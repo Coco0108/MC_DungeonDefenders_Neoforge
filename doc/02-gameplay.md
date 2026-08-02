@@ -93,9 +93,17 @@ cycle est en trois temps :
      géométrie est *soumise*, plus dessinée immédiatement ; le lambda reçoit un
      `PoseStack.Pose` et un `VertexConsumer` au moment du rendu réel.
 
-Deux quads sont émis via `addBar` : le fond gris (`0.3, 0.3, 0.3`) sur toute la largeur
-(`2.0`), puis la jauge de largeur `2.0 * healthPercent` par-dessus. Le dégradé
-**vert → jaune → rouge** vient de `red()` / `green()` (le bleu est toujours 0) :
+Deux quads sont émis via `addSegment`, **juxtaposés et jamais superposés** : la jauge
+colorée occupe la portion pleine (`healthPercent`), le gris (`0.3, 0.3, 0.3`) le reste. Un
+segment de largeur nulle n'est pas émis du tout.
+
+> C'est volontaire. `debugQuads` est déclaré avec `sortOnUpload()`, un tri de transparence
+> par distance à la caméra. Avec un fond pleine largeur recouvert par la jauge, les deux
+> quads étaient coplanaires (`z = 0` tous les deux) et l'ordre de tri devenait instable : la
+> barre apparaissait entièrement grise par intermittence, selon la position de la caméra.
+> Juxtaposer les segments supprime le problème à la racine plutôt que de jouer sur le Z.
+
+Le dégradé **vert → jaune → rouge** vient de `red()` / `green()` (le bleu est toujours 0) :
 
 - au-dessus de 50 % : `red = (1 - p) * 2`, `green = 1` → vert pur à 100 %, jaune à 50 % ;
 - en dessous : `red = 1`, `green = p * 2` → jaune à 50 %, rouge pur à 0 %.

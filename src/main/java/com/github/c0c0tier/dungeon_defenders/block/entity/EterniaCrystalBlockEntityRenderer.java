@@ -65,24 +65,32 @@ public class EterniaCrystalBlockEntityRenderer
         // ce qu'il faut pour une barre de vie, et visible sous tous les angles.
         collector.submitCustomGeometry(poseStack, RenderTypes.debugQuads(),
                 (pose, buffer) -> {
-                    // Fond gris sur toute la largeur, puis la jauge par-dessus.
-                    addBar(pose, buffer, BAR_WIDTH, 0.3F, 0.3F, 0.3F);
-                    addBar(pose, buffer, BAR_WIDTH * healthPercent,
-                            red(healthPercent), green(healthPercent), 0.0F);
+                    float left = -BAR_WIDTH / 2.0F;
+                    float right = left + BAR_WIDTH;
+                    float split = left + BAR_WIDTH * healthPercent;
+
+                    // Les deux segments sont juxtaposés, jamais superposés : ce render
+                    // type trie les quads par distance à la caméra (sortOnUpload), et
+                    // deux quads coplanaires donneraient un ordre instable — la barre
+                    // apparaissait alors entièrement grise par intermittence.
+                    if (healthPercent > 0.0F) {
+                        addSegment(pose, buffer, left, split, red(healthPercent), green(healthPercent), 0.0F);
+                    }
+                    if (healthPercent < 1.0F) {
+                        addSegment(pose, buffer, split, right, 0.3F, 0.3F, 0.3F);
+                    }
                 });
 
         poseStack.popPose();
     }
 
-    /** Ajoute un quad centré horizontalement, de largeur {@code width}. */
-    private static void addBar(PoseStack.Pose pose, VertexConsumer buffer, float width, float r, float g, float b) {
-        float left = -BAR_WIDTH / 2.0F;
-        float right = left + width;
-
-        buffer.addVertex(pose, left, 0.0F, 0.0F).setColor(r, g, b, 1.0F);
-        buffer.addVertex(pose, right, 0.0F, 0.0F).setColor(r, g, b, 1.0F);
-        buffer.addVertex(pose, right, BAR_HEIGHT, 0.0F).setColor(r, g, b, 1.0F);
-        buffer.addVertex(pose, left, BAR_HEIGHT, 0.0F).setColor(r, g, b, 1.0F);
+    /** Ajoute un quad allant de {@code x0} à {@code x1}. */
+    private static void addSegment(
+            PoseStack.Pose pose, VertexConsumer buffer, float x0, float x1, float r, float g, float b) {
+        buffer.addVertex(pose, x0, 0.0F, 0.0F).setColor(r, g, b, 1.0F);
+        buffer.addVertex(pose, x1, 0.0F, 0.0F).setColor(r, g, b, 1.0F);
+        buffer.addVertex(pose, x1, BAR_HEIGHT, 0.0F).setColor(r, g, b, 1.0F);
+        buffer.addVertex(pose, x0, BAR_HEIGHT, 0.0F).setColor(r, g, b, 1.0F);
     }
 
     // Dégradé vert -> jaune -> rouge : au-dessus de 50 % le rouge monte,
