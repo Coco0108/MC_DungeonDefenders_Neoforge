@@ -53,26 +53,25 @@ public class EterniaCrystalBlock extends BaseEntityBlock {
         return Shapes.box(0.0D, 0.0D, 0.0D, 1.0D, 3.0D, 1.0D);
     }
 
+    /** Dégâts infligés au clic droit à main nue. Harnais de test. */
+    private static final int DEBUG_DAMAGE_ON_USE = 10;
+
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-        // On s'assure d'exécuter le code côté serveur (là où la logique s'exécute)
-        if (!level.isClientSide()) {
-            BlockEntity blockEntity = level.getBlockEntity(pos);
-
-            if (blockEntity instanceof EterniaCrystalBlockEntity crystal) {
-                // 1. On récupère les PV actuels
-                int currentHealth = crystal.getCrystalHealth();
-
-                // 2. On lui retire 10 PV pour tester la modification
-                int newHealth = currentHealth - 10;
-                crystal.setCrystalHealth(newHealth);
-
-                // 3. On envoie un message au joueur dans le chat
-                player.sendSystemMessage(Component.literal("Aïe ! Le cristal perd 10 PV. PV restants : " + newHealth));
-
-                return InteractionResult.SUCCESS;
-            }
+        // Le client se contente de prédire le succès ; la logique tourne côté serveur.
+        if (level.isClientSide()) {
+            return InteractionResult.SUCCESS;
         }
+
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (!(blockEntity instanceof EterniaCrystalBlockEntity crystal)) {
+            return InteractionResult.PASS;
+        }
+
+        crystal.damage(DEBUG_DAMAGE_ON_USE);
+        player.sendSystemMessage(Component.translatable(
+                "dungeon_defenders.eternia_crystal.damaged", DEBUG_DAMAGE_ON_USE, crystal.getCrystalHealth()));
+
         return InteractionResult.SUCCESS;
     }
 }

@@ -30,6 +30,5 @@ que les monstres tentent de détruire. Si le cristal tombe à 0 PV, c'est un *Ga
 ```
 
 Le bloc se trouve dans l'onglet créatif du mod. Voir
-[03-build-et-lancement.md](03-build-et-lancement.md) pour le détail, et
-[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) **avant** de compiler :
-plusieurs points bloquants sont recensés.
+[03-build-et-lancement.md](03-build-et-lancement.md) pour le détail des commandes, et
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) pour ce qui reste à faire.

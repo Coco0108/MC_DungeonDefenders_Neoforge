@@ -13,19 +13,28 @@ MC_DungeonDefenders_Neoforge/
     ├── java/com/github/c0c0tier/dungeon_defenders/
     │   ├── DungeonDefendersMod.java          # Point d'entrée @Mod (commun)
     │   ├── DungeonDefendersModClient.java    # Point d'entrée @Mod côté CLIENT uniquement
-    │   ├── ModEvents.java                    # Événements de jeu (IA des zombies)
+    │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA)
     │   ├── Config.java                       # Spec de config (héritée du template, non branchée)
     │   ├── init/
     │   │   └── ModBlocks.java                # DeferredRegister blocs + items
+    │   ├── entity/ai/
+    │   │   └── AttackEterniaCrystalGoal.java # Goal : converger vers le cristal et le frapper
     │   └── block/
     │       ├── EterniaCrystalBlock.java      # Le bloc : hitbox, interaction, codec
     │       └── entity/
-    │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV)
+    │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client
+    │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
     │           └── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D (client)
     ├── resources/
-    │   ├── assets/dungeon_defenders/lang/en_us.json   # Traductions (encore celles du template)
-    │   └── META-INF/accesstransformer.cfg             # Access Transformers
-    └── templates/META-INF/neoforge.mods.toml          # Métadonnées, expansées par Gradle
+    │   ├── assets/dungeon_defenders/
+    │   │   ├── lang/{en_us,fr_fr}.json            # Traductions
+    │   │   ├── blockstates/eternia_crystal.json   # Variante unique
+    │   │   ├── models/block/eternia_crystal.json  # Modèle (texture vanilla provisoire)
+    │   │   └── items/eternia_crystal.json         # Modèle d'item
+    │   ├── data/dungeon_defenders/loot_table/blocks/eternia_crystal.json
+    │   ├── data/minecraft/tags/block/             # mineable/pickaxe + needs_diamond_tool
+    │   └── META-INF/accesstransformer.cfg         # Access Transformers
+    └── templates/META-INF/neoforge.mods.toml      # Métadonnées, expansées par Gradle
 ```
 
 ## Les deux points d'entrée
@@ -56,8 +65,13 @@ référencé sans risque.
 
 - Constructeur : enregistre le `IConfigScreenFactory` (`ConfigurationScreen::new`) pour que
   NeoForge génère un écran de config depuis l'écran « Mods ».
-- `@EventBusSubscriber(value = Dist.CLIENT)` + `onClientSetup(FMLClientSetupEvent)` :
+- `@EventBusSubscriber(value = Dist.CLIENT)` + `onRegisterRenderers(EntityRenderersEvent.RegisterRenderers)` :
   enregistre le renderer de block entity du cristal.
+
+> `@EventBusSubscriber` n'a pas de paramètre `bus` dans cette version : les événements qui
+> implémentent `IModBusEvent` (comme `RegisterRenderers`) partent automatiquement sur le bus
+> du mod, les autres sur `NeoForge.EVENT_BUS`. C'est ce qui permet à `ModEvents` et à cette
+> classe d'utiliser la même annotation pour des bus différents.
 
 ## Chaîne d'enregistrement
 
@@ -73,7 +87,7 @@ Chargement FML
    ├─ RegisterEvent(ITEM)           → eternia_crystal (BlockItem)
    ├─ RegisterEvent(BLOCK_ENTITY)   → eternia_crystal (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)   → dungeon_defenders_tab
-   └─ FMLClientSetupEvent [client]  → EterniaCrystalBlockEntityRenderer
+   └─ RegisterRenderers [client]    → EterniaCrystalBlockEntityRenderer
 
 Bus de jeu (NeoForge.EVENT_BUS)
    └─ ModEvents.onZombieSpawn(EntityJoinLevelEvent)
@@ -105,6 +119,9 @@ public net.minecraft.world.entity.Display setBillboardConstraints(...)
 public net.minecraft.world.entity.Display setViewRange(F)V
 ```
 
-Elles servaient à l'affichage des PV via une entité `TextDisplay`. Ce code est aujourd'hui
-commenté au profit d'un rendu custom (voir [02-gameplay.md](02-gameplay.md)) ; l'AT reste en
-place. NeoForge détecte automatiquement ce fichier, aucune déclaration Gradle n'est requise.
+Elles servaient à une première version de l'affichage des PV, basée sur une entité
+`TextDisplay`. Ce code a été retiré au profit d'un rendu custom (voir
+[02-gameplay.md](02-gameplay.md)) : **l'AT n'est plus utilisé par aucune classe du mod**. Il
+est conservé pour ne pas fermer la porte à cette approche, mais il peut être supprimé sans
+conséquence. NeoForge détecte automatiquement ce fichier, aucune déclaration Gradle n'est
+requise.

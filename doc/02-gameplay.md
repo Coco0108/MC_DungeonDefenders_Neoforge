@@ -29,7 +29,8 @@ Propriétés définies à l'enregistrement dans `ModBlocks` :
 joueur. C'est un harnais de test, pas une mécanique définitive : dans le jeu final, seuls les
 monstres devraient endommager le cristal.
 
-Le code est gardé par `if (!level.isClientSide())` pour ne s'exécuter que côté serveur.
+Le client renvoie immédiatement `SUCCESS` (prédiction, animation de bras) ; la logique ne
+tourne que côté serveur, et `PASS` est renvoyé si le block entity est absent.
 
 ### L'état — `block/entity/EterniaCrystalBlockEntity.java`
 
@@ -38,11 +39,17 @@ public static final int DEFAULT_HEALTH = 100;
 private int crystalHealth = DEFAULT_HEALTH;
 ```
 
-- `getCrystalHealth()` / `setCrystalHealth(int)` : accès aux PV.
-- `setCrystalHealth` appelle `setChanged()` (marque le chunk à sauvegarder), diffuse les PV
-  restants à **tous les joueurs du monde** dans le chat, puis, si les PV tombent à ≤ 0 :
-  - `level.destroyBlock(worldPosition, false)` — le `false` empêche le drop de l'item ;
-  - message `§c§lLe cristal a été détruit !! Game Over !` à tous les joueurs.
+- `getCrystalHealth()` : lecture des PV.
+- `damage(int)` : raccourci pour retirer des PV — c'est l'entrée utilisée par l'IA et par
+  l'interaction joueur.
+- `setCrystalHealth(int)` :
+  - clampe la valeur à 0 minimum et sort immédiatement si les PV n'ont pas changé ;
+  - appelle `setChanged()` (marque le chunk à sauvegarder) ;
+  - sort si `level` est nul ou côté client ;
+  - appelle `level.sendBlockUpdated(...)` pour pousser les nouveaux PV vers les clients ;
+  - si les PV tombent à ≤ 0 : `level.destroyBlock(worldPosition, false)` — le `false` empêche
+    le drop de l'item — puis message `dungeon_defenders.eternia_crystal.destroyed` en rouge
+    gras à tous les joueurs.
 
 **Persistance.** `saveAdditional` / `loadAdditional` utilisent l'API `ValueOutput` /
 `ValueInput` (le remplaçant des `CompoundTag` bruts) :
@@ -54,63 +61,105 @@ this.crystalHealth = input.getIntOr("CrystalHealth", DEFAULT_HEALTH);
 
 Les PV survivent donc au rechargement du monde.
 
-**Code désactivé.** `updateTextDisplay()` / `removeTextDisplay()` créent une entité
-`Display.TextDisplay` flottante au-dessus du cristal (Y + 3.2), en billboard face au joueur,
-portée 30 blocs, avec un texte coloré selon les PV (vert > 50, orange > 20, rouge sinon).
-Tous les appels sont **commentés** — remplacés par le renderer custom ci-dessous. C'est ce
-code qui justifie l'access transformer ; les méthodes sont conservées, prêtes à être
-réactivées.
+**Synchronisation client.** Les PV ne sont modifiés que côté serveur, alors que le renderer
+les lit côté client. Deux surcharges assurent la propagation :
+
+```java
+getUpdatePacket() → ClientboundBlockEntityDataPacket.create(this)
+getUpdateTag(registries) → saveWithoutMetadata(registries)   // réutilise saveAdditional
+```
+
+`getUpdateTag` couvre l'envoi initial (chargement du chunk), `getUpdatePacket` +
+`sendBlockUpdated` couvrent les mises à jour.
 
 ## Rendu de la barre de vie — `EterniaCrystalBlockEntityRenderer.java`
 
-Renderer client (`BlockEntityRenderer`), enregistré dans `DungeonDefendersModClient.onClientSetup`.
+Renderer client, enregistré via `EntityRenderersEvent.RegisterRenderers` dans
+`DungeonDefendersModClient`.
 
-Fonctionnement :
+Depuis 26.1, un `BlockEntityRenderer` ne voit plus le block entity au moment du rendu. Le
+cycle est en trois temps :
 
-1. Translation à `(0.5, 3.2, 0.5)` — centré au-dessus de la hitbox de 3 blocs.
-2. Billboard manuel : rotation inverse du yaw/pitch du joueur local, pour que la barre soit
-   toujours face à la caméra.
-3. `healthPercent = clamp(currentHealth / DEFAULT_HEALTH, 0, 1)`.
-4. Deux quads dessinés via `renderBar` :
-   - le fond, gris (`0.3, 0.3, 0.3`), largeur fixe `2.0`, de `x = -1` à `x = +1` ;
-   - la jauge, largeur `2.0 * healthPercent`.
-5. Couleur de la jauge : dégradé **vert → jaune → rouge** calculé par `getRed`/`getGreen`/`getBlue`.
-   - Au-dessus de 50 % : rouge monte de 0 → 1, vert reste à 1 (vert → jaune).
-   - En dessous : rouge reste à 1, vert descend de 1 → 0 (jaune → rouge).
-   - Bleu toujours 0.
+1. **`createRenderState()`** → un `EterniaCrystalRenderState` (sous-classe de
+   `BlockEntityRenderState` portant un simple `float healthPercent`).
+2. **`extractRenderState(...)`** — appelé côté extraction, avec accès au block entity :
+   remplit `healthPercent = clamp(getCrystalHealth() / DEFAULT_HEALTH, 0, 1)`.
+3. **`submit(state, poseStack, collector, camera)`** — ne voit que l'état :
+   - translation à `(0.5, 3.2, 0.5)`, au-dessus de la hitbox de 3 blocs ;
+   - billboard via `poseStack.mulPose(camera.orientation)`. Après cette rotation `+X` va vers
+     la droite et **`+Y` vers le bas** (même convention que les name tags vanilla), d'où le
+     `scale(1, -1, 1)` qui rétablit des coordonnées naturelles ;
+   - `collector.submitCustomGeometry(poseStack, RenderTypes.debugQuads(), ...)` — la
+     géométrie est *soumise*, plus dessinée immédiatement ; le lambda reçoit un
+     `PoseStack.Pose` et un `VertexConsumer` au moment du rendu réel.
 
-> ⚠️ Ce renderer utilise l'API `VertexConsumer.vertex(...).endVertex()` et un constructeur
-> prenant un `BlockEntityRendererProvider.Context` qui n'est pas celui appelé côté client.
-> Voir [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+Deux quads sont émis via `addBar` : le fond gris (`0.3, 0.3, 0.3`) sur toute la largeur
+(`2.0`), puis la jauge de largeur `2.0 * healthPercent` par-dessus. Le dégradé
+**vert → jaune → rouge** vient de `red()` / `green()` (le bleu est toujours 0) :
 
-## IA des ennemis — `ModEvents.java`
+- au-dessus de 50 % : `red = (1 - p) * 2`, `green = 1` → vert pur à 100 %, jaune à 50 % ;
+- en dessous : `red = 1`, `green = p * 2` → jaune à 50 %, rouge pur à 0 %.
 
-Écoute `EntityJoinLevelEvent` sur le bus de jeu. Pour chaque `Zombie` rejoignant un monde
-côté serveur, un `MoveToBlockGoal` anonyme est ajouté au `goalSelector` **en priorité 1**
-(donc au-dessus de la plupart des objectifs vanilla).
+> **Pourquoi `debugQuads` ?** C'est le seul render type public qui combine ce dont une barre
+> de vie a besoin : quads non texturés (`POSITION_COLOR`), mélange translucide, test de
+> profondeur, et surtout `withCull(false)` — donc visible quel que soit le sens du quad, ce
+> qui évite tout problème d'orientation après le `scale` négatif.
+
+## IA des ennemis
+
+### Le goal — `entity/ai/AttackEterniaCrystalGoal.java`
+
+Étend `MoveToBlockGoal`. Constantes et surcharges :
 
 | Paramètre | Valeur | Rôle |
 |---|---|---|
-| Vitesse | `1.2D` | multiplicateur de vitesse de déplacement |
-| Rayon de recherche | `16` | blocs autour du zombie |
+| `SPEED_MODIFIER` | `1.2D` | multiplicateur de vitesse de déplacement |
+| `SEARCH_RANGE` | `16` | blocs autour du mob |
+| `DAMAGE_PER_HIT` | `5` | PV retirés par coup |
+| `TICKS_BETWEEN_HITS` | `20` | 1 seconde entre deux coups |
 | `isValidTarget` | `state.is(ModBlocks.ETERNIA_CRYSTAL)` | ne cible que le cristal |
-| `getMoveToTarget` | `this.blockPos` | vise la **base** du cristal, pour éviter que le zombie tente de grimper |
-| `acceptedDistance` | `2.1D` | tolérance suffisante pour un zombie au sol contre une hitbox de 3 de haut |
+| `getMoveToTarget` | `this.blockPos` | vise la **base** du cristal, pour éviter que le mob tente de grimper |
+| `acceptedDistance` | `2.1D` | tolérance suffisante pour un mob au sol contre une hitbox de 3 de haut |
 
-Dans `tick()`, si la cible est atteinte (`isReachedTarget()`), le zombie frappe **toutes les
-20 ticks (1 seconde)**, condition `mob.tickCount % 20 == 0` :
-
-- `crystal.setCrystalHealth(currentHealth - 5)` — **5 dégâts par seconde par zombie** ;
-- `mob.swing(InteractionHand.MAIN_HAND)` — animation de bras.
+Dans `tick()`, si la cible est atteinte (`isReachedTarget()`), le mob appelle
+`crystal.damage(5)` et joue l'animation de bras (`mob.swing`), puis attend
+`TICKS_BETWEEN_HITS`. Le cooldown est un champ du goal (remis à zéro dans `start()` et dès
+que le mob s'éloigne), et non `mob.tickCount` : le rythme reste correct si le mob quitte puis
+revient vers le cristal.
 
 Avec 100 PV par défaut, un zombie seul détruit le cristal en 20 secondes.
 
-> Le compteur utilise `mob.tickCount` (âge de l'entité), pas un compteur propre au goal : le
-> rythme de frappe est donc désynchronisé d'un zombie à l'autre, ce qui est plutôt souhaitable
-> visuellement.
+### L'attribution — `ModEvents.java`
+
+Écoute `EntityJoinLevelEvent` sur le bus de jeu. Pour chaque `Zombie` rejoignant un monde
+côté serveur, le goal est ajouté au `goalSelector` **en priorité 1** (donc au-dessus de la
+plupart des objectifs vanilla).
+
+`EntityJoinLevelEvent` se déclenche aussi au rechargement d'un chunk et au changement de
+dimension. Le code vérifie donc d'abord qu'aucun `AttackEterniaCrystalGoal` n'est déjà
+présent :
+
+```java
+zombie.goalSelector.getAvailableGoals().stream()
+        .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal)
+```
+
+Sans ce test, un même zombie cumulerait plusieurs exemplaires du goal et frapperait le
+cristal plusieurs fois par seconde.
+
+> Pour étendre l'IA à d'autres monstres, il suffit d'élargir le test `instanceof Zombie` :
+> le goal n'exige qu'un `PathfinderMob`.
 
 ## Onglet créatif
 
 `dungeon_defenders_tab`, titre `Component.translatable("itemGroup.dungeon_defenders")`,
-icône et unique entrée : l'item du cristal. La clé de traduction n'existe pas encore dans
-`en_us.json` — voir [05](05-etat-et-problemes-connus.md).
+icône et unique entrée : l'item du cristal.
+
+## Apparence du bloc
+
+Le bloc utilise un modèle `cube_all` standard, mais pointe **provisoirement** sur la texture
+vanilla `minecraft:block/diamond_block` : il n'y a pas encore de texture dédiée. Voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
+Le bloc est miné à la pioche en diamant (tags `mineable/pickaxe` et `needs_diamond_tool`) et
+se drope lui-même via `data/dungeon_defenders/loot_table/blocks/eternia_crystal.json`.

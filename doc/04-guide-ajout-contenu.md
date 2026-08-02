@@ -9,7 +9,10 @@ Recettes basées sur les conventions déjà en place dans le projet.
   l'ID (`ETERNIA_CRYSTAL`).
 - Les registres vivent dans `init/` (`ModBlocks`), sauf `BLOCK_ENTITIES` et
   `CREATIVE_MODE_TABS` encore dans `DungeonDefendersMod`.
-- Les classes de blocs vont dans `block/`, les block entities dans `block/entity/`.
+- Les classes de blocs vont dans `block/`, les block entities dans `block/entity/`, les
+  goals d'IA dans `entity/ai/`.
+- Les messages destinés aux joueurs passent par `Component.translatable` et une clé dans les
+  fichiers de langue, jamais par `Component.literal`.
 
 ## Ajouter un bloc simple
 
@@ -82,11 +85,50 @@ Enfin, créer les ressources (voir [Ressources](#ressources-nécessaires-par-blo
    ⚠️ Le bloc doit être déclaré dans `ModBlocks` (et pas dans `DungeonDefendersMod`) pour
    éviter la boucle d'initialisation statique décrite en [01-architecture.md](01-architecture.md).
 
+Si l'état doit être visible côté client (barre de vie, animation…), ajouter aussi la
+synchronisation — sans elle le client garde la valeur par défaut :
+
+```java
+@Override public Packet<ClientGamePacketListener> getUpdatePacket() {
+    return ClientboundBlockEntityDataPacket.create(this);
+}
+
+@Override public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+    return this.saveWithoutMetadata(registries);
+}
+```
+
+et appeler `level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL)` après chaque mutation.
+
 ## Ajouter un renderer de block entity
 
-Créer la classe dans `block/entity/`, implémenter `BlockEntityRenderer`, puis l'enregistrer
-côté client uniquement, dans `DungeonDefendersModClient`. Le renderer ne doit jamais être
-référencé depuis une classe chargée sur serveur dédié.
+Depuis 26.1 un renderer ne voit plus le block entity au moment du rendu : il faut passer par
+un état intermédiaire.
+
+1. Créer un `XxxRenderState extends BlockEntityRenderState` (annoté `@OnlyIn(Dist.CLIENT)`)
+   qui porte les données à afficher.
+2. Implémenter `BlockEntityRenderer<MonBlockEntity, XxxRenderState>` avec les trois méthodes :
+   - `createRenderState()` → une instance neuve ;
+   - `extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress)` —
+     appeler `BlockEntityRenderer.super.extractRenderState(...)` puis remplir l'état ;
+   - `submit(state, poseStack, collector, camera)` — soumettre la géométrie.
+3. Le constructeur doit prendre un `BlockEntityRendererProvider.Context`.
+4. Enregistrer dans `DungeonDefendersModClient` :
+
+   ```java
+   @SubscribeEvent
+   static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
+       event.registerBlockEntityRenderer(DungeonDefendersMod.MA_TOUR_BE.get(), MonRenderer::new);
+   }
+   ```
+
+Pour de la géométrie brute, utiliser
+`collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> ...)` ; le
+`VertexConsumer` s'alimente avec `addVertex(pose, x, y, z).setColor(...)` — `endVertex()`
+n'existe plus. Pour un billboard, `poseStack.mulPose(camera.orientation)` suffit (attention :
+après cette rotation `+Y` pointe vers le bas).
+
+Le renderer ne doit jamais être référencé depuis une classe chargée sur serveur dédié.
 
 ## Ajouter un comportement sur les entités
 
@@ -119,29 +161,35 @@ Pour ajouter une langue, créer `fr_fr.json` dans le même dossier.
 
 ## Ressources nécessaires par bloc
 
-Le projet n'en contient **aucune** pour l'instant. Un bloc en `RenderShape.MODEL` a besoin de :
+Un bloc en `RenderShape.MODEL` a besoin de :
 
 ```
 src/main/resources/assets/dungeon_defenders/
-├── blockstates/<id>.json
-├── models/block/<id>.json
-├── models/item/<id>.json
+├── blockstates/<id>.json    # { "variants": { "": { "model": "dungeon_defenders:block/<id>" } } }
+├── models/block/<id>.json   # { "parent": "minecraft:block/cube_all", "textures": { "all": ... } }
+├── items/<id>.json          # { "model": { "type": "minecraft:model", "model": "..." } }
 └── textures/block/<id>.png
 ```
 
-Sans eux, le bloc s'affiche en damier noir/violet « missing model ». Ces fichiers peuvent
-être écrits à la main ou générés par datagen (`./gradlew runData`, sortie dans
-`src/generated/resources/`).
+> Attention : depuis 1.21.4 le modèle d'item se déclare dans `assets/<ns>/items/<id>.json`
+> (nouveau système de modèles d'items), et non plus dans `models/item/`.
 
-Côté data pack, prévoir aussi :
+Sans ces fichiers, le bloc s'affiche en damier noir/violet « missing model ».
+
+Côté data pack :
 
 ```
 src/main/resources/data/dungeon_defenders/
 └── loot_table/blocks/<id>.json     # sinon le bloc ne drope rien
 ```
 
-et, comme le bloc utilise `requiresCorrectToolForDrops()`, une entrée dans les tags
-`minecraft:mineable/<outil>` et le tag de niveau d'outil correspondant.
+Noter le dossier `loot_table` au **singulier** depuis 1.21. Et comme le bloc utilise
+`requiresCorrectToolForDrops()`, il faut l'ajouter à
+`data/minecraft/tags/block/mineable/<outil>.json` et au tag de niveau d'outil correspondant
+(`needs_diamond_tool`, `needs_iron_tool`…), avec `"replace": false`.
+
+Tous ces fichiers peuvent aussi être générés par datagen (`./gradlew runData`, sortie dans
+`src/generated/resources/`). `eternia_crystal` est un exemple complet à recopier.
 
 ## Ajouter une option de configuration
 
