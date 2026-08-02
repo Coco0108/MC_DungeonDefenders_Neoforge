@@ -1,5 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders;
 
+import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntityRenderer;
+
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -24,8 +26,11 @@ public class DungeonDefendersModClient {
 
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
-        // Some client setup code
-        DungeonDefendersMod.LOGGER.info("HELLO FROM CLIENT SETUP");
-        DungeonDefendersMod.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+        Minecraft.getInstance().getBlockEntityRenderDispatcher().register(
+                DungeonDefendersMod.ETERNIA_CRYSTAL_BE.get(),
+                new EterniaCrystalBlockEntityRenderer()
+        );
     }
+
+    
 }
