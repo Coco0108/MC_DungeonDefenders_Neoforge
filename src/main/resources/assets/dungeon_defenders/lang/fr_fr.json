@@ -1,0 +1,11 @@
+{
+  "itemGroup.dungeon_defenders": "Dungeon Defenders",
+  "block.dungeon_defenders.eternia_crystal": "Cristal d'Eternia",
+
+  "dungeon_defenders.eternia_crystal.damaged": "Aïe ! Le cristal perd %s PV. PV restants : %s",
+  "dungeon_defenders.eternia_crystal.destroyed": "Le cristal a été détruit !! Game Over !",
+
+  "dungeon_defenders.configuration.title": "Configuration de Dungeon Defenders",
+  "dungeon_defenders.configuration.section.dungeon_defenders.common.toml": "Configuration de Dungeon Defenders",
+  "dungeon_defenders.configuration.section.dungeon_defenders.common.toml.title": "Configuration de Dungeon Defenders"
+}

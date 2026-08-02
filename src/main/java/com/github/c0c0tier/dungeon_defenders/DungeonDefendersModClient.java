@@ -1,12 +1,13 @@
 package com.github.c0c0tier.dungeon_defenders;
 
-import net.minecraft.client.Minecraft;
+import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntityRenderer;
+
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
@@ -23,9 +24,12 @@ public class DungeonDefendersModClient {
     }
 
     @SubscribeEvent
-    static void onClientSetup(FMLClientSetupEvent event) {
-        // Some client setup code
-        DungeonDefendersMod.LOGGER.info("HELLO FROM CLIENT SETUP");
-        DungeonDefendersMod.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+    static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        // C'est l'événement qui fournit le BlockEntityRendererProvider.Context attendu
+        // par le constructeur du renderer.
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.ETERNIA_CRYSTAL_BE.get(),
+                EterniaCrystalBlockEntityRenderer::new
+        );
     }
 }
