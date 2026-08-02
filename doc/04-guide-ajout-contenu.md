@@ -105,8 +105,11 @@ et appeler `level.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL)` après 
 Depuis 26.1 un renderer ne voit plus le block entity au moment du rendu : il faut passer par
 un état intermédiaire.
 
-1. Créer un `XxxRenderState extends BlockEntityRenderState` (annoté `@OnlyIn(Dist.CLIENT)`)
-   qui porte les données à afficher.
+1. Créer un `XxxRenderState extends BlockEntityRenderState` qui porte les données à afficher.
+   Ne pas l'annoter `@OnlyIn` : cette annotation est réservée à Minecraft et NeoForge, son
+   effet n'existe plus au runtime et NeoForge log un avertissement pour tout mod qui
+   l'utilise. La sûreté côté serveur vient du fait que la classe n'est référencée que depuis
+   du code client.
 2. Implémenter `BlockEntityRenderer<MonBlockEntity, XxxRenderState>` avec les trois méthodes :
    - `createRenderState()` → une instance neuve ;
    - `extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress)` —
