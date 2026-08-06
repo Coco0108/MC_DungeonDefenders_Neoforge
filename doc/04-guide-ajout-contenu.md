@@ -44,6 +44,41 @@ Puis l'ajouter à l'onglet créatif dans `DungeonDefendersMod.DUNGEON_DEFENDERS_
 
 Enfin, créer les ressources (voir [Ressources](#ressources-nécessaires-par-bloc) plus bas).
 
+## Ajouter un piège (dégâts au contact)
+
+Pour un bloc qui blesse une entité quand elle marche dessus (piège, sol dangereux…), pas
+besoin de block entity : surcharger `stepOn` suffit. Exemple complet à recopier :
+[`block/SpikeTrapBlock.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/block/SpikeTrapBlock.java).
+
+```java
+@Override
+public void stepOn(Level level, BlockPos pos, BlockState state, Entity entity) {
+    if (level.isClientSide()) {
+        return;
+    }
+    if (entity instanceof Monster monster && monster.isAlive()) {
+        // ... cooldown, puis monster.hurt(level.damageSources().xxx(), degats);
+    }
+    super.stepOn(level, pos, state, entity);
+}
+```
+
+Points importants :
+
+- `stepOn` se déclenche quand l'entité **marche sur** le bloc (comme `MagmaBlock`) —
+  `entityInside` est réservé aux blocs avec lesquels l'entité **chevauche** le volume (cactus,
+  ronces).
+- Toujours sortir si `level.isClientSide()` : la logique de dégâts ne doit tourner que côté
+  serveur.
+- Pour un cooldown par entité (éviter que le piège déclenche à chaque tick), stocker le dernier
+  `level.getGameTime()` de déclenchement dans un `WeakHashMap<Entity, Long>` en champ
+  d'instance du bloc (le bloc est un singleton) ; comparer au tick courant avant de redéclencher.
+  `WeakHashMap` évite de retenir des entités mortes/déchargées.
+- Piocher la `DamageSource` la plus proche du thème dans `DamageSources`
+  (`stalagmite()`, `hotFloor()`, `cactus()`…) plutôt que `generic()`.
+- Filtrer avec `instanceof Monster` pour ne viser que les monstres hostiles ; élargir à
+  `LivingEntity` pour toucher aussi le joueur.
+
 ## Ajouter un block entity
 
 1. Créer la classe dans `block/entity/`, étendant `BlockEntity`, avec un constructeur
@@ -192,7 +227,8 @@ Noter le dossier `loot_table` au **singulier** depuis 1.21. Et comme le bloc uti
 (`needs_diamond_tool`, `needs_iron_tool`…), avec `"replace": false`.
 
 Tous ces fichiers peuvent aussi être générés par datagen (`./gradlew runData`, sortie dans
-`src/generated/resources/`). `eternia_crystal` est un exemple complet à recopier.
+`src/generated/resources/`). `eternia_crystal` (bloc avec block entity) et `spike_trap`
+(bloc simple) sont deux exemples complets à recopier.
 
 ## Ajouter une option de configuration
 

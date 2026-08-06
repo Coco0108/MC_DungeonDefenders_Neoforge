@@ -21,18 +21,19 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── AttackEterniaCrystalGoal.java # Goal : converger vers le cristal et le frapper
     │   └── block/
     │       ├── EterniaCrystalBlock.java      # Le bloc : hitbox, interaction, codec
+    │       ├── SpikeTrapBlock.java           # Piège : dégâts au contact (stepOn) + cooldown
     │       └── entity/
     │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
     │           └── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D (client)
     ├── resources/
     │   ├── assets/dungeon_defenders/
-    │   │   ├── lang/{en_us,fr_fr}.json            # Traductions
-    │   │   ├── blockstates/eternia_crystal.json   # Variante unique
-    │   │   ├── models/block/eternia_crystal.json  # Modèle (texture vanilla provisoire)
-    │   │   └── items/eternia_crystal.json         # Modèle d'item
-    │   ├── data/dungeon_defenders/loot_table/blocks/eternia_crystal.json
-    │   ├── data/minecraft/tags/block/             # mineable/pickaxe + needs_diamond_tool
+    │   │   ├── lang/{en_us,fr_fr}.json                     # Traductions
+    │   │   ├── blockstates/{eternia_crystal,spike_trap}.json   # Variante unique par bloc
+    │   │   ├── models/block/{eternia_crystal,spike_trap}.json  # Modèles (texture vanilla provisoire)
+    │   │   └── items/{eternia_crystal,spike_trap}.json         # Modèles d'item
+    │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_trap}.json
+    │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
     │   └── META-INF/accesstransformer.cfg         # Access Transformers
     └── templates/META-INF/neoforge.mods.toml      # Métadonnées, expansées par Gradle
 ```

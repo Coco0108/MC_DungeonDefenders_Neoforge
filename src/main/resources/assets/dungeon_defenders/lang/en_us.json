@@ -1,6 +1,7 @@
 {
   "itemGroup.dungeon_defenders": "Dungeon Defenders",
   "block.dungeon_defenders.eternia_crystal": "Eternia Crystal",
+  "block.dungeon_defenders.spike_trap": "Spike Trap",
 
   "dungeon_defenders.eternia_crystal.damaged": "Ouch! The crystal loses %s HP. Remaining: %s",
   "dungeon_defenders.eternia_crystal.destroyed": "The Eternia Crystal has been destroyed! Game Over!",

@@ -1,7 +1,8 @@
 # Documentation — Dungeon Defenders (NeoForge)
 
 Mod Minecraft inspiré de *Dungeon Defenders* : le joueur place un **Cristal d'Eternia**
-que les monstres tentent de détruire. Si le cristal tombe à 0 PV, c'est un *Game Over*.
+que les monstres tentent de détruire, et peut se défendre avec des pièges comme le
+**Piège à Pics**. Si le cristal tombe à 0 PV, c'est un *Game Over*.
 
 | Info | Valeur |
 |---|---|
@@ -29,6 +30,6 @@ que les monstres tentent de détruire. Si le cristal tombe à 0 PV, c'est un *Ga
 ./gradlew runClient
 ```
 
-Le bloc se trouve dans l'onglet créatif du mod. Voir
+Les blocs se trouvent dans l'onglet créatif du mod. Voir
 [03-build-et-lancement.md](03-build-et-lancement.md) pour le détail des commandes, et
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) pour ce qui reste à faire.
