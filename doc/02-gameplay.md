@@ -161,9 +161,9 @@ cristal plusieurs fois par seconde.
 ## Onglet créatif
 
 `dungeon_defenders_tab`, titre `Component.translatable("itemGroup.dungeon_defenders")`,
-icône et unique entrée : l'item du cristal.
+contient l'item du cristal et celui du piège à pics.
 
-## Apparence du bloc
+## Apparence du Cristal d'Eternia
 
 Le bloc utilise un modèle `cube_all` standard, mais pointe **provisoirement** sur la texture
 vanilla `minecraft:block/diamond_block` : il n'y a pas encore de texture dédiée. Voir
@@ -171,3 +171,28 @@ vanilla `minecraft:block/diamond_block` : il n'y a pas encore de texture dédié
 
 Le bloc est miné à la pioche en diamant (tags `mineable/pickaxe` et `needs_diamond_tool`) et
 se drope lui-même via `data/dungeon_defenders/loot_table/blocks/eternia_crystal.json`.
+
+## Le Piège à Pics — `block/SpikeTrapBlock.java`
+
+Bloc de défense simple, sans block entity : c'est un premier piège pour ralentir/blesser les
+monstres avant qu'ils n'atteignent le cristal.
+
+| Aspect | Implémentation |
+|---|---|
+| Classe | `Block` (pas de `BaseEntityBlock`, aucun état à persister) |
+| Hook de déclenchement | `stepOn(Level, BlockPos, BlockState, Entity)` — appelé quand une entité **marche sur** le bloc (même mécanisme que `MagmaBlock` pour la lave/feu, à ne pas confondre avec `entityInside`, utilisé par le cactus pour un chevauchement latéral) |
+| Cible | `entity instanceof Monster` (tout monstre hostile vanilla ou modded) |
+| Dégâts | `2.0F`, via `level.damageSources().stalagmite()` |
+| Cooldown | `20` ticks (1 s) **par entité**, pas par bloc : un `WeakHashMap<Entity, Long>` en champ d'instance stocke le dernier `level.getGameTime()` de déclenchement pour chaque monstre. `WeakHashMap` évite de retenir indéfiniment des entités mortes/déchargées |
+| Garde côté client | `level.isClientSide()` sort immédiatement — toute la logique (dégâts + cooldown) tourne uniquement côté serveur |
+
+Propriétés définies à l'enregistrement dans `ModBlocks` : `strength(2.0F)` (dureté/résistance
+aux explosions comparables à la pierre), pas de `requiresCorrectToolForDrops()` — n'importe
+quel outil (ou la main) suffit à le récupérer.
+
+### Apparence
+
+Modèle `cube_all` pointant **provisoirement** sur la texture vanilla
+`minecraft:block/dripstone_block` (choisie pour son aspect visuellement "pointu"). Miné à la
+pioche (tag `mineable/pickaxe` uniquement, pas de tag de niveau d'outil) et se drope lui-même
+via `data/dungeon_defenders/loot_table/blocks/spike_trap.json`.

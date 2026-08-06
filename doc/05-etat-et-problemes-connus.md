@@ -13,6 +13,9 @@ vérifie la CI.
 - ✅ Renderer de barre de vie 3D au-dessus du cristal (API `submit` de 26.1).
 - ✅ Modèle, blockstate, loot table, tags d'outil, traductions `en_us` et `fr_fr`.
 - ✅ CI GitHub Actions.
+- ✅ Bloc `spike_trap` + son item : 2 PV de dégâts à tout `Monster` qui marche dessus
+  (`stepOn`), cooldown de 1 s par entité. Modèle, blockstate, loot table, tag `mineable/pickaxe`,
+  traductions `en_us`/`fr_fr`, onglet créatif.
 
 ## Corrections apportées
 
@@ -47,6 +50,9 @@ donc visible et cohérent, mais ressemble à un bloc de diamant. Il faut créer
 `textures/block/eternia_crystal.png` et mettre à jour le modèle — idéalement un modèle de
 cristal, pas un cube plein, puisque la hitbox fait déjà 3 blocs de haut.
 
+Même situation pour `models/block/spike_trap.json`, qui pointe sur
+`minecraft:block/dripstone_block` en attendant `textures/block/spike_trap.png`.
+
 ### Le clic droit endommage encore le cristal
 
 `useWithoutItem` retire 10 PV : c'est le harnais de test qui a servi à développer la
@@ -77,7 +83,7 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 
 ## Pistes prioritaires
 
-1. Créer la texture et un vrai modèle de cristal.
+1. Créer les textures et vrais modèles du cristal et du piège à pics.
 2. Renseigner `neoforge.mods.toml` et le `README.md` avec les vraies métadonnées.
 3. Externaliser les constantes de gameplay (`DEFAULT_HEALTH`, `DAMAGE_PER_HIT`,
    `SEARCH_RANGE`) dans `Config`, et enregistrer la spec.

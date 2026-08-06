@@ -37,6 +37,7 @@ public class DungeonDefendersMod {
                     .icon(() -> ModBlocks.ETERNIA_CRYSTAL_ITEM.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
                         output.accept(ModBlocks.ETERNIA_CRYSTAL_ITEM.get());
+                        output.accept(ModBlocks.SPIKE_TRAP_ITEM.get());
                     })
                     .build());
 

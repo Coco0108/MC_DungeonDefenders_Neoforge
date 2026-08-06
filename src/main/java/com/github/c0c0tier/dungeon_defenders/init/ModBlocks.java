@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders.init;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.EterniaCrystalBlock;
+import com.github.c0c0tier.dungeon_defenders.block.SpikeTrapBlock;
 import net.minecraft.world.item.BlockItem;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredBlock;
@@ -25,6 +26,14 @@ public class ModBlocks {
     // 2. Enregistrement de l'Item : registerSimpleBlockItem applique aussi l'ID requis
     public static final DeferredItem<BlockItem> ETERNIA_CRYSTAL_ITEM =
             ITEMS.registerSimpleBlockItem("eternia_crystal", ETERNIA_CRYSTAL);
+
+    // 3. Le piège à pics : dégâts au contact, cooldown géré dans SpikeTrapBlock
+    public static final DeferredBlock<SpikeTrapBlock> SPIKE_TRAP = BLOCKS.registerBlock("spike_trap",
+            SpikeTrapBlock::new,
+            properties -> properties.strength(2.0F));
+
+    public static final DeferredItem<BlockItem> SPIKE_TRAP_ITEM =
+            ITEMS.registerSimpleBlockItem("spike_trap", SPIKE_TRAP);
 
     // Connexion au bus d'événements
     public static void register(IEventBus modEventBus) {
