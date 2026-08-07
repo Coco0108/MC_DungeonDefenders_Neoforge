@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
@@ -38,12 +39,14 @@ public class DungeonDefendersMod {
                     .displayItems((parameters, output) -> {
                         output.accept(ModBlocks.ETERNIA_CRYSTAL_ITEM.get());
                         output.accept(ModBlocks.SPIKE_TRAP_ITEM.get());
+                        output.accept(ModBlocks.MANA_TEST_WAND.get());
                     })
                     .build());
 
     public DungeonDefendersMod(IEventBus modEventBus) {
         // On enregistre tes deux fichiers de registres sur le bus
         ModBlocks.register(modEventBus);
+        ModAttachments.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
 

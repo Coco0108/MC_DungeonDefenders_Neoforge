@@ -230,6 +230,73 @@ Tous ces fichiers peuvent aussi être générés par datagen (`./gradlew runData
 `src/generated/resources/`). `eternia_crystal` (bloc avec block entity) et `spike_trap`
 (bloc simple) sont deux exemples complets à recopier.
 
+## Ajouter une donnée persistante sur le joueur (data attachment)
+
+Pour une ressource ou un état porté par le joueur (mana, stamina…) plutôt que par un bloc,
+pas besoin de mixin ni de capability custom : les **data attachments** NeoForge suffisent.
+Exemple complet à recopier : [`init/ModAttachments.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/init/ModAttachments.java)
+(attachment `mana`).
+
+```java
+public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES =
+        DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, DungeonDefendersMod.MODID);
+
+public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> MA_RESSOURCE = ATTACHMENT_TYPES.register(
+        "ma_ressource",
+        () -> AttachmentType.builder(() -> VALEUR_PAR_DEFAUT)
+                .serialize(Codec.INT.fieldOf("MaRessource"))
+                .sync(ByteBufCodecs.VAR_INT)
+                .build());
+```
+
+Points importants :
+
+- Enregistrer `ATTACHMENT_TYPES` sur le bus du mod (méthode `register(IEventBus)`, appelée
+  depuis `DungeonDefendersMod`, comme pour `ModBlocks`).
+- `.serialize(MapCodec<T>)` rend l'attachment persistant (survit au rechargement) ; l'omettre
+  pour une donnée purement transiente.
+- `.sync(StreamCodec<...>)` pousse la valeur au client propriétaire — indispensable si un
+  HUD ou un écran doit l'afficher. Après toute mutation côté serveur, appeler
+  `entity.setData(ATTACHMENT, valeur)` **puis** `entity.syncData(ATTACHMENT)` (la synchro
+  n'est pas automatique à chaque `setData`).
+- Lecture : `entity.getData(ATTACHMENT)` (l'holder implémente `Supplier`, pas besoin de
+  `.get()` sur l'attachment lui-même contrairement à un `DeferredBlock`).
+
+## Ajouter une couche HUD (GuiLayer)
+
+Pour afficher une info permanente à l'écran (barre de ressource, indicateur…), utiliser une
+`GuiLayer` plutôt qu'un mixin sur `Gui`. Exemple complet :
+[`client/gui/ManaOverlay.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/client/gui/ManaOverlay.java).
+
+```java
+public class MonOverlay implements GuiLayer {
+    @Override
+    public void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player == null || minecraft.options.hideGui) {
+            return;
+        }
+        guiGraphics.text(minecraft.font, Component.translatable("..."), x, y, 0xFFFFFF);
+        guiGraphics.fill(x, y, x + largeur, y + hauteur, couleurArgb);
+    }
+}
+```
+
+Puis l'enregistrer dans `DungeonDefendersModClient` (méthode `@SubscribeEvent` sur
+`RegisterGuiLayersEvent`, qui part sur le bus du mod comme `RegisterRenderers`) :
+
+```java
+@SubscribeEvent
+static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
+    event.registerAboveAll(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "mon_overlay"), new MonOverlay());
+}
+```
+
+`registerAboveAll` est le plus simple (aucune dépendance d'ordre) ; `registerAbove` /
+`registerBelow` permettent de se positionner par rapport à une couche vanilla précise
+(voir les constantes de `VanillaGuiLayers`, ex. `HOTBAR`, `PLAYER_HEALTH`) si l'overlay doit
+s'insérer dans l'empilement du HUD plutôt que flotter au-dessus.
+
 ## Ajouter une option de configuration
 
 [`Config.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/Config.java) contient

@@ -16,7 +16,10 @@ MC_DungeonDefenders_Neoforge/
     │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA)
     │   ├── Config.java                       # Spec de config (héritée du template, non branchée)
     │   ├── init/
-    │   │   └── ModBlocks.java                # DeferredRegister blocs + items
+    │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
+    │   │   └── ModAttachments.java           # DeferredRegister des data attachments (mana du joueur)
+    │   ├── client/gui/
+    │   │   └── ManaOverlay.java              # Couche HUD affichant le mana (client uniquement)
     │   ├── entity/ai/
     │   │   └── AttackEterniaCrystalGoal.java # Goal : converger vers le cristal et le frapper
     │   └── block/
@@ -51,8 +54,14 @@ NeoForge autorise plusieurs classes `@Mod` pour le même `modId`, différenciée
 - Enregistre le `BlockEntityType` `eternia_crystal`, lié à `ModBlocks.ETERNIA_CRYSTAL`.
 - Enregistre l'onglet créatif `dungeon_defenders_tab`, dont l'icône et le seul contenu
   sont l'item du cristal.
-- Le constructeur `DungeonDefendersMod(IEventBus modEventBus)` branche les trois registres
-  (`ModBlocks.register(...)`, `BLOCK_ENTITIES`, `CREATIVE_MODE_TABS`) sur le bus du mod.
+- Le constructeur `DungeonDefendersMod(IEventBus modEventBus)` branche les quatre registres
+  (`ModBlocks.register(...)`, `ModAttachments.register(...)`, `BLOCK_ENTITIES`,
+  `CREATIVE_MODE_TABS`) sur le bus du mod.
+
+> `init/ModAttachments.java` suit le même principe que `ModBlocks` : un `DeferredRegister`
+> dédié (ici `NeoForgeRegistries.Keys.ATTACHMENT_TYPES`) avec sa propre méthode
+> `register(IEventBus)`. Voir [02-gameplay.md](02-gameplay.md) pour le détail de l'attachment
+> `mana`.
 
 > **Pourquoi les blocs sont-ils dans `init/ModBlocks` et pas ici ?**
 > Pour casser la dépendance circulaire : le `BlockEntityType` a besoin d'une référence au
@@ -68,6 +77,8 @@ référencé sans risque.
   NeoForge génère un écran de config depuis l'écran « Mods ».
 - `@EventBusSubscriber(value = Dist.CLIENT)` + `onRegisterRenderers(EntityRenderersEvent.RegisterRenderers)` :
   enregistre le renderer de block entity du cristal.
+- `onRegisterGuiLayers(RegisterGuiLayersEvent)` : enregistre `ManaOverlay` via
+  `event.registerAboveAll(...)`, au-dessus de toutes les autres couches du HUD.
 
 > `@EventBusSubscriber` n'a pas de paramètre `bus` dans cette version : les événements qui
 > implémentent `IModBusEvent` (comme `RegisterRenderers`) partent automatiquement sur le bus
@@ -79,16 +90,19 @@ référencé sans risque.
 ```
 Chargement FML
    └─ new DungeonDefendersMod(modEventBus)
-        ├─ ModBlocks.register(bus)   → BLOCKS + ITEMS
+        ├─ ModBlocks.register(bus)        → BLOCKS + ITEMS
+        ├─ ModAttachments.register(bus)   → ATTACHMENT_TYPES
         ├─ BLOCK_ENTITIES.register(bus)
         └─ CREATIVE_MODE_TABS.register(bus)
 
 Événements du bus mod
-   ├─ RegisterEvent(BLOCK)          → eternia_crystal (EterniaCrystalBlock)
-   ├─ RegisterEvent(ITEM)           → eternia_crystal (BlockItem)
-   ├─ RegisterEvent(BLOCK_ENTITY)   → eternia_crystal (BlockEntityType)
-   ├─ RegisterEvent(CREATIVE_TAB)   → dungeon_defenders_tab
-   └─ RegisterRenderers [client]    → EterniaCrystalBlockEntityRenderer
+   ├─ RegisterEvent(BLOCK)             → eternia_crystal (EterniaCrystalBlock)
+   ├─ RegisterEvent(ITEM)              → eternia_crystal (BlockItem)
+   ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana
+   ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal (BlockEntityType)
+   ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
+   ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer
+   └─ RegisterGuiLayersEvent [client]  → ManaOverlay
 
 Bus de jeu (NeoForge.EVENT_BUS)
    └─ ModEvents.onZombieSpawn(EntityJoinLevelEvent)
