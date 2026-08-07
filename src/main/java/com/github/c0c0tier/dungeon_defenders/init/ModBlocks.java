@@ -3,6 +3,7 @@ package com.github.c0c0tier.dungeon_defenders.init;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.EterniaCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpikeTrapBlock;
+import com.github.c0c0tier.dungeon_defenders.item.ManaTestWandItem;
 import net.minecraft.world.item.BlockItem;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredBlock;
@@ -34,6 +35,10 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> SPIKE_TRAP_ITEM =
             ITEMS.registerSimpleBlockItem("spike_trap", SPIKE_TRAP);
+
+    // 4. Baguette de test : retire 10 de mana au clic droit, pour vérifier le HUD (mana)
+    public static final DeferredItem<ManaTestWandItem> MANA_TEST_WAND =
+            ITEMS.registerItem("mana_test_wand", ManaTestWandItem::new);
 
     // Connexion au bus d'événements
     public static void register(IEventBus modEventBus) {

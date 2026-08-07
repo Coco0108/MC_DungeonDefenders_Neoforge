@@ -196,3 +196,65 @@ Modèle `cube_all` pointant **provisoirement** sur la texture vanilla
 `minecraft:block/dripstone_block` (choisie pour son aspect visuellement "pointu"). Miné à la
 pioche (tag `mineable/pickaxe` uniquement, pas de tag de niveau d'outil) et se drope lui-même
 via `data/dungeon_defenders/loot_table/blocks/spike_trap.json`.
+
+## Le mana du joueur
+
+Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore : pour
+l'instant le mana ne se dépense ni ne se régénère, il reste affiché plein).
+
+### L'état — `init/ModAttachments.java`
+
+Le mana courant est un **data attachment** NeoForge posé sur l'entité joueur, pas un champ
+custom : c'est le mécanisme standard pour attacher un état persistant et synchronisable à une
+entité vanilla sans la sous-classer.
+
+```java
+public static final int MAX_MANA = 100;
+
+public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> MANA = ATTACHMENT_TYPES.register(
+        "mana",
+        () -> AttachmentType.builder(() -> MAX_MANA)
+                .serialize(Codec.INT.fieldOf("Mana"))
+                .sync(ByteBufCodecs.VAR_INT)
+                .build());
+```
+
+- `serialize(...)` : le mana survit à une sauvegarde/rechargement (comme les PV du cristal).
+- `sync(...)` : NeoForge pousse automatiquement la valeur au client propriétaire dès qu'un
+  code serveur fait `player.setData(ModAttachments.MANA, valeur)` puis
+  `player.syncData(ModAttachments.MANA)` — même logique de synchro explicite que
+  `sendBlockUpdated` pour le cristal, mais côté entité.
+- `MAX_MANA = 100` est la valeur par défaut : c'est aussi la valeur de retour du
+  `defaultValueSupplier`, donc un joueur sans mana explicitement défini est considéré plein.
+
+### L'affichage — `client/gui/ManaOverlay.java`
+
+Couche HUD (`GuiLayer`) enregistrée dans `DungeonDefendersModClient` via
+`RegisterGuiLayersEvent#registerAboveAll`. Volontairement minimal :
+
+- une jauge unie en haut à gauche de l'écran (`guiGraphics.fill`, pas de sprite) : fond gris
+  foncé pleine largeur, recouvert par un rectangle bleu dont la largeur est proportionnelle à
+  `currentMana / maxMana` ;
+- juste à droite de la jauge, le texte `Mana: X/Y` (clé `dungeon_defenders.hud.mana`) pour
+  lire la valeur exacte, centré verticalement sur la hauteur de la jauge.
+
+Lit `player.getData(ModAttachments.MANA)` à chaque frame ; pas d'état côté overlay lui-même.
+Voir [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) pour ce qu'il reste à
+faire (texture, régénération).
+
+### La baguette de test — `item/ManaTestWandItem.java`
+
+Item simple (pas de bloc) enregistré dans `ModBlocks` via `ITEMS.registerItem(...)` — même
+`DeferredRegister.Items` que les `BlockItem`, il n'existe pas encore de classe `ModItems`
+séparée. Sert uniquement à vérifier le HUD en jeu, sur le même principe que le harnais de
+clic droit du Cristal d'Eternia :
+
+- clic droit : retire 10 de mana (`MANA_COST`) au joueur, via
+  `player.setData(ModAttachments.MANA, ...)` puis `player.syncData(...)` pour pousser la
+  nouvelle valeur au client ;
+- message système confirmant le nouveau mana, ou `dungeon_defenders.mana_test_wand.empty` si
+  le mana est déjà à 0 ;
+- toute la logique est côté serveur (`level.isClientSide()` en sortie anticipée) ; le client
+  reçoit juste `InteractionResult.SUCCESS` pour l'animation de bras.
+
+Modèle provisoire : texture vanilla `minecraft:item/blaze_rod`, pas de modèle dédié.

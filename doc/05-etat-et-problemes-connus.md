@@ -13,9 +13,14 @@ vérifie la CI.
 - ✅ Renderer de barre de vie 3D au-dessus du cristal (API `submit` de 26.1).
 - ✅ Modèle, blockstate, loot table, tags d'outil, traductions `en_us` et `fr_fr`.
 - ✅ CI GitHub Actions.
+- ✅ `neoforge.mods.toml` renseigné avec les vraies métadonnées (`mod_authors`,
+  `mod_description` ajoutés à `replaceProperties` dans `build.gradle`).
 - ✅ Bloc `spike_trap` + son item : 2 PV de dégâts à tout `Monster` qui marche dessus
   (`stepOn`), cooldown de 1 s par entité. Modèle, blockstate, loot table, tag `mineable/pickaxe`,
   traductions `en_us`/`fr_fr`, onglet créatif.
+- ✅ Mana du joueur : data attachment `mana` (persistant, synchronisé), maximum par défaut de
+  100, affiché en HUD via `ManaOverlay` (jauge de remplissage + texte `X/Y` à côté, très
+  provisoire). Testable en jeu avec l'item `mana_test_wand` (clic droit = -10 mana).
 
 ## Corrections apportées
 
@@ -59,6 +64,24 @@ Même situation pour `models/block/spike_trap.json`, qui pointe sur
 mécanique. Il est conservé volontairement (c'est le seul moyen simple de tester sans faire
 spawner un zombie), mais il n'a rien à faire dans une version jouable.
 
+### Le mana n'a pas de vraie utilité de gameplay
+
+`ManaTestWandItem` retire 10 de mana au clic droit, mais c'est un harnais de test au même
+titre que le clic droit sur le cristal : aucun sort ni capacité réelle ne consomme de mana,
+et il n'y a pas de régénération, donc le mana ne remonte jamais une fois dépensé (à part en
+se reconnectant, puisque l'attachment n'est pas remis à `MAX_MANA` ailleurs qu'à sa création).
+Prochaines étapes logiques : une vraie capacité qui consomme du mana, une régénération
+passive (tick côté serveur, borné à `MAX_MANA`), puis retrait de la baguette de test.
+
+### Le HUD du mana n'a pas de vrai visuel
+
+`ManaOverlay` dessine du texte et des rectangles pleins (`guiGraphics.fill`), sans texture ni
+alignement avec le reste du HUD (hotbar, XP, faim…) : c'est un placeholder assumé, à
+remplacer par des sprites une fois le reste de l'UI défini. Il est aussi positionné en
+`registerAboveAll` à une position fixe (haut gauche), sans tenir compte de
+`Gui.leftHeight`/`rightHeight` comme le fait le HUD vanilla pour empiler les barres sans se
+chevaucher.
+
 ### Le rendu n'est pas interpolé
 
 `extractRenderState` reçoit `partialTicks` mais ne s'en sert pas : la barre saute d'un palier
@@ -75,7 +98,6 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 | Fichier | Reliquat |
 |---|---|
 | `README.md` | encore le README du MDK NeoForge, ne parle pas du mod |
-| `src/main/templates/META-INF/neoforge.mods.toml` | `description = "Example mod description."`, `authors` commenté — alors que `mod_description` et `mod_authors` existent dans `gradle.properties` mais ne sont pas dans `replaceProperties` de `build.gradle` |
 | `Config.java` | spec d'exemple (`logDirtBlock`, `magicNumber`…) jamais enregistrée via `registerConfig` |
 | `DungeonDefendersModClient` | enregistre un `IConfigScreenFactory` pour une config inexistante au runtime |
 | `TEMPLATE_LICENSE.txt` | licence du template, à ne pas confondre avec la licence du mod (`All Rights Reserved`) |
@@ -84,8 +106,11 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 ## Pistes prioritaires
 
 1. Créer les textures et vrais modèles du cristal et du piège à pics.
-2. Renseigner `neoforge.mods.toml` et le `README.md` avec les vraies métadonnées.
+2. Renseigner le `README.md` avec les vraies métadonnées (le `neoforge.mods.toml` est fait).
 3. Externaliser les constantes de gameplay (`DEFAULT_HEALTH`, `DAMAGE_PER_HIT`,
    `SEARCH_RANGE`) dans `Config`, et enregistrer la spec.
 4. Retirer le harnais de test du clic droit quand une autre source de dégâts existera.
 5. Étendre l'IA au-delà des zombies (le goal n'exige qu'un `PathfinderMob`).
+6. Donner une vraie utilité au mana (un sort/une capacité qui le consomme, une régénération
+   passive), retirer `ManaTestWandItem`, puis remplacer le HUD provisoire de `ManaOverlay`
+   par un vrai visuel.
