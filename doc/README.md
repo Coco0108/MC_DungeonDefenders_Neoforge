@@ -19,7 +19,7 @@ que les monstres tentent de détruire, et peut se défendre avec des pièges com
 ## Sommaire
 
 1. [Architecture du projet](01-architecture.md) — arborescence, rôle de chaque classe, cycle d'enregistrement.
-2. [Gameplay & mécaniques](02-gameplay.md) — le Cristal d'Eternia, les PV, l'IA des zombies, le rendu de la barre de vie.
+2. [Gameplay & mécaniques](02-gameplay.md) — le Cristal d'Eternia, les PV, l'IA des zombies, le rendu de la barre de vie, et le HUD custom (mana, vie, expérience, vague, phase, score, personnage, compétences).
 3. [Build & lancement](03-build-et-lancement.md) — commandes Gradle, configurations de run, CI GitHub Actions.
 4. [Guide : ajouter du contenu](04-guide-ajout-contenu.md) — recettes pour ajouter un bloc, un block entity, une traduction.
 5. [État du projet & problèmes connus](05-etat-et-problemes-connus.md) — ce qui reste du template, ce qui est cassé, pistes.
