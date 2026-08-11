@@ -7,13 +7,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.client.gui.GuiLayer;
 
-// Overlay volontairement minimal (colonne verticale + texte), même principe que
-// ManaOverlay : à remplacer par une vraie texture quand le reste du HUD sera dessiné, voir
-// 05-etat-et-problemes-connus.md. Contrairement au mana, pas d'attachment ici : la vie est
-// déjà un état vanilla synchronisé (getHealth/getMaxHealth), le maximum à 100 est fixé
-// dans ModEvents (attribut MAX_HEALTH du joueur).
+// Overlay volontairement minimal (losange + texte, via DiamondGauge), même principe que
+// ManaOverlay : un premier pas vers la forme du HUD de référence, en couleurs plates — les
+// vraies textures viendront dans un second temps, voir 05-etat-et-problemes-connus.md.
+// Contrairement au mana, pas d'attachment ici : la vie est déjà un état vanilla synchronisé
+// (getHealth/getMaxHealth), le maximum à 100 est fixé dans ModEvents (attribut MAX_HEALTH du
+// joueur).
 //
-// Colonne de droite du groupe bas-gauche (mana | vie), juste à droite de ManaOverlay, même
+// Losange de droite du groupe bas-gauche (mana | vie), juste à droite de ManaOverlay, même
 // hauteur, au-dessus de la barre d'expérience. Voir HudLayout pour les constantes partagées.
 public class HealthOverlay implements GuiLayer {
     private static final int FILLED_COLOR = 0xFFEF4444;
@@ -31,20 +32,14 @@ public class HealthOverlay implements GuiLayer {
         int currentHealth = Math.round(player.getHealth());
         int maxHealth = Math.round(player.getMaxHealth());
 
-        int columnLeft = HudLayout.MARGIN + HudLayout.COLUMN_WIDTH + HudLayout.COLUMN_GAP;
-        int columnBottom = ExperienceOverlay.barTop(guiGraphics) - HudLayout.ROW_GAP;
-        int columnTop = columnBottom - HudLayout.COLUMN_HEIGHT;
-        int filledHeight = maxHealth <= 0 ? 0 : (int) ((long) HudLayout.COLUMN_HEIGHT * currentHealth / maxHealth);
-        int filledTop = columnBottom - filledHeight;
+        int centerX = HudLayout.MARGIN + HudLayout.DIAMOND_RADIUS * 3 + HudLayout.DIAMOND_GAP;
+        int bottomY = ExperienceOverlay.barTop(guiGraphics) - HudLayout.ROW_GAP;
+        double fillRatio = maxHealth <= 0 ? 0 : (double) currentHealth / maxHealth;
 
-        guiGraphics.fill(columnLeft, columnTop, columnLeft + HudLayout.COLUMN_WIDTH, columnBottom, EMPTY_COLOR);
-        if (filledHeight > 0) {
-            guiGraphics.fill(columnLeft, filledTop, columnLeft + HudLayout.COLUMN_WIDTH, columnBottom, FILLED_COLOR);
-        }
+        DiamondGauge.render(guiGraphics, centerX, bottomY, HudLayout.DIAMOND_RADIUS, fillRatio, FILLED_COLOR, EMPTY_COLOR);
 
         Component text = Component.translatable("dungeon_defenders.hud.health", currentHealth, maxHealth);
-        int centerX = columnLeft + HudLayout.COLUMN_WIDTH / 2;
-        int textY = columnTop - minecraft.font.lineHeight - 2;
+        int textY = bottomY - HudLayout.DIAMOND_RADIUS * 2 - minecraft.font.lineHeight - 2;
         guiGraphics.centeredText(minecraft.font, text, centerX, textY, TEXT_COLOR);
     }
 }

@@ -21,8 +21,9 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── GamePhase.java                # Enum des phases de partie (BUILD, COMBAT)
     │   ├── client/gui/
     │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)
-    │   │   ├── ManaOverlay.java              # Colonne verticale mana, bas gauche (client uniquement)
-    │   │   ├── HealthOverlay.java            # Colonne verticale vie, bas gauche (client uniquement)
+    │   │   ├── DiamondGauge.java              # Dessine une jauge en forme de losange (fill() empilés, sans texture)
+    │   │   ├── ManaOverlay.java              # Losange mana, bas gauche (client uniquement)
+    │   │   ├── HealthOverlay.java            # Losange vie, bas gauche (client uniquement)
     │   │   ├── ExperienceOverlay.java        # Barre horizontale expérience custom, bas gauche (client uniquement)
     │   │   ├── WaveOverlay.java              # Couche HUD affichant la vague en cours (client uniquement)
     │   │   ├── WaveEnemiesOverlay.java       # Couche HUD affichant les ennemis tués/total, haut centre (client uniquement)

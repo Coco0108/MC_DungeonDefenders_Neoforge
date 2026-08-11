@@ -13,35 +13,41 @@ Lancer le client de dev :
 
 ## HUD — groupe bas-gauche (mana, vie, expérience)
 
-- [ ] En bas à gauche de l'écran : deux colonnes verticales côte à côte (mana en bleu à
-      gauche, vie en rouge à droite), avec une barre horizontale verte (expérience) tout en
-      bas, sous les deux colonnes. Rien ne doit se chevaucher.
-- [ ] Le texte `Mana: 100/100` apparaît **au-dessus** de la colonne mana, centré sur sa
-      largeur. Idem pour `Vie : 100/100` au-dessus de la colonne vie.
+- [ ] En bas à gauche de l'écran : deux **losanges** côte à côte (mana en bleu à gauche, vie
+      en rouge à droite — pointes en haut/bas/gauche/droite, pas des rectangles), avec une
+      barre horizontale verte (expérience) tout en bas, sous les deux losanges. Rien ne doit
+      se chevaucher.
+- [ ] Les losanges sont bien des losanges reconnaissables (largeur qui augmente puis diminue
+      du bas vers le haut), pas des rectangles ni des formes crénelées illisibles — c'est un
+      rendu "pixel art" (empilement de bandes de 1px), un léger crénelage sur les bords
+      obliques est normal et attendu, ce n'est pas un bug.
+- [ ] Le texte `Mana: 100/100` apparaît **au-dessus** de la pointe haute du losange mana,
+      centré. Idem pour `Vie : 100/100` au-dessus du losange vie.
 - [ ] Le texte `Expérience : 0/100` apparaît à droite de la barre verte (comme avant, ça n'a
       pas changé pour l'expérience).
-- [ ] Les colonnes mana/vie sont pleines (bleu/rouge sur toute la hauteur) à `100/100` ; la
+- [ ] Les losanges mana/vie sont pleins (bleu/rouge sur toute leur hauteur) à `100/100` ; la
       barre d'expérience est vide (fond gris) à `0/100`.
 - [ ] Les cœurs vanilla (habituellement en bas à gauche, au-dessus de la barre de faim) sont
-      **absents** — remplacés par la colonne rouge.
+      **absents** — remplacés par le losange rouge.
 - [ ] Vérifier que la barre d'XP vanilla est bien invisible (`EXPERIENCE_LEVEL` masqué) et ne
       se confond pas avec la barre verte du mod.
 - [ ] Prendre `mana_test_wand` dans l'onglet créatif Dungeon Defenders (icône bâton de
-      blaze, pas de texture dédiée). Clic droit : la colonne mana perd 10 % de sa hauteur
-      **par le haut** (elle se vide du haut vers le bas puisqu'elle se remplit du bas vers le
-      haut), le texte passe à `90/100`, un message système confirme `-10 mana (90/100)`.
-- [ ] Répéter jusqu'à `0/100` : la colonne mana doit être entièrement vide (fond gris), et un
+      blaze, pas de texture dédiée). Clic droit : le losange mana perd 10 % de sa hauteur
+      **par le haut** (il se vide du haut vers le bas puisqu'il se remplit du bas vers le
+      haut — la pointe haute disparaît en premier), le texte passe à `90/100`, un message
+      système confirme `-10 mana (90/100)`.
+- [ ] Répéter jusqu'à `0/100` : le losange mana doit être entièrement vide (fond gris), et un
       nouveau clic droit affiche le message « Pas assez de mana ! » sans repasser en négatif.
 - [ ] Quitter le monde et y revenir (ou `/reload` + relog) : le mana affiché doit être celui
       d'avant la déconnexion, pas remis à 100 (l'attachment est censé persister).
-- [ ] Se prendre des dégâts (chute, mob, `/damage`) : la colonne vie diminue par le haut, en
+- [ ] Se prendre des dégâts (chute, mob, `/damage`) : le losange vie diminue par le haut, en
       cohérence avec les dégâts subis.
 - [ ] Se reconnecter (relog) après avoir perdu de la vie : la vie perdue doit être conservée,
       pas remise à 100/100 (seul un joueur qui était déjà à son maximum doit se retrouver à
       100/100 après coup).
 - [ ] Un nouveau joueur (jamais connecté à ce monde) doit spawn à 100/100, pas à 20/20.
-- [ ] Redimensionner la fenêtre : le groupe entier reste collé au bord bas-gauche, colonnes et
-      barre toujours alignées entre elles.
+- [ ] Redimensionner la fenêtre : le groupe entier reste collé au bord bas-gauche, losanges et
+      barre toujours alignés entre eux.
 
 ## HUD — vague
 

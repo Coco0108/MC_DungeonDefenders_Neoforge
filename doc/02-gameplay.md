@@ -234,12 +234,13 @@ Couche HUD (`GuiLayer`) enregistrée dans `DungeonDefendersModClient` via
 bas-gauche décrit dans [Le groupe bas-gauche](#le-groupe-bas-gauche--mana-vie-expérience)
 ci-dessous :
 
-- une colonne verticale unie (`guiGraphics.fill`, pas de sprite), en bas à gauche de l'écran :
-  fond gris foncé pleine hauteur, recouvert par le bas d'un rectangle bleu dont la hauteur est
-  proportionnelle à `currentMana / maxMana` — la jauge se remplit du bas vers le haut ;
-  c'est la colonne de **gauche** du groupe (vie à droite) ;
-- au-dessus de la colonne, le texte `Mana: X/Y` (clé `dungeon_defenders.hud.mana`), centré
-  horizontalement (`guiGraphics.centeredText`) sur la largeur de la colonne.
+- un losange (`DiamondGauge`, voir plus bas), en bas à gauche de l'écran : fond gris foncé sur
+  toute sa hauteur, recouvert par le bas d'un losange bleu dont la hauteur est proportionnelle
+  à `currentMana / maxMana` — la jauge se remplit du bas vers le haut, comme avant, mais dans
+  une forme de losange plutôt qu'un rectangle. C'est le losange de **gauche** du groupe (vie à
+  droite) ;
+- au-dessus du losange, le texte `Mana: X/Y` (clé `dungeon_defenders.hud.mana`), centré
+  horizontalement (`guiGraphics.centeredText`) sur son centre.
 
 Lit `player.getData(ModAttachments.MANA)` à chaque frame ; pas d'état côté overlay lui-même.
 Voir [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) pour ce qu'il reste à
@@ -301,11 +302,11 @@ join, où le joueur vient de spawn à 20/20 avant que l'attribut ne soit modifi�
 
 ### L'affichage — `client/gui/HealthOverlay.java`
 
-Même structure que `ManaOverlay` (colonne verticale + texte `Health: X/Y`, clé
-`dungeon_defenders.hud.health`), en rouge, positionnée juste à **droite** de la colonne mana
-(`HudLayout.MARGIN + COLUMN_WIDTH + COLUMN_GAP`), même hauteur. Lit directement
-`player.getHealth()` / `player.getMaxHealth()` à chaque frame — pas besoin d'attachment, ces
-valeurs sont déjà tenues à jour et synchronisées par le moteur.
+Même structure que `ManaOverlay` (losange + texte `Health: X/Y`, clé
+`dungeon_defenders.hud.health`), en rouge, positionné juste à **droite** du losange mana
+(centré sur `HudLayout.MARGIN + DIAMOND_RADIUS * 3 + DIAMOND_GAP`), même taille. Lit
+directement `player.getHealth()` / `player.getMaxHealth()` à chaque frame — pas besoin
+d'attachment, ces valeurs sont déjà tenues à jour et synchronisées par le moteur.
 
 Les cœurs vanilla (`VanillaGuiLayers.PLAYER_HEALTH`) sont masqués dans
 `DungeonDefendersModClient.onRegisterGuiLayers` via `event.replaceLayer(..., HIDDEN)` :
@@ -341,7 +342,7 @@ pas encore de vraie notion de "maximum", c'est surtout ce qui donne son échelle
 
 Contrairement à `ManaOverlay`/`HealthOverlay`, reste une **barre horizontale** classique
 (jauge + texte `Experience: X/Y` à sa droite, clé `dungeon_defenders.hud.experience`), en
-vert, tout en bas de l'écran, sous les deux colonnes. Comme rien ne fait encore varier
+vert, tout en bas de l'écran, sous les deux losanges. Comme rien ne fait encore varier
 l'attachment, elle s'affiche `0/100` en permanence tant qu'aucun mécanisme n'alimente
 `ModAttachments.EXPERIENCE`.
 
@@ -352,19 +353,28 @@ coin bas-gauche de l'écran :
 
 ```
    Mana        Vie
-  ┌────┐     ┌────┐
-  │▓▓▓▓│     │▓▓▓▓│    <- colonnes verticales, remplissage bas → haut
-  │▓▓▓▓│     │▓▓▓▓│       mana à gauche, vie à droite
-  │░░░░│     │▓▓▓▓│
-  └────┘     └────┘
+    ◆           ◆     <- losanges, remplissage bas → haut (pointe basse → pointe haute)
+   ▓█▓         ▓█▓        mana à gauche, vie à droite
+  ▓███▓       ▓███▓
+  ░░░░░       ▓▓▓▓▓
+    ░           ▓
   [███░░░░░░░░░░░░░░] Experience: 0/100   <- barre horizontale, tout en bas
 ```
 
+**Pourquoi des losanges et pas des rectangles ?** Le jeu qui a inspiré ce HUD (*Dungeon
+Defenders* original) affiche le mana et la vie du joueur dans un widget en forme de
+losange/triangle, pas des barres classiques. `DiamondGauge.render(...)` reproduit cette forme
+sans texture : pour chaque bande horizontale d'1px de haut, la largeur croît puis décroît
+linéairement (maximale au centre, nulle aux deux pointes) — un simple empilement de
+`guiGraphics.fill(...)`, façon pixel art, en attendant de vraies textures (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)). `ManaOverlay` et
+`HealthOverlay` appellent cette même méthode avec des couleurs différentes ; ils ne dessinent
+plus rien eux-mêmes directement.
+
 `client/gui/HudLayout.java` centralise les constantes de mise en page partagées par les trois
-(marge, largeur/hauteur des colonnes, écart entre colonnes, écart avant la barre
-d'expérience) : sans ça, garder les trois classes indépendantes alignées au pixel près
-demanderait de dupliquer les mêmes valeurs magiques partout, avec le risque qu'elles divergent
-au premier ajustement.
+(marge, rayon/écart des losanges, écart avant la barre d'expérience) : sans ça, garder les
+trois classes indépendantes alignées au pixel près demanderait de dupliquer les mêmes valeurs
+magiques partout, avec le risque qu'elles divergent au premier ajustement.
 
 `ExperienceOverlay` calcule sa position en premier (ancrée au bord bas de l'écran via
 `guiGraphics.guiHeight()`) et expose `barTop(guiGraphics)`, une méthode package-visible que
