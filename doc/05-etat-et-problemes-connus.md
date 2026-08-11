@@ -35,6 +35,10 @@ vérifie la CI.
   `WaveEnemiesOverlay` (jauge orange + texte `Ennemis : X/Y`, en miroir de
   `ExperienceOverlay`). Démarre à `0/10`, rien ne fait encore
   varier ni les tués ni le total.
+- ✅ Phase de la partie : data attachment `game_phase` sur la `Level` (ordinal de l'enum
+  `GamePhase` : `BUILD`/`COMBAT`), démarre en `BUILD`, affichée juste sous la rangée
+  vague/ennemis via `PhaseOverlay` (`Phase : Construction`). Aucune transition n'existe
+  encore.
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
   voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 
@@ -110,7 +114,16 @@ déclenchement automatique/manuel, pas de condition pour passer à la vague suiv
 victoire à la vague 5 ni de défaite si le cristal tombe avant. C'est un compteur statique pour
 l'instant. Même chose pour `wave_enemies_killed`/`wave_enemies_total` : aucun mob n'est
 généré pour une vague, rien n'incrémente les tués, le total (`10`) n'est jamais recalculé
-selon la vague ou la difficulté.
+selon la vague ou la difficulté. Idem pour `game_phase` : reste bloqué sur `BUILD`, rien ne
+fait passer en `COMBAT` ni ne revient en `BUILD` entre deux vagues.
+
+### `game_phase` stocke un ordinal d'enum, pas un nom stable
+
+`ModAttachments.GAME_PHASE` sérialise `GamePhase.ordinal()` (0 pour `BUILD`, 1 pour
+`COMBAT`). Si l'ordre des constantes de `GamePhase` change un jour (insertion d'une phase
+avant `COMBAT`, par exemple), les sauvegardes existantes se retrouveront avec la mauvaise
+phase au chargement. Pas un problème tant qu'on ajoute des valeurs à la fin de l'enum, mais à
+garder en tête — voir [02-gameplay.md](02-gameplay.md#la-phase-de-la-partie--clientguiphaseoverlayjava).
 
 ### Le HUD du mana et de la vie n'a pas de vrai visuel
 
@@ -160,5 +173,6 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
    (aujourd'hui bloqué à `0/100`, comme le mana avant `ManaTestWandItem`).
 9. Définir le déroulement des vagues (déclenchement, génération des ennemis, condition de
    passage à la suivante, victoire à la dernière vague, défaite si le cristal tombe avant) et
-   faire avancer `ModAttachments.CURRENT_WAVE`/`WAVE_ENEMIES_TOTAL`/`WAVE_ENEMIES_KILLED` en
-   conséquence.
+   faire avancer `ModAttachments.CURRENT_WAVE`/`WAVE_ENEMIES_TOTAL`/`WAVE_ENEMIES_KILLED`/
+   `GAME_PHASE` en conséquence (transition `BUILD` → `COMBAT` au déclenchement d'une vague,
+   retour à `BUILD` une fois la vague nettoyée).

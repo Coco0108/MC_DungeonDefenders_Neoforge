@@ -17,13 +17,15 @@ MC_DungeonDefenders_Neoforge/
     │   ├── Config.java                       # Spec de config (héritée du template, non branchée)
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
-    │   │   └── ModAttachments.java           # DeferredRegister des data attachments (mana du joueur)
+    │   │   ├── ModAttachments.java           # DeferredRegister des data attachments (mana, vagues, phase...)
+    │   │   └── GamePhase.java                # Enum des phases de partie (BUILD, COMBAT)
     │   ├── client/gui/
     │   │   ├── ManaOverlay.java              # Couche HUD affichant le mana (client uniquement)
     │   │   ├── HealthOverlay.java            # Couche HUD affichant la vie (client uniquement)
     │   │   ├── ExperienceOverlay.java        # Couche HUD affichant l'expérience custom (client uniquement)
     │   │   ├── WaveOverlay.java              # Couche HUD affichant la vague en cours (client uniquement)
-    │   │   └── WaveEnemiesOverlay.java       # Couche HUD affichant les ennemis tués/total de la vague (client uniquement)
+    │   │   ├── WaveEnemiesOverlay.java       # Couche HUD affichant les ennemis tués/total de la vague (client uniquement)
+    │   │   └── PhaseOverlay.java             # Couche HUD affichant la phase (construction/combat) (client uniquement)
     │   ├── entity/ai/
     │   │   └── AttackEterniaCrystalGoal.java # Goal : converger vers le cristal et le frapper
     │   └── block/
@@ -82,9 +84,9 @@ référencé sans risque.
 - `@EventBusSubscriber(value = Dist.CLIENT)` + `onRegisterRenderers(EntityRenderersEvent.RegisterRenderers)` :
   enregistre le renderer de block entity du cristal.
 - `onRegisterGuiLayers(RegisterGuiLayersEvent)` : enregistre `ManaOverlay`, `HealthOverlay`,
-  `ExperienceOverlay`, `WaveOverlay` et `WaveEnemiesOverlay` via `event.registerAboveAll(...)`,
-  au-dessus de toutes les autres couches du HUD, et masque les cœurs, la faim, l'expérience et
-  la hotbar vanilla via `event.replaceLayer(...)` — voir
+  `ExperienceOverlay`, `WaveOverlay`, `WaveEnemiesOverlay` et `PhaseOverlay` via
+  `event.registerAboveAll(...)`, au-dessus de toutes les autres couches du HUD, et masque les
+  cœurs, la faim, l'expérience et la hotbar vanilla via `event.replaceLayer(...)` — voir
   [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 
 > `@EventBusSubscriber` n'a pas de paramètre `bus` dans cette version : les événements qui
@@ -106,12 +108,12 @@ Chargement FML
    ├─ RegisterEvent(BLOCK)             → eternia_crystal (EterniaCrystalBlock)
    ├─ RegisterEvent(ITEM)              → eternia_crystal (BlockItem)
    ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana, experience, current_wave,
-   │                                      wave_enemies_total, wave_enemies_killed
+   │                                      wave_enemies_total, wave_enemies_killed, game_phase
    ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
    ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer
    └─ RegisterGuiLayersEvent [client]  → ManaOverlay, HealthOverlay, ExperienceOverlay,
-                                          WaveOverlay, WaveEnemiesOverlay
+                                          WaveOverlay, WaveEnemiesOverlay, PhaseOverlay
 
 Bus de jeu (NeoForge.EVENT_BUS)
    ├─ ModEvents.onZombieSpawn(EntityJoinLevelEvent)

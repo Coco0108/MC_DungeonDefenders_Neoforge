@@ -12,6 +12,9 @@
   "dungeon_defenders.hud.experience": "Expérience : %s/%s",
   "dungeon_defenders.hud.wave": "Vague %s/%s",
   "dungeon_defenders.hud.wave_enemies": "Ennemis : %s/%s",
+  "dungeon_defenders.hud.phase": "Phase : %s",
+  "dungeon_defenders.phase.build": "Construction",
+  "dungeon_defenders.phase.combat": "Combat",
   "dungeon_defenders.mana_test_wand.used": "-%s mana (%s/%s)",
   "dungeon_defenders.mana_test_wand.empty": "Pas assez de mana !",
 

@@ -75,6 +75,16 @@ public class ModAttachments {
                     .sync(ByteBufCodecs.VAR_INT)
                     .build());
 
+    // Phase de la partie (construction, combat...) : état de la Level, comme current_wave.
+    // Stockée comme l'ordinal de GamePhase (même approche que les autres compteurs, pas
+    // besoin d'un Codec dédié à l'enum pour l'instant). Démarre en phase de construction.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> GAME_PHASE = ATTACHMENT_TYPES.register(
+            "game_phase",
+            () -> AttachmentType.builder(() -> GamePhase.BUILD.ordinal())
+                    .serialize(Codec.INT.fieldOf("GamePhase"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
     public static void register(IEventBus modEventBus) {
         ATTACHMENT_TYPES.register(modEventBus);
     }

@@ -393,6 +393,23 @@ calculer où commence le texte `Vague X/Y` et se positionner juste à sa gauche 
 couplage entre les deux classes, pour ne pas dupliquer la logique de lecture de
 `CURRENT_WAVE`/`MAX_WAVE`.
 
+### La phase de la partie — `client/gui/PhaseOverlay.java`
+
+Juste en dessous de la rangée vague/ennemis (`WaveOverlay.ROW_Y + ROW_HEIGHT`), texte seul
+comme `WaveOverlay` : `Phase : Construction` ou `Phase : Combat`, clé
+`dungeon_defenders.hud.phase`. Aucune transition entre phases n'existe encore : la partie
+démarre et reste en `BUILD` tant que rien ne la fait changer.
+
+`init/GamePhase.java` est un enum (`BUILD`, `COMBAT`) plutôt qu'une chaîne libre, pour garder
+un ensemble de valeurs fermé et une traduction par valeur
+(`dungeon_defenders.phase.build`/`.combat`, via `GamePhase.translationKey()`). L'attachment
+`ModAttachments.GAME_PHASE` stocke cependant un simple `Integer` (l'ordinal de l'enum), comme
+tous les autres compteurs du mod — pas de `Codec`/`StreamCodec` dédié à l'enum pour
+l'instant, ça aurait été de la complexité en plus pour un gain nul tant qu'il n'y a que deux
+valeurs. À revoir si la liste des phases grandit ou si l'ordre des constantes doit pouvoir
+changer sans casser les sauvegardes existantes (l'ordinal n'est pas stable entre deux
+réordonnancements de l'enum).
+
 ## Le HUD vanilla masqué
 
 Le mod vise une interface entièrement custom : plusieurs couches du HUD vanilla sont donc

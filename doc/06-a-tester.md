@@ -67,6 +67,14 @@ Lancer le client de dev :
       juste à gauche du texte `Vague X/Y` (elle suit sa largeur, qui peut varier avec le
       nombre de chiffres).
 
+## HUD — phase
+
+- [ ] Le texte `Phase : Construction` apparaît juste en dessous de la rangée `Vague X/Y` /
+      `Ennemis : X/Y`, collé au bord droit.
+- [ ] Il reste stable sur `Construction` — rien ne le fait encore changer, c'est attendu.
+- [ ] Les trois lignes en haut à droite (vague+ennemis, phase) sont bien empilées sans se
+      chevaucher ni se toucher.
+
 ## HUD vanilla masqué
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

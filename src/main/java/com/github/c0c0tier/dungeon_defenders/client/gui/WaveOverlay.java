@@ -16,7 +16,9 @@ public class WaveOverlay implements GuiLayer {
     private static final int MARGIN = 4;
     // Rangée partagée avec WaveEnemiesOverlay, qui se place juste à gauche de ce texte (via
     // waveText(...) ci-dessous) plutôt qu'en dessous, pour rester sur la même ligne.
+    // PhaseOverlay, lui, se place dans la rangée suivante via ROW_Y + ROW_HEIGHT.
     static final int ROW_Y = MARGIN;
+    static final int ROW_HEIGHT = 14;
     private static final int TEXT_COLOR = 0xFFFFFF;
 
     @Override
