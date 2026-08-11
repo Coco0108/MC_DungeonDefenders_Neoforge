@@ -31,8 +31,9 @@ vérifie la CI.
   démarre à 1), affichée en haut à droite (`Vague X/5`) via `WaveOverlay` — texte seul, pas de
   jauge. Aucun déroulement de vagues n'existe encore.
 - ✅ Progression de la vague : `wave_enemies_killed`/`wave_enemies_total` (mêmes garanties que
-  `current_wave`), affichée juste en dessous via `WaveEnemiesOverlay` (jauge orange + texte
-  `Ennemis : X/Y`, en miroir de `ExperienceOverlay`). Démarre à `0/10`, rien ne fait encore
+  `current_wave`), affichée sur la même rangée, juste à gauche de `Vague X/Y`, via
+  `WaveEnemiesOverlay` (jauge orange + texte `Ennemis : X/Y`, en miroir de
+  `ExperienceOverlay`). Démarre à `0/10`, rien ne fait encore
   varier ni les tués ni le total.
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
   voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).

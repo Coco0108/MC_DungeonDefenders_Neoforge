@@ -14,10 +14,9 @@ import net.neoforged.neoforge.client.gui.GuiLayer;
 // joueur : lu depuis Minecraft.level, pas Minecraft.player.
 public class WaveOverlay implements GuiLayer {
     private static final int MARGIN = 4;
-    // Position/hauteur de cette rangée dans le coin haut droit : WaveEnemiesOverlay s'appuie
-    // dessus pour se placer juste en dessous (même convention que ManaOverlay côté gauche).
+    // Rangée partagée avec WaveEnemiesOverlay, qui se place juste à gauche de ce texte (via
+    // waveText(...) ci-dessous) plutôt qu'en dessous, pour rester sur la même ligne.
     static final int ROW_Y = MARGIN;
-    static final int ROW_HEIGHT = 14;
     private static final int TEXT_COLOR = 0xFFFFFF;
 
     @Override
@@ -28,11 +27,14 @@ public class WaveOverlay implements GuiLayer {
             return;
         }
 
-        int currentWave = level.getData(ModAttachments.CURRENT_WAVE);
-        int maxWave = ModAttachments.MAX_WAVE;
-
-        Component text = Component.translatable("dungeon_defenders.hud.wave", currentWave, maxWave);
+        Component text = waveText(level);
         int x = guiGraphics.guiWidth() - MARGIN - minecraft.font.width(text);
         guiGraphics.text(minecraft.font, text, x, ROW_Y, TEXT_COLOR);
+    }
+
+    static Component waveText(Level level) {
+        int currentWave = level.getData(ModAttachments.CURRENT_WAVE);
+        int maxWave = ModAttachments.MAX_WAVE;
+        return Component.translatable("dungeon_defenders.hud.wave", currentWave, maxWave);
     }
 }

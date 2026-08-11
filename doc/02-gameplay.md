@@ -378,14 +378,20 @@ pas `player`, puisque l'état appartient au monde.
 
 ### La progression de la vague — `client/gui/WaveEnemiesOverlay.java`
 
-Juste en dessous de `WaveOverlay` (`WaveOverlay.ROW_Y + ROW_HEIGHT`), même style que
-`ExperienceOverlay` (jauge + texte `Ennemis : X/Y`, clé
-`dungeon_defenders.hud.wave_enemies`) mais **en miroir** : le texte est à gauche de la jauge
-et le groupe entier (jauge collée au bord droit, texte juste à sa gauche) reste aligné avec
-`WaveOverlay` au-dessus. `X` = ennemis déjà tués (`ModAttachments.WAVE_ENEMIES_KILLED`, vide
-par défaut), `Y` = ennemis total de la vague (`ModAttachments.WAVE_ENEMIES_TOTAL`, `10` par
+Sur la **même rangée** que `WaveOverlay` (pas en dessous, pour lire les deux informations
+d'un coup d'œil), même style que `ExperienceOverlay` (jauge + texte `Ennemis : X/Y`, clé
+`dungeon_defenders.hud.wave_enemies`) mais **en miroir et ancré sur `WaveOverlay`** : dans
+l'ordre, de droite à gauche, `Vague X/Y` puis un espace, la jauge (`BAR_WIDTH = 60`, plus
+étroite que les autres jauges du HUD pour que la ligne ne déborde pas), puis le texte
+`Ennemis : X/Y`. `X` = ennemis déjà tués (`ModAttachments.WAVE_ENEMIES_KILLED`, vide par
+défaut), `Y` = ennemis total de la vague (`ModAttachments.WAVE_ENEMIES_TOTAL`, `10` par
 défaut) ; la jauge orange se remplit à mesure que `X` se rapproche de `Y`. Deux attachments
 sur la `Level`, même raisonnement que `current_wave`.
+
+`WaveEnemiesOverlay` appelle `WaveOverlay.waveText(level)` (méthode package-visible) pour
+calculer où commence le texte `Vague X/Y` et se positionner juste à sa gauche — c'est le seul
+couplage entre les deux classes, pour ne pas dupliquer la logique de lecture de
+`CURRENT_WAVE`/`MAX_WAVE`.
 
 ## Le HUD vanilla masqué
 

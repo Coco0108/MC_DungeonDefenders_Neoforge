@@ -58,13 +58,14 @@ Lancer le client de dev :
 
 ## HUD — progression de la vague
 
-- [ ] Une jauge orange apparaît juste en dessous du texte `Vague 1/5`, avec le texte
-      `Ennemis : 0/10` à sa gauche (jauge collée au bord droit, texte à gauche — sens inverse
-      des jauges de gauche).
+- [ ] Sur la **même ligne** que `Vague 1/5` (pas en dessous), de droite à gauche : `Vague
+      1/5`, une jauge orange, puis le texte `Ennemis : 0/10`. Tout doit tenir sur une seule
+      ligne sans se chevaucher.
 - [ ] La jauge est vide (fond gris) puisque `0/10` : rien ne doit apparaître en orange tant
       que rien ne tue d'ennemis, c'est attendu.
-- [ ] Les deux lignes (`Vague X/Y` et `Ennemis : X/Y`) restent alignées l'une sous l'autre et
-      collées au bord droit en redimensionnant la fenêtre.
+- [ ] En redimensionnant la fenêtre, l'ensemble reste collé au bord droit et la jauge reste
+      juste à gauche du texte `Vague X/Y` (elle suit sa largeur, qui peut varier avec le
+      nombre de chiffres).
 
 ## HUD vanilla masqué
 
