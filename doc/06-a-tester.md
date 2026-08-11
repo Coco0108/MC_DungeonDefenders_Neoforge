@@ -56,6 +56,16 @@ Lancer le client de dev :
       recalculée à chaque frame via `guiWidth()`), pas figé à une position absolue de l'écran
       d'origine.
 
+## HUD — progression de la vague
+
+- [ ] Une jauge orange apparaît juste en dessous du texte `Vague 1/5`, avec le texte
+      `Ennemis : 0/10` à sa gauche (jauge collée au bord droit, texte à gauche — sens inverse
+      des jauges de gauche).
+- [ ] La jauge est vide (fond gris) puisque `0/10` : rien ne doit apparaître en orange tant
+      que rien ne tue d'ennemis, c'est attendu.
+- [ ] Les deux lignes (`Vague X/Y` et `Ennemis : X/Y`) restent alignées l'une sous l'autre et
+      collées au bord droit en redimensionnant la fenêtre.
+
 ## HUD vanilla masqué
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

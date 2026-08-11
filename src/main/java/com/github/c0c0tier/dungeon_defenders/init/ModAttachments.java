@@ -22,6 +22,10 @@ public class ModAttachments {
     // (déclenchement d'une vague, condition de victoire/défaite) n'est pas défini.
     public static final int MAX_WAVE = 5;
 
+    // Nombre d'ennemis par défaut dans une vague. Valeur provisoire tant que la génération
+    // des vagues (nombre d'ennemis, difficulté croissante...) n'est pas définie.
+    public static final int DEFAULT_WAVE_ENEMIES_TOTAL = 10;
+
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES =
             DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, DungeonDefendersMod.MODID);
 
@@ -50,6 +54,24 @@ public class ModAttachments {
             "current_wave",
             () -> AttachmentType.builder(() -> 1)
                     .serialize(Codec.INT.fieldOf("CurrentWave"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Nombre total d'ennemis de la vague en cours et nombre d'ennemis déjà tués. Même
+    // logique que current_wave : état de la Level, pas du joueur. Le total est réinitialisé
+    // à sa valeur par défaut au premier chargement du monde ; les tués repartent de 0, comme
+    // l'expérience, puisqu'ils s'accumulent au lieu de se dépenser.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> WAVE_ENEMIES_TOTAL = ATTACHMENT_TYPES.register(
+            "wave_enemies_total",
+            () -> AttachmentType.builder(() -> DEFAULT_WAVE_ENEMIES_TOTAL)
+                    .serialize(Codec.INT.fieldOf("WaveEnemiesTotal"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> WAVE_ENEMIES_KILLED = ATTACHMENT_TYPES.register(
+            "wave_enemies_killed",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.INT.fieldOf("WaveEnemiesKilled"))
                     .sync(ByteBufCodecs.VAR_INT)
                     .build());
 
