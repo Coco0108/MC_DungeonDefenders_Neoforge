@@ -258,3 +258,53 @@ clic droit du Cristal d'Eternia :
   reçoit juste `InteractionResult.SUCCESS` pour l'animation de bras.
 
 Modèle provisoire : texture vanilla `minecraft:item/blaze_rod`, pas de modèle dédié.
+
+## La vie du joueur
+
+Contrairement au mana, la vie n'est pas une ressource inventée pour le mod : c'est l'attribut
+vanilla `Attributes.MAX_HEALTH` / `LivingEntity.getHealth()`, déjà persistant et déjà
+synchronisé par le jeu. Le mod se contente d'en changer le maximum par défaut.
+
+### Le maximum à 100 — `ModEvents.onPlayerJoin`
+
+```java
+private static final double PLAYER_MAX_HEALTH = 100.0D;
+
+@SubscribeEvent
+public static void onPlayerJoin(EntityJoinLevelEvent event) {
+    if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Player player)) {
+        return;
+    }
+
+    AttributeInstance maxHealthAttribute = player.getAttribute(Attributes.MAX_HEALTH);
+    if (maxHealthAttribute == null) {
+        return;
+    }
+
+    boolean wasAtPreviousMax = player.getHealth() >= maxHealthAttribute.getValue();
+    maxHealthAttribute.setBaseValue(PLAYER_MAX_HEALTH);
+    if (wasAtPreviousMax) {
+        player.setHealth((float) maxHealthAttribute.getValue());
+    }
+}
+```
+
+`EntityJoinLevelEvent` se redéclenche à chaque connexion, respawn et changement de dimension
+(même remarque que pour `onZombieSpawn`). `setBaseValue` est idempotent (poser deux fois la
+même valeur ne change rien), donc pas besoin de garde anti-doublon ici. Le seul piège est de
+ne pas soigner gratuitement un joueur déjà blessé à chaque relog : le code ne remonte la vie
+au nouveau maximum que si le joueur était **déjà** à son ancien maximum (cas du tout premier
+join, où le joueur vient de spawn à 20/20 avant que l'attribut ne soit modifié).
+
+### L'affichage — `client/gui/HealthOverlay.java`
+
+Même structure que `ManaOverlay` (jauge + texte `Health: X/Y`, clé
+`dungeon_defenders.hud.health`), en rouge, positionnée juste en dessous grâce aux constantes
+`ManaOverlay.ROW_Y` / `ROW_HEIGHT`. Lit directement `player.getHealth()` /
+`player.getMaxHealth()` à chaque frame — pas besoin d'attachment, ces valeurs sont déjà
+tenues à jour et synchronisées par le moteur.
+
+Les cœurs vanilla (`VanillaGuiLayers.PLAYER_HEALTH`) sont masqués dans
+`DungeonDefendersModClient.onRegisterGuiLayers` via `event.replaceLayer(..., noOpLayer)` :
+avec 100 PV ils s'étaleraient sur plusieurs rangées de cœurs (le rendu vanilla est pensé pour
+20 PV, pas 100) et feraient de toute façon doublon avec `HealthOverlay`.

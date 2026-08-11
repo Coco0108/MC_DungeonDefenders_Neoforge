@@ -8,6 +8,7 @@
   "dungeon_defenders.eternia_crystal.destroyed": "Le cristal a été détruit !! Game Over !",
 
   "dungeon_defenders.hud.mana": "Mana : %s/%s",
+  "dungeon_defenders.hud.health": "Vie : %s/%s",
   "dungeon_defenders.mana_test_wand.used": "-%s mana (%s/%s)",
   "dungeon_defenders.mana_test_wand.empty": "Pas assez de mana !",
 

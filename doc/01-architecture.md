@@ -13,13 +13,14 @@ MC_DungeonDefenders_Neoforge/
     ├── java/com/github/c0c0tier/dungeon_defenders/
     │   ├── DungeonDefendersMod.java          # Point d'entrée @Mod (commun)
     │   ├── DungeonDefendersModClient.java    # Point d'entrée @Mod côté CLIENT uniquement
-    │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA)
+    │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA, vie max du joueur)
     │   ├── Config.java                       # Spec de config (héritée du template, non branchée)
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
     │   │   └── ModAttachments.java           # DeferredRegister des data attachments (mana du joueur)
     │   ├── client/gui/
-    │   │   └── ManaOverlay.java              # Couche HUD affichant le mana (client uniquement)
+    │   │   ├── ManaOverlay.java              # Couche HUD affichant le mana (client uniquement)
+    │   │   └── HealthOverlay.java            # Couche HUD affichant la vie (client uniquement)
     │   ├── entity/ai/
     │   │   └── AttackEterniaCrystalGoal.java # Goal : converger vers le cristal et le frapper
     │   └── block/
@@ -77,8 +78,8 @@ référencé sans risque.
   NeoForge génère un écran de config depuis l'écran « Mods ».
 - `@EventBusSubscriber(value = Dist.CLIENT)` + `onRegisterRenderers(EntityRenderersEvent.RegisterRenderers)` :
   enregistre le renderer de block entity du cristal.
-- `onRegisterGuiLayers(RegisterGuiLayersEvent)` : enregistre `ManaOverlay` via
-  `event.registerAboveAll(...)`, au-dessus de toutes les autres couches du HUD.
+- `onRegisterGuiLayers(RegisterGuiLayersEvent)` : enregistre `ManaOverlay` et `HealthOverlay`
+  via `event.registerAboveAll(...)`, au-dessus de toutes les autres couches du HUD.
 
 > `@EventBusSubscriber` n'a pas de paramètre `bus` dans cette version : les événements qui
 > implémentent `IModBusEvent` (comme `RegisterRenderers`) partent automatiquement sur le bus
@@ -102,10 +103,11 @@ Chargement FML
    ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
    ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer
-   └─ RegisterGuiLayersEvent [client]  → ManaOverlay
+   └─ RegisterGuiLayersEvent [client]  → ManaOverlay, HealthOverlay
 
 Bus de jeu (NeoForge.EVENT_BUS)
-   └─ ModEvents.onZombieSpawn(EntityJoinLevelEvent)
+   ├─ ModEvents.onZombieSpawn(EntityJoinLevelEvent)
+   └─ ModEvents.onPlayerJoin(EntityJoinLevelEvent)
 ```
 
 `ModEvents` est annoté `@EventBusSubscriber(modid = MODID)` sans `bus` explicite : il

@@ -8,6 +8,7 @@
   "dungeon_defenders.eternia_crystal.destroyed": "The Eternia Crystal has been destroyed! Game Over!",
 
   "dungeon_defenders.hud.mana": "Mana: %s/%s",
+  "dungeon_defenders.hud.health": "Health: %s/%s",
   "dungeon_defenders.mana_test_wand.used": "-%s mana (%s/%s)",
   "dungeon_defenders.mana_test_wand.empty": "Not enough mana!",
 

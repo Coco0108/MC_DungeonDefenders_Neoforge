@@ -12,6 +12,12 @@ import net.neoforged.neoforge.client.gui.GuiLayer;
 // texture quand le reste du HUD sera dessiné, voir 05-etat-et-problemes-connus.md.
 public class ManaOverlay implements GuiLayer {
     private static final int MARGIN = 4;
+    // Position de la rangée mana dans le HUD, et hauteur réservée par rangée : HealthOverlay
+    // s'appuie sur ces deux constantes pour se placer juste en dessous. Tant qu'il n'y a pas
+    // de vrai système d'empilement (voir Gui.leftHeight/rightHeight côté vanilla), c'est la
+    // seule chose qui les garde alignées.
+    static final int ROW_Y = MARGIN;
+    static final int ROW_HEIGHT = 14;
     private static final int BAR_WIDTH = 100;
     private static final int BAR_HEIGHT = 6;
     private static final int FILLED_COLOR = 0xFF3B82F6;
@@ -29,7 +35,7 @@ public class ManaOverlay implements GuiLayer {
         int currentMana = player.getData(ModAttachments.MANA);
         int maxMana = ModAttachments.MAX_MANA;
 
-        int barY = MARGIN;
+        int barY = ROW_Y;
         int filledWidth = maxMana <= 0 ? 0 : (int) ((long) BAR_WIDTH * currentMana / maxMana);
 
         guiGraphics.fill(MARGIN, barY, MARGIN + BAR_WIDTH, barY + BAR_HEIGHT, EMPTY_COLOR);

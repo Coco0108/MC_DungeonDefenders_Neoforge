@@ -21,6 +21,8 @@ vérifie la CI.
 - ✅ Mana du joueur : data attachment `mana` (persistant, synchronisé), maximum par défaut de
   100, affiché en HUD via `ManaOverlay` (jauge de remplissage + texte `X/Y` à côté, très
   provisoire). Testable en jeu avec l'item `mana_test_wand` (clic droit = -10 mana).
+- ✅ Vie du joueur : maximum vanilla porté de 20 à 100 (`ModEvents.onPlayerJoin`), affichée en
+  HUD via `HealthOverlay` (même principe que le mana, en rouge, juste en dessous).
 
 ## Corrections apportées
 
@@ -73,12 +75,13 @@ se reconnectant, puisque l'attachment n'est pas remis à `MAX_MANA` ailleurs qu'
 Prochaines étapes logiques : une vraie capacité qui consomme du mana, une régénération
 passive (tick côté serveur, borné à `MAX_MANA`), puis retrait de la baguette de test.
 
-### Le HUD du mana n'a pas de vrai visuel
+### Le HUD du mana et de la vie n'a pas de vrai visuel
 
-`ManaOverlay` dessine du texte et des rectangles pleins (`guiGraphics.fill`), sans texture ni
-alignement avec le reste du HUD (hotbar, XP, faim…) : c'est un placeholder assumé, à
-remplacer par des sprites une fois le reste de l'UI défini. Il est aussi positionné en
-`registerAboveAll` à une position fixe (haut gauche), sans tenir compte de
+`ManaOverlay` et `HealthOverlay` dessinent du texte et des rectangles pleins
+(`guiGraphics.fill`), sans texture ni alignement avec le reste du HUD (hotbar, XP, faim…) :
+c'est un placeholder assumé, à remplacer par des sprites une fois le reste de l'UI défini.
+Ils sont aussi positionnés en `registerAboveAll` à des coordonnées fixes (haut gauche, l'une
+sous l'autre via les constantes `ManaOverlay.ROW_Y`/`ROW_HEIGHT`), sans tenir compte de
 `Gui.leftHeight`/`rightHeight` comme le fait le HUD vanilla pour empiler les barres sans se
 chevaucher.
 
@@ -113,4 +116,4 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 5. Étendre l'IA au-delà des zombies (le goal n'exige qu'un `PathfinderMob`).
 6. Donner une vraie utilité au mana (un sort/une capacité qui le consomme, une régénération
    passive), retirer `ManaTestWandItem`, puis remplacer le HUD provisoire de `ManaOverlay`
-   par un vrai visuel.
+   et `HealthOverlay` par un vrai visuel, aligné sur le reste du HUD.
