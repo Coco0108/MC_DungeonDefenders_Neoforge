@@ -27,6 +27,9 @@ vérifie la CI.
   démarre à `0/100` (contrairement au mana/à la vie qui démarrent pleins), affichée en HUD
   via `ExperienceOverlay` (même principe, en vert, sous la vie). Sans rapport avec l'XP
   vanilla.
+- ✅ Vague en cours : data attachment `current_wave` sur la `Level` (persistant, synchronisé,
+  démarre à 1), affichée en haut à droite (`Vague X/5`) via `WaveOverlay` — texte seul, pas de
+  jauge. Aucun déroulement de vagues n'existe encore.
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
   voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 
@@ -95,6 +98,13 @@ Comme le mana à ses débuts : l'attachment `experience` existe et s'affiche, ma
 fait varier — pas de source de gain, pas de système de niveaux. Reste `0/100` en permanence
 tant que ça n'existe pas.
 
+### Les vagues ne se déroulent pas
+
+`current_wave` existe et s'affiche (`1/5`), mais rien ne le fait avancer : pas de
+déclenchement automatique/manuel, pas de condition pour passer à la vague suivante, pas de
+victoire à la vague 5 ni de défaite si le cristal tombe avant. C'est un compteur statique pour
+l'instant.
+
 ### Le HUD du mana et de la vie n'a pas de vrai visuel
 
 `ManaOverlay` et `HealthOverlay` dessinent du texte et des rectangles pleins
@@ -141,3 +151,6 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
    mais vides pour l'instant).
 8. Définir un vrai système d'expérience/niveaux qui alimente `ModAttachments.EXPERIENCE`
    (aujourd'hui bloqué à `0/100`, comme le mana avant `ManaTestWandItem`).
+9. Définir le déroulement des vagues (déclenchement, condition de passage à la suivante,
+   victoire à la dernière vague, défaite si le cristal tombe avant) et faire avancer
+   `ModAttachments.CURRENT_WAVE` en conséquence.

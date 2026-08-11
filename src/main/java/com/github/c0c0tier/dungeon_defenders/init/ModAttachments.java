@@ -18,6 +18,10 @@ public class ModAttachments {
     // provisoire tant que la façon d'en gagner/monter de niveau n'est pas définie.
     public static final int MAX_EXPERIENCE = 100;
 
+    // Nombre de vagues par défaut. Valeur provisoire tant que le déroulement d'une partie
+    // (déclenchement d'une vague, condition de victoire/défaite) n'est pas défini.
+    public static final int MAX_WAVE = 5;
+
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES =
             DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, DungeonDefendersMod.MODID);
 
@@ -36,6 +40,16 @@ public class ModAttachments {
             "experience",
             () -> AttachmentType.builder(() -> 0)
                     .serialize(Codec.INT.fieldOf("Experience"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Vague en cours : commence à 1, persistante, synchronisée au client pour le HUD.
+    // Contrairement au mana/à la vie/à l'expérience, c'est un état du monde (Level), pas du
+    // joueur : une vague concerne toute la partie, pas un joueur en particulier.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> CURRENT_WAVE = ATTACHMENT_TYPES.register(
+            "current_wave",
+            () -> AttachmentType.builder(() -> 1)
+                    .serialize(Codec.INT.fieldOf("CurrentWave"))
                     .sync(ByteBufCodecs.VAR_INT)
                     .build());
 

@@ -46,6 +46,16 @@ Lancer le client de dev :
       dernière doit être invisible (`EXPERIENCE_LEVEL` masqué), seule la jauge verte du mod
       doit être visible.
 
+## HUD — vague
+
+- [ ] Le texte `Vague 1/5` apparaît en haut à droite de l'écran, collé au bord droit (pas de
+      jauge, juste du texte).
+- [ ] Il reste stable (`1/5`) quoi qu'il se passe en jeu — rien ne le fait encore varier,
+      c'est attendu.
+- [ ] Redimensionner la fenêtre de jeu : le texte doit rester collé au bord droit (position
+      recalculée à chaque frame via `guiWidth()`), pas figé à une position absolue de l'écran
+      d'origine.
+
 ## HUD vanilla masqué
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

@@ -10,6 +10,7 @@
   "dungeon_defenders.hud.mana": "Mana : %s/%s",
   "dungeon_defenders.hud.health": "Vie : %s/%s",
   "dungeon_defenders.hud.experience": "Expérience : %s/%s",
+  "dungeon_defenders.hud.wave": "Vague %s/%s",
   "dungeon_defenders.mana_test_wand.used": "-%s mana (%s/%s)",
   "dungeon_defenders.mana_test_wand.empty": "Pas assez de mana !",
 

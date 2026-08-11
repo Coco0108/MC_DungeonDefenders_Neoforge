@@ -341,6 +341,41 @@ Même structure que `ManaOverlay`/`HealthOverlay` (jauge + texte `Experience: X/
 `HealthOverlay.ROW_Y + ManaOverlay.ROW_HEIGHT`. Comme rien ne fait encore varier l'attachment,
 elle s'affiche `0/100` en permanence tant qu'aucun mécanisme n'alimente `ModAttachments.EXPERIENCE`.
 
+## La vague en cours
+
+Compteur affiché en haut à droite (`Vague X/Y`), pour un futur déroulement en vagues de
+monstres. Aucune mécanique de déclenchement, de victoire ou de défaite n'existe encore : la
+valeur ne bouge jamais toute seule.
+
+### L'état — `init/ModAttachments.java`
+
+Contrairement au mana/à la vie/à l'expérience, la vague **n'est pas un état du joueur** :
+c'est un état de la partie, donc de la `Level`. `Level`/`ServerLevel` implémentent aussi
+`IAttachmentHolder` (comme `Entity`), le même mécanisme de data attachment s'applique donc
+directement à l'échelle du monde plutôt que par joueur.
+
+```java
+public static final int MAX_WAVE = 5;
+
+public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> CURRENT_WAVE = ATTACHMENT_TYPES.register(
+        "current_wave",
+        () -> AttachmentType.builder(() -> 1)
+                .serialize(Codec.INT.fieldOf("CurrentWave"))
+                .sync(ByteBufCodecs.VAR_INT)
+                .build());
+```
+
+Commence à `1` (pas `0`, une partie démarre à la vague 1). `ServerLevel` expose le même
+`syncData(AttachmentType<?>)` qu'`Entity`, poussé à tous les joueurs qui suivent ce monde.
+
+### L'affichage — `client/gui/WaveOverlay.java`
+
+Contrairement aux trois autres overlays, **pas de jauge** : juste le texte `Vague X/Y` (clé
+`dungeon_defenders.hud.wave`), en haut à droite de l'écran. La position est calculée avec
+`guiGraphics.guiWidth() - MARGIN - font.width(texte)` pour rester collée au bord droit quel
+que soit le nombre de chiffres. Lit `Minecraft.getInstance().level.getData(...)` — `level`,
+pas `player`, puisque l'état appartient au monde.
+
 ## Le HUD vanilla masqué
 
 Le mod vise une interface entièrement custom : plusieurs couches du HUD vanilla sont donc
