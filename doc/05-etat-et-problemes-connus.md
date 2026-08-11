@@ -44,10 +44,10 @@ vérifie la CI.
   démarre à 0), affiché tout en bas centre de l'écran via `ScoreOverlay` (`Score : X`, texte
   seul). Censé correspondre à l'expérience gagnée sur la carte en cours, mais distinct de
   `experience` (qui elle persiste au-delà d'une carte) — rien ne l'alimente encore.
-- ✅ Niveau du personnage : data attachment `level` sur le joueur (persistant, synchronisé,
-  démarre à 1), affiché juste au-dessus du score via `CharacterOverlay`
-  (`Nom - niv X`, `Nom` = pseudo Minecraft du joueur pour l'instant). Rien ne le fait encore
-  monter.
+- ✅ Nom et niveau du personnage : `character_name` (`String`, distinct du pseudo Minecraft
+  mais initialisé avec, faute de mieux) et `level` (`Integer`, démarre à 1) — deux data
+  attachments sur le joueur, persistants, synchronisés. Affichés juste au-dessus du score via
+  `CharacterOverlay` (`Nom - niv X`). Rien ne fait encore varier ni l'un ni l'autre.
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
   voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 
@@ -124,6 +124,14 @@ l'expérience *et* du score en même temps ? Le score d'une carte devrait-il rem
 jour selon un barème ? Aucune de ces questions n'est tranchée — les trois attachments
 (`experience`, `score`, `level`) coexistent pour l'instant sans logique commune.
 
+### Pas moyen de changer le nom du personnage
+
+`character_name` est bien un champ distinct du pseudo Minecraft (voir
+[02-gameplay.md](02-gameplay.md)), mais aucune commande ni écran ne permet de le modifier :
+en pratique, il reste égal au pseudo Minecraft du joueur pour toujours, exactement comme si
+l'attachment n'existait pas. L'intérêt de l'avoir séparé du compte ne se concrétise que le
+jour où une interface de renommage est ajoutée.
+
 ### Les vagues ne se déroulent pas
 
 `current_wave` existe et s'affiche (`1/5`), mais rien ne le fait avancer : pas de
@@ -195,3 +203,5 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
    faire avancer `ModAttachments.CURRENT_WAVE`/`WAVE_ENEMIES_TOTAL`/`WAVE_ENEMIES_KILLED`/
    `GAME_PHASE` en conséquence (transition `BUILD` → `COMBAT` au déclenchement d'une vague,
    retour à `BUILD` une fois la vague nettoyée).
+10. Donner un moyen de choisir/changer `ModAttachments.CHARACTER_NAME` (commande, écran de
+    création de personnage...) — sans ça, il reste égal au pseudo Minecraft en permanence.

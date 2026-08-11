@@ -472,9 +472,14 @@ positionner juste au-dessus (même principe que `WaveOverlay.waveText(...)` ou
 Affiche `Nom - niv X` (clé `dungeon_defenders.hud.character`), juste au-dessus de
 `ScoreOverlay`. Deux points à noter :
 
-- **Le nom** est pour l'instant le pseudo Minecraft du joueur (`player.getName()`) : il n'y a
-  pas de système de nom de personnage custom, distinct du compte Minecraft. Le remplacer
-  quand ce système existera.
+- **Le nom** (`ModAttachments.CHARACTER_NAME`) est un attachment `String`, distinct du pseudo
+  Minecraft (`GameProfile.name()`) — c'est volontairement un champ à part, pour pouvoir
+  diverger du compte du joueur. Sa valeur par défaut reprend le pseudo Minecraft (via
+  `AttachmentType.builder(Function<IAttachmentHolder, T>)`, qui donne accès au holder — ici
+  le `Player` — pour calculer la valeur initiale), juste pour ne pas afficher une chaîne vide
+  tant qu'aucun nom n'a été choisi. Rien ne permet encore de le changer (pas de commande, pas
+  d'écran de création de personnage) : voir
+  [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 - **Le niveau** (`ModAttachments.LEVEL`) est un attachment joueur (contrairement au score),
   démarre à `1`, persistant, synchronisé. Rien ne le fait encore monter — pas de formule
   d'XP → niveau, pas de notion de "monter de niveau".

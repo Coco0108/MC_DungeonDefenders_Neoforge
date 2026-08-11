@@ -3,6 +3,7 @@ package com.github.c0c0tier.dungeon_defenders.init;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.mojang.serialization.Codec;
 import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -103,6 +104,17 @@ public class ModAttachments {
             () -> AttachmentType.builder(() -> 1)
                     .serialize(Codec.INT.fieldOf("Level"))
                     .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Nom de personnage : distinct du pseudo Minecraft, éditable indépendamment (pas encore
+    // de commande/écran pour le faire). Par défaut, prend le pseudo Minecraft du joueur au
+    // premier accès — juste pour ne pas afficher une chaîne vide tant qu'aucune valeur n'a
+    // été choisie, ça reste un champ à part qui peut diverger du compte ensuite.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<String>> CHARACTER_NAME = ATTACHMENT_TYPES.register(
+            "character_name",
+            () -> AttachmentType.builder(holder -> holder instanceof Player player ? player.getGameProfile().name() : "")
+                    .serialize(Codec.STRING.fieldOf("CharacterName"))
+                    .sync(ByteBufCodecs.STRING_UTF8)
                     .build());
 
     public static void register(IEventBus modEventBus) {

@@ -76,8 +76,10 @@ Lancer le client de dev :
 
 - [ ] Tout en bas de l'écran, centré horizontalement (pas collé à gauche ni à droite) :
       `Score : 0`, sans jauge, juste du texte.
-- [ ] Juste au-dessus, toujours centré : `<pseudo Minecraft> - niv 1` (le pseudo est celui du
-      compte utilisé pour se connecter, pas un nom de personnage custom).
+- [ ] Juste au-dessus, toujours centré : `<pseudo Minecraft> - niv 1` — le nom affiché est
+      `character_name`, un champ distinct du pseudo, mais qui vaut le pseudo Minecraft par
+      défaut : à `niv 1`, il doit donc afficher exactement le pseudo du compte utilisé pour
+      se connecter (aucun moyen de le changer pour l'instant, c'est attendu).
 - [ ] Les deux lignes restent stables (`Score : 0`, `niv 1`) — rien ne les fait encore
       varier, c'est attendu.
 - [ ] Le bloc score/personnage ne chevauche pas la barre d'expérience (bas gauche) : il doit
