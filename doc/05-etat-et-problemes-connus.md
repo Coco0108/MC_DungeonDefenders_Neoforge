@@ -23,6 +23,10 @@ vérifie la CI.
   provisoire). Testable en jeu avec l'item `mana_test_wand` (clic droit = -10 mana).
 - ✅ Vie du joueur : maximum vanilla porté de 20 à 100 (`ModEvents.onPlayerJoin`), affichée en
   HUD via `HealthOverlay` (même principe que le mana, en rouge, juste en dessous).
+- ✅ Expérience custom du joueur : data attachment `experience` (persistant, synchronisé),
+  démarre à `0/100` (contrairement au mana/à la vie qui démarrent pleins), affichée en HUD
+  via `ExperienceOverlay` (même principe, en vert, sous la vie). Sans rapport avec l'XP
+  vanilla.
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
   voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 
@@ -77,14 +81,19 @@ se reconnectant, puisque l'attachment n'est pas remis à `MAX_MANA` ailleurs qu'
 Prochaines étapes logiques : une vraie capacité qui consomme du mana, une régénération
 passive (tick côté serveur, borné à `MAX_MANA`), puis retrait de la baguette de test.
 
-### Faim, expérience et hotbar masqués sans remplacement
+### Faim et hotbar masqués sans remplacement
 
-`FOOD_LEVEL`, `EXPERIENCE_LEVEL` et `HOTBAR` sont masqués (voir
+`FOOD_LEVEL` et `HOTBAR` sont masqués (voir
 [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué)) mais rien ne les remplace encore : le
-joueur ne voit plus sa faim, son expérience, ni l'objet qu'il a en main/sa barre d'objets. Tant
-qu'un équivalent custom n'existe pas, c'est une vraie perte d'information en jeu, pas
-seulement esthétique — à garder en tête en testant (voir
-[06-a-tester.md](06-a-tester.md)).
+joueur ne voit plus sa faim, ni l'objet qu'il a en main/sa barre d'objets. Tant qu'un
+équivalent custom n'existe pas, c'est une vraie perte d'information en jeu, pas seulement
+esthétique — à garder en tête en testant (voir [06-a-tester.md](06-a-tester.md)).
+
+### L'expérience custom n'a pas de vraie utilité de gameplay
+
+Comme le mana à ses débuts : l'attachment `experience` existe et s'affiche, mais rien ne le
+fait varier — pas de source de gain, pas de système de niveaux. Reste `0/100` en permanence
+tant que ça n'existe pas.
 
 ### Le HUD du mana et de la vie n'a pas de vrai visuel
 
@@ -128,5 +137,7 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 6. Donner une vraie utilité au mana (un sort/une capacité qui le consomme, une régénération
    passive), retirer `ManaTestWandItem`, puis remplacer le HUD provisoire de `ManaOverlay`
    et `HealthOverlay` par un vrai visuel, aligné sur le reste du HUD.
-7. Concevoir et implémenter les remplacements custom de la faim, de l'expérience et de la
-   hotbar (masqués mais vides pour l'instant).
+7. Concevoir et implémenter les remplacements custom de la faim et de la hotbar (masquées
+   mais vides pour l'instant).
+8. Définir un vrai système d'expérience/niveaux qui alimente `ModAttachments.EXPERIENCE`
+   (aujourd'hui bloqué à `0/100`, comme le mana avant `ManaTestWandItem`).

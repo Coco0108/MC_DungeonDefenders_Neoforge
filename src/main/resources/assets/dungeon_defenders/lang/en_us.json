@@ -9,6 +9,7 @@
 
   "dungeon_defenders.hud.mana": "Mana: %s/%s",
   "dungeon_defenders.hud.health": "Health: %s/%s",
+  "dungeon_defenders.hud.experience": "Experience: %s/%s",
   "dungeon_defenders.mana_test_wand.used": "-%s mana (%s/%s)",
   "dungeon_defenders.mana_test_wand.empty": "Not enough mana!",
 

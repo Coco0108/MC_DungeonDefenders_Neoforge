@@ -37,6 +37,15 @@ Lancer le client de dev :
       100/100 après coup).
 - [ ] Un nouveau joueur (jamais connecté à ce monde) doit spawn à 100/100, pas à 20/20.
 
+## HUD — expérience custom
+
+- [ ] Une jauge verte apparaît juste en dessous de celle de la vie, avec le texte
+      `Expérience : 0/100` à droite (rien ne la fait varier pour l'instant, donc elle doit
+      rester vide et stable).
+- [ ] Vérifier qu'elle ne se confond pas visuellement avec la barre d'XP vanilla — cette
+      dernière doit être invisible (`EXPERIENCE_LEVEL` masqué), seule la jauge verte du mod
+      doit être visible.
+
 ## HUD vanilla masqué
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

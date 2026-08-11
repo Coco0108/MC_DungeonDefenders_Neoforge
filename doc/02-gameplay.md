@@ -309,6 +309,38 @@ Les cœurs vanilla (`VanillaGuiLayers.PLAYER_HEALTH`) sont masqués dans
 avec 100 PV ils s'étaleraient sur plusieurs rangées de cœurs (le rendu vanilla est pensé pour
 20 PV, pas 100) et feraient de toute façon doublon avec `HealthOverlay`.
 
+## L'expérience custom du joueur
+
+**Rien à voir avec l'XP vanilla** (`EXPERIENCE_LEVEL`/`getExperienceLevel()`) : c'est une
+ressource propre au mod, pensée pour un futur système de progression/niveaux (pas encore
+défini — rien ne la fait varier pour l'instant, elle démarre à 0).
+
+### L'état — `init/ModAttachments.java`
+
+Même mécanisme que le mana : un data attachment, mais qui démarre **vide** plutôt que plein,
+puisqu'une expérience se gagne au lieu de se dépenser.
+
+```java
+public static final int MAX_EXPERIENCE = 100;
+
+public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> EXPERIENCE = ATTACHMENT_TYPES.register(
+        "experience",
+        () -> AttachmentType.builder(() -> 0)
+                .serialize(Codec.INT.fieldOf("Experience"))
+                .sync(ByteBufCodecs.VAR_INT)
+                .build());
+```
+
+`MAX_EXPERIENCE = 100` est une valeur provisoire : sans système de niveaux défini, il n'y a
+pas encore de vraie notion de "maximum", c'est surtout ce qui donne son échelle à la jauge.
+
+### L'affichage — `client/gui/ExperienceOverlay.java`
+
+Même structure que `ManaOverlay`/`HealthOverlay` (jauge + texte `Experience: X/Y`, clé
+`dungeon_defenders.hud.experience`), en vert, positionnée juste en dessous de la vie grâce à
+`HealthOverlay.ROW_Y + ManaOverlay.ROW_HEIGHT`. Comme rien ne fait encore varier l'attachment,
+elle s'affiche `0/100` en permanence tant qu'aucun mécanisme n'alimente `ModAttachments.EXPERIENCE`.
+
 ## Le HUD vanilla masqué
 
 Le mod vise une interface entièrement custom : plusieurs couches du HUD vanilla sont donc
@@ -320,7 +352,7 @@ fait rien.
 |---|---|---|
 | Cœurs de vie | `PLAYER_HEALTH` | `HealthOverlay` |
 | Faim | `FOOD_LEVEL` | *(rien pour l'instant)* |
-| Expérience | `EXPERIENCE_LEVEL` | *(rien pour l'instant)* |
+| Expérience vanilla | `EXPERIENCE_LEVEL` | `ExperienceOverlay` (expérience **custom**, sans rapport avec l'XP vanilla) |
 | Barre d'inventaire (hotbar) | `HOTBAR` | *(rien pour l'instant)* |
 
 > `replaceLayer` ne fait que vider le contenu d'une couche existante, sans la retirer de la
@@ -328,6 +360,6 @@ fait rien.
 > `registerAbove`/`registerBelow` côté vanilla, par exemple l'armure au-dessus de la hotbar)
 > restent inchangés, elles dessinent juste dans le vide.
 
-Faim, expérience et hotbar n'ont pas encore d'équivalent custom : tant que ce n'est pas fait,
-le joueur ne voit ni sa faim, ni son expérience, ni l'objet sélectionné/sa barre d'objets. Voir
+Faim et hotbar n'ont pas encore d'équivalent custom : tant que ce n'est pas fait, le joueur ne
+voit ni sa faim, ni l'objet sélectionné/sa barre d'objets. Voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
