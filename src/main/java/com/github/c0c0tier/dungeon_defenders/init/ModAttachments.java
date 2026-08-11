@@ -3,6 +3,7 @@ package com.github.c0c0tier.dungeon_defenders.init;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.mojang.serialization.Codec;
 import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -14,6 +15,18 @@ public class ModAttachments {
     // ou upgrades doivent le faire varier.
     public static final int MAX_MANA = 100;
 
+    // Expérience custom maximale par défaut (rien à voir avec l'XP vanilla). Valeur
+    // provisoire tant que la façon d'en gagner/monter de niveau n'est pas définie.
+    public static final int MAX_EXPERIENCE = 100;
+
+    // Nombre de vagues par défaut. Valeur provisoire tant que le déroulement d'une partie
+    // (déclenchement d'une vague, condition de victoire/défaite) n'est pas défini.
+    public static final int MAX_WAVE = 5;
+
+    // Nombre d'ennemis par défaut dans une vague. Valeur provisoire tant que la génération
+    // des vagues (nombre d'ennemis, difficulté croissante...) n'est pas définie.
+    public static final int DEFAULT_WAVE_ENEMIES_TOTAL = 10;
+
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES =
             DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, DungeonDefendersMod.MODID);
 
@@ -24,6 +37,84 @@ public class ModAttachments {
             () -> AttachmentType.builder(() -> MAX_MANA)
                     .serialize(Codec.INT.fieldOf("Mana"))
                     .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Expérience custom du joueur : vide par défaut (contrairement au mana/à la vie, elle se
+    // gagne au lieu de se dépenser), persistante, synchronisée au client pour le HUD.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> EXPERIENCE = ATTACHMENT_TYPES.register(
+            "experience",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.INT.fieldOf("Experience"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Vague en cours : commence à 1, persistante, synchronisée au client pour le HUD.
+    // Contrairement au mana/à la vie/à l'expérience, c'est un état du monde (Level), pas du
+    // joueur : une vague concerne toute la partie, pas un joueur en particulier.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> CURRENT_WAVE = ATTACHMENT_TYPES.register(
+            "current_wave",
+            () -> AttachmentType.builder(() -> 1)
+                    .serialize(Codec.INT.fieldOf("CurrentWave"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Nombre total d'ennemis de la vague en cours et nombre d'ennemis déjà tués. Même
+    // logique que current_wave : état de la Level, pas du joueur. Le total est réinitialisé
+    // à sa valeur par défaut au premier chargement du monde ; les tués repartent de 0, comme
+    // l'expérience, puisqu'ils s'accumulent au lieu de se dépenser.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> WAVE_ENEMIES_TOTAL = ATTACHMENT_TYPES.register(
+            "wave_enemies_total",
+            () -> AttachmentType.builder(() -> DEFAULT_WAVE_ENEMIES_TOTAL)
+                    .serialize(Codec.INT.fieldOf("WaveEnemiesTotal"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> WAVE_ENEMIES_KILLED = ATTACHMENT_TYPES.register(
+            "wave_enemies_killed",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.INT.fieldOf("WaveEnemiesKilled"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Phase de la partie (construction, combat...) : état de la Level, comme current_wave.
+    // Stockée comme l'ordinal de GamePhase (même approche que les autres compteurs, pas
+    // besoin d'un Codec dédié à l'enum pour l'instant). Démarre en phase de construction.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> GAME_PHASE = ATTACHMENT_TYPES.register(
+            "game_phase",
+            () -> AttachmentType.builder(() -> GamePhase.BUILD.ordinal())
+                    .serialize(Codec.INT.fieldOf("GamePhase"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Score de la carte en cours : conceptuellement l'expérience gagnée pendant cette carte
+    // (contrairement à "experience", qui elle est censée persister au-delà d'une carte). État
+    // de la Level (comme current_wave) : "notre score", partagé par la partie, pas par
+    // joueur. Rien ne l'alimente encore, voir 05-etat-et-problemes-connus.md.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> SCORE = ATTACHMENT_TYPES.register(
+            "score",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.INT.fieldOf("Score"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Niveau du personnage : état du joueur (contrairement au score), commence à 1,
+    // persistant, synchronisé au client pour le HUD. Rien ne le fait encore monter.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> LEVEL = ATTACHMENT_TYPES.register(
+            "level",
+            () -> AttachmentType.builder(() -> 1)
+                    .serialize(Codec.INT.fieldOf("Level"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Nom de personnage : distinct du pseudo Minecraft, éditable indépendamment (pas encore
+    // de commande/écran pour le faire). Par défaut, prend le pseudo Minecraft du joueur au
+    // premier accès — juste pour ne pas afficher une chaîne vide tant qu'aucune valeur n'a
+    // été choisie, ça reste un champ à part qui peut diverger du compte ensuite.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<String>> CHARACTER_NAME = ATTACHMENT_TYPES.register(
+            "character_name",
+            () -> AttachmentType.builder(holder -> holder instanceof Player player ? player.getGameProfile().name() : "")
+                    .serialize(Codec.STRING.fieldOf("CharacterName"))
+                    .sync(ByteBufCodecs.STRING_UTF8)
                     .build());
 
     public static void register(IEventBus modEventBus) {

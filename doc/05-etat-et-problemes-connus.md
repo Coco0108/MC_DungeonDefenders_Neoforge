@@ -19,8 +19,42 @@ vérifie la CI.
   (`stepOn`), cooldown de 1 s par entité. Modèle, blockstate, loot table, tag `mineable/pickaxe`,
   traductions `en_us`/`fr_fr`, onglet créatif.
 - ✅ Mana du joueur : data attachment `mana` (persistant, synchronisé), maximum par défaut de
-  100, affiché en HUD via `ManaOverlay` (jauge de remplissage + texte `X/Y` à côté, très
-  provisoire). Testable en jeu avec l'item `mana_test_wand` (clic droit = -10 mana).
+  100, affiché en HUD via `ManaOverlay` — losange en bas à gauche de l'écran (`DiamondGauge`,
+  couleurs plates), très provisoire. Testable en jeu avec l'item `mana_test_wand` (clic droit
+  = -10 mana).
+- ✅ Vie du joueur : maximum vanilla porté de 20 à 100 (`ModEvents.onPlayerJoin`), affichée en
+  HUD via `HealthOverlay` — losange juste à droite de celui du mana, même style.
+- ✅ Expérience custom du joueur : data attachment `experience` (persistant, synchronisé),
+  démarre à `0/100` (contrairement au mana/à la vie qui démarrent pleins), affichée en HUD
+  via `ExperienceOverlay` — barre horizontale tout en bas, sous les losanges mana/vie. Sans
+  rapport avec l'XP vanilla. Le groupe des trois est décrit dans
+  [02-gameplay.md](02-gameplay.md#le-groupe-bas-gauche--mana-vie-expérience).
+- ✅ Vague en cours : data attachment `current_wave` sur la `Level` (persistant, synchronisé,
+  démarre à 1), affichée en haut à droite (`Vague X/5`) via `WaveOverlay` — texte seul, pas de
+  jauge. Aucun déroulement de vagues n'existe encore.
+- ✅ Progression de la vague : `wave_enemies_killed`/`wave_enemies_total` (mêmes garanties que
+  `current_wave`), affichée en grande barre centrée tout en haut de l'écran via
+  `WaveEnemiesOverlay` (jauge orange, texte `Ennemis : X/Y` superposé au centre) — la zone la
+  plus visible du HUD, comme dans le jeu de référence. Démarre à `0/10`, rien ne fait encore
+  varier ni les tués ni le total.
+- ✅ Phase de la partie : data attachment `game_phase` sur la `Level` (ordinal de l'enum
+  `GamePhase` : `BUILD`/`COMBAT`), démarre en `BUILD`, affichée juste sous la rangée
+  vague/ennemis via `PhaseOverlay` (`Phase : Construction`). Aucune transition n'existe
+  encore.
+- ✅ Score de la carte : data attachment `score` sur la `Level` (persistant, synchronisé,
+  démarre à 0), affiché tout en bas centre de l'écran via `ScoreOverlay` (`Score : X`, texte
+  seul). Censé correspondre à l'expérience gagnée sur la carte en cours, mais distinct de
+  `experience` (qui elle persiste au-delà d'une carte) — rien ne l'alimente encore.
+- ✅ Nom et niveau du personnage : `character_name` (`String`, distinct du pseudo Minecraft
+  mais initialisé avec, faute de mieux) et `level` (`Integer`, démarre à 1) — deux data
+  attachments sur le joueur, persistants, synchronisés. Affichés juste au-dessus du score via
+  `CharacterOverlay` (`Nom - niv X`). Rien ne fait encore varier ni l'un ni l'autre.
+- ✅ 4 emplacements de compétences (soin sur soi, sort 1, sort 2, réparation de tour) en bas à
+  gauche via `AbilitySlotsOverlay`, juste à droite des losanges mana/vie, dans cet ordre —
+  fond en rond (`CircleSlot`), purement visuel : pas de clic, pas de cooldown, pas d'icône.
+  Voir "Ce qui reste" ci-dessous.
+- ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
+  voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 
 ## Corrections apportées
 
@@ -73,12 +107,71 @@ se reconnectant, puisque l'attachment n'est pas remis à `MAX_MANA` ailleurs qu'
 Prochaines étapes logiques : une vraie capacité qui consomme du mana, une régénération
 passive (tick côté serveur, borné à `MAX_MANA`), puis retrait de la baguette de test.
 
-### Le HUD du mana n'a pas de vrai visuel
+### Faim et hotbar masqués sans remplacement
 
-`ManaOverlay` dessine du texte et des rectangles pleins (`guiGraphics.fill`), sans texture ni
-alignement avec le reste du HUD (hotbar, XP, faim…) : c'est un placeholder assumé, à
-remplacer par des sprites une fois le reste de l'UI défini. Il est aussi positionné en
-`registerAboveAll` à une position fixe (haut gauche), sans tenir compte de
+`FOOD_LEVEL` et `HOTBAR` sont masqués (voir
+[02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué)) mais rien ne les remplace encore : le
+joueur ne voit plus sa faim, ni l'objet qu'il a en main/sa barre d'objets. Tant qu'un
+équivalent custom n'existe pas, c'est une vraie perte d'information en jeu, pas seulement
+esthétique — à garder en tête en testant (voir [06-a-tester.md](06-a-tester.md)).
+
+### L'expérience custom n'a pas de vraie utilité de gameplay
+
+Comme le mana à ses débuts : l'attachment `experience` existe et s'affiche, mais rien ne le
+fait varier — pas de source de gain, pas de système de niveaux. Reste `0/100` en permanence
+tant que ça n'existe pas.
+
+### Le score et le niveau ne sont reliés à rien
+
+`score` et `level` existent et s'affichent, mais rien ne les fait varier, et surtout **rien
+ne les relie entre eux ni à `experience`** : tuer un ennemi ne devrait-il pas donner de
+l'expérience *et* du score en même temps ? Le score d'une carte devrait-il remettre `level` à
+jour selon un barème ? Aucune de ces questions n'est tranchée — les trois attachments
+(`experience`, `score`, `level`) coexistent pour l'instant sans logique commune.
+
+### Pas moyen de changer le nom du personnage
+
+`character_name` est bien un champ distinct du pseudo Minecraft (voir
+[02-gameplay.md](02-gameplay.md)), mais aucune commande ni écran ne permet de le modifier :
+en pratique, il reste égal au pseudo Minecraft du joueur pour toujours, exactement comme si
+l'attachment n'existait pas. L'intérêt de l'avoir séparé du compte ne se concrétise que le
+jour où une interface de renommage est ajoutée.
+
+### Les emplacements de compétences ne font rien
+
+`AbilitySlotsOverlay` dessine 4 ronds vides : pas d'icône, pas de clic, pas de cooldown, pas
+de coût en mana, pas de lien avec un vrai sort ou une vraie action de réparation (qui
+n'existent pas non plus côté gameplay). C'est un pur placeholder visuel, en attendant les
+images promises pour chaque slot et la logique derrière.
+
+### Les vagues ne se déroulent pas
+
+`current_wave` existe et s'affiche (`1/5`), mais rien ne le fait avancer : pas de
+déclenchement automatique/manuel, pas de condition pour passer à la vague suivante, pas de
+victoire à la vague 5 ni de défaite si le cristal tombe avant. C'est un compteur statique pour
+l'instant. Même chose pour `wave_enemies_killed`/`wave_enemies_total` : aucun mob n'est
+généré pour une vague, rien n'incrémente les tués, le total (`10`) n'est jamais recalculé
+selon la vague ou la difficulté. Idem pour `game_phase` : reste bloqué sur `BUILD`, rien ne
+fait passer en `COMBAT` ni ne revient en `BUILD` entre deux vagues.
+
+### `game_phase` stocke un ordinal d'enum, pas un nom stable
+
+`ModAttachments.GAME_PHASE` sérialise `GamePhase.ordinal()` (0 pour `BUILD`, 1 pour
+`COMBAT`). Si l'ordre des constantes de `GamePhase` change un jour (insertion d'une phase
+avant `COMBAT`, par exemple), les sauvegardes existantes se retrouveront avec la mauvaise
+phase au chargement. Pas un problème tant qu'on ajoute des valeurs à la fin de l'enum, mais à
+garder en tête — voir [02-gameplay.md](02-gameplay.md#la-phase-de-la-partie--clientguiphaseoverlayjava).
+
+### Le HUD du mana, de la vie et de l'expérience n'a toujours pas de vraie texture
+
+`ManaOverlay`/`HealthOverlay` (via `DiamondGauge`) et `ExperienceOverlay` dessinent des formes
+en couleurs plates (`guiGraphics.fill` empilés), sans texture ni alignement avec le reste du
+HUD (hotbar, XP, faim…). Le passage de rectangles à losanges (`DiamondGauge`) est une première
+étape pour se rapprocher du jeu de référence (*Dungeon Defenders* original, voir
+[02-gameplay.md](02-gameplay.md#le-groupe-bas-gauche--mana-vie-expérience)) au niveau de la
+**forme**, mais ça reste un placeholder assumé côté **matière** : pas de sprite, pas de cadre
+métallique, pas d'icône. Ils sont aussi positionnés en `registerAboveAll` à des coordonnées
+fixes (bas gauche, via les constantes de `HudLayout`), sans tenir compte de
 `Gui.leftHeight`/`rightHeight` comme le fait le HUD vanilla pour empiler les barres sans se
 chevaucher.
 
@@ -112,5 +205,22 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 4. Retirer le harnais de test du clic droit quand une autre source de dégâts existera.
 5. Étendre l'IA au-delà des zombies (le goal n'exige qu'un `PathfinderMob`).
 6. Donner une vraie utilité au mana (un sort/une capacité qui le consomme, une régénération
-   passive), retirer `ManaTestWandItem`, puis remplacer le HUD provisoire de `ManaOverlay`
-   par un vrai visuel.
+   passive), retirer `ManaTestWandItem`, puis habiller `ManaOverlay`/`HealthOverlay`/
+   `ExperienceOverlay` de vraies textures (sprites, cadre) une fois disponibles — la forme
+   (losange) se rapproche déjà du jeu de référence, il manque la matière.
+7. Concevoir et implémenter les remplacements custom de la faim et de la hotbar (masquées
+   mais vides pour l'instant).
+8. Définir un vrai système d'expérience/score/niveaux : comment `EXPERIENCE`, `SCORE` et
+   `LEVEL` se nourrissent l'un l'autre (aujourd'hui trois compteurs indépendants, tous
+   bloqués à leur valeur par défaut, comme le mana avant `ManaTestWandItem`).
+9. Définir le déroulement des vagues (déclenchement, génération des ennemis, condition de
+   passage à la suivante, victoire à la dernière vague, défaite si le cristal tombe avant) et
+   faire avancer `ModAttachments.CURRENT_WAVE`/`WAVE_ENEMIES_TOTAL`/`WAVE_ENEMIES_KILLED`/
+   `GAME_PHASE` en conséquence (transition `BUILD` → `COMBAT` au déclenchement d'une vague,
+   retour à `BUILD` une fois la vague nettoyée).
+10. Donner un moyen de choisir/changer `ModAttachments.CHARACTER_NAME` (commande, écran de
+    création de personnage...) — sans ça, il reste égal au pseudo Minecraft en permanence.
+11. Une fois les images des 4 compétences fournies : les afficher dans `AbilitySlotsOverlay`
+    (probablement via `blitSprite`, une texture par `SLOT_NAMES`), puis brancher le clic, un
+    cooldown, et enfin le vrai effet de chaque compétence (soin, sorts, réparation de tour —
+    aucun n'existe encore côté gameplay).

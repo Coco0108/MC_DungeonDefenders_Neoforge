@@ -8,6 +8,15 @@
   "dungeon_defenders.eternia_crystal.destroyed": "The Eternia Crystal has been destroyed! Game Over!",
 
   "dungeon_defenders.hud.mana": "Mana: %s/%s",
+  "dungeon_defenders.hud.health": "Health: %s/%s",
+  "dungeon_defenders.hud.experience": "Experience: %s/%s",
+  "dungeon_defenders.hud.wave": "Wave %s/%s",
+  "dungeon_defenders.hud.wave_enemies": "Enemies: %s/%s",
+  "dungeon_defenders.hud.phase": "Phase: %s",
+  "dungeon_defenders.phase.build": "Build",
+  "dungeon_defenders.phase.combat": "Combat",
+  "dungeon_defenders.hud.score": "Score: %s",
+  "dungeon_defenders.hud.character": "%s - lvl %s",
   "dungeon_defenders.mana_test_wand.used": "-%s mana (%s/%s)",
   "dungeon_defenders.mana_test_wand.empty": "Not enough mana!",
 

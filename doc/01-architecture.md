@@ -13,13 +13,25 @@ MC_DungeonDefenders_Neoforge/
     ├── java/com/github/c0c0tier/dungeon_defenders/
     │   ├── DungeonDefendersMod.java          # Point d'entrée @Mod (commun)
     │   ├── DungeonDefendersModClient.java    # Point d'entrée @Mod côté CLIENT uniquement
-    │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA)
+    │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA, vie max du joueur)
     │   ├── Config.java                       # Spec de config (héritée du template, non branchée)
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
-    │   │   └── ModAttachments.java           # DeferredRegister des data attachments (mana du joueur)
+    │   │   ├── ModAttachments.java           # DeferredRegister des data attachments (mana, vagues, phase...)
+    │   │   └── GamePhase.java                # Enum des phases de partie (BUILD, COMBAT)
     │   ├── client/gui/
-    │   │   └── ManaOverlay.java              # Couche HUD affichant le mana (client uniquement)
+    │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)
+    │   │   ├── DiamondGauge.java             # Dessine une jauge en forme de losange (fill() empilés, sans texture)
+    │   │   ├── CircleSlot.java               # Dessine un rond (fond + bordure) (fill() empilés, sans texture)
+    │   │   ├── ManaOverlay.java              # Losange mana, bas gauche (client uniquement)
+    │   │   ├── HealthOverlay.java            # Losange vie, bas gauche (client uniquement)
+    │   │   ├── ExperienceOverlay.java        # Barre horizontale expérience custom, bas gauche (client uniquement)
+    │   │   ├── WaveOverlay.java              # Couche HUD affichant la vague en cours (client uniquement)
+    │   │   ├── WaveEnemiesOverlay.java       # Couche HUD affichant les ennemis tués/total, haut centre (client uniquement)
+    │   │   ├── PhaseOverlay.java             # Couche HUD affichant la phase (construction/combat) (client uniquement)
+    │   │   ├── ScoreOverlay.java             # Couche HUD affichant le score de la carte, bas centre (client uniquement)
+    │   │   ├── CharacterOverlay.java         # Couche HUD affichant "Nom - niv X", bas centre (client uniquement)
+    │   │   └── AbilitySlotsOverlay.java      # 4 emplacements de compétences, bas gauche, à côté des losanges (client uniquement)
     │   ├── entity/ai/
     │   │   └── AttackEterniaCrystalGoal.java # Goal : converger vers le cristal et le frapper
     │   └── block/
@@ -77,8 +89,12 @@ référencé sans risque.
   NeoForge génère un écran de config depuis l'écran « Mods ».
 - `@EventBusSubscriber(value = Dist.CLIENT)` + `onRegisterRenderers(EntityRenderersEvent.RegisterRenderers)` :
   enregistre le renderer de block entity du cristal.
-- `onRegisterGuiLayers(RegisterGuiLayersEvent)` : enregistre `ManaOverlay` via
-  `event.registerAboveAll(...)`, au-dessus de toutes les autres couches du HUD.
+- `onRegisterGuiLayers(RegisterGuiLayersEvent)` : enregistre `ManaOverlay`, `HealthOverlay`,
+  `ExperienceOverlay`, `WaveOverlay`, `WaveEnemiesOverlay`, `PhaseOverlay`, `ScoreOverlay`,
+  `CharacterOverlay` et `AbilitySlotsOverlay` via `event.registerAboveAll(...)`, au-dessus de
+  toutes les autres couches du HUD, et masque les cœurs, la faim, l'expérience et la hotbar
+  vanilla via
+  `event.replaceLayer(...)` — voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 
 > `@EventBusSubscriber` n'a pas de paramètre `bus` dans cette version : les événements qui
 > implémentent `IModBusEvent` (comme `RegisterRenderers`) partent automatiquement sur le bus
@@ -98,14 +114,19 @@ Chargement FML
 Événements du bus mod
    ├─ RegisterEvent(BLOCK)             → eternia_crystal (EterniaCrystalBlock)
    ├─ RegisterEvent(ITEM)              → eternia_crystal (BlockItem)
-   ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana
+   ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana, experience, current_wave,
+   │                                      wave_enemies_total, wave_enemies_killed, game_phase,
+   │                                      score, level, character_name
    ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
    ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer
-   └─ RegisterGuiLayersEvent [client]  → ManaOverlay
+   └─ RegisterGuiLayersEvent [client]  → ManaOverlay, HealthOverlay, ExperienceOverlay,
+                                          WaveOverlay, WaveEnemiesOverlay, PhaseOverlay,
+                                          ScoreOverlay, CharacterOverlay, AbilitySlotsOverlay
 
 Bus de jeu (NeoForge.EVENT_BUS)
-   └─ ModEvents.onZombieSpawn(EntityJoinLevelEvent)
+   ├─ ModEvents.onZombieSpawn(EntityJoinLevelEvent)
+   └─ ModEvents.onPlayerJoin(EntityJoinLevelEvent)
 ```
 
 `ModEvents` est annoté `@EventBusSubscriber(modid = MODID)` sans `bus` explicite : il

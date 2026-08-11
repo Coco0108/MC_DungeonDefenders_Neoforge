@@ -230,13 +230,17 @@ public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> M
 ### L'affichage — `client/gui/ManaOverlay.java`
 
 Couche HUD (`GuiLayer`) enregistrée dans `DungeonDefendersModClient` via
-`RegisterGuiLayersEvent#registerAboveAll`. Volontairement minimal :
+`RegisterGuiLayersEvent#registerAboveAll`. Volontairement minimal, et fait partie du groupe
+bas-gauche décrit dans [Le groupe bas-gauche](#le-groupe-bas-gauche--mana-vie-expérience)
+ci-dessous :
 
-- une jauge unie en haut à gauche de l'écran (`guiGraphics.fill`, pas de sprite) : fond gris
-  foncé pleine largeur, recouvert par un rectangle bleu dont la largeur est proportionnelle à
-  `currentMana / maxMana` ;
-- juste à droite de la jauge, le texte `Mana: X/Y` (clé `dungeon_defenders.hud.mana`) pour
-  lire la valeur exacte, centré verticalement sur la hauteur de la jauge.
+- un losange (`DiamondGauge`, voir plus bas), en bas à gauche de l'écran : fond gris foncé sur
+  toute sa hauteur, recouvert par le bas d'un losange bleu dont la hauteur est proportionnelle
+  à `currentMana / maxMana` — la jauge se remplit du bas vers le haut, comme avant, mais dans
+  une forme de losange plutôt qu'un rectangle. C'est le losange de **gauche** du groupe (vie à
+  droite) ;
+- au-dessus du losange, le texte `Mana: X/Y` (clé `dungeon_defenders.hud.mana`), centré
+  horizontalement (`guiGraphics.centeredText`) sur son centre.
 
 Lit `player.getData(ModAttachments.MANA)` à chaque frame ; pas d'état côté overlay lui-même.
 Voir [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) pour ce qu'il reste à
@@ -258,3 +262,300 @@ clic droit du Cristal d'Eternia :
   reçoit juste `InteractionResult.SUCCESS` pour l'animation de bras.
 
 Modèle provisoire : texture vanilla `minecraft:item/blaze_rod`, pas de modèle dédié.
+
+## La vie du joueur
+
+Contrairement au mana, la vie n'est pas une ressource inventée pour le mod : c'est l'attribut
+vanilla `Attributes.MAX_HEALTH` / `LivingEntity.getHealth()`, déjà persistant et déjà
+synchronisé par le jeu. Le mod se contente d'en changer le maximum par défaut.
+
+### Le maximum à 100 — `ModEvents.onPlayerJoin`
+
+```java
+private static final double PLAYER_MAX_HEALTH = 100.0D;
+
+@SubscribeEvent
+public static void onPlayerJoin(EntityJoinLevelEvent event) {
+    if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Player player)) {
+        return;
+    }
+
+    AttributeInstance maxHealthAttribute = player.getAttribute(Attributes.MAX_HEALTH);
+    if (maxHealthAttribute == null) {
+        return;
+    }
+
+    boolean wasAtPreviousMax = player.getHealth() >= maxHealthAttribute.getValue();
+    maxHealthAttribute.setBaseValue(PLAYER_MAX_HEALTH);
+    if (wasAtPreviousMax) {
+        player.setHealth((float) maxHealthAttribute.getValue());
+    }
+}
+```
+
+`EntityJoinLevelEvent` se redéclenche à chaque connexion, respawn et changement de dimension
+(même remarque que pour `onZombieSpawn`). `setBaseValue` est idempotent (poser deux fois la
+même valeur ne change rien), donc pas besoin de garde anti-doublon ici. Le seul piège est de
+ne pas soigner gratuitement un joueur déjà blessé à chaque relog : le code ne remonte la vie
+au nouveau maximum que si le joueur était **déjà** à son ancien maximum (cas du tout premier
+join, où le joueur vient de spawn à 20/20 avant que l'attribut ne soit modifié).
+
+### L'affichage — `client/gui/HealthOverlay.java`
+
+Même structure que `ManaOverlay` (losange + texte `Health: X/Y`, clé
+`dungeon_defenders.hud.health`), en rouge, positionné juste à **droite** du losange mana
+(centré sur `HudLayout.MARGIN + DIAMOND_RADIUS * 3 + DIAMOND_GAP`), même taille. Lit
+directement `player.getHealth()` / `player.getMaxHealth()` à chaque frame — pas besoin
+d'attachment, ces valeurs sont déjà tenues à jour et synchronisées par le moteur.
+
+Les cœurs vanilla (`VanillaGuiLayers.PLAYER_HEALTH`) sont masqués dans
+`DungeonDefendersModClient.onRegisterGuiLayers` via `event.replaceLayer(..., HIDDEN)` :
+avec 100 PV ils s'étaleraient sur plusieurs rangées de cœurs (le rendu vanilla est pensé pour
+20 PV, pas 100) et feraient de toute façon doublon avec `HealthOverlay`.
+
+## L'expérience custom du joueur
+
+**Rien à voir avec l'XP vanilla** (`EXPERIENCE_LEVEL`/`getExperienceLevel()`) : c'est une
+ressource propre au mod, pensée pour un futur système de progression/niveaux (pas encore
+défini — rien ne la fait varier pour l'instant, elle démarre à 0).
+
+### L'état — `init/ModAttachments.java`
+
+Même mécanisme que le mana : un data attachment, mais qui démarre **vide** plutôt que plein,
+puisqu'une expérience se gagne au lieu de se dépenser.
+
+```java
+public static final int MAX_EXPERIENCE = 100;
+
+public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> EXPERIENCE = ATTACHMENT_TYPES.register(
+        "experience",
+        () -> AttachmentType.builder(() -> 0)
+                .serialize(Codec.INT.fieldOf("Experience"))
+                .sync(ByteBufCodecs.VAR_INT)
+                .build());
+```
+
+`MAX_EXPERIENCE = 100` est une valeur provisoire : sans système de niveaux défini, il n'y a
+pas encore de vraie notion de "maximum", c'est surtout ce qui donne son échelle à la jauge.
+
+### L'affichage — `client/gui/ExperienceOverlay.java`
+
+Contrairement à `ManaOverlay`/`HealthOverlay`, reste une **barre horizontale** classique
+(jauge + texte `Experience: X/Y` à sa droite, clé `dungeon_defenders.hud.experience`), en
+vert, tout en bas de l'écran, sous les deux losanges. Comme rien ne fait encore varier
+l'attachment, elle s'affiche `0/100` en permanence tant qu'aucun mécanisme n'alimente
+`ModAttachments.EXPERIENCE`.
+
+## Le groupe bas-gauche — mana, vie, expérience
+
+`ManaOverlay`, `HealthOverlay` et `ExperienceOverlay` forment un groupe positionné dans le
+coin bas-gauche de l'écran :
+
+```
+   Mana        Vie
+    ◆           ◆     <- losanges, remplissage bas → haut (pointe basse → pointe haute)
+   ▓█▓         ▓█▓        mana à gauche, vie à droite
+  ▓███▓       ▓███▓
+  ░░░░░       ▓▓▓▓▓
+    ░           ▓
+  [███░░░░░░░░░░░░░░] Experience: 0/100   <- barre horizontale, tout en bas
+```
+
+**Pourquoi des losanges et pas des rectangles ?** Le jeu qui a inspiré ce HUD (*Dungeon
+Defenders* original) affiche le mana et la vie du joueur dans un widget en forme de
+losange/triangle, pas des barres classiques. `DiamondGauge.render(...)` reproduit cette forme
+sans texture : pour chaque bande horizontale d'1px de haut, la largeur croît puis décroît
+linéairement (maximale au centre, nulle aux deux pointes) — un simple empilement de
+`guiGraphics.fill(...)`, façon pixel art, en attendant de vraies textures (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)). `ManaOverlay` et
+`HealthOverlay` appellent cette même méthode avec des couleurs différentes ; ils ne dessinent
+plus rien eux-mêmes directement.
+
+`client/gui/HudLayout.java` centralise les constantes de mise en page partagées par les trois
+(marge, rayon/écart des losanges, écart avant la barre d'expérience) : sans ça, garder les
+trois classes indépendantes alignées au pixel près demanderait de dupliquer les mêmes valeurs
+magiques partout, avec le risque qu'elles divergent au premier ajustement.
+
+Un quatrième overlay, `AbilitySlotsOverlay`, se greffe juste à droite de ce groupe (les 4
+emplacements de compétences) — voir
+[Les emplacements de compétences](#les-emplacements-de-compétences--clientguiabilityslotsoverlayjava)
+plus bas.
+
+`ExperienceOverlay` calcule sa position en premier (ancrée au bord bas de l'écran via
+`guiGraphics.guiHeight()`) et expose `barTop(guiGraphics)`, une méthode package-visible que
+`ManaOverlay`/`HealthOverlay` appellent pour savoir où s'arrête le bas de leurs colonnes
+(`ExperienceOverlay.barTop(guiGraphics) - HudLayout.ROW_GAP`) — même principe de couplage
+minimal que `WaveOverlay.waveText(level)` pour le groupe haut-droit.
+
+## La vague en cours
+
+Compteur affiché en haut à droite (`Vague X/Y`), pour un futur déroulement en vagues de
+monstres. Aucune mécanique de déclenchement, de victoire ou de défaite n'existe encore : la
+valeur ne bouge jamais toute seule.
+
+### L'état — `init/ModAttachments.java`
+
+Contrairement au mana/à la vie/à l'expérience, la vague **n'est pas un état du joueur** :
+c'est un état de la partie, donc de la `Level`. `Level`/`ServerLevel` implémentent aussi
+`IAttachmentHolder` (comme `Entity`), le même mécanisme de data attachment s'applique donc
+directement à l'échelle du monde plutôt que par joueur.
+
+```java
+public static final int MAX_WAVE = 5;
+
+public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> CURRENT_WAVE = ATTACHMENT_TYPES.register(
+        "current_wave",
+        () -> AttachmentType.builder(() -> 1)
+                .serialize(Codec.INT.fieldOf("CurrentWave"))
+                .sync(ByteBufCodecs.VAR_INT)
+                .build());
+```
+
+Commence à `1` (pas `0`, une partie démarre à la vague 1). `ServerLevel` expose le même
+`syncData(AttachmentType<?>)` qu'`Entity`, poussé à tous les joueurs qui suivent ce monde.
+
+### L'affichage — `client/gui/WaveOverlay.java`
+
+Contrairement aux trois autres overlays, **pas de jauge** : juste le texte `Vague X/Y` (clé
+`dungeon_defenders.hud.wave`), en haut à droite de l'écran. La position est calculée avec
+`guiGraphics.guiWidth() - MARGIN - font.width(texte)` pour rester collée au bord droit quel
+que soit le nombre de chiffres. Lit `Minecraft.getInstance().level.getData(...)` — `level`,
+pas `player`, puisque l'état appartient au monde.
+
+### La progression de la vague — `client/gui/WaveEnemiesOverlay.java`
+
+**Centrée tout en haut de l'écran**, indépendante du reste du groupe vague/phase (qui reste
+en haut à droite) : c'est l'information la plus visible du jeu de référence (*Dungeon
+Defenders* original), une grosse barre en haut-centre, donc elle a sa propre place plutôt que
+de se caser à côté du texte `Vague X/Y`.
+
+Même style que `ExperienceOverlay` (jauge + texte `Ennemis : X/Y`, clé
+`dungeon_defenders.hud.wave_enemies`), mais plus large (`BAR_WIDTH = 240`) et avec le texte
+**superposé au centre de la jauge** plutôt qu'à côté — plus compact malgré la largeur,
+également plus proche du rendu du jeu de référence. `X` = ennemis déjà tués
+(`ModAttachments.WAVE_ENEMIES_KILLED`, vide par défaut), `Y` = ennemis total de la vague
+(`ModAttachments.WAVE_ENEMIES_TOTAL`, `10` par défaut) ; la jauge orange se remplit à mesure
+que `X` se rapproche de `Y`. Deux attachments sur la `Level`, même raisonnement que
+`current_wave`.
+
+### La phase de la partie — `client/gui/PhaseOverlay.java`
+
+Juste en dessous de la rangée vague/ennemis (`WaveOverlay.ROW_Y + ROW_HEIGHT`), texte seul
+comme `WaveOverlay` : `Phase : Construction` ou `Phase : Combat`, clé
+`dungeon_defenders.hud.phase`. Aucune transition entre phases n'existe encore : la partie
+démarre et reste en `BUILD` tant que rien ne la fait changer.
+
+`init/GamePhase.java` est un enum (`BUILD`, `COMBAT`) plutôt qu'une chaîne libre, pour garder
+un ensemble de valeurs fermé et une traduction par valeur
+(`dungeon_defenders.phase.build`/`.combat`, via `GamePhase.translationKey()`). L'attachment
+`ModAttachments.GAME_PHASE` stocke cependant un simple `Integer` (l'ordinal de l'enum), comme
+tous les autres compteurs du mod — pas de `Codec`/`StreamCodec` dédié à l'enum pour
+l'instant, ça aurait été de la complexité en plus pour un gain nul tant qu'il n'y a que deux
+valeurs. À revoir si la liste des phases grandit ou si l'ordre des constantes doit pouvoir
+changer sans casser les sauvegardes existantes (l'ordinal n'est pas stable entre deux
+réordonnancements de l'enum).
+
+## Le score et le personnage — bas centre de l'écran
+
+Deux dernières lignes de texte, centrées horizontalement tout en bas de l'écran (à droite de
+la barre d'expérience, qui elle est en bas à gauche) :
+
+```
+        toto - niv 15
+          Score : 0
+```
+
+### Le score — `client/gui/ScoreOverlay.java`
+
+`ModAttachments.SCORE` est conceptuellement l'expérience gagnée **sur la carte en cours**,
+par opposition à `ModAttachments.EXPERIENCE` qui est censée persister au-delà d'une carte.
+C'est pourquoi ce n'est pas le même attachment, même si les deux valeurs pourraient un jour
+augmenter ensemble (une capacité tuant un ennemi donnerait de l'XP *et* du score, un peu comme
+la vue et le score au sens jeu vidéo classique). Comme `current_wave`, c'est un état de la
+`Level` : "notre score" est partagé par la partie, pas individuel par joueur. Démarre à `0`,
+rien ne l'alimente encore.
+
+Affiché en texte seul (pas de jauge, un score n'a pas de maximum), clé
+`dungeon_defenders.hud.score`, centré via `guiGraphics.centeredText(...)`. Expose
+`rowY(guiGraphics)`, une méthode package-visible que `CharacterOverlay` utilise pour se
+positionner juste au-dessus (même principe que `WaveOverlay.waveText(...)` ou
+`ExperienceOverlay.barTop(...)`).
+
+### Le personnage — `client/gui/CharacterOverlay.java`
+
+Affiche `Nom - niv X` (clé `dungeon_defenders.hud.character`), juste au-dessus de
+`ScoreOverlay`. Deux points à noter :
+
+- **Le nom** (`ModAttachments.CHARACTER_NAME`) est un attachment `String`, distinct du pseudo
+  Minecraft (`GameProfile.name()`) — c'est volontairement un champ à part, pour pouvoir
+  diverger du compte du joueur. Sa valeur par défaut reprend le pseudo Minecraft (via
+  `AttachmentType.builder(Function<IAttachmentHolder, T>)`, qui donne accès au holder — ici
+  le `Player` — pour calculer la valeur initiale), juste pour ne pas afficher une chaîne vide
+  tant qu'aucun nom n'a été choisi. Rien ne permet encore de le changer (pas de commande, pas
+  d'écran de création de personnage) : voir
+  [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+- **Le niveau** (`ModAttachments.LEVEL`) est un attachment joueur (contrairement au score),
+  démarre à `1`, persistant, synchronisé. Rien ne le fait encore monter — pas de formule
+  d'XP → niveau, pas de notion de "monter de niveau".
+
+## Les emplacements de compétences — `client/gui/AbilitySlotsOverlay.java`
+
+Quatre ronds en bas à **gauche** de l'écran, juste à droite des losanges mana/vie et
+au-dessus de la barre d'expérience — dans le prolongement du groupe bas-gauche décrit plus
+haut, comme dans le jeu de référence, dans l'ordre gauche → droite :
+
+```
+   Mana        Vie
+    ◆           ◆     ( ) ( ) ( ) ( )
+   ▓█▓         ▓█▓     soin sort1 sort2 répare
+  ▓███▓       ▓███▓
+  ░░░░░       ▓▓▓▓▓
+    ░           ▓
+  [███░░░░░░░░░░░░░░] Experience: 0/100
+```
+
+1. Soin sur soi
+2. Sort 1 du héros
+3. Sort 2 du héros
+4. Réparation de tour
+
+**Purement visuel pour l'instant** : aucun clic, aucun cooldown, aucune consommation de mana,
+aucune icône (elles arriveront plus tard, une par slot). C'est juste le fond des slots — un
+rond avec une fine bordure, dessiné par `CircleSlot` (même philosophie que `DiamondGauge` :
+`guiGraphics.fill()` empilés, bande par bande, largeur donnée par le théorème de Pythagore —
+pas de texture ni de géométrie custom bas niveau).
+
+Se positionne à partir de `HudLayout.MARGIN + DIAMOND_RADIUS * 4 + DIAMOND_GAP` (le bord droit
+du losange vie), plus un petit écart (`GROUP_GAP`) — c'est le seul couplage avec le reste du
+groupe bas-gauche, pour rester juste à côté des losanges plutôt que de dupliquer leur calcul
+de position en dur.
+
+`AbilitySlotsOverlay.SLOT_NAMES` est un tableau de 4 identifiants (`self_heal`,
+`hero_spell_1`, `hero_spell_2`, `repair_tower`) qui ne sert encore à rien à l'exécution : il
+documente juste l'ordre attendu, en attendant que chaque slot ait sa propre icône et sa propre
+logique. Contrairement aux autres overlays, pas d'attachment ici non plus : il n'y a encore
+aucun état à lire (pas de cooldown, pas de "sort débloqué ou non"), voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
+## Le HUD vanilla masqué
+
+Le mod vise une interface entièrement custom : plusieurs couches du HUD vanilla sont donc
+masquées dans `DungeonDefendersModClient.onRegisterGuiLayers`, via
+`event.replaceLayer(identifiant, HIDDEN)` où `HIDDEN` est une `GuiLayer` dont `render(...)` ne
+fait rien.
+
+| Couche masquée | Identifiant `VanillaGuiLayers` | Remplacée par |
+|---|---|---|
+| Cœurs de vie | `PLAYER_HEALTH` | `HealthOverlay` |
+| Faim | `FOOD_LEVEL` | *(rien pour l'instant)* |
+| Expérience vanilla | `EXPERIENCE_LEVEL` | `ExperienceOverlay` (expérience **custom**, sans rapport avec l'XP vanilla) |
+| Barre d'inventaire (hotbar) | `HOTBAR` | *(rien pour l'instant)* |
+
+> `replaceLayer` ne fait que vider le contenu d'une couche existante, sans la retirer de la
+> liste : l'ordre d'affichage et les couches enregistrées relativement à elle (via
+> `registerAbove`/`registerBelow` côté vanilla, par exemple l'armure au-dessus de la hotbar)
+> restent inchangés, elles dessinent juste dans le vide.
+
+Faim et hotbar n'ont pas encore d'équivalent custom : tant que ce n'est pas fait, le joueur ne
+voit ni sa faim, ni l'objet sélectionné/sa barre d'objets. Voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
