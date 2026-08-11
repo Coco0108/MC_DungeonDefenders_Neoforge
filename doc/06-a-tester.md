@@ -11,40 +11,37 @@ Lancer le client de dev :
 ./gradlew runClient
 ```
 
-## HUD — mana
+## HUD — groupe bas-gauche (mana, vie, expérience)
 
-- [ ] Une jauge bleue apparaît en haut à gauche de l'écran, avec le texte `Mana: 100/100`
-      juste à droite.
+- [ ] En bas à gauche de l'écran : deux colonnes verticales côte à côte (mana en bleu à
+      gauche, vie en rouge à droite), avec une barre horizontale verte (expérience) tout en
+      bas, sous les deux colonnes. Rien ne doit se chevaucher.
+- [ ] Le texte `Mana: 100/100` apparaît **au-dessus** de la colonne mana, centré sur sa
+      largeur. Idem pour `Vie : 100/100` au-dessus de la colonne vie.
+- [ ] Le texte `Expérience : 0/100` apparaît à droite de la barre verte (comme avant, ça n'a
+      pas changé pour l'expérience).
+- [ ] Les colonnes mana/vie sont pleines (bleu/rouge sur toute la hauteur) à `100/100` ; la
+      barre d'expérience est vide (fond gris) à `0/100`.
+- [ ] Les cœurs vanilla (habituellement en bas à gauche, au-dessus de la barre de faim) sont
+      **absents** — remplacés par la colonne rouge.
+- [ ] Vérifier que la barre d'XP vanilla est bien invisible (`EXPERIENCE_LEVEL` masqué) et ne
+      se confond pas avec la barre verte du mod.
 - [ ] Prendre `mana_test_wand` dans l'onglet créatif Dungeon Defenders (icône bâton de
-      blaze, pas de texture dédiée).
-- [ ] Clic droit avec la baguette : la jauge perd 10 % de sa largeur, le texte passe à
-      `90/100`, un message système confirme `-10 mana (90/100)`.
-- [ ] Répéter jusqu'à `0/100` : la jauge doit être entièrement vide (fond gris), et un
+      blaze, pas de texture dédiée). Clic droit : la colonne mana perd 10 % de sa hauteur
+      **par le haut** (elle se vide du haut vers le bas puisqu'elle se remplit du bas vers le
+      haut), le texte passe à `90/100`, un message système confirme `-10 mana (90/100)`.
+- [ ] Répéter jusqu'à `0/100` : la colonne mana doit être entièrement vide (fond gris), et un
       nouveau clic droit affiche le message « Pas assez de mana ! » sans repasser en négatif.
 - [ ] Quitter le monde et y revenir (ou `/reload` + relog) : le mana affiché doit être celui
       d'avant la déconnexion, pas remis à 100 (l'attachment est censé persister).
-
-## HUD — vie
-
-- [ ] Une jauge rouge apparaît juste en dessous de celle du mana, avec le texte
-      `Vie : 100/100` à droite.
-- [ ] Les cœurs vanilla (en bas à gauche, au-dessus de la barre de faim) sont **absents** —
-      remplacés par cette jauge.
-- [ ] Se prendre des dégâts (chute, mob, `/damage`) : la jauge rouge et le texte diminuent en
+- [ ] Se prendre des dégâts (chute, mob, `/damage`) : la colonne vie diminue par le haut, en
       cohérence avec les dégâts subis.
 - [ ] Se reconnecter (relog) après avoir perdu de la vie : la vie perdue doit être conservée,
       pas remise à 100/100 (seul un joueur qui était déjà à son maximum doit se retrouver à
       100/100 après coup).
 - [ ] Un nouveau joueur (jamais connecté à ce monde) doit spawn à 100/100, pas à 20/20.
-
-## HUD — expérience custom
-
-- [ ] Une jauge verte apparaît juste en dessous de celle de la vie, avec le texte
-      `Expérience : 0/100` à droite (rien ne la fait varier pour l'instant, donc elle doit
-      rester vide et stable).
-- [ ] Vérifier qu'elle ne se confond pas visuellement avec la barre d'XP vanilla — cette
-      dernière doit être invisible (`EXPERIENCE_LEVEL` masqué), seule la jauge verte du mod
-      doit être visible.
+- [ ] Redimensionner la fenêtre : le groupe entier reste collé au bord bas-gauche, colonnes et
+      barre toujours alignées entre elles.
 
 ## HUD — vague
 

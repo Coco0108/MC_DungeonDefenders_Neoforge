@@ -230,13 +230,16 @@ public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> M
 ### L'affichage — `client/gui/ManaOverlay.java`
 
 Couche HUD (`GuiLayer`) enregistrée dans `DungeonDefendersModClient` via
-`RegisterGuiLayersEvent#registerAboveAll`. Volontairement minimal :
+`RegisterGuiLayersEvent#registerAboveAll`. Volontairement minimal, et fait partie du groupe
+bas-gauche décrit dans [Le groupe bas-gauche](#le-groupe-bas-gauche--mana-vie-expérience)
+ci-dessous :
 
-- une jauge unie en haut à gauche de l'écran (`guiGraphics.fill`, pas de sprite) : fond gris
-  foncé pleine largeur, recouvert par un rectangle bleu dont la largeur est proportionnelle à
-  `currentMana / maxMana` ;
-- juste à droite de la jauge, le texte `Mana: X/Y` (clé `dungeon_defenders.hud.mana`) pour
-  lire la valeur exacte, centré verticalement sur la hauteur de la jauge.
+- une colonne verticale unie (`guiGraphics.fill`, pas de sprite), en bas à gauche de l'écran :
+  fond gris foncé pleine hauteur, recouvert par le bas d'un rectangle bleu dont la hauteur est
+  proportionnelle à `currentMana / maxMana` — la jauge se remplit du bas vers le haut ;
+  c'est la colonne de **gauche** du groupe (vie à droite) ;
+- au-dessus de la colonne, le texte `Mana: X/Y` (clé `dungeon_defenders.hud.mana`), centré
+  horizontalement (`guiGraphics.centeredText`) sur la largeur de la colonne.
 
 Lit `player.getData(ModAttachments.MANA)` à chaque frame ; pas d'état côté overlay lui-même.
 Voir [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) pour ce qu'il reste à
@@ -298,11 +301,11 @@ join, où le joueur vient de spawn à 20/20 avant que l'attribut ne soit modifi�
 
 ### L'affichage — `client/gui/HealthOverlay.java`
 
-Même structure que `ManaOverlay` (jauge + texte `Health: X/Y`, clé
-`dungeon_defenders.hud.health`), en rouge, positionnée juste en dessous grâce aux constantes
-`ManaOverlay.ROW_Y` / `ROW_HEIGHT`. Lit directement `player.getHealth()` /
-`player.getMaxHealth()` à chaque frame — pas besoin d'attachment, ces valeurs sont déjà
-tenues à jour et synchronisées par le moteur.
+Même structure que `ManaOverlay` (colonne verticale + texte `Health: X/Y`, clé
+`dungeon_defenders.hud.health`), en rouge, positionnée juste à **droite** de la colonne mana
+(`HudLayout.MARGIN + COLUMN_WIDTH + COLUMN_GAP`), même hauteur. Lit directement
+`player.getHealth()` / `player.getMaxHealth()` à chaque frame — pas besoin d'attachment, ces
+valeurs sont déjà tenues à jour et synchronisées par le moteur.
 
 Les cœurs vanilla (`VanillaGuiLayers.PLAYER_HEALTH`) sont masqués dans
 `DungeonDefendersModClient.onRegisterGuiLayers` via `event.replaceLayer(..., HIDDEN)` :
@@ -336,10 +339,38 @@ pas encore de vraie notion de "maximum", c'est surtout ce qui donne son échelle
 
 ### L'affichage — `client/gui/ExperienceOverlay.java`
 
-Même structure que `ManaOverlay`/`HealthOverlay` (jauge + texte `Experience: X/Y`, clé
-`dungeon_defenders.hud.experience`), en vert, positionnée juste en dessous de la vie grâce à
-`HealthOverlay.ROW_Y + ManaOverlay.ROW_HEIGHT`. Comme rien ne fait encore varier l'attachment,
-elle s'affiche `0/100` en permanence tant qu'aucun mécanisme n'alimente `ModAttachments.EXPERIENCE`.
+Contrairement à `ManaOverlay`/`HealthOverlay`, reste une **barre horizontale** classique
+(jauge + texte `Experience: X/Y` à sa droite, clé `dungeon_defenders.hud.experience`), en
+vert, tout en bas de l'écran, sous les deux colonnes. Comme rien ne fait encore varier
+l'attachment, elle s'affiche `0/100` en permanence tant qu'aucun mécanisme n'alimente
+`ModAttachments.EXPERIENCE`.
+
+## Le groupe bas-gauche — mana, vie, expérience
+
+`ManaOverlay`, `HealthOverlay` et `ExperienceOverlay` forment un groupe positionné dans le
+coin bas-gauche de l'écran :
+
+```
+   Mana        Vie
+  ┌────┐     ┌────┐
+  │▓▓▓▓│     │▓▓▓▓│    <- colonnes verticales, remplissage bas → haut
+  │▓▓▓▓│     │▓▓▓▓│       mana à gauche, vie à droite
+  │░░░░│     │▓▓▓▓│
+  └────┘     └────┘
+  [███░░░░░░░░░░░░░░] Experience: 0/100   <- barre horizontale, tout en bas
+```
+
+`client/gui/HudLayout.java` centralise les constantes de mise en page partagées par les trois
+(marge, largeur/hauteur des colonnes, écart entre colonnes, écart avant la barre
+d'expérience) : sans ça, garder les trois classes indépendantes alignées au pixel près
+demanderait de dupliquer les mêmes valeurs magiques partout, avec le risque qu'elles divergent
+au premier ajustement.
+
+`ExperienceOverlay` calcule sa position en premier (ancrée au bord bas de l'écran via
+`guiGraphics.guiHeight()`) et expose `barTop(guiGraphics)`, une méthode package-visible que
+`ManaOverlay`/`HealthOverlay` appellent pour savoir où s'arrête le bas de leurs colonnes
+(`ExperienceOverlay.barTop(guiGraphics) - HudLayout.ROW_GAP`) — même principe de couplage
+minimal que `WaveOverlay.waveText(level)` pour le groupe haut-droit.
 
 ## La vague en cours
 

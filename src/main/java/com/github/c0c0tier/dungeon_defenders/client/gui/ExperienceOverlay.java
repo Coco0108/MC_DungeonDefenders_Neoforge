@@ -12,11 +12,12 @@ import net.neoforged.neoforge.client.gui.GuiLayer;
 // HealthOverlay : à remplacer par une vraie texture quand le reste du HUD sera dessiné, voir
 // 05-etat-et-problemes-connus.md. C'est une expérience custom, pas l'XP vanilla : rien ne la
 // fait encore varier (voir ModAttachments.EXPERIENCE), elle démarre donc vide.
+//
+// Barre horizontale ancrée en bas à gauche de l'écran, sous les colonnes mana/vie
+// (ManaOverlay/HealthOverlay s'appuient sur barTop(...) ci-dessous pour se placer juste
+// au-dessus).
 public class ExperienceOverlay implements GuiLayer {
-    private static final int MARGIN = 4;
-    private static final int ROW_Y = HealthOverlay.ROW_Y + ManaOverlay.ROW_HEIGHT;
     private static final int BAR_WIDTH = 100;
-    private static final int BAR_HEIGHT = 6;
     private static final int FILLED_COLOR = 0xFF22C55E;
     private static final int EMPTY_COLOR = 0xFF2B2B2B;
     private static final int TEXT_COLOR = 0xFFFFFF;
@@ -32,17 +33,23 @@ public class ExperienceOverlay implements GuiLayer {
         int currentExperience = player.getData(ModAttachments.EXPERIENCE);
         int maxExperience = ModAttachments.MAX_EXPERIENCE;
 
+        int barY = barTop(guiGraphics);
         int filledWidth = maxExperience <= 0 ? 0 : (int) ((long) BAR_WIDTH * currentExperience / maxExperience);
 
-        guiGraphics.fill(MARGIN, ROW_Y, MARGIN + BAR_WIDTH, ROW_Y + BAR_HEIGHT, EMPTY_COLOR);
+        guiGraphics.fill(HudLayout.MARGIN, barY, HudLayout.MARGIN + BAR_WIDTH, barY + HudLayout.EXPERIENCE_BAR_HEIGHT, EMPTY_COLOR);
         if (filledWidth > 0) {
-            guiGraphics.fill(MARGIN, ROW_Y, MARGIN + filledWidth, ROW_Y + BAR_HEIGHT, FILLED_COLOR);
+            guiGraphics.fill(HudLayout.MARGIN, barY, HudLayout.MARGIN + filledWidth, barY + HudLayout.EXPERIENCE_BAR_HEIGHT, FILLED_COLOR);
         }
 
-        int textX = MARGIN + BAR_WIDTH + 6;
-        int textY = ROW_Y + BAR_HEIGHT / 2 - minecraft.font.lineHeight / 2;
+        int textX = HudLayout.MARGIN + BAR_WIDTH + 6;
+        int textY = barY + HudLayout.EXPERIENCE_BAR_HEIGHT / 2 - minecraft.font.lineHeight / 2;
         guiGraphics.text(minecraft.font,
                 Component.translatable("dungeon_defenders.hud.experience", currentExperience, maxExperience),
                 textX, textY, TEXT_COLOR);
+    }
+
+    // Position Y du haut de cette barre, ancrée en bas de l'écran.
+    static int barTop(GuiGraphicsExtractor guiGraphics) {
+        return guiGraphics.guiHeight() - HudLayout.MARGIN - HudLayout.EXPERIENCE_BAR_HEIGHT;
     }
 }

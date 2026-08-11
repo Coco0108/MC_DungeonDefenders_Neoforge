@@ -19,14 +19,15 @@ vérifie la CI.
   (`stepOn`), cooldown de 1 s par entité. Modèle, blockstate, loot table, tag `mineable/pickaxe`,
   traductions `en_us`/`fr_fr`, onglet créatif.
 - ✅ Mana du joueur : data attachment `mana` (persistant, synchronisé), maximum par défaut de
-  100, affiché en HUD via `ManaOverlay` (jauge de remplissage + texte `X/Y` à côté, très
-  provisoire). Testable en jeu avec l'item `mana_test_wand` (clic droit = -10 mana).
+  100, affiché en HUD via `ManaOverlay` — colonne verticale en bas à gauche de l'écran, très
+  provisoire. Testable en jeu avec l'item `mana_test_wand` (clic droit = -10 mana).
 - ✅ Vie du joueur : maximum vanilla porté de 20 à 100 (`ModEvents.onPlayerJoin`), affichée en
-  HUD via `HealthOverlay` (même principe que le mana, en rouge, juste en dessous).
+  HUD via `HealthOverlay` — colonne verticale juste à droite de celle du mana, même style.
 - ✅ Expérience custom du joueur : data attachment `experience` (persistant, synchronisé),
   démarre à `0/100` (contrairement au mana/à la vie qui démarrent pleins), affichée en HUD
-  via `ExperienceOverlay` (même principe, en vert, sous la vie). Sans rapport avec l'XP
-  vanilla.
+  via `ExperienceOverlay` — barre horizontale tout en bas, sous les colonnes mana/vie. Sans
+  rapport avec l'XP vanilla. Le groupe des trois est décrit dans
+  [02-gameplay.md](02-gameplay.md#le-groupe-bas-gauche--mana-vie-expérience).
 - ✅ Vague en cours : data attachment `current_wave` sur la `Level` (persistant, synchronisé,
   démarre à 1), affichée en haut à droite (`Vague X/5`) via `WaveOverlay` — texte seul, pas de
   jauge. Aucun déroulement de vagues n'existe encore.
@@ -125,15 +126,16 @@ avant `COMBAT`, par exemple), les sauvegardes existantes se retrouveront avec la
 phase au chargement. Pas un problème tant qu'on ajoute des valeurs à la fin de l'enum, mais à
 garder en tête — voir [02-gameplay.md](02-gameplay.md#la-phase-de-la-partie--clientguiphaseoverlayjava).
 
-### Le HUD du mana et de la vie n'a pas de vrai visuel
+### Le HUD du mana, de la vie et de l'expérience n'a pas de vrai visuel
 
-`ManaOverlay` et `HealthOverlay` dessinent du texte et des rectangles pleins
-(`guiGraphics.fill`), sans texture ni alignement avec le reste du HUD (hotbar, XP, faim…) :
-c'est un placeholder assumé, à remplacer par des sprites une fois le reste de l'UI défini.
-Ils sont aussi positionnés en `registerAboveAll` à des coordonnées fixes (haut gauche, l'une
-sous l'autre via les constantes `ManaOverlay.ROW_Y`/`ROW_HEIGHT`), sans tenir compte de
-`Gui.leftHeight`/`rightHeight` comme le fait le HUD vanilla pour empiler les barres sans se
-chevaucher.
+`ManaOverlay`, `HealthOverlay` et `ExperienceOverlay` dessinent du texte et des rectangles
+pleins (`guiGraphics.fill`), sans texture ni alignement avec le reste du HUD (hotbar, XP,
+faim…) : c'est un placeholder assumé, à remplacer par des sprites une fois le reste de l'UI
+défini. Ils sont aussi positionnés en `registerAboveAll` à des coordonnées fixes (bas gauche,
+via les constantes de `HudLayout` — voir
+[02-gameplay.md](02-gameplay.md#le-groupe-bas-gauche--mana-vie-expérience)), sans tenir
+compte de `Gui.leftHeight`/`rightHeight` comme le fait le HUD vanilla pour empiler les barres
+sans se chevaucher.
 
 ### Le rendu n'est pas interpolé
 
@@ -165,8 +167,8 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 4. Retirer le harnais de test du clic droit quand une autre source de dégâts existera.
 5. Étendre l'IA au-delà des zombies (le goal n'exige qu'un `PathfinderMob`).
 6. Donner une vraie utilité au mana (un sort/une capacité qui le consomme, une régénération
-   passive), retirer `ManaTestWandItem`, puis remplacer le HUD provisoire de `ManaOverlay`
-   et `HealthOverlay` par un vrai visuel, aligné sur le reste du HUD.
+   passive), retirer `ManaTestWandItem`, puis remplacer le HUD provisoire de `ManaOverlay`,
+   `HealthOverlay` et `ExperienceOverlay` par un vrai visuel, aligné sur le reste du HUD.
 7. Concevoir et implémenter les remplacements custom de la faim et de la hotbar (masquées
    mais vides pour l'instant).
 8. Définir un vrai système d'expérience/niveaux qui alimente `ModAttachments.EXPERIENCE`

@@ -8,18 +8,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.client.gui.GuiLayer;
 
-// Overlay volontairement minimal (texte + jauge unie) : à remplacer par une vraie
+// Overlay volontairement minimal (colonne verticale + texte) : à remplacer par une vraie
 // texture quand le reste du HUD sera dessiné, voir 05-etat-et-problemes-connus.md.
+//
+// Colonne de gauche du groupe bas-gauche (mana | vie), au-dessus de la barre d'expérience.
+// Se remplit du bas vers le haut. Voir HudLayout pour les constantes partagées avec
+// HealthOverlay/ExperienceOverlay.
 public class ManaOverlay implements GuiLayer {
-    private static final int MARGIN = 4;
-    // Position de la rangée mana dans le HUD, et hauteur réservée par rangée : HealthOverlay
-    // s'appuie sur ces deux constantes pour se placer juste en dessous. Tant qu'il n'y a pas
-    // de vrai système d'empilement (voir Gui.leftHeight/rightHeight côté vanilla), c'est la
-    // seule chose qui les garde alignées.
-    static final int ROW_Y = MARGIN;
-    static final int ROW_HEIGHT = 14;
-    private static final int BAR_WIDTH = 100;
-    private static final int BAR_HEIGHT = 6;
     private static final int FILLED_COLOR = 0xFF3B82F6;
     private static final int EMPTY_COLOR = 0xFF2B2B2B;
     private static final int TEXT_COLOR = 0xFFFFFF;
@@ -35,19 +30,22 @@ public class ManaOverlay implements GuiLayer {
         int currentMana = player.getData(ModAttachments.MANA);
         int maxMana = ModAttachments.MAX_MANA;
 
-        int barY = ROW_Y;
-        int filledWidth = maxMana <= 0 ? 0 : (int) ((long) BAR_WIDTH * currentMana / maxMana);
+        int columnLeft = HudLayout.MARGIN;
+        int columnBottom = ExperienceOverlay.barTop(guiGraphics) - HudLayout.ROW_GAP;
+        int columnTop = columnBottom - HudLayout.COLUMN_HEIGHT;
+        int filledHeight = maxMana <= 0 ? 0 : (int) ((long) HudLayout.COLUMN_HEIGHT * currentMana / maxMana);
+        int filledTop = columnBottom - filledHeight;
 
-        guiGraphics.fill(MARGIN, barY, MARGIN + BAR_WIDTH, barY + BAR_HEIGHT, EMPTY_COLOR);
-        if (filledWidth > 0) {
-            guiGraphics.fill(MARGIN, barY, MARGIN + filledWidth, barY + BAR_HEIGHT, FILLED_COLOR);
+        guiGraphics.fill(columnLeft, columnTop, columnLeft + HudLayout.COLUMN_WIDTH, columnBottom, EMPTY_COLOR);
+        if (filledHeight > 0) {
+            guiGraphics.fill(columnLeft, filledTop, columnLeft + HudLayout.COLUMN_WIDTH, columnBottom, FILLED_COLOR);
         }
 
-        // Le texte se place à côté de la jauge (et non dessus), pour lire la valeur exacte.
-        int textX = MARGIN + BAR_WIDTH + 6;
-        int textY = barY + BAR_HEIGHT / 2 - minecraft.font.lineHeight / 2;
-        guiGraphics.text(minecraft.font,
-                Component.translatable("dungeon_defenders.hud.mana", currentMana, maxMana),
-                textX, textY, TEXT_COLOR);
+        // Le texte se place au-dessus de la colonne (et non à côté), pour lire la valeur
+        // exacte sans empiéter sur la colonne voisine (vie).
+        Component text = Component.translatable("dungeon_defenders.hud.mana", currentMana, maxMana);
+        int centerX = columnLeft + HudLayout.COLUMN_WIDTH / 2;
+        int textY = columnTop - minecraft.font.lineHeight - 2;
+        guiGraphics.centeredText(minecraft.font, text, centerX, textY, TEXT_COLOR);
     }
 }

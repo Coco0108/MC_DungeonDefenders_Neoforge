@@ -20,9 +20,10 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── ModAttachments.java           # DeferredRegister des data attachments (mana, vagues, phase...)
     │   │   └── GamePhase.java                # Enum des phases de partie (BUILD, COMBAT)
     │   ├── client/gui/
-    │   │   ├── ManaOverlay.java              # Couche HUD affichant le mana (client uniquement)
-    │   │   ├── HealthOverlay.java            # Couche HUD affichant la vie (client uniquement)
-    │   │   ├── ExperienceOverlay.java        # Couche HUD affichant l'expérience custom (client uniquement)
+    │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)
+    │   │   ├── ManaOverlay.java              # Colonne verticale mana, bas gauche (client uniquement)
+    │   │   ├── HealthOverlay.java            # Colonne verticale vie, bas gauche (client uniquement)
+    │   │   ├── ExperienceOverlay.java        # Barre horizontale expérience custom, bas gauche (client uniquement)
     │   │   ├── WaveOverlay.java              # Couche HUD affichant la vague en cours (client uniquement)
     │   │   ├── WaveEnemiesOverlay.java       # Couche HUD affichant les ennemis tués/total de la vague (client uniquement)
     │   │   └── PhaseOverlay.java             # Couche HUD affichant la phase (construction/combat) (client uniquement)
