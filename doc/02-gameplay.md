@@ -409,20 +409,19 @@ pas `player`, puisque l'état appartient au monde.
 
 ### La progression de la vague — `client/gui/WaveEnemiesOverlay.java`
 
-Sur la **même rangée** que `WaveOverlay` (pas en dessous, pour lire les deux informations
-d'un coup d'œil), même style que `ExperienceOverlay` (jauge + texte `Ennemis : X/Y`, clé
-`dungeon_defenders.hud.wave_enemies`) mais **en miroir et ancré sur `WaveOverlay`** : dans
-l'ordre, de droite à gauche, `Vague X/Y` puis un espace, la jauge (`BAR_WIDTH = 60`, plus
-étroite que les autres jauges du HUD pour que la ligne ne déborde pas), puis le texte
-`Ennemis : X/Y`. `X` = ennemis déjà tués (`ModAttachments.WAVE_ENEMIES_KILLED`, vide par
-défaut), `Y` = ennemis total de la vague (`ModAttachments.WAVE_ENEMIES_TOTAL`, `10` par
-défaut) ; la jauge orange se remplit à mesure que `X` se rapproche de `Y`. Deux attachments
-sur la `Level`, même raisonnement que `current_wave`.
+**Centrée tout en haut de l'écran**, indépendante du reste du groupe vague/phase (qui reste
+en haut à droite) : c'est l'information la plus visible du jeu de référence (*Dungeon
+Defenders* original), une grosse barre en haut-centre, donc elle a sa propre place plutôt que
+de se caser à côté du texte `Vague X/Y`.
 
-`WaveEnemiesOverlay` appelle `WaveOverlay.waveText(level)` (méthode package-visible) pour
-calculer où commence le texte `Vague X/Y` et se positionner juste à sa gauche — c'est le seul
-couplage entre les deux classes, pour ne pas dupliquer la logique de lecture de
-`CURRENT_WAVE`/`MAX_WAVE`.
+Même style que `ExperienceOverlay` (jauge + texte `Ennemis : X/Y`, clé
+`dungeon_defenders.hud.wave_enemies`), mais plus large (`BAR_WIDTH = 240`) et avec le texte
+**superposé au centre de la jauge** plutôt qu'à côté — plus compact malgré la largeur,
+également plus proche du rendu du jeu de référence. `X` = ennemis déjà tués
+(`ModAttachments.WAVE_ENEMIES_KILLED`, vide par défaut), `Y` = ennemis total de la vague
+(`ModAttachments.WAVE_ENEMIES_TOTAL`, `10` par défaut) ; la jauge orange se remplit à mesure
+que `X` se rapproche de `Y`. Deux attachments sur la `Level`, même raisonnement que
+`current_wave`.
 
 ### La phase de la partie — `client/gui/PhaseOverlay.java`
 

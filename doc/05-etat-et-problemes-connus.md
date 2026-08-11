@@ -32,9 +32,9 @@ vérifie la CI.
   démarre à 1), affichée en haut à droite (`Vague X/5`) via `WaveOverlay` — texte seul, pas de
   jauge. Aucun déroulement de vagues n'existe encore.
 - ✅ Progression de la vague : `wave_enemies_killed`/`wave_enemies_total` (mêmes garanties que
-  `current_wave`), affichée sur la même rangée, juste à gauche de `Vague X/Y`, via
-  `WaveEnemiesOverlay` (jauge orange + texte `Ennemis : X/Y`, en miroir de
-  `ExperienceOverlay`). Démarre à `0/10`, rien ne fait encore
+  `current_wave`), affichée en grande barre centrée tout en haut de l'écran via
+  `WaveEnemiesOverlay` (jauge orange, texte `Ennemis : X/Y` superposé au centre) — la zone la
+  plus visible du HUD, comme dans le jeu de référence. Démarre à `0/10`, rien ne fait encore
   varier ni les tués ni le total.
 - ✅ Phase de la partie : data attachment `game_phase` sur la `Level` (ordinal de l'enum
   `GamePhase` : `BUILD`/`COMBAT`), démarre en `BUILD`, affichée juste sous la rangée

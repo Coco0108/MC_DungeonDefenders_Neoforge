@@ -25,7 +25,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── HealthOverlay.java            # Colonne verticale vie, bas gauche (client uniquement)
     │   │   ├── ExperienceOverlay.java        # Barre horizontale expérience custom, bas gauche (client uniquement)
     │   │   ├── WaveOverlay.java              # Couche HUD affichant la vague en cours (client uniquement)
-    │   │   ├── WaveEnemiesOverlay.java       # Couche HUD affichant les ennemis tués/total de la vague (client uniquement)
+    │   │   ├── WaveEnemiesOverlay.java       # Couche HUD affichant les ennemis tués/total, haut centre (client uniquement)
     │   │   ├── PhaseOverlay.java             # Couche HUD affichant la phase (construction/combat) (client uniquement)
     │   │   ├── ScoreOverlay.java             # Couche HUD affichant le score de la carte, bas centre (client uniquement)
     │   │   └── CharacterOverlay.java         # Couche HUD affichant "Nom - niv X", bas centre (client uniquement)

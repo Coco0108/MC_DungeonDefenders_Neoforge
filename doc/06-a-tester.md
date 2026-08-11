@@ -55,14 +55,14 @@ Lancer le client de dev :
 
 ## HUD — progression de la vague
 
-- [ ] Sur la **même ligne** que `Vague 1/5` (pas en dessous), de droite à gauche : `Vague
-      1/5`, une jauge orange, puis le texte `Ennemis : 0/10`. Tout doit tenir sur une seule
-      ligne sans se chevaucher.
+- [ ] Une grande jauge orange (240px de large) apparaît **centrée tout en haut de l'écran**,
+      bien séparée du texte `Vague X/Y` (qui reste en haut à droite).
+- [ ] Le texte `Ennemis : 0/10` est **superposé au centre de la jauge** (pas à côté), lisible
+      par-dessus le fond gris.
 - [ ] La jauge est vide (fond gris) puisque `0/10` : rien ne doit apparaître en orange tant
       que rien ne tue d'ennemis, c'est attendu.
-- [ ] En redimensionnant la fenêtre, l'ensemble reste collé au bord droit et la jauge reste
-      juste à gauche du texte `Vague X/Y` (elle suit sa largeur, qui peut varier avec le
-      nombre de chiffres).
+- [ ] En redimensionnant la fenêtre, la jauge reste centrée horizontalement et collée au bord
+      haut de l'écran, indépendamment de la position de `Vague X/Y`.
 
 ## HUD — phase
 
