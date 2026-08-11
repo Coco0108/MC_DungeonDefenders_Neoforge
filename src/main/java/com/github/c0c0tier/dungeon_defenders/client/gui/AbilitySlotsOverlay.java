@@ -6,8 +6,9 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.client.gui.GuiLayer;
 
-// Quatre emplacements de compétences en bas à droite de l'écran, comme dans le jeu de
-// référence : soin sur soi, sort 1 du héros, sort 2 du héros, réparation de tour — dans cet
+// Quatre emplacements de compétences en bas à gauche de l'écran, juste à droite des losanges
+// mana/vie (voir HudLayout), au-dessus de la barre d'expérience — comme dans le jeu de
+// référence : soin sur soi, sort 1 du héros, sort 2 du héros, réparation de tour, dans cet
 // ordre, de gauche à droite. Purement visuel pour l'instant : pas d'icône (viendront plus
 // tard, une par slot), pas de clic, pas de cooldown, pas de consommation de mana. Voir
 // 05-etat-et-problemes-connus.md.
@@ -19,9 +20,10 @@ public class AbilitySlotsOverlay implements GuiLayer {
             "self_heal", "hero_spell_1", "hero_spell_2", "repair_tower"
     };
 
-    private static final int MARGIN = 4;
     private static final int RADIUS = 14;
     private static final int GAP = 4;
+    // Espace entre le losange vie (HudLayout) et le premier slot.
+    private static final int GROUP_GAP = 10;
     private static final int FILL_COLOR = 0xFF2B2B2B;
     private static final int BORDER_COLOR = 0xFF000000;
 
@@ -33,14 +35,16 @@ public class AbilitySlotsOverlay implements GuiLayer {
             return;
         }
 
-        int centerY = guiGraphics.guiHeight() - MARGIN - RADIUS;
-        int rightmostCenterX = guiGraphics.guiWidth() - MARGIN - RADIUS;
+        // Même ligne de base que les losanges mana/vie (leur pointe basse), pour rester
+        // aligné avec eux plutôt que de flotter à une hauteur différente.
+        int bottomY = ExperienceOverlay.barTop(guiGraphics) - HudLayout.ROW_GAP;
+        int centerY = bottomY - RADIUS;
+
+        int healthDiamondRight = HudLayout.MARGIN + HudLayout.DIAMOND_RADIUS * 4 + HudLayout.DIAMOND_GAP;
+        int firstCenterX = healthDiamondRight + GROUP_GAP + RADIUS;
 
         for (int i = 0; i < SLOT_NAMES.length; i++) {
-            // i = 0 (soin) est le plus à gauche ; on part du bord droit (réparation) et on
-            // recule d'un pas par slot pour respecter l'ordre gauche -> droite demandé.
-            int slotsFromRight = SLOT_NAMES.length - 1 - i;
-            int centerX = rightmostCenterX - slotsFromRight * (RADIUS * 2 + GAP);
+            int centerX = firstCenterX + i * (RADIUS * 2 + GAP);
             CircleSlot.render(guiGraphics, centerX, centerY, RADIUS, FILL_COLOR, BORDER_COLOR);
         }
     }

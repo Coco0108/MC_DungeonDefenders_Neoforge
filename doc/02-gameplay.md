@@ -376,6 +376,11 @@ plus rien eux-mêmes directement.
 trois classes indépendantes alignées au pixel près demanderait de dupliquer les mêmes valeurs
 magiques partout, avec le risque qu'elles divergent au premier ajustement.
 
+Un quatrième overlay, `AbilitySlotsOverlay`, se greffe juste à droite de ce groupe (les 4
+emplacements de compétences) — voir
+[Les emplacements de compétences](#les-emplacements-de-compétences--clientguiabilityslotsoverlayjava)
+plus bas.
+
 `ExperienceOverlay` calcule sa position en premier (ancrée au bord bas de l'écran via
 `guiGraphics.guiHeight()`) et expose `barTop(guiGraphics)`, une méthode package-visible que
 `ManaOverlay`/`HealthOverlay` appellent pour savoir où s'arrête le bas de leurs colonnes
@@ -495,12 +500,18 @@ Affiche `Nom - niv X` (clé `dungeon_defenders.hud.character`), juste au-dessus 
 
 ## Les emplacements de compétences — `client/gui/AbilitySlotsOverlay.java`
 
-Quatre ronds en bas à droite de l'écran, comme dans le jeu de référence, dans l'ordre
-gauche → droite :
+Quatre ronds en bas à **gauche** de l'écran, juste à droite des losanges mana/vie et
+au-dessus de la barre d'expérience — dans le prolongement du groupe bas-gauche décrit plus
+haut, comme dans le jeu de référence, dans l'ordre gauche → droite :
 
 ```
-                                    ( ) ( ) ( ) ( )
-                                    soin sort1 sort2 répare
+   Mana        Vie
+    ◆           ◆     ( ) ( ) ( ) ( )
+   ▓█▓         ▓█▓     soin sort1 sort2 répare
+  ▓███▓       ▓███▓
+  ░░░░░       ▓▓▓▓▓
+    ░           ▓
+  [███░░░░░░░░░░░░░░] Experience: 0/100
 ```
 
 1. Soin sur soi
@@ -513,6 +524,11 @@ aucune icône (elles arriveront plus tard, une par slot). C'est juste le fond de
 rond avec une fine bordure, dessiné par `CircleSlot` (même philosophie que `DiamondGauge` :
 `guiGraphics.fill()` empilés, bande par bande, largeur donnée par le théorème de Pythagore —
 pas de texture ni de géométrie custom bas niveau).
+
+Se positionne à partir de `HudLayout.MARGIN + DIAMOND_RADIUS * 4 + DIAMOND_GAP` (le bord droit
+du losange vie), plus un petit écart (`GROUP_GAP`) — c'est le seul couplage avec le reste du
+groupe bas-gauche, pour rester juste à côté des losanges plutôt que de dupliquer leur calcul
+de position en dur.
 
 `AbilitySlotsOverlay.SLOT_NAMES` est un tableau de 4 identifiants (`self_heal`,
 `hero_spell_1`, `hero_spell_2`, `repair_tower`) qui ne sert encore à rien à l'exécution : il

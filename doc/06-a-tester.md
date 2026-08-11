@@ -92,19 +92,21 @@ Lancer le client de dev :
       y avoir un espace visible entre les deux, la barre d'expérience étant plus à gauche.
 - [ ] Redimensionner la fenêtre : le bloc reste centré horizontalement et collé au bord bas.
 
-## HUD — emplacements de compétences (bas droite)
+## HUD — emplacements de compétences (bas gauche)
 
-- [ ] 4 ronds apparaissent en bas à droite de l'écran, alignés horizontalement, collés au
-      coin (dans l'ordre gauche → droite : soin, sort 1, sort 2, réparation — impossible à
-      distinguer visuellement pour l'instant, pas d'icône, c'est attendu).
+- [ ] 4 ronds apparaissent en bas à gauche de l'écran, **juste à droite du losange vie**,
+      alignés horizontalement sur la même ligne que les losanges mana/vie, au-dessus de la
+      barre d'expérience (dans l'ordre gauche → droite : soin, sort 1, sort 2, réparation —
+      impossible à distinguer visuellement pour l'instant, pas d'icône, c'est attendu).
 - [ ] Chaque rond a une fine bordure sombre autour d'un fond gris — vérifier que ce sont bien
       des ronds (pas des carrés), même remarque que pour les losanges : un léger crénelage sur
       le contour est normal avec cette technique de rendu.
 - [ ] Rien ne se passe au clic dessus (ce ne sont pas des boutons pour l'instant, c'est
       attendu) et il n'y a pas d'erreur dans les logs.
-- [ ] Ne chevauche ni la barre d'expérience (bas gauche) ni le bloc score/personnage (bas
-      centre) — il doit y avoir de l'espace visible de chaque côté.
-- [ ] Redimensionner la fenêtre : le groupe reste collé au coin bas-droit.
+- [ ] Ne chevauche ni les losanges mana/vie ni la barre d'expérience — il doit y avoir un
+      petit espace visible entre le losange vie et le premier rond (soin).
+- [ ] Redimensionner la fenêtre : le groupe entier (losanges + ronds + barre d'expérience)
+      reste collé au coin bas-gauche et aligné.
 
 ## HUD vanilla masqué
 

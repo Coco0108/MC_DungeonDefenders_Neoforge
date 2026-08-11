@@ -31,7 +31,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── PhaseOverlay.java             # Couche HUD affichant la phase (construction/combat) (client uniquement)
     │   │   ├── ScoreOverlay.java             # Couche HUD affichant le score de la carte, bas centre (client uniquement)
     │   │   ├── CharacterOverlay.java         # Couche HUD affichant "Nom - niv X", bas centre (client uniquement)
-    │   │   └── AbilitySlotsOverlay.java      # 4 emplacements de compétences, bas droite (client uniquement)
+    │   │   └── AbilitySlotsOverlay.java      # 4 emplacements de compétences, bas gauche, à côté des losanges (client uniquement)
     │   ├── entity/ai/
     │   │   └── AttackEterniaCrystalGoal.java # Goal : converger vers le cristal et le frapper
     │   └── block/
