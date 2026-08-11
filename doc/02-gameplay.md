@@ -493,6 +493,34 @@ Affiche `Nom - niv X` (clé `dungeon_defenders.hud.character`), juste au-dessus 
   démarre à `1`, persistant, synchronisé. Rien ne le fait encore monter — pas de formule
   d'XP → niveau, pas de notion de "monter de niveau".
 
+## Les emplacements de compétences — `client/gui/AbilitySlotsOverlay.java`
+
+Quatre ronds en bas à droite de l'écran, comme dans le jeu de référence, dans l'ordre
+gauche → droite :
+
+```
+                                    ( ) ( ) ( ) ( )
+                                    soin sort1 sort2 répare
+```
+
+1. Soin sur soi
+2. Sort 1 du héros
+3. Sort 2 du héros
+4. Réparation de tour
+
+**Purement visuel pour l'instant** : aucun clic, aucun cooldown, aucune consommation de mana,
+aucune icône (elles arriveront plus tard, une par slot). C'est juste le fond des slots — un
+rond avec une fine bordure, dessiné par `CircleSlot` (même philosophie que `DiamondGauge` :
+`guiGraphics.fill()` empilés, bande par bande, largeur donnée par le théorème de Pythagore —
+pas de texture ni de géométrie custom bas niveau).
+
+`AbilitySlotsOverlay.SLOT_NAMES` est un tableau de 4 identifiants (`self_heal`,
+`hero_spell_1`, `hero_spell_2`, `repair_tower`) qui ne sert encore à rien à l'exécution : il
+documente juste l'ordre attendu, en attendant que chaque slot ait sa propre icône et sa propre
+logique. Contrairement aux autres overlays, pas d'attachment ici non plus : il n'y a encore
+aucun état à lire (pas de cooldown, pas de "sort débloqué ou non"), voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
 ## Le HUD vanilla masqué
 
 Le mod vise une interface entièrement custom : plusieurs couches du HUD vanilla sont donc

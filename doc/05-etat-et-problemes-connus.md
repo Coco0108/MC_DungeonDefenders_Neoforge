@@ -49,6 +49,9 @@ vérifie la CI.
   mais initialisé avec, faute de mieux) et `level` (`Integer`, démarre à 1) — deux data
   attachments sur le joueur, persistants, synchronisés. Affichés juste au-dessus du score via
   `CharacterOverlay` (`Nom - niv X`). Rien ne fait encore varier ni l'un ni l'autre.
+- ✅ 4 emplacements de compétences (soin sur soi, sort 1, sort 2, réparation de tour) en bas à
+  droite via `AbilitySlotsOverlay`, dans cet ordre — fond en rond (`CircleSlot`), purement
+  visuel : pas de clic, pas de cooldown, pas d'icône. Voir "Ce qui reste" ci-dessous.
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
   voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 
@@ -133,6 +136,13 @@ en pratique, il reste égal au pseudo Minecraft du joueur pour toujours, exactem
 l'attachment n'existait pas. L'intérêt de l'avoir séparé du compte ne se concrétise que le
 jour où une interface de renommage est ajoutée.
 
+### Les emplacements de compétences ne font rien
+
+`AbilitySlotsOverlay` dessine 4 ronds vides : pas d'icône, pas de clic, pas de cooldown, pas
+de coût en mana, pas de lien avec un vrai sort ou une vraie action de réparation (qui
+n'existent pas non plus côté gameplay). C'est un pur placeholder visuel, en attendant les
+images promises pour chaque slot et la logique derrière.
+
 ### Les vagues ne se déroulent pas
 
 `current_wave` existe et s'affiche (`1/5`), mais rien ne le fait avancer : pas de
@@ -209,3 +219,7 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
    retour à `BUILD` une fois la vague nettoyée).
 10. Donner un moyen de choisir/changer `ModAttachments.CHARACTER_NAME` (commande, écran de
     création de personnage...) — sans ça, il reste égal au pseudo Minecraft en permanence.
+11. Une fois les images des 4 compétences fournies : les afficher dans `AbilitySlotsOverlay`
+    (probablement via `blitSprite`, une texture par `SLOT_NAMES`), puis brancher le clic, un
+    cooldown, et enfin le vrai effet de chaque compétence (soin, sorts, réparation de tour —
+    aucun n'existe encore côté gameplay).

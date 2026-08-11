@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntityRenderer;
+import com.github.c0c0tier.dungeon_defenders.client.gui.AbilitySlotsOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.CharacterOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ExperienceOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.HealthOverlay;
@@ -75,6 +76,9 @@ public class DungeonDefendersModClient {
         event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "character_overlay"),
                 new CharacterOverlay());
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "ability_slots_overlay"),
+                new AbilitySlotsOverlay());
 
         // Les cœurs vanilla ne sont pas prévus pour 100 PV (ils s'étalent sur plusieurs
         // rangées) et feraient doublon avec HealthOverlay : on les masque plutôt que de

@@ -92,6 +92,20 @@ Lancer le client de dev :
       y avoir un espace visible entre les deux, la barre d'expérience étant plus à gauche.
 - [ ] Redimensionner la fenêtre : le bloc reste centré horizontalement et collé au bord bas.
 
+## HUD — emplacements de compétences (bas droite)
+
+- [ ] 4 ronds apparaissent en bas à droite de l'écran, alignés horizontalement, collés au
+      coin (dans l'ordre gauche → droite : soin, sort 1, sort 2, réparation — impossible à
+      distinguer visuellement pour l'instant, pas d'icône, c'est attendu).
+- [ ] Chaque rond a une fine bordure sombre autour d'un fond gris — vérifier que ce sont bien
+      des ronds (pas des carrés), même remarque que pour les losanges : un léger crénelage sur
+      le contour est normal avec cette technique de rendu.
+- [ ] Rien ne se passe au clic dessus (ce ne sont pas des boutons pour l'instant, c'est
+      attendu) et il n'y a pas d'erreur dans les logs.
+- [ ] Ne chevauche ni la barre d'expérience (bas gauche) ni le bloc score/personnage (bas
+      centre) — il doit y avoir de l'espace visible de chaque côté.
+- [ ] Redimensionner la fenêtre : le groupe reste collé au coin bas-droit.
+
 ## HUD vanilla masqué
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar
