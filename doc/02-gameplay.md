@@ -441,6 +441,44 @@ valeurs. À revoir si la liste des phases grandit ou si l'ordre des constantes d
 changer sans casser les sauvegardes existantes (l'ordinal n'est pas stable entre deux
 réordonnancements de l'enum).
 
+## Le score et le personnage — bas centre de l'écran
+
+Deux dernières lignes de texte, centrées horizontalement tout en bas de l'écran (à droite de
+la barre d'expérience, qui elle est en bas à gauche) :
+
+```
+        toto - niv 15
+          Score : 0
+```
+
+### Le score — `client/gui/ScoreOverlay.java`
+
+`ModAttachments.SCORE` est conceptuellement l'expérience gagnée **sur la carte en cours**,
+par opposition à `ModAttachments.EXPERIENCE` qui est censée persister au-delà d'une carte.
+C'est pourquoi ce n'est pas le même attachment, même si les deux valeurs pourraient un jour
+augmenter ensemble (une capacité tuant un ennemi donnerait de l'XP *et* du score, un peu comme
+la vue et le score au sens jeu vidéo classique). Comme `current_wave`, c'est un état de la
+`Level` : "notre score" est partagé par la partie, pas individuel par joueur. Démarre à `0`,
+rien ne l'alimente encore.
+
+Affiché en texte seul (pas de jauge, un score n'a pas de maximum), clé
+`dungeon_defenders.hud.score`, centré via `guiGraphics.centeredText(...)`. Expose
+`rowY(guiGraphics)`, une méthode package-visible que `CharacterOverlay` utilise pour se
+positionner juste au-dessus (même principe que `WaveOverlay.waveText(...)` ou
+`ExperienceOverlay.barTop(...)`).
+
+### Le personnage — `client/gui/CharacterOverlay.java`
+
+Affiche `Nom - niv X` (clé `dungeon_defenders.hud.character`), juste au-dessus de
+`ScoreOverlay`. Deux points à noter :
+
+- **Le nom** est pour l'instant le pseudo Minecraft du joueur (`player.getName()`) : il n'y a
+  pas de système de nom de personnage custom, distinct du compte Minecraft. Le remplacer
+  quand ce système existera.
+- **Le niveau** (`ModAttachments.LEVEL`) est un attachment joueur (contrairement au score),
+  démarre à `1`, persistant, synchronisé. Rien ne le fait encore monter — pas de formule
+  d'XP → niveau, pas de notion de "monter de niveau".
+
 ## Le HUD vanilla masqué
 
 Le mod vise une interface entièrement custom : plusieurs couches du HUD vanilla sont donc

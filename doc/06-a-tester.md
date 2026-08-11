@@ -72,6 +72,18 @@ Lancer le client de dev :
 - [ ] Les trois lignes en haut à droite (vague+ennemis, phase) sont bien empilées sans se
       chevaucher ni se toucher.
 
+## HUD — score et personnage (bas centre)
+
+- [ ] Tout en bas de l'écran, centré horizontalement (pas collé à gauche ni à droite) :
+      `Score : 0`, sans jauge, juste du texte.
+- [ ] Juste au-dessus, toujours centré : `<pseudo Minecraft> - niv 1` (le pseudo est celui du
+      compte utilisé pour se connecter, pas un nom de personnage custom).
+- [ ] Les deux lignes restent stables (`Score : 0`, `niv 1`) — rien ne les fait encore
+      varier, c'est attendu.
+- [ ] Le bloc score/personnage ne chevauche pas la barre d'expérience (bas gauche) : il doit
+      y avoir un espace visible entre les deux, la barre d'expérience étant plus à gauche.
+- [ ] Redimensionner la fenêtre : le bloc reste centré horizontalement et collé au bord bas.
+
 ## HUD vanilla masqué
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

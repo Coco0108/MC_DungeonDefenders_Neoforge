@@ -85,6 +85,26 @@ public class ModAttachments {
                     .sync(ByteBufCodecs.VAR_INT)
                     .build());
 
+    // Score de la carte en cours : conceptuellement l'expérience gagnée pendant cette carte
+    // (contrairement à "experience", qui elle est censée persister au-delà d'une carte). État
+    // de la Level (comme current_wave) : "notre score", partagé par la partie, pas par
+    // joueur. Rien ne l'alimente encore, voir 05-etat-et-problemes-connus.md.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> SCORE = ATTACHMENT_TYPES.register(
+            "score",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.INT.fieldOf("Score"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Niveau du personnage : état du joueur (contrairement au score), commence à 1,
+    // persistant, synchronisé au client pour le HUD. Rien ne le fait encore monter.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> LEVEL = ATTACHMENT_TYPES.register(
+            "level",
+            () -> AttachmentType.builder(() -> 1)
+                    .serialize(Codec.INT.fieldOf("Level"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
     public static void register(IEventBus modEventBus) {
         ATTACHMENT_TYPES.register(modEventBus);
     }

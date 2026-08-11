@@ -1,10 +1,12 @@
 package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntityRenderer;
+import com.github.c0c0tier.dungeon_defenders.client.gui.CharacterOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ExperienceOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.HealthOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ManaOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.PhaseOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveOverlay;
 
@@ -67,6 +69,12 @@ public class DungeonDefendersModClient {
         event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "phase_overlay"),
                 new PhaseOverlay());
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "score_overlay"),
+                new ScoreOverlay());
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "character_overlay"),
+                new CharacterOverlay());
 
         // Les cœurs vanilla ne sont pas prévus pour 100 PV (ils s'étalent sur plusieurs
         // rangées) et feraient doublon avec HealthOverlay : on les masque plutôt que de

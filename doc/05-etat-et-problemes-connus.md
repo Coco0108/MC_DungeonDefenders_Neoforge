@@ -40,6 +40,14 @@ vérifie la CI.
   `GamePhase` : `BUILD`/`COMBAT`), démarre en `BUILD`, affichée juste sous la rangée
   vague/ennemis via `PhaseOverlay` (`Phase : Construction`). Aucune transition n'existe
   encore.
+- ✅ Score de la carte : data attachment `score` sur la `Level` (persistant, synchronisé,
+  démarre à 0), affiché tout en bas centre de l'écran via `ScoreOverlay` (`Score : X`, texte
+  seul). Censé correspondre à l'expérience gagnée sur la carte en cours, mais distinct de
+  `experience` (qui elle persiste au-delà d'une carte) — rien ne l'alimente encore.
+- ✅ Niveau du personnage : data attachment `level` sur le joueur (persistant, synchronisé,
+  démarre à 1), affiché juste au-dessus du score via `CharacterOverlay`
+  (`Nom - niv X`, `Nom` = pseudo Minecraft du joueur pour l'instant). Rien ne le fait encore
+  monter.
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
   voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 
@@ -108,6 +116,14 @@ Comme le mana à ses débuts : l'attachment `experience` existe et s'affiche, ma
 fait varier — pas de source de gain, pas de système de niveaux. Reste `0/100` en permanence
 tant que ça n'existe pas.
 
+### Le score et le niveau ne sont reliés à rien
+
+`score` et `level` existent et s'affichent, mais rien ne les fait varier, et surtout **rien
+ne les relie entre eux ni à `experience`** : tuer un ennemi ne devrait-il pas donner de
+l'expérience *et* du score en même temps ? Le score d'une carte devrait-il remettre `level` à
+jour selon un barème ? Aucune de ces questions n'est tranchée — les trois attachments
+(`experience`, `score`, `level`) coexistent pour l'instant sans logique commune.
+
 ### Les vagues ne se déroulent pas
 
 `current_wave` existe et s'affiche (`1/5`), mais rien ne le fait avancer : pas de
@@ -171,8 +187,9 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
    `HealthOverlay` et `ExperienceOverlay` par un vrai visuel, aligné sur le reste du HUD.
 7. Concevoir et implémenter les remplacements custom de la faim et de la hotbar (masquées
    mais vides pour l'instant).
-8. Définir un vrai système d'expérience/niveaux qui alimente `ModAttachments.EXPERIENCE`
-   (aujourd'hui bloqué à `0/100`, comme le mana avant `ManaTestWandItem`).
+8. Définir un vrai système d'expérience/score/niveaux : comment `EXPERIENCE`, `SCORE` et
+   `LEVEL` se nourrissent l'un l'autre (aujourd'hui trois compteurs indépendants, tous
+   bloqués à leur valeur par défaut, comme le mana avant `ManaTestWandItem`).
 9. Définir le déroulement des vagues (déclenchement, génération des ennemis, condition de
    passage à la suivante, victoire à la dernière vague, défaite si le cristal tombe avant) et
    faire avancer `ModAttachments.CURRENT_WAVE`/`WAVE_ENEMIES_TOTAL`/`WAVE_ENEMIES_KILLED`/
