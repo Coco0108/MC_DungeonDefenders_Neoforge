@@ -1,0 +1,53 @@
+# 6. À tester en jeu
+
+Ce fichier liste ce qui a été écrit et compile, mais **jamais lancé en jeu** : le
+développement s'est fait dans un environnement sans affichage (`./gradlew compileJava`
+passe, mais `./gradlew runClient` n'a pas pu être vérifié visuellement). Coche au fur et à
+mesure, et signale ici ce qui casse pour que ça reste une référence à jour.
+
+Lancer le client de dev :
+
+```bash
+./gradlew runClient
+```
+
+## HUD — mana
+
+- [ ] Une jauge bleue apparaît en haut à gauche de l'écran, avec le texte `Mana: 100/100`
+      juste à droite.
+- [ ] Prendre `mana_test_wand` dans l'onglet créatif Dungeon Defenders (icône bâton de
+      blaze, pas de texture dédiée).
+- [ ] Clic droit avec la baguette : la jauge perd 10 % de sa largeur, le texte passe à
+      `90/100`, un message système confirme `-10 mana (90/100)`.
+- [ ] Répéter jusqu'à `0/100` : la jauge doit être entièrement vide (fond gris), et un
+      nouveau clic droit affiche le message « Pas assez de mana ! » sans repasser en négatif.
+- [ ] Quitter le monde et y revenir (ou `/reload` + relog) : le mana affiché doit être celui
+      d'avant la déconnexion, pas remis à 100 (l'attachment est censé persister).
+
+## HUD — vie
+
+- [ ] Une jauge rouge apparaît juste en dessous de celle du mana, avec le texte
+      `Vie : 100/100` à droite.
+- [ ] Les cœurs vanilla (en bas à gauche, au-dessus de la barre de faim) sont **absents** —
+      remplacés par cette jauge.
+- [ ] Se prendre des dégâts (chute, mob, `/damage`) : la jauge rouge et le texte diminuent en
+      cohérence avec les dégâts subis.
+- [ ] Se reconnecter (relog) après avoir perdu de la vie : la vie perdue doit être conservée,
+      pas remise à 100/100 (seul un joueur qui était déjà à son maximum doit se retrouver à
+      100/100 après coup).
+- [ ] Un nouveau joueur (jamais connecté à ce monde) doit spawn à 100/100, pas à 20/20.
+
+## Général
+
+- [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni
+      à l'usage des deux points ci-dessus.
+- [ ] Les fonctionnalités précédentes (Cristal d'Eternia, Piège à Pics, IA zombie) n'ont pas
+      régressé — rien dans ce qui précède ne les touche directement, mais à vérifier une fois
+      qu'un test complet est possible.
+
+## Une fois testé
+
+Reporter les résultats dans [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)
+(déplacer ce qui fonctionne vers « Ce qui est implémenté », et ce qui casse vers
+« Ce qui reste »), puis vider ou réduire ce fichier aux prochaines fonctionnalités non
+testées.
