@@ -79,7 +79,9 @@ référencé sans risque.
 - `@EventBusSubscriber(value = Dist.CLIENT)` + `onRegisterRenderers(EntityRenderersEvent.RegisterRenderers)` :
   enregistre le renderer de block entity du cristal.
 - `onRegisterGuiLayers(RegisterGuiLayersEvent)` : enregistre `ManaOverlay` et `HealthOverlay`
-  via `event.registerAboveAll(...)`, au-dessus de toutes les autres couches du HUD.
+  via `event.registerAboveAll(...)`, au-dessus de toutes les autres couches du HUD, et masque
+  les cœurs, la faim, l'expérience et la hotbar vanilla via `event.replaceLayer(...)` — voir
+  [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 
 > `@EventBusSubscriber` n'a pas de paramètre `bus` dans cette version : les événements qui
 > implémentent `IModBusEvent` (comme `RegisterRenderers`) partent automatiquement sur le bus

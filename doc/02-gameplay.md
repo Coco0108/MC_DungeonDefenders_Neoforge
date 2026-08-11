@@ -305,6 +305,29 @@ Même structure que `ManaOverlay` (jauge + texte `Health: X/Y`, clé
 tenues à jour et synchronisées par le moteur.
 
 Les cœurs vanilla (`VanillaGuiLayers.PLAYER_HEALTH`) sont masqués dans
-`DungeonDefendersModClient.onRegisterGuiLayers` via `event.replaceLayer(..., noOpLayer)` :
+`DungeonDefendersModClient.onRegisterGuiLayers` via `event.replaceLayer(..., HIDDEN)` :
 avec 100 PV ils s'étaleraient sur plusieurs rangées de cœurs (le rendu vanilla est pensé pour
 20 PV, pas 100) et feraient de toute façon doublon avec `HealthOverlay`.
+
+## Le HUD vanilla masqué
+
+Le mod vise une interface entièrement custom : plusieurs couches du HUD vanilla sont donc
+masquées dans `DungeonDefendersModClient.onRegisterGuiLayers`, via
+`event.replaceLayer(identifiant, HIDDEN)` où `HIDDEN` est une `GuiLayer` dont `render(...)` ne
+fait rien.
+
+| Couche masquée | Identifiant `VanillaGuiLayers` | Remplacée par |
+|---|---|---|
+| Cœurs de vie | `PLAYER_HEALTH` | `HealthOverlay` |
+| Faim | `FOOD_LEVEL` | *(rien pour l'instant)* |
+| Expérience | `EXPERIENCE_LEVEL` | *(rien pour l'instant)* |
+| Barre d'inventaire (hotbar) | `HOTBAR` | *(rien pour l'instant)* |
+
+> `replaceLayer` ne fait que vider le contenu d'une couche existante, sans la retirer de la
+> liste : l'ordre d'affichage et les couches enregistrées relativement à elle (via
+> `registerAbove`/`registerBelow` côté vanilla, par exemple l'armure au-dessus de la hotbar)
+> restent inchangés, elles dessinent juste dans le vide.
+
+Faim, expérience et hotbar n'ont pas encore d'équivalent custom : tant que ce n'est pas fait,
+le joueur ne voit ni sa faim, ni son expérience, ni l'objet sélectionné/sa barre d'objets. Voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).

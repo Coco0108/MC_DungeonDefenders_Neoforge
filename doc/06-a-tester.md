@@ -37,6 +37,17 @@ Lancer le client de dev :
       100/100 après coup).
 - [ ] Un nouveau joueur (jamais connecté à ce monde) doit spawn à 100/100, pas à 20/20.
 
+## HUD vanilla masqué
+
+- [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar
+      (barre d'objets tout en bas) ont **disparu** de l'écran.
+- [ ] Aucune erreur au changement de slot sélectionné (touches 1-9 / molette) malgré la
+      hotbar invisible — elle doit continuer à fonctionner en arrière-plan (l'objet en main
+      change bien), seul l'affichage est masqué.
+- [ ] La barre d'armure (si équipée) : vérifier si elle s'affiche seule, à une position
+      bizarre, maintenant que la hotbar en dessous d'elle est vide (comportement attendu mais
+      pas encore vérifié visuellement).
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

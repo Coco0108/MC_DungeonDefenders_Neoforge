@@ -23,6 +23,8 @@ vérifie la CI.
   provisoire). Testable en jeu avec l'item `mana_test_wand` (clic droit = -10 mana).
 - ✅ Vie du joueur : maximum vanilla porté de 20 à 100 (`ModEvents.onPlayerJoin`), affichée en
   HUD via `HealthOverlay` (même principe que le mana, en rouge, juste en dessous).
+- ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
+  voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 
 ## Corrections apportées
 
@@ -75,6 +77,15 @@ se reconnectant, puisque l'attachment n'est pas remis à `MAX_MANA` ailleurs qu'
 Prochaines étapes logiques : une vraie capacité qui consomme du mana, une régénération
 passive (tick côté serveur, borné à `MAX_MANA`), puis retrait de la baguette de test.
 
+### Faim, expérience et hotbar masqués sans remplacement
+
+`FOOD_LEVEL`, `EXPERIENCE_LEVEL` et `HOTBAR` sont masqués (voir
+[02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué)) mais rien ne les remplace encore : le
+joueur ne voit plus sa faim, son expérience, ni l'objet qu'il a en main/sa barre d'objets. Tant
+qu'un équivalent custom n'existe pas, c'est une vraie perte d'information en jeu, pas
+seulement esthétique — à garder en tête en testant (voir
+[06-a-tester.md](06-a-tester.md)).
+
 ### Le HUD du mana et de la vie n'a pas de vrai visuel
 
 `ManaOverlay` et `HealthOverlay` dessinent du texte et des rectangles pleins
@@ -117,3 +128,5 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 6. Donner une vraie utilité au mana (un sort/une capacité qui le consomme, une régénération
    passive), retirer `ManaTestWandItem`, puis remplacer le HUD provisoire de `ManaOverlay`
    et `HealthOverlay` par un vrai visuel, aligné sur le reste du HUD.
+7. Concevoir et implémenter les remplacements custom de la faim, de l'expérience et de la
+   hotbar (masqués mais vides pour l'instant).
