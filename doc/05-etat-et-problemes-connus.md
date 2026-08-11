@@ -55,6 +55,11 @@ vérifie la CI.
   Voir "Ce qui reste" ci-dessous.
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
   voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
+- ✅ Bloc `spawner` : premier vrai morceau de gameplay (pas juste du HUD). Fait apparaître des
+  zombies pendant la phase de combat via l'algorithme de spawn pondéré du plan Excel du
+  joueur (voir [02-gameplay.md](02-gameplay.md#le-spawner--blockspawnerblockjava)). Clic droit
+  = harnais de test qui bascule `BUILD`/`COMBAT`. Incrémente aussi
+  `ModAttachments.WAVE_ENEMIES_KILLED` via un nouveau handler `LivingDeathEvent`.
 
 ## Corrections apportées
 
@@ -144,15 +149,27 @@ de coût en mana, pas de lien avec un vrai sort ou une vraie action de réparati
 n'existent pas non plus côté gameplay). C'est un pur placeholder visuel, en attendant les
 images promises pour chaque slot et la logique derrière.
 
-### Les vagues ne se déroulent pas
+### Les vagues ne se déroulent toujours pas vraiment
 
-`current_wave` existe et s'affiche (`1/5`), mais rien ne le fait avancer : pas de
-déclenchement automatique/manuel, pas de condition pour passer à la vague suivante, pas de
-victoire à la vague 5 ni de défaite si le cristal tombe avant. C'est un compteur statique pour
-l'instant. Même chose pour `wave_enemies_killed`/`wave_enemies_total` : aucun mob n'est
-généré pour une vague, rien n'incrémente les tués, le total (`10`) n'est jamais recalculé
-selon la vague ou la difficulté. Idem pour `game_phase` : reste bloqué sur `BUILD`, rien ne
-fait passer en `COMBAT` ni ne revient en `BUILD` entre deux vagues.
+`current_wave` existe et s'affiche (`1/5`), mais rien ne le fait avancer : pas de condition
+pour passer à la vague suivante, pas de victoire à la vague 5 ni de défaite si le cristal
+tombe avant. Le `spawner` fait maintenant apparaître de vrais ennemis et
+`wave_enemies_killed` compte vraiment les morts (voir
+[02-gameplay.md](02-gameplay.md#le-spawner--blockspawnerblockjava)), mais :
+
+- `game_phase` ne bascule que via le harnais de test (clic droit sur le `SpawnerBlock`) — pas
+  de vrai déclencheur de combat, pas de retour automatique à `BUILD` une fois la vague nettoyée ;
+- `wave_enemies_total` reste bloqué à sa valeur par défaut (`10`) : personne ne somme les
+  poids des spawners actifs de la carte au démarrage du combat ;
+- rien ne fait avancer `current_wave` quand `wave_enemies_killed` atteint `wave_enemies_total`.
+
+### Le spawner n'a qu'une composition fixe, pas de GUI
+
+`SpawnerBlockEntity` fait toujours apparaître le même type d'ennemi (zombie, poids 15) au même
+seuil (20) : la feuille "Idées" du plan Excel du joueur prévoyait un vrai GUI de configuration
+(slots d'œufs, multiplicateurs, intervalle, plage de vagues de début/fin) pour choisir la
+composition par spawner. Volontairement repoussé — décision prise avec le joueur, qui compte
+le refaire "d'une manière plus simple" plus tard plutôt que le GUI double initialement prévu.
 
 ### `game_phase` stocke un ordinal d'enum, pas un nom stable
 
@@ -213,14 +230,17 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 8. Définir un vrai système d'expérience/score/niveaux : comment `EXPERIENCE`, `SCORE` et
    `LEVEL` se nourrissent l'un l'autre (aujourd'hui trois compteurs indépendants, tous
    bloqués à leur valeur par défaut, comme le mana avant `ManaTestWandItem`).
-9. Définir le déroulement des vagues (déclenchement, génération des ennemis, condition de
-   passage à la suivante, victoire à la dernière vague, défaite si le cristal tombe avant) et
-   faire avancer `ModAttachments.CURRENT_WAVE`/`WAVE_ENEMIES_TOTAL`/`WAVE_ENEMIES_KILLED`/
-   `GAME_PHASE` en conséquence (transition `BUILD` → `COMBAT` au déclenchement d'une vague,
-   retour à `BUILD` une fois la vague nettoyée).
+9. Définir le déroulement des vagues : un vrai déclencheur pour passer en `COMBAT` (à la
+   place du harnais de test au clic droit), sommer les poids des spawners actifs dans
+   `WAVE_ENEMIES_TOTAL` au démarrage, faire avancer `CURRENT_WAVE` et repasser en `BUILD`
+   quand `WAVE_ENEMIES_KILLED` atteint `WAVE_ENEMIES_TOTAL`, victoire à la dernière vague,
+   défaite si le cristal tombe avant.
 10. Donner un moyen de choisir/changer `ModAttachments.CHARACTER_NAME` (commande, écran de
     création de personnage...) — sans ça, il reste égal au pseudo Minecraft en permanence.
 11. Une fois les images des 4 compétences fournies : les afficher dans `AbilitySlotsOverlay`
     (probablement via `blitSprite`, une texture par `SLOT_NAMES`), puis brancher le clic, un
     cooldown, et enfin le vrai effet de chaque compétence (soin, sorts, réparation de tour —
     aucun n'existe encore côté gameplay).
+12. Donner au `SpawnerBlockEntity` une vraie configuration (plusieurs types d'ennemis, poids,
+    intervalle, plage de vagues) — "d'une manière plus simple" que le GUI double slots
+    d'œufs/multiplicateurs prévu dans le plan Excel, forme à définir avec le joueur.

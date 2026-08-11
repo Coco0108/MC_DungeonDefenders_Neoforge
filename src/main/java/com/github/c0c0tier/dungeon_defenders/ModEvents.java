@@ -1,13 +1,18 @@
 package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackEterniaCrystalGoal;
+import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
+import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class ModEvents {
@@ -52,5 +57,23 @@ public class ModEvents {
         if (wasAtPreviousMax) {
             player.setHealth((float) maxHealthAttribute.getValue());
         }
+    }
+
+    @SubscribeEvent
+    public static void onMonsterDeath(LivingDeathEvent event) {
+        Level level = event.getEntity().level();
+        if (level.isClientSide() || !(event.getEntity() instanceof Monster)) {
+            return;
+        }
+
+        // Ne compte que les morts pendant le combat : un zombie qui traîne encore en phase
+        // de construction (rechargement de chunk, etc.) ne doit pas fausser le compteur.
+        if (level.getData(ModAttachments.GAME_PHASE) != GamePhase.COMBAT.ordinal()) {
+            return;
+        }
+
+        int killed = level.getData(ModAttachments.WAVE_ENEMIES_KILLED);
+        level.setData(ModAttachments.WAVE_ENEMIES_KILLED, killed + 1);
+        level.syncData(ModAttachments.WAVE_ENEMIES_KILLED);
     }
 }

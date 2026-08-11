@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders.init;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.EterniaCrystalBlock;
+import com.github.c0c0tier.dungeon_defenders.block.SpawnerBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpikeTrapBlock;
 import com.github.c0c0tier.dungeon_defenders.item.ManaTestWandItem;
 import net.minecraft.world.item.BlockItem;
@@ -39,6 +40,15 @@ public class ModBlocks {
     // 4. Baguette de test : retire 10 de mana au clic droit, pour vérifier le HUD (mana)
     public static final DeferredItem<ManaTestWandItem> MANA_TEST_WAND =
             ITEMS.registerItem("mana_test_wand", ManaTestWandItem::new);
+
+    // 5. Spawner : fait apparaître des zombies pendant la phase de combat (voir
+    // SpawnerBlockEntity pour l'algorithme). Clic droit = harnais de test qui bascule la phase.
+    public static final DeferredBlock<SpawnerBlock> SPAWNER = BLOCKS.registerBlock("spawner",
+            SpawnerBlock::new,
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> SPAWNER_ITEM =
+            ITEMS.registerSimpleBlockItem("spawner", SPAWNER);
 
     // Connexion au bus d'événements
     public static void register(IEventBus modEventBus) {

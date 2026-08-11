@@ -2,6 +2,7 @@
   "itemGroup.dungeon_defenders": "Dungeon Defenders",
   "block.dungeon_defenders.eternia_crystal": "Eternia Crystal",
   "block.dungeon_defenders.spike_trap": "Spike Trap",
+  "block.dungeon_defenders.spawner": "Spawner",
   "item.dungeon_defenders.mana_test_wand": "Mana Test Wand",
 
   "dungeon_defenders.eternia_crystal.damaged": "Ouch! The crystal loses %s HP. Remaining: %s",
@@ -19,6 +20,7 @@
   "dungeon_defenders.hud.character": "%s - lvl %s",
   "dungeon_defenders.mana_test_wand.used": "-%s mana (%s/%s)",
   "dungeon_defenders.mana_test_wand.empty": "Not enough mana!",
+  "dungeon_defenders.spawner.phase_toggled": "Phase switched to: %s",
 
   "dungeon_defenders.configuration.title": "Dungeon Defenders Configs",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml": "Dungeon Defenders Configs",

@@ -2,6 +2,7 @@
   "itemGroup.dungeon_defenders": "Dungeon Defenders",
   "block.dungeon_defenders.eternia_crystal": "Cristal d'Eternia",
   "block.dungeon_defenders.spike_trap": "Piège à Pics",
+  "block.dungeon_defenders.spawner": "Générateur",
   "item.dungeon_defenders.mana_test_wand": "Baguette de test (mana)",
 
   "dungeon_defenders.eternia_crystal.damaged": "Aïe ! Le cristal perd %s PV. PV restants : %s",
@@ -19,6 +20,7 @@
   "dungeon_defenders.hud.character": "%s - niv %s",
   "dungeon_defenders.mana_test_wand.used": "-%s mana (%s/%s)",
   "dungeon_defenders.mana_test_wand.empty": "Pas assez de mana !",
+  "dungeon_defenders.spawner.phase_toggled": "Phase changée : %s",
 
   "dungeon_defenders.configuration.title": "Configuration de Dungeon Defenders",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml": "Configuration de Dungeon Defenders",

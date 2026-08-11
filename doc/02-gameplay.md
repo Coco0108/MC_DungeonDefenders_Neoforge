@@ -442,8 +442,9 @@ que `X` se rapproche de `Y`. Deux attachments sur la `Level`, même raisonnement
 
 Juste en dessous de la rangée vague/ennemis (`WaveOverlay.ROW_Y + ROW_HEIGHT`), texte seul
 comme `WaveOverlay` : `Phase : Construction` ou `Phase : Combat`, clé
-`dungeon_defenders.hud.phase`. Aucune transition entre phases n'existe encore : la partie
-démarre et reste en `BUILD` tant que rien ne la fait changer.
+`dungeon_defenders.hud.phase`. La partie démarre en `BUILD`. La seule façon de changer de
+phase pour l'instant est le harnais de test au clic droit du `SpawnerBlock` (voir plus bas) —
+aucun vrai déclencheur de combat n'existe encore.
 
 `init/GamePhase.java` est un enum (`BUILD`, `COMBAT`) plutôt qu'une chaîne libre, pour garder
 un ensemble de valeurs fermé et une traduction par valeur
@@ -454,6 +455,76 @@ l'instant, ça aurait été de la complexité en plus pour un gain nul tant qu'i
 valeurs. À revoir si la liste des phases grandit ou si l'ordre des constantes doit pouvoir
 changer sans casser les sauvegardes existantes (l'ordinal n'est pas stable entre deux
 réordonnancements de l'enum).
+
+## Le Spawner — `block/SpawnerBlock.java`
+
+Premier morceau de vraie mécanique de combat du mod (le reste n'était que du HUD affichant
+des valeurs par défaut) : un bloc à poser dans la map qui fait apparaître des ennemis pendant
+la phase de combat. L'algorithme vient de la feuille "Idées" du plan Excel du joueur (voir
+mémoire de session) : un accumulateur par type d'ennemi, incrémenté à chaque contrôle du
+poids de ce type ; dès qu'il atteint un seuil, un ennemi de ce type spawn et le seuil lui est
+retiré. Plus un type a un poids élevé, plus il ressort souvent — le poids fait office de
+"nombre total voulu sur la vague" :
+
+```java
+zombieAccumulator += ZOMBIE_WEIGHT;   // 15, repris de l'exemple du joueur
+if (zombieAccumulator >= SPAWN_THRESHOLD) {   // 20
+    EntityType.ZOMBIE.spawn(serverLevel, pos.above(), EntitySpawnReason.SPAWNER);
+    zombieAccumulator -= SPAWN_THRESHOLD;
+}
+```
+
+> Le seuil se déclenche à `>=`, pas `>` : l'exemple du joueur contenait une ligne
+> ("Gobelin = 20 → spawn") qui ne fonctionne qu'avec `>=`. Détail d'implémentation, l'idée
+> reste identique à ce qu'il avait écrit.
+
+### L'état — `block/entity/SpawnerBlockEntity.java`
+
+`BaseEntityBlock` + `BlockEntityTicker`, sur le même principe qu'`EterniaCrystalBlockEntity`
+(codec, `newBlockEntity`) mais avec un tick serveur en plus — premier bloc du mod à en avoir
+un. `serverTick(...)` :
+
+1. Sort immédiatement si `ModAttachments.GAME_PHASE != COMBAT` — le spawner ne tourne qu'en
+   combat.
+2. Ne fait tourner l'algorithme qu'une fois par seconde (`TICKS_BETWEEN_CHECKS = 20`), pas à
+   chaque tick, pour rester lisible.
+3. Applique l'algorithme ci-dessus.
+
+Seul `zombieAccumulator` est persistant (`saveAdditional`/`loadAdditional`) ; le minuteur
+sub-seconde ne l'est pas, le perdre au rechargement n'a aucune conséquence visible.
+
+**V1 volontairement simple**, comme convenu avec le joueur : une seule composition fixe
+(zombies, poids 15), pas encore le GUI de configuration prévu dans la feuille Idées (slots
+d'œufs, multiplicateurs, intervalle, plage de vagues) — voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
+### Le harnais de test — clic droit
+
+Comme pour le Cristal d'Eternia et `ManaTestWandItem`, un harnais de test plutôt qu'une vraie
+mécanique : clic droit sur le `SpawnerBlock` bascule `ModAttachments.GAME_PHASE` entre `BUILD`
+et `COMBAT` (`level.setData(...)` + `level.syncData(...)`, message système confirmant la
+nouvelle phase). C'est le seul moyen de déclencher le combat pour l'instant — le vrai
+déclencheur (et la transition retour vers `BUILD` en fin de vague) reste à faire.
+
+### Le compteur d'ennemis tués — `ModEvents.onMonsterDeath`
+
+`WaveEnemiesOverlay` lisait déjà `ModAttachments.WAVE_ENEMIES_KILLED`, mais rien ne
+l'incrémentait. Un nouveau handler `LivingDeathEvent` dans `ModEvents` : si l'entité qui
+meurt est un `Monster` et que la phase est `COMBAT`, incrémente le compteur et le
+synchronise. Pas de filtre sur "a été spawné par un `SpawnerBlockEntity`" — tout monstre mort
+en combat compte, ce qui suffit au sens du HUD ("ennemis tués dans la vague").
+
+`ModAttachments.WAVE_ENEMIES_TOTAL`, en revanche, **n'est pas encore branché** : il reste à
+sa valeur par défaut (`10`), il faudrait sommer les poids de tous les spawners actifs de la
+carte au démarrage du combat — repoussé volontairement, voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
+### Apparence
+
+Modèle `cube_all` pointant **provisoirement** sur la texture vanilla
+`minecraft:block/spawner` (la cage du spawner vanilla, cohérente thématiquement). Miné à la
+pioche (tag `mineable/pickaxe`) et se drope lui-même via
+`data/dungeon_defenders/loot_table/blocks/spawner.json`.
 
 ## Le score et le personnage — bas centre de l'écran
 

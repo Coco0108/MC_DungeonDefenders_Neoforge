@@ -37,17 +37,19 @@ MC_DungeonDefenders_Neoforge/
     │   └── block/
     │       ├── EterniaCrystalBlock.java      # Le bloc : hitbox, interaction, codec
     │       ├── SpikeTrapBlock.java           # Piège : dégâts au contact (stepOn) + cooldown
+    │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
     │       └── entity/
     │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
-    │           └── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D (client)
+    │           ├── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D (client)
+    │           └── SpawnerBlockEntity.java                 # Algorithme de spawn pondéré (voir 02-gameplay.md)
     ├── resources/
     │   ├── assets/dungeon_defenders/
     │   │   ├── lang/{en_us,fr_fr}.json                     # Traductions
-    │   │   ├── blockstates/{eternia_crystal,spike_trap}.json   # Variante unique par bloc
-    │   │   ├── models/block/{eternia_crystal,spike_trap}.json  # Modèles (texture vanilla provisoire)
-    │   │   └── items/{eternia_crystal,spike_trap}.json         # Modèles d'item
-    │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_trap}.json
+    │   │   ├── blockstates/{eternia_crystal,spike_trap,spawner}.json   # Variante unique par bloc
+    │   │   ├── models/block/{eternia_crystal,spike_trap,spawner}.json  # Modèles (texture vanilla provisoire)
+    │   │   └── items/{eternia_crystal,spike_trap,spawner}.json         # Modèles d'item
+    │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_trap,spawner}.json
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
     │   └── META-INF/accesstransformer.cfg         # Access Transformers
     └── templates/META-INF/neoforge.mods.toml      # Métadonnées, expansées par Gradle
@@ -63,7 +65,8 @@ NeoForge autorise plusieurs classes `@Mod` pour le même `modId`, différenciée
 - Possède deux `DeferredRegister` :
   - `BLOCK_ENTITIES` (`Registries.BLOCK_ENTITY_TYPE`)
   - `CREATIVE_MODE_TABS` (`Registries.CREATIVE_MODE_TAB`)
-- Enregistre le `BlockEntityType` `eternia_crystal`, lié à `ModBlocks.ETERNIA_CRYSTAL`.
+- Enregistre les `BlockEntityType` `eternia_crystal` et `spawner`, liés à
+  `ModBlocks.ETERNIA_CRYSTAL`/`ModBlocks.SPAWNER`.
 - Enregistre l'onglet créatif `dungeon_defenders_tab`, dont l'icône et le seul contenu
   sont l'item du cristal.
 - Le constructeur `DungeonDefendersMod(IEventBus modEventBus)` branche les quatre registres
@@ -112,12 +115,12 @@ Chargement FML
         └─ CREATIVE_MODE_TABS.register(bus)
 
 Événements du bus mod
-   ├─ RegisterEvent(BLOCK)             → eternia_crystal (EterniaCrystalBlock)
-   ├─ RegisterEvent(ITEM)              → eternia_crystal (BlockItem)
+   ├─ RegisterEvent(BLOCK)             → eternia_crystal, spike_trap, spawner
+   ├─ RegisterEvent(ITEM)              → eternia_crystal, spike_trap, spawner (BlockItem)
    ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana, experience, current_wave,
    │                                      wave_enemies_total, wave_enemies_killed, game_phase,
    │                                      score, level, character_name
-   ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal (BlockEntityType)
+   ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal, spawner (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
    ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer
    └─ RegisterGuiLayersEvent [client]  → ManaOverlay, HealthOverlay, ExperienceOverlay,
@@ -126,7 +129,11 @@ Chargement FML
 
 Bus de jeu (NeoForge.EVENT_BUS)
    ├─ ModEvents.onZombieSpawn(EntityJoinLevelEvent)
-   └─ ModEvents.onPlayerJoin(EntityJoinLevelEvent)
+   ├─ ModEvents.onPlayerJoin(EntityJoinLevelEvent)
+   └─ ModEvents.onMonsterDeath(LivingDeathEvent)
+
+Chaque SpawnerBlockEntity, en plus de ces événements :
+   └─ BlockEntityTicker [serveur]  → SpawnerBlockEntity.serverTick(...), une fois par tick de bloc
 ```
 
 `ModEvents` est annoté `@EventBusSubscriber(modid = MODID)` sans `bus` explicite : il

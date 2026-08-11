@@ -2,6 +2,7 @@
   "replace": false,
   "values": [
     "dungeon_defenders:eternia_crystal",
-    "dungeon_defenders:spike_trap"
+    "dungeon_defenders:spike_trap",
+    "dungeon_defenders:spawner"
   ]
 }
