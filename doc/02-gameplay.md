@@ -633,6 +633,36 @@ nouvelles entrées.
   l'écran — non géré pour l'instant, acceptable tant que `SpawnableEnemy` ne contient que
   deux valeurs.
 
+### L'aperçu de composition en phase Construction — `SpawnerBlockEntityRenderer.java`
+
+Comme dans le jeu de référence : en phase `BUILD`, chaque spawner affiche au-dessus de lui le
+total d'ennemis à venir et le détail par type, **visible à travers les murs** — pour planifier
+sa défense avant que le combat démarre. Disparaît en phase `COMBAT` (pas d'intérêt une fois la
+vague lancée).
+
+Techniquement, c'est un deuxième `BlockEntityRenderer` (même trio `createRenderState` /
+`extractRenderState` / `submit` que `EterniaCrystalBlockEntityRenderer`), mais qui dessine du
+**texte** plutôt que des quads de couleur — la barre de vie du cristal utilisait
+`RenderTypes.debugQuads()` (quads non texturés, non cullés), qui ne convient pas au texte. Le
+mécanisme "à travers les murs" ici est `Font.DisplayMode.SEE_THROUGH`, passé à
+`SubmitNodeCollector#submitText(...)` : c'est le même render type que celui utilisé par
+Minecraft pour les noms des mobs brillants (effet Glowing) au-dessus des blocs.
+
+**Le calcul du total** réutilise exactement la formule de `SpawnEntry.resetForWave(...)`
+(`max(1, round(baseCount × DifficultyScaling.getMultiplier(level)))`) pour chaque entrée de la
+composition, sommée pour le total — l'aperçu affiché correspond donc exactement à ce que la
+prochaine vague fera spawn, tant que la difficulté ne change pas entre-temps.
+
+**Ce qui n'y est pas, volontairement** (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)) :
+
+- Pas d'icône par type de monstre, texte seul pour l'instant ("Zombie : 12") — à ajouter plus
+  tard si besoin, sans revoir cette classe puisque `SpawnableEnemy` porte déjà tout ce qu'il
+  faut (`translationKey()`) pour brancher une icône dessus.
+- Portée d'affichage plafonnée à 32 blocs (`MAX_DISTANCE_SQ`) pour éviter d'encombrer l'écran
+  si beaucoup de spawners sont proches les uns des autres — valeur arbitraire, à ajuster si
+  besoin une fois testée en jeu.
+
 ### Le compteur d'ennemis tués — `ModEvents.onMonsterDeath`
 
 `WaveEnemiesOverlay` lisait déjà `ModAttachments.WAVE_ENEMIES_KILLED`, mais rien ne

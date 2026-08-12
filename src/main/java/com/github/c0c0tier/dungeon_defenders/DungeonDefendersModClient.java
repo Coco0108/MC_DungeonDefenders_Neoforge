@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntityRenderer;
+import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntityRenderer;
 import com.github.c0c0tier.dungeon_defenders.client.gui.AbilitySlotsOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.CharacterOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ExperienceOverlay;
@@ -50,6 +51,10 @@ public class DungeonDefendersModClient {
         event.registerBlockEntityRenderer(
                 DungeonDefendersMod.ETERNIA_CRYSTAL_BE.get(),
                 EterniaCrystalBlockEntityRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.SPAWNER_BE.get(),
+                SpawnerBlockEntityRenderer::new
         );
     }
 

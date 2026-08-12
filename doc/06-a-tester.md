@@ -189,6 +189,31 @@ développement, ni pour la reconstruction dynamique des widgets à l'ajout/retra
       exception liée à `SpawnerConfigMenu`, `SpawnerConfigScreen`, `SpawnerConfigPayload` ou
       `ModNetworking`.
 
+## L'aperçu de composition du spawner (texte à travers les murs, phase Construction)
+
+Deuxième morceau à risque de cette session : premier texte du mod rendu "à travers les murs"
+(`Font.DisplayMode.SEE_THROUGH`), jamais vérifié visuellement pendant le développement.
+
+- [ ] En phase **Construction**, poser un spawner : un texte flotte au-dessus
+      ("Total : 20", puis "Zombie : 15" et "Squelette : 5" sur les valeurs par défaut),
+      centré horizontalement, sans chevauchement entre les lignes.
+- [ ] **Se placer derrière un mur** en gardant le spawner à moins de ~32 blocs : le texte doit
+      rester visible à travers le mur (c'est le point central de cette fonctionnalité).
+- [ ] S'éloigner au-delà d'environ 32 blocs (`MAX_DISTANCE_SQ`) : le texte doit disparaître.
+- [ ] Modifier la composition du spawner via l'écran de config (ex : mettre `30` sur Zombie),
+      valider : l'aperçu au-dessus du bloc doit refléter le nouveau nombre immédiatement,
+      sans avoir besoin de rouvrir le monde.
+- [ ] Changer la difficulté n'est pas encore possible en jeu (`DIFFICULTY` reste à `NORMAL`,
+      voir 05-etat-et-problemes-connus.md) — impossible de tester la mise à l'échelle du total
+      par la difficulté pour l'instant, seulement par le nombre de base et la vague.
+- [ ] **Basculer en phase Combat** (shift + clic droit sur le spawner) : l'aperçu doit
+      **disparaître** immédiatement. Rebasculer en Construction : il doit réapparaître.
+- [ ] Poser 2-3 spawners avec des compositions différentes proches les uns des autres :
+      chaque aperçu doit afficher les bons chiffres pour **son propre** spawner, pas ceux
+      d'un autre.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `SpawnerBlockEntityRenderer`
+      ou `SpawnerRenderState` (en particulier au chargement du monde ou à la casse du bloc).
+
 ## HUD vanilla masqué
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

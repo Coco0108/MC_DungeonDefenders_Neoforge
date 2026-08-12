@@ -82,6 +82,11 @@ vérifie la CI.
   application — appliquée **immédiatement** (pas d'attente de la prochaine vague). Détail
   complet dans
   [02-gameplay.md](02-gameplay.md#lécran-de-configuration--menu-network-clientguiscreenspawnerconfigscreenjava).
+- ✅ Aperçu de composition du spawner en phase Construction (`SpawnerBlockEntityRenderer`) :
+  total d'ennemis à venir + détail par type affiché au-dessus du bloc, **visible à travers les
+  murs** (`Font.DisplayMode.SEE_THROUGH`), comme dans le jeu de référence. Caché en phase
+  Combat, texte seul pour l'instant (pas d'icône par type). Détail dans
+  [02-gameplay.md](02-gameplay.md#laperçu-de-composition-en-phase-construction--spawnerblockentityrendererjava).
 
 ## Corrections apportées
 
@@ -284,3 +289,7 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 13. Donner un moyen de choisir la difficulté au lancement de la map
     (`ModAttachments.DIFFICULTY`) — reste bloquée à `NORMAL`, aucun écran de lancement de
     partie n'existe encore.
+14. Ajouter une icône par type de monstre dans l'aperçu de composition du spawner
+    (`SpawnerBlockEntityRenderer`, phase Construction) — texte seul pour l'instant. Piste
+    envisagée : réutiliser les textures vanilla des œufs d'invocation
+    (`zombie_spawn_egg`/`skeleton_spawn_egg`) pour ne pas dépendre d'assets custom.

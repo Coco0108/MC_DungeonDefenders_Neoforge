@@ -54,7 +54,9 @@ MC_DungeonDefenders_Neoforge/
     │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
     │           ├── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D (client)
-    │           └── SpawnerBlockEntity.java                 # Algorithme de spawn pondéré (voir 02-gameplay.md)
+    │           ├── SpawnerBlockEntity.java                 # Algorithme de spawn pondéré (voir 02-gameplay.md)
+    │           ├── SpawnerRenderState.java                 # Instantané pour le rendu (client)
+    │           └── SpawnerBlockEntityRenderer.java         # Aperçu de composition en phase Construction, à travers les murs (client)
     ├── resources/
     │   ├── assets/dungeon_defenders/
     │   │   ├── lang/{en_us,fr_fr}.json                     # Traductions
@@ -149,7 +151,7 @@ Chargement FML
    ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal, spawner (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
    ├─ RegisterPayloadHandlersEvent     → SpawnerConfigPayload (C2S, ModNetworking — commun, pas client-only)
-   ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer
+   ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer, SpawnerBlockEntityRenderer
    ├─ RegisterGuiLayersEvent [client]  → ManaOverlay, HealthOverlay, ExperienceOverlay,
    │                                      WaveOverlay, WaveEnemiesOverlay, PhaseOverlay,
    │                                      ScoreOverlay, CharacterOverlay, AbilitySlotsOverlay
