@@ -18,7 +18,18 @@ MC_DungeonDefenders_Neoforge/
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
     │   │   ├── ModAttachments.java           # DeferredRegister des data attachments (mana, vagues, phase...)
-    │   │   └── GamePhase.java                # Enum des phases de partie (BUILD, COMBAT)
+    │   │   ├── ModMenus.java                 # DeferredRegister des MenuType (GUI de config)
+    │   │   ├── GamePhase.java                # Enum des phases de partie (BUILD, COMBAT)
+    │   │   ├── GameDifficulty.java           # Enum de difficulté (EASY, NORMAL, HARD)
+    │   │   └── DifficultyScaling.java        # Multiplicateur difficulté x vague, pour les spawners
+    │   ├── menu/
+    │   │   ├── SpawnerConfigMenu.java        # AbstractContainerMenu sans slot, transmet juste le BlockPos
+    │   │   └── SpawnerConfigMenuProvider.java # MenuProvider ouvert par SpawnerBlock au clic droit
+    │   ├── network/
+    │   │   ├── SpawnerConfigPayload.java     # Paquet C2S (BlockPos + config du spawner)
+    │   │   └── ModNetworking.java            # Enregistrement des paquets custom (RegisterPayloadHandlersEvent)
+    │   ├── client/gui/screen/
+    │   │   └── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
     │   ├── client/gui/
     │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)
     │   │   ├── DiamondGauge.java             # Dessine une jauge en forme de losange (fill() empilés, sans texture)
@@ -69,14 +80,22 @@ NeoForge autorise plusieurs classes `@Mod` pour le même `modId`, différenciée
   `ModBlocks.ETERNIA_CRYSTAL`/`ModBlocks.SPAWNER`.
 - Enregistre l'onglet créatif `dungeon_defenders_tab`, dont l'icône et le seul contenu
   sont l'item du cristal.
-- Le constructeur `DungeonDefendersMod(IEventBus modEventBus)` branche les quatre registres
-  (`ModBlocks.register(...)`, `ModAttachments.register(...)`, `BLOCK_ENTITIES`,
-  `CREATIVE_MODE_TABS`) sur le bus du mod.
+- Le constructeur `DungeonDefendersMod(IEventBus modEventBus)` branche les cinq registres
+  (`ModBlocks.register(...)`, `ModAttachments.register(...)`, `ModMenus.register(...)`,
+  `BLOCK_ENTITIES`, `CREATIVE_MODE_TABS`) sur le bus du mod.
 
-> `init/ModAttachments.java` suit le même principe que `ModBlocks` : un `DeferredRegister`
-> dédié (ici `NeoForgeRegistries.Keys.ATTACHMENT_TYPES`) avec sa propre méthode
-> `register(IEventBus)`. Voir [02-gameplay.md](02-gameplay.md) pour le détail de l'attachment
-> `mana`.
+> `init/ModAttachments.java` et `init/ModMenus.java` suivent le même principe que
+> `ModBlocks` : un `DeferredRegister` dédié (`NeoForgeRegistries.Keys.ATTACHMENT_TYPES` /
+> `Registries.MENU`) avec sa propre méthode `register(IEventBus)`. Voir
+> [02-gameplay.md](02-gameplay.md) pour le détail de l'attachment `mana`, et plus bas pour
+> `ModMenus`.
+
+> **`network/ModNetworking.java`** est une classe à part, ni dans `DungeonDefendersMod` ni
+> dans `DungeonDefendersModClient` : elle écoute `RegisterPayloadHandlersEvent`
+> (`@EventBusSubscriber(modid = MODID)`, sans `bus` — part sur le bus du mod comme les
+> événements `IModBusEvent`), et **doit** rester dans du code commun : un serveur dédié a
+> besoin de savoir décoder les paquets envoyés par ses clients, donc ce n'est pas du code
+> client-only comme `DungeonDefendersModClient`.
 
 > **Pourquoi les blocs sont-ils dans `init/ModBlocks` et pas ici ?**
 > Pour casser la dépendance circulaire : le `BlockEntityType` a besoin d'une référence au
@@ -98,6 +117,10 @@ référencé sans risque.
   toutes les autres couches du HUD, et masque les cœurs, la faim, l'expérience et la hotbar
   vanilla via
   `event.replaceLayer(...)` — voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
+- `onRegisterMenuScreens(RegisterMenuScreensEvent)` : associe `ModMenus.SPAWNER_CONFIG` à
+  `SpawnerConfigScreen::new`. Contrairement à `RegisterGuiLayersEvent`, ce n'est pas
+  `MenuScreens.register(...)` qu'on appelle directement (privée dans cette version) mais cet
+  événement, sur le même principe.
 
 > `@EventBusSubscriber` n'a pas de paramètre `bus` dans cette version : les événements qui
 > implémentent `IModBusEvent` (comme `RegisterRenderers`) partent automatiquement sur le bus
@@ -111,6 +134,7 @@ Chargement FML
    └─ new DungeonDefendersMod(modEventBus)
         ├─ ModBlocks.register(bus)        → BLOCKS + ITEMS
         ├─ ModAttachments.register(bus)   → ATTACHMENT_TYPES
+        ├─ ModMenus.register(bus)         → MENU_TYPES
         ├─ BLOCK_ENTITIES.register(bus)
         └─ CREATIVE_MODE_TABS.register(bus)
 
@@ -119,13 +143,16 @@ Chargement FML
    ├─ RegisterEvent(ITEM)              → eternia_crystal, spike_trap, spawner (BlockItem)
    ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana, experience, current_wave,
    │                                      wave_enemies_total, wave_enemies_killed, game_phase,
-   │                                      score, level, character_name
+   │                                      score, level, character_name, difficulty
+   ├─ RegisterEvent(MENU)              → spawner_config (MenuType)
    ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal, spawner (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
+   ├─ RegisterPayloadHandlersEvent     → SpawnerConfigPayload (C2S, ModNetworking — commun, pas client-only)
    ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer
-   └─ RegisterGuiLayersEvent [client]  → ManaOverlay, HealthOverlay, ExperienceOverlay,
-                                          WaveOverlay, WaveEnemiesOverlay, PhaseOverlay,
-                                          ScoreOverlay, CharacterOverlay, AbilitySlotsOverlay
+   ├─ RegisterGuiLayersEvent [client]  → ManaOverlay, HealthOverlay, ExperienceOverlay,
+   │                                      WaveOverlay, WaveEnemiesOverlay, PhaseOverlay,
+   │                                      ScoreOverlay, CharacterOverlay, AbilitySlotsOverlay
+   └─ RegisterMenuScreensEvent [client] → spawner_config -> SpawnerConfigScreen
 
 Bus de jeu (NeoForge.EVENT_BUS)
    ├─ ModEvents.onMonsterSpawn(EntityJoinLevelEvent)
@@ -134,6 +161,14 @@ Bus de jeu (NeoForge.EVENT_BUS)
 
 Chaque SpawnerBlockEntity, en plus de ces événements :
    └─ BlockEntityTicker [serveur]  → SpawnerBlockEntity.serverTick(...), une fois par tick de bloc
+
+Clic droit sur un SpawnerBlock (voir 02-gameplay.md) :
+   └─ player.openMenu(SpawnerConfigMenuProvider)
+        ├─ Serveur : SpawnerConfigMenuProvider#writeClientSideData -> écrit le BlockPos
+        └─ Client : IContainerFactory reconstruit SpawnerConfigMenu, RegisterMenuScreensEvent
+                     ouvre SpawnerConfigScreen -> au clic sur "Valider", envoie
+                     SpawnerConfigPayload -> ModNetworking l'applique via
+                     SpawnerBlockEntity.applyConfig(...)
 ```
 
 `ModEvents` est annoté `@EventBusSubscriber(modid = MODID)` sans `bus` explicite : il

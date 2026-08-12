@@ -4,6 +4,7 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEnt
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
+import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -55,6 +56,7 @@ public class DungeonDefendersMod {
         // On enregistre tes deux fichiers de registres sur le bus
         ModBlocks.register(modEventBus);
         ModAttachments.register(modEventBus);
+        ModMenus.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
 

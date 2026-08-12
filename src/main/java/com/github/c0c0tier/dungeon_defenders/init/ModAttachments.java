@@ -117,6 +117,17 @@ public class ModAttachments {
                     .sync(ByteBufCodecs.STRING_UTF8)
                     .build());
 
+    // Difficulté de la partie : état de la Level (comme current_wave), censée être choisie
+    // au lancement de la map — aucun écran pour le faire n'existe encore, donc démarre en
+    // Normal. Stockée comme l'ordinal de GameDifficulty, même approche que game_phase.
+    // Consultée par DifficultyScaling pour calculer le multiplicateur des spawners.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> DIFFICULTY = ATTACHMENT_TYPES.register(
+            "difficulty",
+            () -> AttachmentType.builder(() -> GameDifficulty.NORMAL.ordinal())
+                    .serialize(Codec.INT.fieldOf("Difficulty"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
     public static void register(IEventBus modEventBus) {
         ATTACHMENT_TYPES.register(modEventBus);
     }

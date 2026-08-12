@@ -4,6 +4,7 @@ import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.menu.SpawnerConfigMenuProvider;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -48,9 +49,19 @@ public class SpawnerBlock extends BaseEntityBlock {
                 : createTickerHelper(blockEntityType, DungeonDefendersMod.SPAWNER_BE.get(), SpawnerBlockEntity::serverTick);
     }
 
-    /** Bascule Construction/Combat au clic droit. Harnais de test, en attendant un vrai déclencheur. */
+    /**
+     * Shift + clic droit : bascule Construction/Combat (harnais de test, en attendant un
+     * vrai déclencheur). Clic droit seul : ouvre l'écran de configuration.
+     */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        if (player.isShiftKeyDown()) {
+            return togglePhase(level, player);
+        }
+        return openConfigScreen(level, pos, player);
+    }
+
+    private static InteractionResult togglePhase(Level level, Player player) {
         if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
@@ -65,5 +76,14 @@ public class SpawnerBlock extends BaseEntityBlock {
                 "dungeon_defenders.spawner.phase_toggled", Component.translatable(next.translationKey())));
 
         return InteractionResult.SUCCESS;
+    }
+
+    private static InteractionResult openConfigScreen(Level level, BlockPos pos, Player player) {
+        if (level.isClientSide()) {
+            return InteractionResult.SUCCESS;
+        }
+
+        player.openMenu(new SpawnerConfigMenuProvider(pos));
+        return InteractionResult.CONSUME;
     }
 }

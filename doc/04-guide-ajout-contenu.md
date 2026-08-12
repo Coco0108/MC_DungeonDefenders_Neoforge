@@ -298,6 +298,53 @@ static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
 (voir les constantes de `VanillaGuiLayers`, ex. `HOTBAR`, `PLAYER_HEALTH`) si l'overlay doit
 s'insérer dans l'empilement du HUD plutôt que flotter au-dessus.
 
+## Ajouter un GUI de configuration (menu + écran + réseau)
+
+Pour un écran ouvert par clic droit sur un bloc, qui édite l'état d'un `BlockEntity` (pas un
+inventaire) : pas besoin de slots ni d'items, juste un menu-vecteur + un écran + un paquet
+custom. Exemple complet à recopier : `menu/SpawnerConfigMenu.java`,
+`menu/SpawnerConfigMenuProvider.java`, `network/SpawnerConfigPayload.java`,
+`network/ModNetworking.java`, `client/gui/screen/SpawnerConfigScreen.java` (détaillé dans
+[02-gameplay.md](02-gameplay.md)).
+
+Les pièces, dans l'ordre où elles interviennent :
+
+1. **`MenuProvider`** (un `record` suffit) : donné à `player.openMenu(...)` côté serveur dans
+   le `useWithoutItem`/`use` du bloc. Porte les données nécessaires pour retrouver le bloc
+   côté client (typiquement un `BlockPos`) et les écrit dans
+   `writeClientSideData(menu, buf)` — la surcharge NeoForge de `MenuProvider`, pas une
+   méthode vanilla.
+2. **`AbstractContainerMenu`** minimal : deux constructeurs, un pour le serveur (reçoit les
+   données directement), un pour le client (reçoit un `RegistryFriendlyByteBuf` et les
+   relit). `quickMoveStack` peut renvoyer `ItemStack.EMPTY` et `stillValid` renvoyer `true`
+   sans risque tant qu'il n'y a ni slot ni item — la vraie vérification se fait dans le
+   handler du paquet (point 5).
+3. **`MenuType`** : `IMenuTypeExtension.create(MonMenu::new)` (le constructeur "buffer"),
+   enregistré via un `DeferredRegister<MenuType<?>>` sur `Registries.MENU`, même principe que
+   `ModBlocks`/`ModAttachments`.
+4. **Écran** : `class MonEcran extends Screen implements MenuAccess<MonMenu>` — pas besoin
+   d'étendre `AbstractContainerScreen` si le menu n'a pas de slot, ça évite d'hériter du
+   rendu du panneau d'inventaire vanilla. Widgets standards (`EditBox`, `Button.builder(...)`)
+   ajoutés via `addRenderableWidget(...)` dans `init()`. **Attention au renommage de cette
+   version** : le point d'entrée du rendu n'est pas `render(GuiGraphics, ...)` mais
+   `extractRenderState(GuiGraphicsExtractor, int mouseX, int mouseY, float partialTick)` —
+   appeler `super.extractRenderState(...)` en premier dessine le fond et les widgets déjà
+   ajoutés, comme le faisait `super.render(...)` avant. Enregistré côté client via
+   `RegisterMenuScreensEvent` (pas `MenuScreens.register(...)`, privée dans cette version).
+5. **Paquet C2S** : un `record` implémentant `CustomPacketPayload` (`type()`, un
+   `Type<T>` déclaré avec `Identifier.fromNamespaceAndPath(...)`, un `StreamCodec` via
+   `StreamCodec.composite(...)` — jusqu'à 7 champs avec les surcharges de cette version).
+   Enregistré dans une classe à part (**pas** dans la classe client) via
+   `RegisterPayloadHandlersEvent` + `PayloadRegistrar#playToServer(type, codec, handler)` :
+   un serveur dédié doit savoir décoder ce que ses clients lui envoient, donc cet
+   enregistrement doit rester du code commun.
+6. **Envoi depuis l'écran** : `Minecraft.getInstance().getConnection().send(payload.toVanillaServerbound())`
+   — pas de helper `PacketDistributor.sendToServer(...)`, ces méthodes sont toutes serveur →
+   client dans cette version.
+7. **Handler côté serveur** : revérifier l'existence du bloc à la position reçue et la
+   portée du joueur avant d'appliquer quoi que ce soit (voir `ModNetworking`) — le client est
+   toujours considéré non fiable.
+
 ## Ajouter une option de configuration
 
 [`Config.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/Config.java) contient

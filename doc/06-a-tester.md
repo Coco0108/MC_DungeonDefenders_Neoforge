@@ -112,12 +112,19 @@ Lancer le client de dev :
 
 - [ ] Prendre `spawner` dans l'onglet créatif Dungeon Defenders (texture : cage de spawner
       vanilla), le poser.
-- [ ] Clic droit dessus : un message système confirme le changement de phase
+- [ ] **Shift + clic droit** dessus : un message système confirme le changement de phase
       (`Phase changée : Combat` / `Phase changée : Construction`), et le texte `Phase : ...`
       en haut à droite du HUD change en conséquence.
+- [ ] **Clic droit sans shift** : ouvre l'écran de configuration (voir section dédiée
+      ci-dessous), au lieu de basculer la phase.
 - [ ] Une fois en `Combat`, attendre : des **zombies et des squelettes** doivent apparaître
-      au-dessus du bloc, les zombies plus fréquemment que les squelettes (poids 15 contre 5 —
-      environ 3x plus de zombies sur la durée, pas un ratio exact vague par vague).
+      au-dessus du bloc, les zombies plus fréquemment que les squelettes (nombre de base 15
+      contre 5 par défaut — environ 3x plus de zombies sur la durée, pas un ratio exact vague
+      par vague).
+- [ ] Laisser tourner un moment : **chaque type doit finir par s'arrêter** une fois son
+      plafond atteint (15 zombies et 5 squelettes par défaut, sur la vague 1 avec la
+      difficulté Normal) — le spawner ne doit **pas** spawn indéfiniment tant qu'on reste en
+      combat, contrairement à avant cette évolution.
 - [ ] Le squelette apparu se comporte comme le zombie : il converge à pied vers le cristal et
       le frappe au corps à corps une fois arrivé — **pas de tir à l'arc**, c'est un manque
       connu (voir 05-etat-et-problemes-connus.md), pas un bug si vous vous attendiez à le
@@ -136,6 +143,33 @@ Lancer le client de dev :
 - [ ] `Ennemis : X/10` reste bloqué sur `/10` quel que soit le nombre d'ennemis tués (le
       total n'est pas encore recalculé, c'est un `TODO` connu — voir
       05-etat-et-problemes-connus.md).
+
+## L'écran de configuration du spawner (premier GUI custom, avec réseau)
+
+C'est le morceau le plus à risque de cette session (aucun test visuel possible pendant le
+développement) — à vérifier avec le plus d'attention.
+
+- [ ] Clic droit (sans shift) sur un spawner ouvre bien un écran, sans crash ni écran noir.
+- [ ] L'écran affiche 6 champs numériques avec leurs libellés (Intervalle, Rayon de spawn,
+      Première/Dernière vague active, Zombies/Squelettes) et un bouton "Valider" — rien ne
+      doit se chevaucher, chaque libellé doit être lisible juste au-dessus de son champ.
+- [ ] Les champs sont **pré-remplis** avec les valeurs par défaut du spawner tout juste posé
+      (`20`, `0`, `1`, `5`, `15`, `5` dans cet ordre) — pas vides, pas à `0` partout.
+- [ ] Taper des lettres dans un champ : rien ne s'affiche (filtre chiffres uniquement).
+- [ ] Modifier une valeur (ex : mettre `30` dans "Zombies"), cliquer "Valider" : l'écran se
+      ferme, aucune erreur dans les logs.
+- [ ] **Rouvrir l'écran du même spawner** (clic droit à nouveau) : la nouvelle valeur (`30`)
+      doit apparaître — pas l'ancienne (`15`). C'est le test le plus important : il vérifie
+      que la config a bien été appliquée côté serveur **et** resynchronisée vers le client.
+- [ ] Avec le spawner en Combat au moment de la modification : les ennemis déjà en cours de
+      spawn pour la vague continuent avec les **anciennes** valeurs jusqu'à la vague
+      suivante (comportement voulu, pas un bug) — difficile à observer sans le système de
+      vagues complet, à noter seulement si quelque chose semble clairement incohérent.
+- [ ] Poser 2 spawners, ouvrir l'écran de l'un, le fermer sans "Valider" (touche Échap) :
+      l'autre spawner ne doit pas avoir été affecté.
+- [ ] Vérifier `run/logs/latest.log` après une session de test avec cet écran : aucune
+      exception liée à `SpawnerConfigMenu`, `SpawnerConfigScreen`, `SpawnerConfigPayload` ou
+      `ModNetworking`.
 
 ## HUD vanilla masqué
 

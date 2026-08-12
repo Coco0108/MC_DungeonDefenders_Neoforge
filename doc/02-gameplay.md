@@ -461,20 +461,25 @@ réordonnancements de l'enum).
 
 Premier morceau de vraie mécanique de combat du mod (le reste n'était que du HUD affichant
 des valeurs par défaut) : un bloc à poser dans la map qui fait apparaître des ennemis pendant
-la phase de combat. L'algorithme vient de la feuille "Idées" du plan Excel du joueur (voir
-mémoire de session) : un accumulateur par type d'ennemi, incrémenté à chaque contrôle du
-poids de ce type ; dès qu'il atteint un seuil, un ennemi de ce type spawn et le seuil lui est
-retiré. Plus un type a un poids élevé, plus il ressort souvent — le poids fait office de
-"nombre total voulu sur la vague" :
+la phase de combat. L'algorithme vient de la feuille "Idées" du plan Excel du joueur, précisé
+au fil d'une discussion : un accumulateur par type d'ennemi, incrémenté chaque contrôle de son
+"nombre de base" ; dès qu'il atteint un seuil, un ennemi de ce type spawn et le seuil lui est
+retiré. Le nombre de base sert **aussi** de plafond pour ce type : une fois atteint, ce type
+est sauté (round-robin sur les types restants) jusqu'à ce que tous soient épuisés — c'est
+exactement l'exemple du joueur ("on a au total 15 gobelins et 5 orcs", pas juste un ratio).
 
 ```java
-for (SpawnEntry entry : SPAWN_TABLE) {
-    accumulators[i] += entry.weight();   // zombie: 15, squelette: 5 — repris de l'exemple du joueur
-    if (accumulators[i] >= SPAWN_THRESHOLD) {   // 20
-        entry.type().spawn(serverLevel, pos.above(), EntitySpawnReason.SPAWNER);
-        accumulators[i] -= SPAWN_THRESHOLD;
-    }
+// SpawnEntry.tickAndMaybeSpawn(...), une fois par entrée de la composition
+if (spawned >= effectiveTotal) {
+    return false;   // ce type est épuisé pour la vague, on le saute
 }
+accumulator += effectiveTotal;
+if (accumulator < SPAWN_THRESHOLD) {   // 20
+    return false;
+}
+accumulator -= SPAWN_THRESHOLD;
+spawned++;
+type.spawn(level, spawnPos, EntitySpawnReason.SPAWNER);
 ```
 
 > Le seuil se déclenche à `>=`, pas `>` : l'exemple du joueur contenait une ligne
@@ -489,29 +494,112 @@ un. `serverTick(...)` :
 
 1. Sort immédiatement si `ModAttachments.GAME_PHASE != COMBAT` — le spawner ne tourne qu'en
    combat.
-2. Ne fait tourner l'algorithme qu'une fois par seconde (`TICKS_BETWEEN_CHECKS = 20`), pas à
-   chaque tick, pour rester lisible.
-3. Applique l'algorithme ci-dessus, une fois par entrée de `SPAWN_TABLE`.
+2. Sort aussi si `CURRENT_WAVE` est en dehors de `[waveStart, waveEnd]` — un spawner peut être
+   configuré pour ne s'activer que sur une plage de vagues.
+3. Si la vague a changé depuis le dernier passage (`lastWaveHandled`), recalcule le plafond de
+   chaque type (`resetForWave`, voir plus bas) et remet sa progression à zéro : une nouvelle
+   vague, une nouvelle chance de spawn pour chaque type.
+4. Ne fait tourner l'algorithme qu'une fois toutes les `intervalTicks` (20 par défaut, soit
+   une seconde), pas à chaque tick, pour rester lisible.
+5. Applique l'algorithme ci-dessus, une fois par entrée de la composition.
 
-`SPAWN_TABLE` est une `List<SpawnEntry(EntityType, weight)>` figée dans le code — deux
-entrées pour l'instant, zombie (poids 15) et squelette (poids 5), reprenant exactement les
-chiffres de l'exemple du joueur (15 gobelins / 5 orcs). Chaque entrée a son propre
-accumulateur (`accumulators[i]`, même index que dans `SPAWN_TABLE`), persistant
-(`saveAdditional`/`loadAdditional`, `putIntArray`/`getIntArray`) ; le minuteur sub-seconde ne
-l'est pas, le perdre au rechargement n'a aucune conséquence visible.
+**La composition** (`List<SpawnEntry>`) est modifiable par spawner — deux entrées par défaut,
+zombie (nombre de base 15) et squelette (nombre de base 5), reprenant exactement les chiffres
+de l'exemple du joueur. Chaque `SpawnEntry` combine sa config (type, nombre de base) et sa
+progression pour la vague en cours (`spawned`, `accumulator`, `effectiveTotal`), le tout
+persistant via un `Codec` dédié (`ValueOutput/ValueInput#list(...)`, la liste ayant une
+longueur variable contrairement aux compteurs simples du reste du mod).
 
-**V1 volontairement simple**, comme convenu avec le joueur : une composition fixe codée en
-dur, pas encore le GUI de configuration prévu dans la feuille Idées (slots d'œufs,
-multiplicateurs, intervalle, plage de vagues) — voir
+**Paramètres configurables par spawner**, en plus de la composition : `intervalTicks` (défaut
+20), `spawnRadius` (défaut 0 — spawn pile au-dessus du bloc ; au-delà, une position aléatoire
+dans ce rayon, pour éviter que tout s'empile sur la même case), `waveStart`/`waveEnd` (défaut
+1 à `MAX_WAVE`). Tous persistants. Pas encore de GUI pour les éditer en jeu — en cours, voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 
-### Le harnais de test — clic droit
+### Le multiplicateur de difficulté — `init/DifficultyScaling.java`
+
+`effectiveTotal = round(baseCount × DifficultyScaling.getMultiplier(level))`, recalculé à
+chaque nouvelle vague (pas à chaque tick — sinon un type déjà épuisé pourrait redevenir actif
+en cours de vague si le multiplicateur changeait entre-temps). Le multiplicateur combine :
+
+- **La difficulté** (`ModAttachments.DIFFICULTY`, enum `GameDifficulty` : `EASY` ×0.75,
+  `NORMAL` ×1.0, `HARD` ×1.5) — censée être choisie au lancement de la map, mais aucun écran
+  pour le faire n'existe encore : démarre toujours à `NORMAL`.
+- **La vague courante** : +10 % par vague au-delà de la première (`1.0 + (wave - 1) × 0.1`).
+
+`DifficultyScaling.getMultiplier(Level)` est le seul point de calcul, pensé pour accueillir
+d'autres facteurs plus tard (nombre de joueurs, par exemple) sans changer les appelants.
+
+Comme `effectiveTotal` sert à la fois de fréquence d'apparition (`accumulator +=
+effectiveTotal`) et de plafond (`spawned >= effectiveTotal`), une difficulté plus élevée
+rend un type d'ennemi **à la fois** plus nombreux et plus fréquent sur la vague — pas
+seulement plus nombreux.
+
+### Le harnais de test — clic droit (maj/shift = bascule de phase)
 
 Comme pour le Cristal d'Eternia et `ManaTestWandItem`, un harnais de test plutôt qu'une vraie
-mécanique : clic droit sur le `SpawnerBlock` bascule `ModAttachments.GAME_PHASE` entre `BUILD`
-et `COMBAT` (`level.setData(...)` + `level.syncData(...)`, message système confirmant la
-nouvelle phase). C'est le seul moyen de déclencher le combat pour l'instant — le vrai
-déclencheur (et la transition retour vers `BUILD` en fin de vague) reste à faire.
+mécanique : **shift + clic droit** sur le `SpawnerBlock` bascule `ModAttachments.GAME_PHASE`
+entre `BUILD` et `COMBAT` (`level.setData(...)` + `level.syncData(...)`, message système
+confirmant la nouvelle phase). C'est le seul moyen de déclencher le combat pour l'instant — le
+vrai déclencheur (et la transition retour vers `BUILD` en fin de vague) reste à faire. Un clic
+droit **sans shift** ouvre l'écran de configuration (voir plus bas).
+
+### L'écran de configuration — `menu/`, `network/`, `client/gui/screen/SpawnerConfigScreen.java`
+
+Premier GUI custom du mod. Six champs numériques + un bouton "Valider", **pas de slot ni
+d'item** — les paramètres décidés avec le joueur : intervalle (ticks), rayon de spawn, vague
+de début, vague de fin, et le nombre de base pour chaque type d'ennemi disponible (zombie,
+squelette). Pré-rempli avec la configuration actuelle du spawner ciblé.
+
+**Le trajet complet, dans l'ordre :**
+
+1. **Clic droit** (sans shift) sur un `SpawnerBlock` → `SpawnerBlock.openConfigScreen(...)`
+   appelle `player.openMenu(new SpawnerConfigMenuProvider(pos))` côté serveur.
+2. **`SpawnerConfigMenuProvider`** (`record MenuProvider`) fournit `createMenu(...)` (le menu
+   côté serveur, qui ne porte que le `BlockPos`) et surcharge
+   `writeClientSideData(menu, buf)` — l'extension NeoForge de `MenuProvider` qui écrit des
+   données supplémentaires dans le paquet d'ouverture. Ici : juste `buf.writeBlockPos(pos)`.
+3. Côté client, `IMenuTypeExtension.create(SpawnerConfigMenu::new)` (voir
+   `init/ModMenus.java`) reconstruit **le même** `SpawnerConfigMenu` à partir de ce
+   `BlockPos` — c'est le rôle du deuxième constructeur de `SpawnerConfigMenu`, qui prend un
+   `RegistryFriendlyByteBuf` et lit `extraData.readBlockPos()`.
+4. `RegisterMenuScreensEvent` (voir `DungeonDefendersModClient`) associe ce `MenuType` à
+   `SpawnerConfigScreen::new`, qui s'ouvre automatiquement.
+5. **`SpawnerConfigScreen.init()`** ne lit **pas** le menu pour la configuration (le menu ne
+   porte que le `BlockPos`) : il retrouve directement le `SpawnerBlockEntity` **côté client**
+   via `Minecraft.getInstance().level.getBlockEntity(pos)` — cette copie cliente est déjà à
+   jour grâce à la synchronisation ajoutée à `SpawnerBlockEntity`
+   (`getUpdatePacket`/`getUpdateTag`, même mécanisme que pour les PV du cristal). Chaque
+   champ est pré-rempli avec la valeur lue (`getIntervalTicks()`, `getBaseCount(EntityType)`,
+   etc.), avec un filtre n'acceptant que des chiffres (`EditBox#setFilter`).
+6. Au clic sur **"Valider"**, le client construit un `SpawnerConfigPayload` (le `BlockPos` +
+   les 6 valeurs, parsées depuis les champs) et l'envoie via
+   `Minecraft.getInstance().getConnection().send(payload.toVanillaServerbound())`.
+7. **`ModNetworking`** (enregistré via `RegisterPayloadHandlersEvent`, voir plus haut) reçoit
+   le paquet côté serveur : revérifie que le bloc à cette position est toujours un
+   `SpawnerBlockEntity` et que le joueur est encore à portée (8 blocs), puis appelle
+   `spawner.applyConfig(...)`.
+
+> **Pourquoi pas de vérification de portée dans `SpawnerConfigMenu#stillValid` ?** Parce que
+> ce menu ne contient ni slot ni item : la seule action possible dessus est d'envoyer le
+> paquet de config, et ce paquet revérifie déjà tout côté serveur avant d'agir. Une double
+> vérification (menu **et** paquet) n'aurait rien apporté ici.
+
+`SpawnerBlockEntity.applyConfig(...)` ne touche pas à la progression de la vague en cours
+(`spawned`/`accumulator`/`effectiveTotal`) : les nouveaux nombres de base ne prennent effet
+qu'à la prochaine vague détectée par `serverTick` (voir plus haut), pour ne pas fausser une
+vague déjà commencée.
+
+**Ce qui n'est PAS dans ce GUI**, volontairement (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)) :
+
+- Pas de liste d'ennemis éditable (ajouter/retirer un type) : les deux lignes
+  zombie/squelette sont fixes, seul leur nombre de base se règle. Mettre un nombre de base à
+  `0` désactive ce type en pratique, sans avoir besoin d'un bouton "retirer".
+- Pas de sélection de type par un bouton "cycler" (l'idée envisagée au départ) : inutile tant
+  qu'il n'y a que deux types possibles, voir "Ce qui reste".
+- Pas de choix de difficulté ici — c'est un réglage de partie (`ModAttachments.DIFFICULTY`),
+  pas du spawner, voir plus haut.
 
 ### Le compteur d'ennemis tués — `ModEvents.onMonsterDeath`
 
@@ -521,9 +609,10 @@ meurt est un `Monster` et que la phase est `COMBAT`, incrémente le compteur et 
 synchronise. Pas de filtre sur "a été spawné par un `SpawnerBlockEntity`" — tout monstre mort
 en combat compte, ce qui suffit au sens du HUD ("ennemis tués dans la vague").
 
-`ModAttachments.WAVE_ENEMIES_TOTAL`, en revanche, **n'est pas encore branché** : il reste à
-sa valeur par défaut (`10`), il faudrait sommer les poids de tous les spawners actifs de la
-carte au démarrage du combat — repoussé volontairement, voir
+`ModAttachments.WAVE_ENEMIES_TOTAL`, en revanche, **n'est toujours pas branché** : chaque
+spawner connaît maintenant son propre plafond total (somme des `effectiveTotal` de ses
+entrées), mais rien ne les additionne à l'échelle de la carte — il faudrait un registre des
+spawners actifs, pas juste la logique locale à chacun. Repoussé volontairement, voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 
 ### Apparence

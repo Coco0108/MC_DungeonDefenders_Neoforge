@@ -58,14 +58,26 @@ vérifie la CI.
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
   voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 - ✅ Bloc `spawner` : premier vrai morceau de gameplay (pas juste du HUD). Fait apparaître des
-  zombies (poids 15) et des squelettes (poids 5) pendant la phase de combat via l'algorithme
-  de spawn pondéré du plan Excel du joueur (voir
-  [02-gameplay.md](02-gameplay.md#le-spawner--blockspawnerblockjava)). Clic droit = harnais de
-  test qui bascule `BUILD`/`COMBAT`. Incrémente aussi `ModAttachments.WAVE_ENEMIES_KILLED` via
-  un nouveau handler `LivingDeathEvent`.
+  zombies et des squelettes pendant la phase de combat via l'algorithme de spawn pondéré du
+  plan Excel du joueur (voir
+  [02-gameplay.md](02-gameplay.md#le-spawner--blockspawnerblockjava)). Le nombre de base de
+  chaque type sert aussi de plafond pour la vague (une fois atteint, ce type est sauté), et
+  est mis à l'échelle par `DifficultyScaling` (difficulté × vague). Configurable par spawner
+  (intervalle, rayon de spawn, plage de vagues, nombre de base par type). Shift + clic droit =
+  harnais de test qui bascule `BUILD`/`COMBAT`. Incrémente aussi
+  `ModAttachments.WAVE_ENEMIES_KILLED` via un nouveau handler `LivingDeathEvent`.
 - ✅ Squelette ajouté comme deuxième ennemi (réutilise `EntityType.SKELETON` vanilla, comme le
   zombie) : cible le cristal comme n'importe quel `Monster`, et sort du spawner. Aucune
   spécificité de comportement (tir à distance, etc.) pour l'instant — voir "Ce qui reste".
+- ✅ Difficulté de la partie : data attachment `difficulty` sur la `Level` (ordinal de l'enum
+  `GameDifficulty` : `EASY`/`NORMAL`/`HARD`), démarre à `NORMAL` — censée être choisie au
+  lancement de la map, mais aucun écran pour le faire n'existe encore.
+- ✅ Écran de configuration du spawner (premier GUI custom du mod) : clic droit sans shift sur
+  un `SpawnerBlock` ouvre `SpawnerConfigScreen`, 6 champs numériques (intervalle, rayon,
+  vague de début/fin, nombre de base zombie/squelette), sans slot ni item. Réseau custom
+  C2S (`SpawnerConfigPayload` + `ModNetworking`), revérifié côté serveur (portée, existence
+  du bloc) avant application. Détail complet dans
+  [02-gameplay.md](02-gameplay.md#lécran-de-configuration--menu-network-clientguiscreenspawnerconfigscreenjava).
 
 ## Corrections apportées
 
@@ -169,13 +181,21 @@ tombe avant. Le `spawner` fait maintenant apparaître de vrais ennemis et
   poids des spawners actifs de la carte au démarrage du combat ;
 - rien ne fait avancer `current_wave` quand `wave_enemies_killed` atteint `wave_enemies_total`.
 
-### Le spawner n'a qu'une composition fixe, pas de GUI
+### Le GUI du spawner ne gère que zombie/squelette, pas une liste libre
 
-`SpawnerBlockEntity` fait toujours apparaître le même type d'ennemi (zombie, poids 15) au même
-seuil (20) : la feuille "Idées" du plan Excel du joueur prévoyait un vrai GUI de configuration
-(slots d'œufs, multiplicateurs, intervalle, plage de vagues de début/fin) pour choisir la
-composition par spawner. Volontairement repoussé — décision prise avec le joueur, qui compte
-le refaire "d'une manière plus simple" plus tard plutôt que le GUI double initialement prévu.
+`SpawnerConfigScreen` existe (voir [02-gameplay.md](02-gameplay.md)) et permet de régler
+l'intervalle, le rayon, la plage de vagues et le nombre de base de chaque type — mais la
+feuille "Idées" du plan Excel du joueur prévoyait à l'origine des **slots d'œufs** pour
+choisir librement les types (n'importe quel mob, pas juste zombie/squelette). Ce qu'on a est
+la version "plus simple" décidée avec le joueur pour cette première itération : deux lignes
+fixes, pas de bouton ajouter/retirer un type. Étendre à une vraie liste (et donc à d'autres
+ennemis que zombie/squelette, une fois qu'ils existeront) demandera de revoir le paquet réseau
+(actuellement une forme figée à 7 valeurs, pas une liste variable) et l'écran (actuellement
+une ligne codée en dur par type).
+
+Le seuil de déclenchement (`SPAWN_THRESHOLD = 20`) reste une constante globale non exposée
+dans le GUI, comme décidé avec le joueur (son effet se règle déjà via l'intervalle et le
+nombre de base, l'exposer en plus aurait été redondant).
 
 ### `game_phase` stocke un ordinal d'enum, pas un nom stable
 
@@ -246,10 +266,13 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
     (probablement via `blitSprite`, une texture par `SLOT_NAMES`), puis brancher le clic, un
     cooldown, et enfin le vrai effet de chaque compétence (soin, sorts, réparation de tour —
     aucun n'existe encore côté gameplay).
-11. Donner au `SpawnerBlockEntity` une vraie configuration (`SPAWN_TABLE` figé à deux entrées
-    pour l'instant) — poids/intervalle/plage de vagues réglables, "d'une manière plus simple"
-    que le GUI double slots d'œufs/multiplicateurs prévu dans le plan Excel, forme à définir
-    avec le joueur.
+11. Étendre `SpawnerConfigScreen`/`SpawnerConfigPayload` d'une composition figée
+    (zombie/squelette) à une vraie liste (ajouter/retirer un type, choisir parmi tous les
+    ennemis disponibles) — nécessite de revoir la forme du paquet réseau (actuellement 7
+    valeurs fixes, pas une liste variable).
 12. Donner au squelette (et à tout futur ennemi à distance) un vrai comportement d'archer —
     il utilise pour l'instant le même goal de mêlée que le zombie (`AttackEterniaCrystalGoal`
     le fait juste taper le cristal au corps à corps), pas d'attaque à l'arc.
+13. Donner un moyen de choisir la difficulté au lancement de la map
+    (`ModAttachments.DIFFICULTY`) — reste bloquée à `NORMAL`, aucun écran de lancement de
+    partie n'existe encore.
