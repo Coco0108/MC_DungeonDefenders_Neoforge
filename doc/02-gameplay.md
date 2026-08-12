@@ -25,12 +25,35 @@ Propriétés définies à l'enregistrement dans `ModBlocks` :
 
 ### Interaction joueur
 
-`useWithoutItem` (clic droit à main nue) retire **10 PV** au cristal et envoie un message au
-joueur. C'est un harnais de test, pas une mécanique définitive : dans le jeu final, seuls les
-monstres devraient endommager le cristal.
+`useWithoutItem` (clic droit à main nue) se comporte différemment selon la phase :
+
+- **En Construction** : bascule "prêt" pour le joueur qui clique — voir "Le vote prêt" plus
+  bas, c'est le vrai déclencheur du Combat.
+- **En Combat** : retire **10 PV** au cristal et envoie un message au joueur — l'ancien
+  harnais de test, gardé pour pouvoir déclencher la destruction du cristal sans attendre une
+  vraie vague. Dans le jeu final, seuls les monstres devraient endommager le cristal.
 
 Le client renvoie immédiatement `SUCCESS` (prédiction, animation de bras) ; la logique ne
-tourne que côté serveur, et `PASS` est renvoyé si le block entity est absent.
+tourne que côté serveur, et `PASS` est renvoyé si le block entity est absent (uniquement
+pertinent pour la branche Combat, qui a besoin du block entity — la branche Construction n'en
+a pas besoin).
+
+### Le vote "prêt" — déclencheur du Combat
+
+Pour passer de Construction à Combat, il faut que **tous les joueurs présents dans cette
+Level** cliquent sur le cristal (pas tout le serveur : une future map/dimension différente
+aura ses propres joueurs, voir 05-etat-et-problemes-connus.md). Chaque clic bascule l'état
+"prêt" du joueur qui a cliqué (`ModAttachments.READY`, un attachment **joueur**, comme
+`mana`/`experience` — pas persistant, se re-décider à chaque Construction est voulu), diffuse
+la progression à tout le monde (`Prêt : 2/3`), et dès que tous sont prêts,
+`PhaseTransitions.enterCombat(level)` se déclenche — qui remet aussitôt "prêt" à faux pour
+tout le monde (voir plus bas), pour repartir propre à la Construction suivante. Un seul joueur
+en solo se retrouve donc à devoir cliquer une fois pour lancer le combat (1/1).
+
+Le harnais de test au clic droit du `SpawnerBlock` (shift + clic droit, voir plus bas) reste
+disponible en parallèle pour basculer directement de phase sans passer par le vote — pratique
+pour les tests, mais il passe aussi par `PhaseTransitions`, donc remet "prêt" à zéro pour tout
+le monde comme le vote, pas de comportement divergent entre les deux déclencheurs.
 
 ### L'état — `block/entity/EterniaCrystalBlockEntity.java`
 
@@ -115,48 +138,102 @@ Le dégradé **vert → jaune → rouge** vient de `red()` / `green()` (le bleu 
 
 ## IA des ennemis
 
-### Le goal — `entity/ai/AttackEterniaCrystalGoal.java`
+### La base commune — `entity/ai/AbstractEterniaCrystalAttackGoal.java`
 
-Étend `MoveToBlockGoal`. Constantes et surcharges :
+`AttackEterniaCrystalGoal` (corps à corps) et `RangedAttackEterniaCrystalGoal` (distance)
+partagent tout ce qui concerne le **ciblage et le déplacement** — identique dans les deux cas
+— via cette classe abstraite, qui étend `MoveToBlockGoal` :
 
-| Paramètre | Valeur | Rôle |
-|---|---|---|
-| `SPEED_MODIFIER` | `1.2D` | multiplicateur de vitesse de déplacement |
-| `SEARCH_RANGE` | `16` | blocs autour du mob |
-| `DAMAGE_PER_HIT` | `5` | PV retirés par coup |
-| `TICKS_BETWEEN_HITS` | `20` | 1 seconde entre deux coups |
-| `isValidTarget` | `state.is(ModBlocks.ETERNIA_CRYSTAL)` | ne cible que le cristal |
-| `getMoveToTarget` | `this.blockPos` | vise la **base** du cristal, pour éviter que le mob tente de grimper |
-| `acceptedDistance` | `2.1D` | tolérance suffisante pour un mob au sol contre une hitbox de 3 de haut |
+| Membre | Rôle |
+|---|---|
+| Constructeur `(mob, speedModifier, acceptedDistance, damagePerHit)` | `speedModifier`/`acceptedDistance` passés à `MoveToBlockGoal` ; `damagePerHit` exposé aux sous-classes via `this.damagePerHit` |
+| `isValidTarget` | `state.is(ModBlocks.ETERNIA_CRYSTAL)` — ne cible que le cristal |
+| `getMoveToTarget` | `this.blockPos` — vise la **base** du cristal, pour éviter que le mob tente de grimper |
+| `findCrystal()` | `protected final`, retrouve le `EterniaCrystalBlockEntity` à `this.blockPos` (ou `null` s'il a été cassé) |
+| `onReachedTarget(crystal)` | abstrait, appelé chaque tick tant que le mob est à `acceptedDistance()` du cristal |
+| `onTargetLost()` | appelé chaque tick tant qu'il ne l'est pas ; no-op par défaut |
 
-Dans `tick()`, si la cible est atteinte (`isReachedTarget()`), le mob appelle
-`crystal.damage(5)` et joue l'animation de bras (`mob.swing`), puis attend
-`TICKS_BETWEEN_HITS`. Le cooldown est un champ du goal (remis à zéro dans `start()` et dès
-que le mob s'éloigne), et non `mob.tickCount` : le rythme reste correct si le mob quitte puis
-revient vers le cristal.
+`SEARCH_RANGE` (16 blocs) reste une constante interne à cette classe, pas exposée au
+constructeur — contrairement aux dégâts, rien ne justifie encore qu'elle varie d'un ennemi à
+l'autre. `acceptedDistance`, en revanche, est ce qui distingue fondamentalement le corps à
+corps (une valeur fixe, faible) de la distance (une portée, potentiellement variable d'un
+ennemi à l'autre) : chaque sous-classe la fixe à sa manière (voir plus bas).
 
-Avec 100 PV par défaut, un zombie seul détruit le cristal en 20 secondes.
+> **Sous-classer `AbstractEterniaCrystalAttackGoal` directement** (plutôt que
+> `AttackEterniaCrystalGoal`/`RangedAttackEterniaCrystalGoal`) n'a d'intérêt que pour un
+> **nouveau style d'attaque** — une troisième famille, ni corps à corps ni tir à l'arc (une
+> attaque de zone, par exemple). Pour un ennemi qui attaque comme les deux familles
+> existantes mais avec d'autres chiffres, pas besoin de sous-classer quoi que ce soit : les
+> deux constructeurs `(mob, damagePerHit, ticksBetweenX, ...)` couvrent déjà ce cas (voir
+> ci-dessous).
 
-### L'attribution — `ModEvents.java`
-
-Écoute `EntityJoinLevelEvent` sur le bus de jeu. Pour chaque `Zombie` rejoignant un monde
-côté serveur, le goal est ajouté au `goalSelector` **en priorité 1** (donc au-dessus de la
-plupart des objectifs vanilla).
-
-`EntityJoinLevelEvent` se déclenche aussi au rechargement d'un chunk et au changement de
-dimension. Le code vérifie donc d'abord qu'aucun `AttackEterniaCrystalGoal` n'est déjà
-présent :
+### Le goal corps à corps — `entity/ai/AttackEterniaCrystalGoal.java`
 
 ```java
-zombie.goalSelector.getAvailableGoals().stream()
-        .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal)
+public AttackEterniaCrystalGoal(PathfinderMob mob)                              // 5 dégâts / 20 ticks (par défaut)
+public AttackEterniaCrystalGoal(PathfinderMob mob, int damagePerHit, int ticksBetweenHits)
 ```
 
-Sans ce test, un même zombie cumulerait plusieurs exemplaires du goal et frapperait le
-cristal plusieurs fois par seconde.
+`SPEED_MODIFIER` (`1.2D`) et `ACCEPTED_DISTANCE` (`2.1D`, tolérance suffisante pour un mob au
+sol contre une hitbox de 3 de haut) restent des constantes internes — c'est la cadence et les
+dégâts qui varient d'un ennemi de mêlée à l'autre, pas la distance d'engagement (toujours
+"collé au cristal" par définition du corps à corps).
 
-> Pour étendre l'IA à d'autres monstres, il suffit d'élargir le test `instanceof Zombie` :
-> le goal n'exige qu'un `PathfinderMob`.
+Dans `onReachedTarget(crystal)`, une fois le cooldown écoulé : `crystal.damage(damagePerHit)`,
+animation de bras (`mob.swing`), puis attend `ticksBetweenHits`. Le cooldown est un champ du
+goal (remis à zéro dans `start()` et dans `onTargetLost()`), et non `mob.tickCount` : le
+rythme reste correct si le mob quitte puis revient vers le cristal.
+
+Avec 100 PV par défaut et les valeurs par défaut (5 dégâts/s), un zombie seul détruit le
+cristal en 20 secondes.
+
+### Le goal à distance — `entity/ai/RangedAttackEterniaCrystalGoal.java`
+
+```java
+public RangedAttackEterniaCrystalGoal(PathfinderMob mob)                                                    // 3 dégâts / 20 ticks / 10 blocs (par défaut)
+public RangedAttackEterniaCrystalGoal(PathfinderMob mob, int damagePerHit, int ticksBetweenShots, double shootRange)
+```
+
+Contrairement au corps à corps, la **portée de tir** (`shootRange`, passée comme
+`acceptedDistance` au parent) est elle aussi exposée au constructeur : un futur ennemi à
+distance pourrait raisonnablement viser de plus près (un lanceur) ou de plus loin (un
+tireur d'élite), pas seulement avoir des dégâts/une cadence différents. `DRAW_TICKS` (20,
+temps de tension de l'arc) reste une constante interne : c'est un détail de timing
+d'animation, pas un levier d'équilibrage entre archétypes.
+
+Dans `onReachedTarget(crystal)`, une fois à portée : le mob se tourne vers le cristal
+(`LookControl#setLookAt`, nécessaire une fois immobile — `MoveToBlockGoal` ne le fait plus
+après l'approche), puis alterne tension (`mob.startUsingItem(MAIN_HAND)`, ce qui déclenche la
+pose vanilla "arc tendu" puisque le squelette porte déjà un arc par défaut) et tir. Au tir,
+`crystal.damage(damagePerHit)` est appliqué **directement** au cristal, sur le même principe
+"harnais" que le corps à corps — la flèche réellement lancée (`spawnArrow`, une vraie entité
+`Arrow`, avec le calcul d'arc `dy + distance × 0.2` repris du tir vanilla) n'est là que pour
+le **visuel** du tir, ce n'est pas sa collision qui inflige les dégâts (le cristal n'étant pas
+une entité, une flèche vanilla ne saurait pas le "toucher" toute seule).
+
+### L'attribution — `ModEvents.onMonsterSpawn`
+
+Écoute `EntityJoinLevelEvent` sur le bus de jeu. Pour chaque `Monster` rejoignant un monde
+côté serveur, un goal est ajouté au `goalSelector` **en priorité 1** (donc au-dessus de la
+plupart des objectifs vanilla) — lequel dépend du type : `AbstractSkeleton` (squelette, et
+tout futur sous-type) reçoit `RangedAttackEterniaCrystalGoal`, tout le reste reçoit
+`AttackEterniaCrystalGoal` (corps à corps).
+
+> `Monster` plutôt que `PathfinderMob` : les deux goals n'exigent techniquement qu'un
+> `PathfinderMob`, mais cette classe couvre aussi les mobs passifs (animaux, villageois...).
+> `Monster` est la bonne frontière sémantique — tout ce qui est hostile, rien de passif.
+
+`EntityJoinLevelEvent` se déclenche aussi au rechargement d'un chunk et au changement de
+dimension. Le code vérifie donc d'abord qu'aucun des deux goals n'est déjà présent :
+
+```java
+monster.goalSelector.getAvailableGoals().stream()
+        .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal
+                || wrapped.getGoal() instanceof RangedAttackEterniaCrystalGoal)
+```
+
+Sans ce test, un même monstre cumulerait plusieurs exemplaires du goal et attaquerait le
+cristal plusieurs fois par seconde.
 
 ## Onglet créatif
 
@@ -294,7 +371,7 @@ public static void onPlayerJoin(EntityJoinLevelEvent event) {
 ```
 
 `EntityJoinLevelEvent` se redéclenche à chaque connexion, respawn et changement de dimension
-(même remarque que pour `onZombieSpawn`). `setBaseValue` est idempotent (poser deux fois la
+(même remarque que pour `onMonsterSpawn`). `setBaseValue` est idempotent (poser deux fois la
 même valeur ne change rien), donc pas besoin de garde anti-doublon ici. Le seul piège est de
 ne pas soigner gratuitement un joueur déjà blessé à chaque relog : le code ne remonte la vie
 au nouveau maximum que si le joueur était **déjà** à son ancien maximum (cas du tout premier
@@ -442,8 +519,9 @@ que `X` se rapproche de `Y`. Deux attachments sur la `Level`, même raisonnement
 
 Juste en dessous de la rangée vague/ennemis (`WaveOverlay.ROW_Y + ROW_HEIGHT`), texte seul
 comme `WaveOverlay` : `Phase : Construction` ou `Phase : Combat`, clé
-`dungeon_defenders.hud.phase`. Aucune transition entre phases n'existe encore : la partie
-démarre et reste en `BUILD` tant que rien ne la fait changer.
+`dungeon_defenders.hud.phase`. La partie démarre en `BUILD`. La seule façon de changer de
+phase pour l'instant est le harnais de test au clic droit du `SpawnerBlock` (voir plus bas) —
+aucun vrai déclencheur de combat n'existe encore.
 
 `init/GamePhase.java` est un enum (`BUILD`, `COMBAT`) plutôt qu'une chaîne libre, pour garder
 un ensemble de valeurs fermé et une traduction par valeur
@@ -454,6 +532,314 @@ l'instant, ça aurait été de la complexité en plus pour un gain nul tant qu'i
 valeurs. À revoir si la liste des phases grandit ou si l'ordre des constantes doit pouvoir
 changer sans casser les sauvegardes existantes (l'ordinal n'est pas stable entre deux
 réordonnancements de l'enum).
+
+## Le Spawner — `block/SpawnerBlock.java`
+
+Premier morceau de vraie mécanique de combat du mod (le reste n'était que du HUD affichant
+des valeurs par défaut) : un bloc à poser dans la map qui fait apparaître des ennemis pendant
+la phase de combat. L'algorithme vient de la feuille "Idées" du plan Excel du joueur, précisé
+au fil d'une discussion : un accumulateur par type d'ennemi, incrémenté chaque contrôle de son
+"nombre de base" ; dès qu'il atteint un seuil, un ennemi de ce type spawn et le seuil lui est
+retiré. Le nombre de base sert **aussi** de plafond pour ce type : une fois atteint, ce type
+est sauté (round-robin sur les types restants) jusqu'à ce que tous soient épuisés — c'est
+exactement l'exemple du joueur ("on a au total 15 gobelins et 5 orcs", pas juste un ratio).
+
+```java
+// SpawnEntry.tickAndMaybeSpawn(...), une fois par entrée de la composition
+if (spawned >= effectiveTotal) {
+    return false;   // ce type est épuisé pour la vague, on le saute
+}
+accumulator += effectiveTotal;
+if (accumulator < SPAWN_THRESHOLD) {   // 20
+    return false;
+}
+accumulator -= SPAWN_THRESHOLD;
+spawned++;
+type.spawn(level, spawnPos, EntitySpawnReason.SPAWNER);
+```
+
+> Le seuil se déclenche à `>=`, pas `>` : l'exemple du joueur contenait une ligne
+> ("Gobelin = 20 → spawn") qui ne fonctionne qu'avec `>=`. Détail d'implémentation, l'idée
+> reste identique à ce qu'il avait écrit.
+
+**La position de spawn** (`SpawnerBlockEntity#findSafeSpawnPos`) : avec un rayon supérieur à
+0, la position tirée au hasard dans ce rayon peut tomber à l'intérieur d'un bloc plein (mur,
+terrain irrégulier autour du spawner). `findSafeSpawnPos` essaie jusqu'à 8 positions
+aléatoires, en ne retenant que celles où la position **et** celle juste au-dessus (place pour
+les pieds et la tête) sont toutes les deux traversables (`BlockState#getCollisionShape(...)
+.isEmpty()`) ; si aucune des 8 ne convient, replie sur `pos.above()` — la position par défaut
+utilisée avant l'ajout du rayon, censée toujours être libre. Pas de vérification qu'il y a un
+sol en dessous (un ennemi qui spawn au-dessus d'un trou tombe simplement, ce n'est pas un bug)
+— seul l'enlisement dans un bloc plein est évité.
+
+### L'état — `block/entity/SpawnerBlockEntity.java`
+
+`BaseEntityBlock` + `BlockEntityTicker`, sur le même principe qu'`EterniaCrystalBlockEntity`
+(codec, `newBlockEntity`) mais avec un tick serveur en plus — premier bloc du mod à en avoir
+un. `serverTick(...)` :
+
+1. Sort immédiatement si `ModAttachments.GAME_PHASE != COMBAT` — le spawner ne tourne qu'en
+   combat.
+2. Sort aussi si `CURRENT_WAVE` est en dehors de `[waveStart, waveEnd]` — un spawner peut être
+   configuré pour ne s'activer que sur une plage de vagues.
+3. Si une nouvelle session de combat a commencé depuis le dernier passage
+   (`lastCombatSessionHandled` vs `ModAttachments.COMBAT_SESSION`, voir "Le déroulement d'une
+   vague" plus bas), recalcule le plafond de chaque type (`resetForWave`, voir plus bas) et
+   remet sa progression à zéro : une nouvelle session de combat, une nouvelle chance de spawn
+   pour chaque type.
+4. Ne fait tourner l'algorithme qu'une fois toutes les `intervalTicks` (20 par défaut, soit
+   une seconde), pas à chaque tick, pour rester lisible.
+5. Applique l'algorithme ci-dessus, une fois par entrée de la composition.
+
+**La composition** (`List<SpawnEntry>`) est modifiable par spawner — deux entrées par défaut,
+zombie (nombre de base 15) et squelette (nombre de base 5), reprenant exactement les chiffres
+de l'exemple du joueur. Chaque `SpawnEntry` combine son ennemi (`init/SpawnableEnemy.java`,
+plutôt qu'un `EntityType<?>` brut), son nombre de base et sa progression pour la vague en
+cours (`spawned`, `accumulator`, `effectiveTotal`), le tout persistant via un `Codec` dédié
+(`ValueOutput/ValueInput#list(...)`, la liste ayant une longueur variable contrairement aux
+compteurs simples du reste du mod ; l'ennemi est stocké par ordinal, comme `GamePhase`).
+
+`init/SpawnableEnemy.java` est la liste fermée des ennemis choisissables dans un spawner
+(`ZOMBIE`, `SKELETON` pour l'instant). Il n'existe pas de tag vanilla générique "tout ce qui
+est hostile" dans cette version de Minecraft (vérifié) : cet enum sert à la fois de source de
+vérité réseau (transmis par ordinal, voir plus bas) et de liste pour le bouton "cycler le
+type" du GUI. Ajouter un ennemi au jeu et vouloir le rendre choisissable dans un spawner se
+résume à une ligne dans cet enum — rien d'autre à toucher côté GUI/réseau/persistance.
+
+**Paramètres configurables par spawner**, en plus de la composition : `intervalTicks` (défaut
+20), `spawnRadius` (défaut 0 — spawn pile au-dessus du bloc ; au-delà, une position aléatoire
+dans ce rayon, pour éviter que tout s'empile sur la même case), `waveStart`/`waveEnd` (défaut
+1 à `MAX_WAVE`). Tous persistants. Pas encore de GUI pour les éditer en jeu — en cours, voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
+### Le multiplicateur de difficulté — `init/DifficultyScaling.java`
+
+`effectiveTotal = round(baseCount × DifficultyScaling.getMultiplier(level))`, recalculé à
+chaque nouvelle vague (pas à chaque tick — sinon un type déjà épuisé pourrait redevenir actif
+en cours de vague si le multiplicateur changeait entre-temps). Le multiplicateur combine :
+
+- **La difficulté** (`ModAttachments.DIFFICULTY`, enum `GameDifficulty` : `EASY` ×0.75,
+  `NORMAL` ×1.0, `HARD` ×1.5) — censée être choisie au lancement de la map, mais aucun écran
+  pour le faire n'existe encore : démarre toujours à `NORMAL`.
+- **La vague courante** : +10 % par vague au-delà de la première (`1.0 + (wave - 1) × 0.1`).
+
+`DifficultyScaling.getMultiplier(Level)` est le seul point de calcul, pensé pour accueillir
+d'autres facteurs plus tard (nombre de joueurs, par exemple) sans changer les appelants.
+
+Comme `effectiveTotal` sert à la fois de fréquence d'apparition (`accumulator +=
+effectiveTotal`) et de plafond (`spawned >= effectiveTotal`), une difficulté plus élevée
+rend un type d'ennemi **à la fois** plus nombreux et plus fréquent sur la vague — pas
+seulement plus nombreux.
+
+### Le harnais de test — clic droit (maj/shift = bascule de phase)
+
+Comme pour le Cristal d'Eternia et `ManaTestWandItem`, un harnais de test plutôt qu'une vraie
+mécanique : **shift + clic droit** sur le `SpawnerBlock` bascule `ModAttachments.GAME_PHASE`
+entre `BUILD` et `COMBAT` directement, message système confirmant la nouvelle phase — sans
+passer par le vote "prêt" du cristal (voir plus haut). Pratique pour tester rapidement sans
+réunir tous les joueurs, mais ça fait aussi avancer `CURRENT_WAVE` comme n'importe quelle fin
+de combat (voir [Le déroulement d'une
+vague](#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath) plus bas)
+— attention à l'utiliser en rafale en test, ça consomme les vagues vite.
+
+Le passage effectif de phase (peu importe le déclencheur : vote "prêt", harnais de test, ou
+fin de vague) passe toujours par `init/PhaseTransitions.java`, pas par un
+`level.setData(GAME_PHASE, ...)` direct — ça centralise la remise à zéro des compteurs qui va
+avec (voir plus bas), pour que les trois déclencheurs se comportent pareil.
+
+Un clic droit **sans shift** ouvre l'écran de configuration (voir plus bas) — **réservé au
+mode créatif**, comme un bloc de structure vanilla : la configuration d'un spawner est censée
+être figée une fois la map construite (voir "Ce qui n'est PAS dans ce GUI" plus bas).
+
+### L'écran de configuration — `menu/`, `network/`, `client/gui/screen/SpawnerConfigScreen.java`
+
+Premier GUI custom du mod, **pas de slot ni d'item** — les paramètres décidés avec le joueur :
+intervalle (ticks), rayon de spawn, vague de début, vague de fin, et une **liste dynamique**
+de lignes de composition (une par ennemi choisi). Chaque ligne a un bouton qui affiche le nom
+de l'ennemi et le fait cycler vers le suivant au clic (`SpawnableEnemy.next()`, en sautant les
+ennemis déjà utilisés par une autre ligne), un champ pour son nombre de base, et un bouton "X"
+pour la retirer (cachée s'il ne reste qu'une seule ligne — on garde toujours au moins un
+ennemi). Un bouton "+ Ajouter" en bas de la liste, cachée une fois que toutes les valeurs de
+`SpawnableEnemy` sont utilisées (la liste d'ennemis possibles est fermée). Pré-rempli avec la
+configuration actuelle du spawner ciblé.
+
+**Pourquoi l'état est gardé en mémoire, pas seulement dans les widgets** : ajouter ou retirer
+une ligne change le nombre de lignes, donc décale tout ce qui suit (les lignes restantes, le
+bouton Ajouter, le bouton Valider) — il faut reconstruire tous les widgets
+(`Screen#rebuildWidgets()`). Mais reconstruire détruit les `EditBox`/`Button` existants, donc
+leurs valeurs seraient perdues si elles n'étaient pas sauvegardées ailleurs. `SpawnerConfigScreen`
+garde donc sa propre copie (`intervalText`, `radiusText`, ..., `rows: List<RowState>`) comme
+source de vérité entre deux reconstructions, chargée depuis le `SpawnerBlockEntity` une seule
+fois (`loadedFromSpawner`, à la toute première `init()`) pour ne pas écraser les modifications
+en cours de l'utilisateur à chaque ajout/retrait. `syncFieldsToState()` recopie les valeurs des
+widgets actuels dans cet état juste avant un rebuild. Cycler le type d'une ligne, en revanche,
+ne touche **pas** au nombre de lignes : pas besoin de rebuild, juste
+`AbstractWidget#setMessage(...)` sur le bouton concerné pour changer son libellé.
+
+**Le trajet complet, dans l'ordre :**
+
+1. **Clic droit** (sans shift) sur un `SpawnerBlock` → `SpawnerBlock.openConfigScreen(...)`
+   appelle `player.openMenu(new SpawnerConfigMenuProvider(pos))` côté serveur.
+2. **`SpawnerConfigMenuProvider`** (`record MenuProvider`) fournit `createMenu(...)` (le menu
+   côté serveur, qui ne porte que le `BlockPos`) et surcharge
+   `writeClientSideData(menu, buf)` — l'extension NeoForge de `MenuProvider` qui écrit des
+   données supplémentaires dans le paquet d'ouverture. Ici : juste `buf.writeBlockPos(pos)`.
+3. Côté client, `IMenuTypeExtension.create(SpawnerConfigMenu::new)` (voir
+   `init/ModMenus.java`) reconstruit **le même** `SpawnerConfigMenu` à partir de ce
+   `BlockPos` — c'est le rôle du deuxième constructeur de `SpawnerConfigMenu`, qui prend un
+   `RegistryFriendlyByteBuf` et lit `extraData.readBlockPos()`.
+4. `RegisterMenuScreensEvent` (voir `DungeonDefendersModClient`) associe ce `MenuType` à
+   `SpawnerConfigScreen::new`, qui s'ouvre automatiquement.
+5. **`SpawnerConfigScreen.init()`** ne lit **pas** le menu pour la configuration (le menu ne
+   porte que le `BlockPos`) : il retrouve directement le `SpawnerBlockEntity` **côté client**
+   via `Minecraft.getInstance().level.getBlockEntity(pos)` — cette copie cliente est déjà à
+   jour grâce à la synchronisation ajoutée à `SpawnerBlockEntity`
+   (`getUpdatePacket`/`getUpdateTag`, même mécanisme que pour les PV du cristal). L'état en
+   mémoire (`intervalText`, ..., `rows`) est rempli depuis `getIntervalTicks()`,
+   `getEntries()`, etc., avec un filtre n'acceptant que des chiffres sur les champs numériques
+   (`EditBox#setFilter`).
+6. Au clic sur **"Valider"**, le client construit un `SpawnerConfigPayload` (le `BlockPos` +
+   4 valeurs scalaires + la liste `entries` (une paire ordinal d'ennemi / nombre de base par
+   ligne), lue depuis l'état en mémoire) et l'envoie via
+   `Minecraft.getInstance().getConnection().send(payload.toVanillaServerbound())`.
+7. **`ModNetworking`** (enregistré via `RegisterPayloadHandlersEvent`, voir plus haut) reçoit
+   le paquet côté serveur : revérifie que le bloc à cette position est toujours un
+   `SpawnerBlockEntity` et que le joueur est encore à portée (8 blocs), reconstruit la liste
+   de `SpawnEntry` en validant chaque ordinal d'ennemi reçu (`0 <= ordinal <
+   SpawnableEnemy.values().length` — jamais faire confiance à une valeur reçue par le réseau
+   pour indexer un tableau), puis appelle `spawner.applyConfig(...)`.
+
+> **Pourquoi pas de vérification de portée dans `SpawnerConfigMenu#stillValid` ?** Parce que
+> ce menu ne contient ni slot ni item : la seule action possible dessus est d'envoyer le
+> paquet de config, et ce paquet revérifie déjà tout côté serveur avant d'agir. Une double
+> vérification (menu **et** paquet) n'aurait rien apporté ici.
+
+`SpawnerBlockEntity.applyConfig(...)` remplace entièrement la composition (`entries`) et
+**applique tout de suite** les nouveaux plafonds : `resetForWave(...)` est appelé
+immédiatement avec le multiplicateur de difficulté courant, sans attendre le prochain
+changement de vague détecté par `serverTick`. C'est un choix volontaire différent de la toute
+première version du spawner (qui attendait la vague suivante) : reconfigurer un spawner doit
+se voir tout de suite, comme le reste du GUI. Une conséquence assumée : si on reconfigure en
+plein milieu d'une vague, la progression de cette vague (`spawned`) repart de zéro pour les
+nouvelles entrées.
+
+**Ce qui n'est PAS dans ce GUI**, volontairement (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)) :
+
+- Pas de choix de difficulté ici — c'est un réglage de partie (`ModAttachments.DIFFICULTY`),
+  pas du spawner, voir plus haut.
+- Pas de défilement (scroll) si la liste d'ennemis grandit au point de dépasser la hauteur de
+  l'écran — non géré pour l'instant, acceptable tant que `SpawnableEnemy` ne contient que
+  deux valeurs.
+- **Pas accessible en survie** (`SpawnerBlock.openConfigScreen` vérifie `player.isCreative()`
+  avant d'ouvrir l'écran, message système sinon) : l'idée à terme est que les maps soient des
+  structures pré-construites (spawners déjà configurés en créatif, puis sauvegardées) posées
+  au lancement d'une partie — pas un réglage que le joueur ferait pendant qu'il joue. Ce
+  verrou permet aussi de garder simple le calcul de `wave_enemies_total` (voir plus bas) : pas
+  besoin de le recalculer à chaque reconfiguration en pleine partie, puisque ça n'arrive plus.
+
+### L'aperçu de composition en phase Construction — `SpawnerBlockEntityRenderer.java`
+
+Comme dans le jeu de référence : en phase `BUILD`, chaque spawner affiche au-dessus de lui le
+total d'ennemis à venir et le détail par type, **visible à travers les murs** — pour planifier
+sa défense avant que le combat démarre. Disparaît en phase `COMBAT` (pas d'intérêt une fois la
+vague lancée).
+
+Techniquement, c'est un deuxième `BlockEntityRenderer` (même trio `createRenderState` /
+`extractRenderState` / `submit` que `EterniaCrystalBlockEntityRenderer`), mais qui dessine du
+**texte** plutôt que des quads de couleur — la barre de vie du cristal utilisait
+`RenderTypes.debugQuads()` (quads non texturés, non cullés), qui ne convient pas au texte. Le
+mécanisme "à travers les murs" ici est `Font.DisplayMode.SEE_THROUGH`, passé à
+`SubmitNodeCollector#submitText(...)` : c'est le même render type que celui utilisé par
+Minecraft pour les noms des mobs brillants (effet Glowing) au-dessus des blocs.
+
+**Le calcul du total** réutilise exactement la formule de `SpawnEntry.resetForWave(...)`
+(`max(1, round(baseCount × DifficultyScaling.getMultiplier(level)))`) pour chaque entrée de la
+composition, sommée pour le total — l'aperçu affiché correspond donc exactement à ce que la
+prochaine vague fera spawn, tant que la difficulté ne change pas entre-temps.
+
+**Ce qui n'y est pas, volontairement** (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)) :
+
+- Pas d'icône par type de monstre, texte seul pour l'instant ("Zombie : 12") — à ajouter plus
+  tard si besoin, sans revoir cette classe puisque `SpawnableEnemy` porte déjà tout ce qu'il
+  faut (`translationKey()`) pour brancher une icône dessus.
+- Portée d'affichage plafonnée à 32 blocs (`MAX_DISTANCE_SQ`) pour éviter d'encombrer l'écran
+  si beaucoup de spawners sont proches les uns des autres — valeur arbitraire, à ajuster si
+  besoin une fois testée en jeu.
+
+### Le compteur d'ennemis tués — `ModEvents.onMonsterDeath`
+
+`WaveEnemiesOverlay` lisait déjà `ModAttachments.WAVE_ENEMIES_KILLED`, mais rien ne
+l'incrémentait. Un handler `LivingDeathEvent` dans `ModEvents` : si l'entité qui meurt est un
+`Monster` et que la phase est `COMBAT`, incrémente le compteur et le synchronise. Pas de
+filtre sur "a été spawné par un `SpawnerBlockEntity`" — tout monstre mort en combat compte, ce
+qui suffit au sens du HUD ("ennemis tués dans la vague").
+
+### Le déroulement d'une vague — `init/PhaseTransitions.java`, `ModEvents.onMonsterDeath`
+
+Ce qui manquait pour qu'une vague se déroule vraiment : un vrai déclencheur pour passer en
+Combat (le vote "prêt", voir plus haut), un total juste (`WAVE_ENEMIES_TOTAL` était bloqué à
+sa valeur par défaut), un retour automatique en Construction une fois ce total atteint, et
+`CURRENT_WAVE` qui avance réellement d'une vague à l'autre.
+
+**Le registre des spawners actifs** (`ModAttachments.ACTIVE_SPAWNERS`, un `Set<BlockPos>` sur
+la `Level`) — nécessaire parce que calculer le total demande de connaître **tous** les
+spawners de la carte, pas juste "moi-même" comme le fait déjà l'aperçu au-dessus de chaque
+bloc (voir plus haut). Chaque `SpawnerBlockEntity` s'y ajoute dans `setLevel(...)` (appelé une
+fois par instance, à la pose comme au chargement d'un chunk) et s'en retire dans
+`setRemoved()`. Ni persistant ni synchronisé : usage strictement serveur, et un spawner non
+chargé ne peut de toute façon pas spawn — l'exclure du registre est donc cohérent, pas un bug.
+Ce registre ne reflète que "les spawners actuellement chargés" ; il deviendra pleinement fiable
+une fois qu'un système force-chargera toute la zone de jeu pendant une partie (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)).
+
+**Le calcul du total** (`PhaseTransitions.enterBuild(...)`) : à chaque entrée en Construction,
+somme sur tous les spawners du registre (dont la vague courante tombe dans leur
+`[waveStart, waveEnd]`) la même formule que l'aperçu déjà affiché au-dessus de chaque bloc
+(`max(1, round(baseCount × multiplier))`). Recalculé **une seule fois**, à l'entrée en
+Construction — pas en continu — parce que le GUI de config n'est plus accessible en pleine
+partie (voir plus haut, verrou créatif) : rien ne peut changer la composition d'un spawner
+une fois la Construction commencée, donc pas besoin de retour en arrière.
+
+**La session de combat** (`ModAttachments.COMBAT_SESSION`, un compteur incrémenté à chaque
+entrée en Combat) : chaque spawner relance sa propre progression de spawn (`resetForWave`)
+au début de **chaque** session de combat, plutôt que seulement quand `CURRENT_WAVE` change
+(remplace l'ancien déclencheur `lastWaveHandled`, désormais `lastCombatSessionHandled`). Cette
+distinction reste utile même maintenant que `CURRENT_WAVE` avance : le harnais de test au clic
+droit du `SpawnerBlock` (voir plus bas) permet toujours de rebasculer Combat → Construction →
+Combat rapidement pour tester, ce qui fait aussi avancer la vague à chaque fois (voir plus
+bas) — sans la session de combat comme déclencheur indépendant, un enchaînement de vagues très
+rapide pourrait désynchroniser la remise à zéro de la progression de spawn.
+
+**`PhaseTransitions.java`** centralise ces deux transitions (`enterCombat`/`enterBuild`) pour
+que le vote "prêt", le harnais de test et le retour automatique de fin de vague passent tous
+par le même code, plutôt que de dupliquer la remise à zéro des compteurs à trois endroits :
+
+- `enterCombat(level)` : phase → `COMBAT`, incrémente `COMBAT_SESSION`, remet
+  `WAVE_ENEMIES_KILLED` à 0, et remet "prêt" à faux pour tous les joueurs présents (voir plus
+  haut, "Le vote prêt").
+- `enterBuild(level)` : fait avancer `CURRENT_WAVE` de 1 (plafonné à `MAX_WAVE`, voir "Ce qui
+  reste" plus bas), phase → `BUILD`, recalcule `WAVE_ENEMIES_TOTAL` à partir du registre pour
+  la nouvelle vague.
+
+**Le retour automatique** (`ModEvents.onMonsterDeath`) : après avoir incrémenté
+`WAVE_ENEMIES_KILLED`, si `killed >= total` (et `total > 0`, pour ne pas basculer
+immédiatement si aucun spawner n'a encore pu contribuer), appelle `enterBuild(...)` et
+diffuse un message à tous les joueurs (`dungeon_defenders.spawner.wave_cleared`, même
+mécanisme que le message de destruction du cristal).
+
+Ce qui reste **hors de ce morceau**, volontairement : `CURRENT_WAVE` reste plafonné à
+`MAX_WAVE` une fois atteint (pas de dépassement en `6/5`), mais rien ne déclenche encore de
+victoire à ce moment-là, ni de défaite si le cristal tombe avant. Voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
+### Apparence
+
+Modèle `cube_all` pointant **provisoirement** sur la texture vanilla
+`minecraft:block/spawner` (la cage du spawner vanilla, cohérente thématiquement). Miné à la
+pioche (tag `mineable/pickaxe`) et se drope lui-même via
+`data/dungeon_defenders/loot_table/blocks/spawner.json`.
 
 ## Le score et le personnage — bas centre de l'écran
 

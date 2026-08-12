@@ -8,7 +8,9 @@ vérifie la CI.
 - ✅ Bloc `eternia_crystal` + son item, hitbox 1×3×1, très résistant.
 - ✅ Block entity avec PV persistants (100 par défaut) **et synchronisés vers le client**.
 - ✅ Destruction du bloc et message « Game Over » à 0 PV.
-- ✅ IA : les zombies convergent sur le cristal dans un rayon de 16 blocs et infligent 5 PV/s.
+- ✅ IA : tout `Monster` (zombie, squelette...) qui rejoint le monde converge sur le cristal
+  dans un rayon de 16 blocs et lui inflige 5 PV/s (`ModEvents.onMonsterSpawn`, généralisé
+  au-delà des zombies).
 - ✅ Onglet créatif dédié.
 - ✅ Renderer de barre de vie 3D au-dessus du cristal (API `submit` de 26.1).
 - ✅ Modèle, blockstate, loot table, tags d'outil, traductions `en_us` et `fr_fr`.
@@ -55,6 +57,57 @@ vérifie la CI.
   Voir "Ce qui reste" ci-dessous.
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
   voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
+- ✅ Bloc `spawner` : premier vrai morceau de gameplay (pas juste du HUD). Fait apparaître des
+  zombies et des squelettes pendant la phase de combat via l'algorithme de spawn pondéré du
+  plan Excel du joueur (voir
+  [02-gameplay.md](02-gameplay.md#le-spawner--blockspawnerblockjava)). Le nombre de base de
+  chaque type sert aussi de plafond pour la vague (une fois atteint, ce type est sauté), et
+  est mis à l'échelle par `DifficultyScaling` (difficulté × vague). Configurable par spawner
+  (intervalle, rayon de spawn, plage de vagues, nombre de base par type). Shift + clic droit =
+  harnais de test qui bascule `BUILD`/`COMBAT`. Incrémente aussi
+  `ModAttachments.WAVE_ENEMIES_KILLED` via un nouveau handler `LivingDeathEvent`.
+- ✅ Squelette ajouté comme deuxième ennemi (réutilise `EntityType.SKELETON` vanilla, comme le
+  zombie) : cible le cristal comme n'importe quel `Monster`, et sort du spawner.
+- ✅ Comportement d'archer pour le squelette (`entity/ai/RangedAttackEterniaCrystalGoal.java`,
+  branché dans `ModEvents.onMonsterSpawn` pour tout `AbstractSkeleton`) : s'arrête à distance
+  de tir (10 blocs) plutôt que de venir au corps à corps, tend l'arc (pose vanilla), puis tire
+  une vraie flèche visuelle sur le cristal — les dégâts (3 PV, contre 5 au corps à corps) sont
+  appliqués directement au cristal, même logique "harnais" que `AttackEterniaCrystalGoal`.
+  Pensé pour être réutilisable tel quel par un futur ennemi à distance. Détail dans
+  [02-gameplay.md](02-gameplay.md#le-goal-à-distance--entityairangedattacketerniacrystalgoaljava).
+- ✅ Difficulté de la partie : data attachment `difficulty` sur la `Level` (ordinal de l'enum
+  `GameDifficulty` : `EASY`/`NORMAL`/`HARD`), démarre à `NORMAL` — censée être choisie au
+  lancement de la map, mais aucun écran pour le faire n'existe encore.
+- ✅ Écran de configuration du spawner (premier GUI custom du mod) : clic droit sans shift sur
+  un `SpawnerBlock` ouvre `SpawnerConfigScreen`, sans slot ni item. Intervalle, rayon, vague
+  de début/fin, et une **liste dynamique** de composition (ajouter/retirer un ennemi, cycler
+  son type parmi `init/SpawnableEnemy.java`, régler son nombre de base) — plus la liste figée
+  zombie/squelette de la première version. Réseau custom C2S (`SpawnerConfigPayload`, avec une
+  liste de longueur variable via `ByteBufCodecs.collection` + `ModNetworking`), revérifié côté
+  serveur (portée, existence du bloc, validité de chaque ordinal d'ennemi reçu) avant
+  application — appliquée **immédiatement** (pas d'attente de la prochaine vague). **Réservé
+  au mode créatif** (`player.isCreative()`) : une vraie partie est censée charger des
+  spawners déjà configurés, pas les reconfigurer en jouant. Détail complet dans
+  [02-gameplay.md](02-gameplay.md#lécran-de-configuration--menu-network-clientguiscreenspawnerconfigscreenjava).
+- ✅ Aperçu de composition du spawner en phase Construction (`SpawnerBlockEntityRenderer`) :
+  total d'ennemis à venir + détail par type affiché au-dessus du bloc, **visible à travers les
+  murs** (`Font.DisplayMode.SEE_THROUGH`), comme dans le jeu de référence. Caché en phase
+  Combat, texte seul pour l'instant (pas d'icône par type). Détail dans
+  [02-gameplay.md](02-gameplay.md#laperçu-de-composition-en-phase-construction--spawnerblockentityrendererjava).
+- ✅ Une vague se déroule maintenant de bout en bout : le Combat se **déclenche** via un vote
+  "prêt" (clic droit sur le Cristal d'Eternia en Construction, data attachment **joueur**
+  `ready`, remis à zéro pour tout le monde une fois le combat lancé) plutôt que seulement le
+  harnais de test ; `wave_enemies_total` est calculé pour de vrai (registre des spawners
+  actifs, `ModAttachments.ACTIVE_SPAWNERS`, sommé à l'entrée en Construction) ; dès que
+  `wave_enemies_killed` l'atteint, retour automatique en Construction
+  (`ModEvents.onMonsterDeath` → `PhaseTransitions.enterBuild`) **et** `current_wave` avance de
+  1 (plafonné à `MAX_WAVE`). Détail dans
+  [02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath).
+- ✅ Un ennemi ne peut plus spawn à l'intérieur d'un bloc plein (`SpawnerBlockEntity
+  #findSafeSpawnPos`) : jusqu'à 8 positions aléatoires essayées dans le rayon de spawn,
+  vérifiées traversables (pieds + tête), repli sur `pos.above()` sinon. Pas de vérification
+  de sol en dessous — un ennemi qui spawn au-dessus d'un trou tombe simplement, ce n'est pas
+  traité comme un problème.
 
 ## Corrections apportées
 
@@ -144,15 +197,56 @@ de coût en mana, pas de lien avec un vrai sort ou une vraie action de réparati
 n'existent pas non plus côté gameplay). C'est un pur placeholder visuel, en attendant les
 images promises pour chaque slot et la logique derrière.
 
-### Les vagues ne se déroulent pas
+### Les vagues ne se déroulent toujours pas complètement
 
-`current_wave` existe et s'affiche (`1/5`), mais rien ne le fait avancer : pas de
-déclenchement automatique/manuel, pas de condition pour passer à la vague suivante, pas de
-victoire à la vague 5 ni de défaite si le cristal tombe avant. C'est un compteur statique pour
-l'instant. Même chose pour `wave_enemies_killed`/`wave_enemies_total` : aucun mob n'est
-généré pour une vague, rien n'incrémente les tués, le total (`10`) n'est jamais recalculé
-selon la vague ou la difficulté. Idem pour `game_phase` : reste bloqué sur `BUILD`, rien ne
-fait passer en `COMBAT` ni ne revient en `BUILD` entre deux vagues.
+`current_wave` avance maintenant réellement d'une vague à l'autre (plafonné à `MAX_WAVE`,
+voir "Ce qui est implémenté" plus haut et
+[02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath)),
+mais rien ne se passe une fois `MAX_WAVE` atteint : pas de condition de victoire (dernière
+vague nettoyée) ni de défaite (cristal détruit) — la partie continue simplement à boucler sur
+la dernière vague indéfiniment.
+
+Le registre `ModAttachments.ACTIVE_SPAWNERS` ne reflète que les spawners **actuellement
+chargés** — fiable en test (le joueur est toujours à proximité), mais deviendra pleinement
+correct seulement une fois qu'un système force-chargera toute la zone de jeu pendant une
+partie (voir "Système de maps/structures" ci-dessous) plutôt que de compter sur le chargement
+naturel autour du joueur.
+
+### Système de maps/structures (pas commencé, discuté mais pas conçu en détail)
+
+Discuté avec le joueur en préparant le déroulement des vagues, pas encore de code : l'idée est
+qu'une map soit une **structure** Minecraft (`.nbt`, comme un bloc de structure vanilla)
+construite en créatif — spawners déjà configurés inclus, puisque le format structure
+sauvegarde aussi les données NBT des block entities. Lancer une partie chargerait cette
+structure à un endroit fixe et y téléporterait le joueur (probablement depuis un hub/"taverne"
+central). Une taille maximale de map serait définie à l'avance, et toute cette zone serait
+**force-chargée** (chunk tickets, indépendants de la position du joueur) tant qu'un joueur y
+est, relâchée au retour à la taverne — nécessaire parce que Minecraft ne charge/tick
+normalement que les chunks proches d'un joueur, ce qui ne suffit pas pour une arène fixe où
+plusieurs spawners peuvent être loin les uns des autres (voir plus haut, `ACTIVE_SPAWNERS`).
+
+C'est le prérequis pour que le verrou créatif du GUI de config (voir plus haut) ait vraiment
+son plein effet : tant que ce système n'existe pas, rien n'empêche techniquement de construire
+et tester une map "à la main" en créatif dans n'importe quel monde.
+
+### Le GUI du spawner ne choisit que parmi une liste fermée d'ennemis (SpawnableEnemy)
+
+`SpawnerConfigScreen` (voir [02-gameplay.md](02-gameplay.md)) permet maintenant d'ajouter et
+retirer des lignes de composition librement, et de cycler le type de chaque ligne — mais
+uniquement parmi les valeurs d'`init/SpawnableEnemy.java` (`ZOMBIE`, `SKELETON` pour
+l'instant), pas n'importe quel mob du jeu. La feuille "Idées" du plan Excel du joueur
+prévoyait à l'origine des **slots d'œufs** pour choisir librement n'importe quel type de mob.
+Choix assumé ici : une liste fermée plutôt qu'un `EntityType<?>` arbitraire, parce qu'il
+n'existe pas de tag vanilla générique "tout ce qui est hostile" dans cette version de
+Minecraft (vérifié) — il faudrait de toute façon une forme de liste blanche pour éviter
+qu'un joueur puisse faire spawn n'importe quelle entité (villageois, boss, etc.) depuis ce
+GUI. Ajouter un ennemi au jeu et le rendre choisissable ici se résume à une entrée dans
+`SpawnableEnemy` (une ligne, une clé de traduction) — pas de nouveau blocage architectural
+tant qu'on reste dans cette approche liste-fermée.
+
+Le seuil de déclenchement (`SPAWN_THRESHOLD = 20`) reste une constante globale non exposée
+dans le GUI, comme décidé avec le joueur (son effet se règle déjà via l'intervalle et le
+nombre de base, l'exposer en plus aurait été redondant).
 
 ### `game_phase` stocke un ordinal d'enum, pas un nom stable
 
@@ -203,24 +297,44 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 3. Externaliser les constantes de gameplay (`DEFAULT_HEALTH`, `DAMAGE_PER_HIT`,
    `SEARCH_RANGE`) dans `Config`, et enregistrer la spec.
 4. Retirer le harnais de test du clic droit quand une autre source de dégâts existera.
-5. Étendre l'IA au-delà des zombies (le goal n'exige qu'un `PathfinderMob`).
-6. Donner une vraie utilité au mana (un sort/une capacité qui le consomme, une régénération
+5. Donner une vraie utilité au mana (un sort/une capacité qui le consomme, une régénération
    passive), retirer `ManaTestWandItem`, puis habiller `ManaOverlay`/`HealthOverlay`/
    `ExperienceOverlay` de vraies textures (sprites, cadre) une fois disponibles — la forme
    (losange) se rapproche déjà du jeu de référence, il manque la matière.
-7. Concevoir et implémenter les remplacements custom de la faim et de la hotbar (masquées
+6. Concevoir et implémenter les remplacements custom de la faim et de la hotbar (masquées
    mais vides pour l'instant).
-8. Définir un vrai système d'expérience/score/niveaux : comment `EXPERIENCE`, `SCORE` et
+7. Définir un vrai système d'expérience/score/niveaux : comment `EXPERIENCE`, `SCORE` et
    `LEVEL` se nourrissent l'un l'autre (aujourd'hui trois compteurs indépendants, tous
    bloqués à leur valeur par défaut, comme le mana avant `ManaTestWandItem`).
-9. Définir le déroulement des vagues (déclenchement, génération des ennemis, condition de
-   passage à la suivante, victoire à la dernière vague, défaite si le cristal tombe avant) et
-   faire avancer `ModAttachments.CURRENT_WAVE`/`WAVE_ENEMIES_TOTAL`/`WAVE_ENEMIES_KILLED`/
-   `GAME_PHASE` en conséquence (transition `BUILD` → `COMBAT` au déclenchement d'une vague,
-   retour à `BUILD` une fois la vague nettoyée).
-10. Donner un moyen de choisir/changer `ModAttachments.CHARACTER_NAME` (commande, écran de
-    création de personnage...) — sans ça, il reste égal au pseudo Minecraft en permanence.
-11. Une fois les images des 4 compétences fournies : les afficher dans `AbilitySlotsOverlay`
+8. ~~Définir le déroulement des vagues~~ — fait pour l'essentiel : vote "prêt" pour déclencher
+   le Combat, `WAVE_ENEMIES_TOTAL` juste (registre des spawners actifs), retour automatique en
+   `BUILD` dès que `WAVE_ENEMIES_KILLED` l'atteint, `CURRENT_WAVE` qui avance (plafonné à
+   `MAX_WAVE`) — voir "Ce qui est implémenté" et
+   [02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath).
+   Reste ouvert : victoire à la dernière vague, défaite si le cristal tombe avant.
+9. Donner un moyen de choisir/changer `ModAttachments.CHARACTER_NAME` (commande, écran de
+   création de personnage...) — sans ça, il reste égal au pseudo Minecraft en permanence.
+10. Une fois les images des 4 compétences fournies : les afficher dans `AbilitySlotsOverlay`
     (probablement via `blitSprite`, une texture par `SLOT_NAMES`), puis brancher le clic, un
     cooldown, et enfin le vrai effet de chaque compétence (soin, sorts, réparation de tour —
     aucun n'existe encore côté gameplay).
+11. ~~Étendre `SpawnerConfigScreen`/`SpawnerConfigPayload` d'une composition figée à une vraie
+    liste~~ — fait : liste dynamique (ajouter/retirer/cycler), voir
+    [02-gameplay.md](02-gameplay.md#lécran-de-configuration--menu-network-clientguiscreenspawnerconfigscreenjava).
+    Reste ouvert : gérer le défilement si `SpawnableEnemy` grandit au point de dépasser la
+    hauteur de l'écran (non géré pour l'instant, deux valeurs seulement).
+12. ~~Donner au squelette un vrai comportement d'archer~~ — fait :
+    `RangedAttackEterniaCrystalGoal` (voir "Ce qui est implémenté" et
+    [02-gameplay.md](02-gameplay.md#le-goal-à-distance--entityairangedattacketerniacrystalgoaljava)).
+13. Donner un moyen de choisir la difficulté au lancement de la map
+    (`ModAttachments.DIFFICULTY`) — reste bloquée à `NORMAL`, aucun écran de lancement de
+    partie n'existe encore.
+14. Ajouter une icône par type de monstre dans l'aperçu de composition du spawner
+    (`SpawnerBlockEntityRenderer`, phase Construction) — texte seul pour l'instant. Piste
+    envisagée : réutiliser les textures vanilla des œufs d'invocation
+    (`zombie_spawn_egg`/`skeleton_spawn_egg`) pour ne pas dépendre d'assets custom.
+15. Système de maps/structures : sauvegarder une map construite en créatif comme structure
+    `.nbt`, la charger + téléporter le joueur au lancement d'une partie (probablement depuis
+    un hub central), force-charger toute sa zone (taille max définie à l'avance) tant que la
+    partie dure. Voir la section dédiée dans "Ce qui reste" ci-dessus — c'est aussi ce qui
+    rendra `ACTIVE_SPAWNERS` pleinement fiable (indépendant de la position du joueur).

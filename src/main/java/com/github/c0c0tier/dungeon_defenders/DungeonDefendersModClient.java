@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntityRenderer;
+import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntityRenderer;
 import com.github.c0c0tier.dungeon_defenders.client.gui.AbilitySlotsOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.CharacterOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ExperienceOverlay;
@@ -10,6 +11,8 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.PhaseOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScreen;
+import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
@@ -19,6 +22,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.GuiLayer;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
@@ -47,6 +51,10 @@ public class DungeonDefendersModClient {
         event.registerBlockEntityRenderer(
                 DungeonDefendersMod.ETERNIA_CRYSTAL_BE.get(),
                 EterniaCrystalBlockEntityRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.SPAWNER_BE.get(),
+                SpawnerBlockEntityRenderer::new
         );
     }
 
@@ -90,5 +98,10 @@ public class DungeonDefendersModClient {
         event.replaceLayer(VanillaGuiLayers.FOOD_LEVEL, HIDDEN);
         event.replaceLayer(VanillaGuiLayers.EXPERIENCE_LEVEL, HIDDEN);
         event.replaceLayer(VanillaGuiLayers.HOTBAR, HIDDEN);
+    }
+
+    @SubscribeEvent
+    static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
+        event.register(ModMenus.SPAWNER_CONFIG.get(), SpawnerConfigScreen::new);
     }
 }

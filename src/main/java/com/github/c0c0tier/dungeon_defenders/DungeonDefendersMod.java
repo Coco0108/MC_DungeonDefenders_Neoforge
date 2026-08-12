@@ -1,8 +1,10 @@
 package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
+import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -31,6 +33,12 @@ public class DungeonDefendersMod {
                     ModBlocks.ETERNIA_CRYSTAL.get()
             ));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SpawnerBlockEntity>> SPAWNER_BE =
+            BLOCK_ENTITIES.register("spawner", () -> new BlockEntityType<>(
+                    SpawnerBlockEntity::new,
+                    ModBlocks.SPAWNER.get()
+            ));
+
     // 3. L'onglet Créatif
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> DUNGEON_DEFENDERS_TAB = CREATIVE_MODE_TABS.register("dungeon_defenders_tab",
             () -> CreativeModeTab.builder()
@@ -40,6 +48,7 @@ public class DungeonDefendersMod {
                         output.accept(ModBlocks.ETERNIA_CRYSTAL_ITEM.get());
                         output.accept(ModBlocks.SPIKE_TRAP_ITEM.get());
                         output.accept(ModBlocks.MANA_TEST_WAND.get());
+                        output.accept(ModBlocks.SPAWNER_ITEM.get());
                     })
                     .build());
 
@@ -47,6 +56,7 @@ public class DungeonDefendersMod {
         // On enregistre tes deux fichiers de registres sur le bus
         ModBlocks.register(modEventBus);
         ModAttachments.register(modEventBus);
+        ModMenus.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
 

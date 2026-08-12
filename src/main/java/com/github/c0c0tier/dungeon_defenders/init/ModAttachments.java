@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders.init;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.mojang.serialization.Codec;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.IEventBus;
@@ -9,6 +10,10 @@ import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.Supplier;
 
 public class ModAttachments {
     // Mana maximal par défaut d'un joueur. À externaliser dans Config si des sorts
@@ -115,6 +120,50 @@ public class ModAttachments {
             () -> AttachmentType.builder(holder -> holder instanceof Player player ? player.getGameProfile().name() : "")
                     .serialize(Codec.STRING.fieldOf("CharacterName"))
                     .sync(ByteBufCodecs.STRING_UTF8)
+                    .build());
+
+    // Difficulté de la partie : état de la Level (comme current_wave), censée être choisie
+    // au lancement de la map — aucun écran pour le faire n'existe encore, donc démarre en
+    // Normal. Stockée comme l'ordinal de GameDifficulty, même approche que game_phase.
+    // Consultée par DifficultyScaling pour calculer le multiplicateur des spawners.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> DIFFICULTY = ATTACHMENT_TYPES.register(
+            "difficulty",
+            () -> AttachmentType.builder(() -> GameDifficulty.NORMAL.ordinal())
+                    .serialize(Codec.INT.fieldOf("Difficulty"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Session de combat en cours : incrémentée à chaque passage en Combat (voir
+    // init/PhaseTransitions.java). Sert de déclencheur pour que chaque spawner relance sa
+    // propre progression de spawn au début d'une nouvelle session, plutôt que seulement
+    // quand current_wave change — sinon rebasculer Combat/Construction/Combat sur la même
+    // vague (harnais de test actuel) ne ferait plus rien spawn. Pas besoin de synchronisation
+    // client, c'est un détail serveur.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> COMBAT_SESSION = ATTACHMENT_TYPES.register(
+            "combat_session",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.INT.fieldOf("CombatSession"))
+                    .build());
+
+    // Registre des spawners actuellement chargés sur cette Level : chaque SpawnerBlockEntity
+    // s'y ajoute/retire lui-même (voir SpawnerBlockEntity#setLevel/#setRemoved). Sert à
+    // calculer wave_enemies_total en sommant tous les spawners actifs à l'entrée en
+    // Construction (voir init/PhaseTransitions.java). Ni persistant ni synchronisé : usage
+    // strictement serveur, se reconstruit naturellement au (dé)chargement des chunks — un
+    // spawner non chargé ne peut de toute façon pas spawn, l'exclure du total est cohérent.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Set<BlockPos>>> ACTIVE_SPAWNERS = ATTACHMENT_TYPES.register(
+            "active_spawners",
+            () -> AttachmentType.<Set<BlockPos>>builder((Supplier<Set<BlockPos>>) HashSet::new).build());
+
+    // "Prêt" : état du joueur (clic droit sur le Cristal d'Eternia en phase Construction, voir
+    // EterniaCrystalBlock), pas de la Level, comme mana/experience. Faux par défaut, remis à
+    // faux pour tout le monde dès que le Combat démarre (voir PhaseTransitions#enterCombat) —
+    // pas persistant (se re-décider à chaque Construction, y compris après reconnexion, est
+    // le comportement voulu), synchronisé pour un futur indicateur HUD.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> READY = ATTACHMENT_TYPES.register(
+            "ready",
+            () -> AttachmentType.builder(() -> Boolean.FALSE)
+                    .sync(ByteBufCodecs.BOOL)
                     .build());
 
     public static void register(IEventBus modEventBus) {

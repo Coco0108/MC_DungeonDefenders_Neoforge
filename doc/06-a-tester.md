@@ -108,6 +108,195 @@ Lancer le client de dev :
 - [ ] Redimensionner la fenêtre : le groupe entier (losanges + ronds + barre d'expérience)
       reste collé au coin bas-gauche et aligné.
 
+## Le vote « prêt » (déclencheur du Combat) — `EterniaCrystalBlock`
+
+Nouveau vrai déclencheur du Combat, à tester **avant** la section Spawner ci-dessous
+puisqu'elle en dépend pour entrer en Combat autrement qu'avec le harnais de test.
+
+- [ ] **En solo**, en phase Construction, clic droit à main nue sur le Cristal d'Eternia : un
+      message "Prêt : 1/1" s'affiche, et la phase bascule **immédiatement** en Combat (un seul
+      joueur = tout le monde est prêt dès son propre clic).
+- [ ] **À plusieurs** (2+ joueurs), un seul clique : message "Prêt : 1/2" pour tout le monde,
+      la phase **ne bascule pas encore**. Le second joueur clique à son tour : "Prêt : 2/2",
+      puis bascule en Combat pour tout le monde.
+- [ ] Re-cliquer sur le cristal **avant** que tout le monde soit prêt annule son propre "prêt"
+      (redevient "Prêt : 0/2" si on était seul à avoir cliqué) — vérifie que c'est bien une
+      bascule (toggle), pas juste un "je suis prêt" à sens unique.
+- [ ] Une fois en Combat, clic droit à main nue sur le cristal inflige maintenant **10 PV de
+      dégâts** (`dungeon_defenders.eternia_crystal.damaged`) — c'est l'ancien harnais de test,
+      gardé mais désormais réservé à la phase Combat (plus de vote "prêt" pendant le combat).
+- [ ] Après un Combat lancé via le vote, tuer tous les ennemis pour revenir en Construction
+      (voir section Spawner) : re-cliquer sur le cristal doit à nouveau proposer le vote
+      "prêt" (repart de 0/N, pas de résidu de l'ancien vote).
+- [ ] Un joueur qui se déconnecte puis se reconnecte pendant que d'autres sont déjà prêts ne
+      doit pas bloquer indéfiniment le décompte : il doit apparaître comme non-prêt (0 par
+      défaut) et devoir cliquer comme les autres.
+
+## Le Spawner (premier vrai gameplay, pas juste du HUD)
+
+- [ ] Prendre `spawner` dans l'onglet créatif Dungeon Defenders (texture : cage de spawner
+      vanilla), le poser.
+- [ ] **Shift + clic droit** dessus : un message système confirme le changement de phase
+      (`Phase changée : Combat` / `Phase changée : Construction`), et le texte `Phase : ...`
+      en haut à droite du HUD change en conséquence — raccourci de test qui contourne le vote
+      "prêt" ci-dessus (utile seul, sans avoir à se re-cliquer soi-même dessus).
+- [ ] **Clic droit sans shift, en créatif** : ouvre l'écran de configuration (voir section
+      dédiée ci-dessous). **En survie**, le même clic droit sans shift doit plutôt afficher le
+      message "Les spawners ne sont configurables qu'en mode créatif" et ne rien ouvrir.
+- [ ] **Avant même de passer en Combat une première fois** : `Ennemis : X/10` peut encore
+      afficher l'ancienne valeur par défaut (`/10`) — normal, le total ne se calcule qu'à
+      l'entrée en Construction, qui n'a encore jamais eu lieu explicitement au tout premier
+      chargement du monde (limite connue, voir 05-etat-et-problemes-connus.md).
+- [ ] Une fois en `Combat`, attendre : des **zombies et des squelettes** doivent apparaître
+      au-dessus du bloc, les zombies plus fréquemment que les squelettes (nombre de base 15
+      contre 5 par défaut — environ 3x plus de zombies sur la durée, pas un ratio exact vague
+      par vague).
+- [ ] Laisser tourner un moment : **chaque type doit finir par s'arrêter** une fois son
+      plafond atteint (15 zombies et 5 squelettes par défaut, sur la vague 1 avec la
+      difficulté Normal) — le spawner ne doit **pas** spawn indéfiniment tant qu'on reste en
+      combat.
+- [ ] Le squelette apparu **s'arrête à distance** du cristal (ne vient plus au corps à
+      corps), lève son arc (pose vanilla "arc tendu"), puis tire une flèche visible vers le
+      cristal — un message de dégâts doit apparaître côté serveur (`crystal.damage(3)`), même
+      si la flèche elle-même ne "touche" pas physiquement le cristal (voir
+      02-gameplay.md pour pourquoi). Nouveau comportement à vérifier en priorité dans cette
+      section — voir aussi la section dédiée ci-dessous.
+- [ ] Tuer un zombie ou un squelette apparu ainsi (ou n'importe quel autre monstre)
+      **pendant que la phase est Combat** : le texte `Ennemis : X/20` (total = 15+5 par défaut,
+      sur un seul spawner) doit voir son `X` s'incrémenter, et la jauge orange se remplir.
+- [ ] **Tuer tous les ennemis de la vague** (les 20, avec un seul spawner par défaut) : la
+      phase doit **repasser automatiquement en Construction**, avec un message système "Vague
+      terminée ! Retour à la Construction." diffusé à tous les joueurs, **et** le texte
+      `Vague X/5` du HUD doit passer de `1/5` à `2/5` — c'est le nouveau comportement
+      principal à vérifier dans cette section.
+- [ ] Sur la vague 2 (et suivantes), le total `Ennemis : X/Y` doit être **légèrement plus
+      élevé** que 20 (multiplicateur de difficulté +10 %/vague — voir `DifficultyScaling`),
+      pas figé à `/20` d'une vague à l'autre.
+- [ ] Répéter jusqu'à la vague 5 : `Vague 5/5` atteint, la vague ne doit **pas** dépasser
+      `5/5` même en nettoyant encore une vague après (plafonné à `MAX_WAVE`, pas de `6/5`) —
+      pas de message de victoire pour l'instant, c'est un manque connu.
+- [ ] Tuer un monstre **pendant que la phase est Construction** : `Ennemis : X/Y` ne doit
+      **pas** bouger (le compteur ne compte que les morts en combat, c'est attendu).
+- [ ] Rebasculer manuellement en Combat (shift + clic droit) **sans avoir cliqué sur le
+      cristal** : le spawner doit **recommencer à spawn** normalement (vérifie que
+      `COMBAT_SESSION` relance bien la progression de chaque spawner) — et la vague avance
+      quand même au retour en Construction, comme n'importe quelle fin de combat.
+- [ ] Poser **2 spawners** avec des compositions différentes : à l'entrée en Construction,
+      `Ennemis : X/Y` doit afficher la **somme des deux** (`Y` = total du premier + total du
+      second) — vérifie le registre `ACTIVE_SPAWNERS`.
+- [ ] Poser un spawner **collé contre un mur/dans un renfoncement irrégulier**, mettre un
+      **rayon de spawn de 3-4** (via l'écran de config), passer en Combat : aucun ennemi ne
+      doit apparaître **à moitié ou totalement enlisé dans un bloc** — ils doivent tous
+      apparaître dans un espace libre, quitte à être repliés sur juste au-dessus du bloc
+      spawner si le rayon ne trouve rien de valide (`findSafeSpawnPos`).
+- [ ] Casser le spawner à la pioche : il se drope (comme spike_trap), et l'accumulateur
+      redémarre à 0 si on le repose (comportement attendu, pas de sauvegarde de position
+      liée au bloc en tant que tel).
+- [ ] Aucune erreur dans les logs au placement, au tick, ou à la casse du bloc — en particulier
+      liée à `PhaseTransitions`, `ModAttachments.ACTIVE_SPAWNERS` ou `COMBAT_SESSION`.
+
+## Le squelette archer (`RangedAttackEterniaCrystalGoal`)
+
+Premier ennemi à distance du mod, et première flèche jamais lancée par le mod — à vérifier
+avec attention, aucun test visuel possible pendant le développement.
+
+- [ ] Faire spawn un squelette (spawner ou `/summon minecraft:skeleton`) à plus de 10 blocs du
+      cristal : il doit **courir vers le cristal**, puis **s'arrêter** avant d'être collé
+      dessus (autour de 10 blocs, pas au corps à corps comme le zombie).
+- [ ] Une fois arrêté : le squelette doit **lever son arc** (l'animation vanilla "arc tendu",
+      la même que quand il vise un joueur) pendant environ 1 seconde, puis **tirer une
+      flèche visible** en direction du cristal.
+- [ ] La flèche tirée doit **voler vers le cristal** (trajectoire à peu près dans la bonne
+      direction, avec un peu d'arc vers le haut) — elle peut manquer visuellement ou passer à
+      travers/à côté du cristal, **ce n'est pas un bug** : les dégâts sont appliqués
+      directement au cristal au moment du tir, indépendamment de la trajectoire réelle de la
+      flèche (voir 02-gameplay.md).
+- [ ] Le cristal doit perdre **3 PV** à chaque tir (message `dungeon_defenders.eternia_crystal
+      .damaged`), au rythme d'environ un tir toutes les 2 secondes (tension + pause).
+- [ ] Faire venir un squelette très près du cristal (le pousser, ou le faire spawn juste à
+      côté) : il doit quand même tirer (pas de recul particulier attendu pour l'instant), pas
+      de crash ni de comportement bizarre à bout portant.
+- [ ] Interrompre le squelette en pleine tension (le pousser hors de portée juste après qu'il
+      commence à lever l'arc) : il doit **annuler proprement** la tension (l'animation d'arc
+      tendu doit s'arrêter) et reprendre l'approche, pas rester bloqué en position de tir.
+- [ ] Tuer le squelette pendant qu'il tire : pas d'exception dans les logs.
+- [ ] Un zombie à proximité doit continuer à se comporter normalement (corps à corps) — les
+      deux comportements ne doivent pas se mélanger entre types d'ennemis.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `RangedAttackEterniaCrystalGoal`
+      ou à la création de l'entité `Arrow`.
+
+## L'écran de configuration du spawner (GUI custom, liste dynamique, avec réseau)
+
+C'est le morceau le plus à risque de cette session (aucun test visuel possible pendant le
+développement, ni pour la reconstruction dynamique des widgets à l'ajout/retrait de lignes) —
+à vérifier avec le plus d'attention.
+
+- [ ] **En mode créatif**, clic droit (sans shift) sur un spawner ouvre bien un écran, sans
+      crash ni écran noir (voir aussi la section "Le Spawner" ci-dessus pour le test du
+      verrou créatif en survie).
+- [ ] L'écran affiche 4 champs numériques (Intervalle, Rayon de spawn, Première/Dernière vague
+      active) avec leurs libellés, **2 lignes de composition** (un bouton avec le nom de
+      l'ennemi + un champ nombre + un bouton "X" chacune), un bouton "+ Ajouter un ennemi" et
+      un bouton "Valider" — rien ne doit se chevaucher ni sortir de l'écran.
+- [ ] Les champs sont **pré-remplis** avec les valeurs par défaut du spawner tout juste posé
+      (`20`, `0`, `1`, `5`, puis "Zombie"/`15` et "Squelette"/`5` sur les deux lignes).
+- [ ] Taper des lettres dans un champ numérique : rien ne s'affiche (filtre chiffres uniquement).
+- [ ] **Cliquer sur le bouton d'une ligne** (nom de l'ennemi) : son libellé change pour
+      l'ennemi suivant (Zombie → Squelette → Zombie...), sans reconstruire tout l'écran (pas
+      de clignotement des autres champs). Comme il n'y a que 2 `SpawnableEnemy` pour l'instant,
+      cycler doit systématiquement échanger avec l'autre ligne si elle utilise déjà l'autre
+      type (jamais deux lignes sur le même ennemi).
+- [ ] **Bouton "X"** : le retire, l'écran se reconstruit (les lignes/boutons suivants se
+      replacent correctement) — sauf s'il ne reste qu'une ligne, où le bouton "X" doit être
+      **absent** (toujours garder au moins un ennemi).
+- [ ] **Bouton "+ Ajouter un ennemi"** : ajoute une ligne (nombre de base `0`), l'écran se
+      reconstruit. Avec seulement 2 `SpawnableEnemy` disponibles, le bouton doit **disparaître**
+      dès que les 2 lignes sont présentes (liste fermée, rien à ajouter de plus pour l'instant).
+- [ ] Modifier une valeur dans un champ, ajouter/retirer une ligne, **puis** modifier une
+      autre valeur : vérifier que les valeurs saisies avant le rebuild n'ont pas été perdues
+      (elles sont recopiées dans l'état en mémoire de l'écran avant chaque reconstruction —
+      voir `SpawnerConfigScreen.syncFieldsToState()`).
+- [ ] Modifier la composition (ex : mettre `30` sur la ligne Zombie), cliquer "Valider" :
+      l'écran se ferme, aucune erreur dans les logs.
+- [ ] **Rouvrir l'écran du même spawner** (clic droit à nouveau) : la nouvelle valeur (`30`) et
+      la composition (nombre de lignes, type de chaque ligne) doivent apparaître telles que
+      validées — pas les anciennes. C'est le test le plus important : il vérifie que la config
+      a bien été appliquée côté serveur **et** resynchronisée vers le client.
+- [ ] Avec le spawner en Combat au moment de la modification : contrairement à la première
+      version de ce GUI, les nouveaux plafonds/composition s'appliquent **immédiatement** (pas
+      d'attente de la vague suivante) — après "Valider", les prochains spawns doivent déjà
+      suivre la nouvelle configuration.
+- [ ] Poser 2 spawners, ouvrir l'écran de l'un, le fermer sans "Valider" (touche Échap) :
+      l'autre spawner ne doit pas avoir été affecté.
+- [ ] Vérifier `run/logs/latest.log` après une session de test avec cet écran : aucune
+      exception liée à `SpawnerConfigMenu`, `SpawnerConfigScreen`, `SpawnerConfigPayload` ou
+      `ModNetworking`.
+
+## L'aperçu de composition du spawner (texte à travers les murs, phase Construction)
+
+Deuxième morceau à risque de cette session : premier texte du mod rendu "à travers les murs"
+(`Font.DisplayMode.SEE_THROUGH`), jamais vérifié visuellement pendant le développement.
+
+- [ ] En phase **Construction**, poser un spawner : un texte flotte au-dessus
+      ("Total : 20", puis "Zombie : 15" et "Squelette : 5" sur les valeurs par défaut),
+      centré horizontalement, sans chevauchement entre les lignes.
+- [ ] **Se placer derrière un mur** en gardant le spawner à moins de ~32 blocs : le texte doit
+      rester visible à travers le mur (c'est le point central de cette fonctionnalité).
+- [ ] S'éloigner au-delà d'environ 32 blocs (`MAX_DISTANCE_SQ`) : le texte doit disparaître.
+- [ ] Modifier la composition du spawner via l'écran de config (ex : mettre `30` sur Zombie),
+      valider : l'aperçu au-dessus du bloc doit refléter le nouveau nombre immédiatement,
+      sans avoir besoin de rouvrir le monde.
+- [ ] Changer la difficulté n'est pas encore possible en jeu (`DIFFICULTY` reste à `NORMAL`,
+      voir 05-etat-et-problemes-connus.md) — impossible de tester la mise à l'échelle du total
+      par la difficulté pour l'instant, seulement par le nombre de base et la vague.
+- [ ] **Basculer en phase Combat** (shift + clic droit sur le spawner) : l'aperçu doit
+      **disparaître** immédiatement. Rebasculer en Construction : il doit réapparaître.
+- [ ] Poser 2-3 spawners avec des compositions différentes proches les uns des autres :
+      chaque aperçu doit afficher les bons chiffres pour **son propre** spawner, pas ceux
+      d'un autre.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `SpawnerBlockEntityRenderer`
+      ou `SpawnerRenderState` (en particulier au chargement du monde ou à la casse du bloc).
+
 ## HUD vanilla masqué
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

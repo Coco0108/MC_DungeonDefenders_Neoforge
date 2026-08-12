@@ -1,0 +1,7 @@
+{
+  "comment": "Placeholder : réutilise la texture vanilla du spawner en attendant une texture dédiée.",
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "minecraft:block/spawner"
+  }
+}
