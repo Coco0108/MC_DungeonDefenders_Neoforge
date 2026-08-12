@@ -137,26 +137,27 @@ revient vers le cristal.
 
 Avec 100 PV par défaut, un zombie seul détruit le cristal en 20 secondes.
 
-### L'attribution — `ModEvents.java`
+### L'attribution — `ModEvents.onMonsterSpawn`
 
-Écoute `EntityJoinLevelEvent` sur le bus de jeu. Pour chaque `Zombie` rejoignant un monde
-côté serveur, le goal est ajouté au `goalSelector` **en priorité 1** (donc au-dessus de la
-plupart des objectifs vanilla).
+Écoute `EntityJoinLevelEvent` sur le bus de jeu. Pour chaque `Monster` rejoignant un monde
+côté serveur (n'importe lequel — zombie, squelette, tout futur ajout), le goal est ajouté au
+`goalSelector` **en priorité 1** (donc au-dessus de la plupart des objectifs vanilla).
+
+> `Monster` plutôt que `PathfinderMob` : le goal n'exige techniquement qu'un `PathfinderMob`,
+> mais cette classe couvre aussi les mobs passifs (animaux, villageois...). `Monster` est la
+> bonne frontière sémantique — tout ce qui est hostile, rien de passif.
 
 `EntityJoinLevelEvent` se déclenche aussi au rechargement d'un chunk et au changement de
 dimension. Le code vérifie donc d'abord qu'aucun `AttackEterniaCrystalGoal` n'est déjà
 présent :
 
 ```java
-zombie.goalSelector.getAvailableGoals().stream()
+monster.goalSelector.getAvailableGoals().stream()
         .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal)
 ```
 
-Sans ce test, un même zombie cumulerait plusieurs exemplaires du goal et frapperait le
+Sans ce test, un même monstre cumulerait plusieurs exemplaires du goal et frapperait le
 cristal plusieurs fois par seconde.
-
-> Pour étendre l'IA à d'autres monstres, il suffit d'élargir le test `instanceof Zombie` :
-> le goal n'exige qu'un `PathfinderMob`.
 
 ## Onglet créatif
 
@@ -294,7 +295,7 @@ public static void onPlayerJoin(EntityJoinLevelEvent event) {
 ```
 
 `EntityJoinLevelEvent` se redéclenche à chaque connexion, respawn et changement de dimension
-(même remarque que pour `onZombieSpawn`). `setBaseValue` est idempotent (poser deux fois la
+(même remarque que pour `onMonsterSpawn`). `setBaseValue` est idempotent (poser deux fois la
 même valeur ne change rien), donc pas besoin de garde anti-doublon ici. Le seul piège est de
 ne pas soigner gratuitement un joueur déjà blessé à chaque relog : le code ne remonte la vie
 au nouveau maximum que si le joueur était **déjà** à son ancien maximum (cas du tout premier
@@ -467,10 +468,12 @@ retiré. Plus un type a un poids élevé, plus il ressort souvent — le poids f
 "nombre total voulu sur la vague" :
 
 ```java
-zombieAccumulator += ZOMBIE_WEIGHT;   // 15, repris de l'exemple du joueur
-if (zombieAccumulator >= SPAWN_THRESHOLD) {   // 20
-    EntityType.ZOMBIE.spawn(serverLevel, pos.above(), EntitySpawnReason.SPAWNER);
-    zombieAccumulator -= SPAWN_THRESHOLD;
+for (SpawnEntry entry : SPAWN_TABLE) {
+    accumulators[i] += entry.weight();   // zombie: 15, squelette: 5 — repris de l'exemple du joueur
+    if (accumulators[i] >= SPAWN_THRESHOLD) {   // 20
+        entry.type().spawn(serverLevel, pos.above(), EntitySpawnReason.SPAWNER);
+        accumulators[i] -= SPAWN_THRESHOLD;
+    }
 }
 ```
 
@@ -488,14 +491,18 @@ un. `serverTick(...)` :
    combat.
 2. Ne fait tourner l'algorithme qu'une fois par seconde (`TICKS_BETWEEN_CHECKS = 20`), pas à
    chaque tick, pour rester lisible.
-3. Applique l'algorithme ci-dessus.
+3. Applique l'algorithme ci-dessus, une fois par entrée de `SPAWN_TABLE`.
 
-Seul `zombieAccumulator` est persistant (`saveAdditional`/`loadAdditional`) ; le minuteur
-sub-seconde ne l'est pas, le perdre au rechargement n'a aucune conséquence visible.
+`SPAWN_TABLE` est une `List<SpawnEntry(EntityType, weight)>` figée dans le code — deux
+entrées pour l'instant, zombie (poids 15) et squelette (poids 5), reprenant exactement les
+chiffres de l'exemple du joueur (15 gobelins / 5 orcs). Chaque entrée a son propre
+accumulateur (`accumulators[i]`, même index que dans `SPAWN_TABLE`), persistant
+(`saveAdditional`/`loadAdditional`, `putIntArray`/`getIntArray`) ; le minuteur sub-seconde ne
+l'est pas, le perdre au rechargement n'a aucune conséquence visible.
 
-**V1 volontairement simple**, comme convenu avec le joueur : une seule composition fixe
-(zombies, poids 15), pas encore le GUI de configuration prévu dans la feuille Idées (slots
-d'œufs, multiplicateurs, intervalle, plage de vagues) — voir
+**V1 volontairement simple**, comme convenu avec le joueur : une composition fixe codée en
+dur, pas encore le GUI de configuration prévu dans la feuille Idées (slots d'œufs,
+multiplicateurs, intervalle, plage de vagues) — voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 
 ### Le harnais de test — clic droit

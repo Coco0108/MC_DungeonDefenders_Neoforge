@@ -6,7 +6,6 @@ import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
-import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -22,19 +21,21 @@ public class ModEvents {
     private static final double PLAYER_MAX_HEALTH = 100.0D;
 
     @SubscribeEvent
-    public static void onZombieSpawn(EntityJoinLevelEvent event) {
-        if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Zombie zombie)) {
+    public static void onMonsterSpawn(EntityJoinLevelEvent event) {
+        // Généralisé de Zombie à Monster (le goal n'exige qu'un PathfinderMob, que Monster
+        // étend) pour couvrir le squelette sans avoir à énumérer chaque type un par un.
+        if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Monster monster)) {
             return;
         }
 
         // EntityJoinLevelEvent se déclenche aussi au rechargement d'un chunk ou au
-        // changement de dimension : sans ce test, un même zombie cumulerait plusieurs
+        // changement de dimension : sans ce test, un même monstre cumulerait plusieurs
         // fois le goal et frapperait le cristal plusieurs fois par seconde.
-        boolean alreadyAdded = zombie.goalSelector.getAvailableGoals().stream()
+        boolean alreadyAdded = monster.goalSelector.getAvailableGoals().stream()
                 .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal);
 
         if (!alreadyAdded) {
-            zombie.goalSelector.addGoal(1, new AttackEterniaCrystalGoal(zombie));
+            monster.goalSelector.addGoal(1, new AttackEterniaCrystalGoal(monster));
         }
     }
 
@@ -51,7 +52,7 @@ public class ModEvents {
 
         // Ne complète la vie que si le joueur était déjà à son ancien maximum, pour ne pas
         // effacer des dégâts en cours à chaque rejointe/changement de dimension (l'événement
-        // se redéclenche aussi dans ces cas-là, comme pour onZombieSpawn ci-dessus).
+        // se redéclenche aussi dans ces cas-là, comme pour onMonsterSpawn ci-dessus).
         boolean wasAtPreviousMax = player.getHealth() >= maxHealthAttribute.getValue();
         maxHealthAttribute.setBaseValue(PLAYER_MAX_HEALTH);
         if (wasAtPreviousMax) {

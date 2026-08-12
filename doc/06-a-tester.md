@@ -115,22 +115,25 @@ Lancer le client de dev :
 - [ ] Clic droit dessus : un message système confirme le changement de phase
       (`Phase changée : Combat` / `Phase changée : Construction`), et le texte `Phase : ...`
       en haut à droite du HUD change en conséquence.
-- [ ] Une fois en `Combat`, attendre ~1 seconde par palier : un zombie doit apparaître
-      au-dessus du bloc environ toutes les quelques secondes (l'algorithme se déclenche
-      quand l'accumulateur atteint 20 ; avec un poids de 15, ça arrive tous les 2 contrôles,
-      donc à peu près toutes les 2 secondes en moyenne).
-- [ ] Reclic droit pour repasser en `Construction` : plus aucun nouveau zombie n'apparaît,
-      même en attendant.
-- [ ] Tuer un zombie apparu ainsi (ou n'importe quel autre monstre) **pendant que la phase
-      est Combat** : le texte `Ennemis : X/10` en haut de l'écran doit voir son `X`
-      s'incrémenter, et la jauge orange se remplir un peu.
+- [ ] Une fois en `Combat`, attendre : des **zombies et des squelettes** doivent apparaître
+      au-dessus du bloc, les zombies plus fréquemment que les squelettes (poids 15 contre 5 —
+      environ 3x plus de zombies sur la durée, pas un ratio exact vague par vague).
+- [ ] Le squelette apparu se comporte comme le zombie : il converge à pied vers le cristal et
+      le frappe au corps à corps une fois arrivé — **pas de tir à l'arc**, c'est un manque
+      connu (voir 05-etat-et-problemes-connus.md), pas un bug si vous vous attendiez à le
+      voir tirer.
+- [ ] Reclic droit pour repasser en `Construction` : plus aucun nouveau zombie/squelette
+      n'apparaît, même en attendant.
+- [ ] Tuer un zombie ou un squelette apparu ainsi (ou n'importe quel autre monstre)
+      **pendant que la phase est Combat** : le texte `Ennemis : X/10` en haut de l'écran doit
+      voir son `X` s'incrémenter, et la jauge orange se remplir un peu.
 - [ ] Tuer un monstre **pendant que la phase est Construction** : `Ennemis : X/10` ne doit
       **pas** bouger (le compteur ne compte que les morts en combat, c'est attendu).
 - [ ] Casser le spawner à la pioche : il se drope (comme spike_trap), et l'accumulateur
       redémarre à 0 si on le repose (comportement attendu, pas de sauvegarde de position
       liée au bloc en tant que tel).
 - [ ] Aucune erreur dans les logs au placement, au tick, ou à la casse du bloc.
-- [ ] `Ennemis : X/10` reste bloqué sur `/10` quel que soit le nombre de zombies tués (le
+- [ ] `Ennemis : X/10` reste bloqué sur `/10` quel que soit le nombre d'ennemis tués (le
       total n'est pas encore recalculé, c'est un `TODO` connu — voir
       05-etat-et-problemes-connus.md).
 

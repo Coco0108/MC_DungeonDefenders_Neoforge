@@ -180,9 +180,10 @@ Toujours filtrer sur le côté serveur pour la logique de gameplay :
 if (!event.getLevel().isClientSide()) { ... }
 ```
 
-Pour cibler d'autres monstres que les zombies, généraliser le test
-`event.getEntity() instanceof Zombie` en `instanceof Monster` (ou `PathfinderMob` pour un
-`MoveToBlockGoal`).
+`ModEvents.onMonsterSpawn` filtre déjà sur `instanceof Monster` (toute hostilité vanilla ou
+moddée) plutôt qu'un type précis comme `Zombie` — pas besoin de le généraliser davantage pour
+un nouveau monstre standard. `PathfinderMob` (exigé par `MoveToBlockGoal`) serait plus large
+mais couvrirait aussi des mobs passifs (animaux, villageois...), ce qui n'est pas voulu ici.
 
 ## Ajouter une traduction
 

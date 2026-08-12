@@ -8,7 +8,9 @@ vérifie la CI.
 - ✅ Bloc `eternia_crystal` + son item, hitbox 1×3×1, très résistant.
 - ✅ Block entity avec PV persistants (100 par défaut) **et synchronisés vers le client**.
 - ✅ Destruction du bloc et message « Game Over » à 0 PV.
-- ✅ IA : les zombies convergent sur le cristal dans un rayon de 16 blocs et infligent 5 PV/s.
+- ✅ IA : tout `Monster` (zombie, squelette...) qui rejoint le monde converge sur le cristal
+  dans un rayon de 16 blocs et lui inflige 5 PV/s (`ModEvents.onMonsterSpawn`, généralisé
+  au-delà des zombies).
 - ✅ Onglet créatif dédié.
 - ✅ Renderer de barre de vie 3D au-dessus du cristal (API `submit` de 26.1).
 - ✅ Modèle, blockstate, loot table, tags d'outil, traductions `en_us` et `fr_fr`.
@@ -56,10 +58,14 @@ vérifie la CI.
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
   voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 - ✅ Bloc `spawner` : premier vrai morceau de gameplay (pas juste du HUD). Fait apparaître des
-  zombies pendant la phase de combat via l'algorithme de spawn pondéré du plan Excel du
-  joueur (voir [02-gameplay.md](02-gameplay.md#le-spawner--blockspawnerblockjava)). Clic droit
-  = harnais de test qui bascule `BUILD`/`COMBAT`. Incrémente aussi
-  `ModAttachments.WAVE_ENEMIES_KILLED` via un nouveau handler `LivingDeathEvent`.
+  zombies (poids 15) et des squelettes (poids 5) pendant la phase de combat via l'algorithme
+  de spawn pondéré du plan Excel du joueur (voir
+  [02-gameplay.md](02-gameplay.md#le-spawner--blockspawnerblockjava)). Clic droit = harnais de
+  test qui bascule `BUILD`/`COMBAT`. Incrémente aussi `ModAttachments.WAVE_ENEMIES_KILLED` via
+  un nouveau handler `LivingDeathEvent`.
+- ✅ Squelette ajouté comme deuxième ennemi (réutilise `EntityType.SKELETON` vanilla, comme le
+  zombie) : cible le cristal comme n'importe quel `Monster`, et sort du spawner. Aucune
+  spécificité de comportement (tir à distance, etc.) pour l'instant — voir "Ce qui reste".
 
 ## Corrections apportées
 
@@ -220,27 +226,30 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 3. Externaliser les constantes de gameplay (`DEFAULT_HEALTH`, `DAMAGE_PER_HIT`,
    `SEARCH_RANGE`) dans `Config`, et enregistrer la spec.
 4. Retirer le harnais de test du clic droit quand une autre source de dégâts existera.
-5. Étendre l'IA au-delà des zombies (le goal n'exige qu'un `PathfinderMob`).
-6. Donner une vraie utilité au mana (un sort/une capacité qui le consomme, une régénération
+5. Donner une vraie utilité au mana (un sort/une capacité qui le consomme, une régénération
    passive), retirer `ManaTestWandItem`, puis habiller `ManaOverlay`/`HealthOverlay`/
    `ExperienceOverlay` de vraies textures (sprites, cadre) une fois disponibles — la forme
    (losange) se rapproche déjà du jeu de référence, il manque la matière.
-7. Concevoir et implémenter les remplacements custom de la faim et de la hotbar (masquées
+6. Concevoir et implémenter les remplacements custom de la faim et de la hotbar (masquées
    mais vides pour l'instant).
-8. Définir un vrai système d'expérience/score/niveaux : comment `EXPERIENCE`, `SCORE` et
+7. Définir un vrai système d'expérience/score/niveaux : comment `EXPERIENCE`, `SCORE` et
    `LEVEL` se nourrissent l'un l'autre (aujourd'hui trois compteurs indépendants, tous
    bloqués à leur valeur par défaut, comme le mana avant `ManaTestWandItem`).
-9. Définir le déroulement des vagues : un vrai déclencheur pour passer en `COMBAT` (à la
+8. Définir le déroulement des vagues : un vrai déclencheur pour passer en `COMBAT` (à la
    place du harnais de test au clic droit), sommer les poids des spawners actifs dans
    `WAVE_ENEMIES_TOTAL` au démarrage, faire avancer `CURRENT_WAVE` et repasser en `BUILD`
    quand `WAVE_ENEMIES_KILLED` atteint `WAVE_ENEMIES_TOTAL`, victoire à la dernière vague,
    défaite si le cristal tombe avant.
-10. Donner un moyen de choisir/changer `ModAttachments.CHARACTER_NAME` (commande, écran de
-    création de personnage...) — sans ça, il reste égal au pseudo Minecraft en permanence.
-11. Une fois les images des 4 compétences fournies : les afficher dans `AbilitySlotsOverlay`
+9. Donner un moyen de choisir/changer `ModAttachments.CHARACTER_NAME` (commande, écran de
+   création de personnage...) — sans ça, il reste égal au pseudo Minecraft en permanence.
+10. Une fois les images des 4 compétences fournies : les afficher dans `AbilitySlotsOverlay`
     (probablement via `blitSprite`, une texture par `SLOT_NAMES`), puis brancher le clic, un
     cooldown, et enfin le vrai effet de chaque compétence (soin, sorts, réparation de tour —
     aucun n'existe encore côté gameplay).
-12. Donner au `SpawnerBlockEntity` une vraie configuration (plusieurs types d'ennemis, poids,
-    intervalle, plage de vagues) — "d'une manière plus simple" que le GUI double slots
-    d'œufs/multiplicateurs prévu dans le plan Excel, forme à définir avec le joueur.
+11. Donner au `SpawnerBlockEntity` une vraie configuration (`SPAWN_TABLE` figé à deux entrées
+    pour l'instant) — poids/intervalle/plage de vagues réglables, "d'une manière plus simple"
+    que le GUI double slots d'œufs/multiplicateurs prévu dans le plan Excel, forme à définir
+    avec le joueur.
+12. Donner au squelette (et à tout futur ennemi à distance) un vrai comportement d'archer —
+    il utilise pour l'instant le même goal de mêlée que le zombie (`AttackEterniaCrystalGoal`
+    le fait juste taper le cristal au corps à corps), pas d'attaque à l'arc.

@@ -128,7 +128,7 @@ Chargement FML
                                           ScoreOverlay, CharacterOverlay, AbilitySlotsOverlay
 
 Bus de jeu (NeoForge.EVENT_BUS)
-   ├─ ModEvents.onZombieSpawn(EntityJoinLevelEvent)
+   ├─ ModEvents.onMonsterSpawn(EntityJoinLevelEvent)
    ├─ ModEvents.onPlayerJoin(EntityJoinLevelEvent)
    └─ ModEvents.onMonsterDeath(LivingDeathEvent)
 
