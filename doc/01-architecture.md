@@ -21,7 +21,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── ModMenus.java                 # DeferredRegister des MenuType (GUI de config)
     │   │   ├── GamePhase.java                # Enum des phases de partie (BUILD, COMBAT)
     │   │   ├── GameDifficulty.java           # Enum de difficulté (EASY, NORMAL, HARD)
-    │   │   └── DifficultyScaling.java        # Multiplicateur difficulté x vague, pour les spawners
+    │   │   ├── DifficultyScaling.java        # Multiplicateur difficulté x vague, pour les spawners
+    │   │   └── SpawnableEnemy.java           # Liste fermée des ennemis choisissables dans un spawner
     │   ├── menu/
     │   │   ├── SpawnerConfigMenu.java        # AbstractContainerMenu sans slot, transmet juste le BlockPos
     │   │   └── SpawnerConfigMenuProvider.java # MenuProvider ouvert par SpawnerBlock au clic droit

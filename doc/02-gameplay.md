@@ -505,10 +505,18 @@ un. `serverTick(...)` :
 
 **La composition** (`List<SpawnEntry>`) est modifiable par spawner — deux entrées par défaut,
 zombie (nombre de base 15) et squelette (nombre de base 5), reprenant exactement les chiffres
-de l'exemple du joueur. Chaque `SpawnEntry` combine sa config (type, nombre de base) et sa
-progression pour la vague en cours (`spawned`, `accumulator`, `effectiveTotal`), le tout
-persistant via un `Codec` dédié (`ValueOutput/ValueInput#list(...)`, la liste ayant une
-longueur variable contrairement aux compteurs simples du reste du mod).
+de l'exemple du joueur. Chaque `SpawnEntry` combine son ennemi (`init/SpawnableEnemy.java`,
+plutôt qu'un `EntityType<?>` brut), son nombre de base et sa progression pour la vague en
+cours (`spawned`, `accumulator`, `effectiveTotal`), le tout persistant via un `Codec` dédié
+(`ValueOutput/ValueInput#list(...)`, la liste ayant une longueur variable contrairement aux
+compteurs simples du reste du mod ; l'ennemi est stocké par ordinal, comme `GamePhase`).
+
+`init/SpawnableEnemy.java` est la liste fermée des ennemis choisissables dans un spawner
+(`ZOMBIE`, `SKELETON` pour l'instant). Il n'existe pas de tag vanilla générique "tout ce qui
+est hostile" dans cette version de Minecraft (vérifié) : cet enum sert à la fois de source de
+vérité réseau (transmis par ordinal, voir plus bas) et de liste pour le bouton "cycler le
+type" du GUI. Ajouter un ennemi au jeu et vouloir le rendre choisissable dans un spawner se
+résume à une ligne dans cet enum — rien d'autre à toucher côté GUI/réseau/persistance.
 
 **Paramètres configurables par spawner**, en plus de la composition : `intervalTicks` (défaut
 20), `spawnRadius` (défaut 0 — spawn pile au-dessus du bloc ; au-delà, une position aléatoire
@@ -546,10 +554,28 @@ droit **sans shift** ouvre l'écran de configuration (voir plus bas).
 
 ### L'écran de configuration — `menu/`, `network/`, `client/gui/screen/SpawnerConfigScreen.java`
 
-Premier GUI custom du mod. Six champs numériques + un bouton "Valider", **pas de slot ni
-d'item** — les paramètres décidés avec le joueur : intervalle (ticks), rayon de spawn, vague
-de début, vague de fin, et le nombre de base pour chaque type d'ennemi disponible (zombie,
-squelette). Pré-rempli avec la configuration actuelle du spawner ciblé.
+Premier GUI custom du mod, **pas de slot ni d'item** — les paramètres décidés avec le joueur :
+intervalle (ticks), rayon de spawn, vague de début, vague de fin, et une **liste dynamique**
+de lignes de composition (une par ennemi choisi). Chaque ligne a un bouton qui affiche le nom
+de l'ennemi et le fait cycler vers le suivant au clic (`SpawnableEnemy.next()`, en sautant les
+ennemis déjà utilisés par une autre ligne), un champ pour son nombre de base, et un bouton "X"
+pour la retirer (cachée s'il ne reste qu'une seule ligne — on garde toujours au moins un
+ennemi). Un bouton "+ Ajouter" en bas de la liste, cachée une fois que toutes les valeurs de
+`SpawnableEnemy` sont utilisées (la liste d'ennemis possibles est fermée). Pré-rempli avec la
+configuration actuelle du spawner ciblé.
+
+**Pourquoi l'état est gardé en mémoire, pas seulement dans les widgets** : ajouter ou retirer
+une ligne change le nombre de lignes, donc décale tout ce qui suit (les lignes restantes, le
+bouton Ajouter, le bouton Valider) — il faut reconstruire tous les widgets
+(`Screen#rebuildWidgets()`). Mais reconstruire détruit les `EditBox`/`Button` existants, donc
+leurs valeurs seraient perdues si elles n'étaient pas sauvegardées ailleurs. `SpawnerConfigScreen`
+garde donc sa propre copie (`intervalText`, `radiusText`, ..., `rows: List<RowState>`) comme
+source de vérité entre deux reconstructions, chargée depuis le `SpawnerBlockEntity` une seule
+fois (`loadedFromSpawner`, à la toute première `init()`) pour ne pas écraser les modifications
+en cours de l'utilisateur à chaque ajout/retrait. `syncFieldsToState()` recopie les valeurs des
+widgets actuels dans cet état juste avant un rebuild. Cycler le type d'une ligne, en revanche,
+ne touche **pas** au nombre de lignes : pas besoin de rebuild, juste
+`AbstractWidget#setMessage(...)` sur le bouton concerné pour changer son libellé.
 
 **Le trajet complet, dans l'ordre :**
 
@@ -569,37 +595,43 @@ squelette). Pré-rempli avec la configuration actuelle du spawner ciblé.
    porte que le `BlockPos`) : il retrouve directement le `SpawnerBlockEntity` **côté client**
    via `Minecraft.getInstance().level.getBlockEntity(pos)` — cette copie cliente est déjà à
    jour grâce à la synchronisation ajoutée à `SpawnerBlockEntity`
-   (`getUpdatePacket`/`getUpdateTag`, même mécanisme que pour les PV du cristal). Chaque
-   champ est pré-rempli avec la valeur lue (`getIntervalTicks()`, `getBaseCount(EntityType)`,
-   etc.), avec un filtre n'acceptant que des chiffres (`EditBox#setFilter`).
+   (`getUpdatePacket`/`getUpdateTag`, même mécanisme que pour les PV du cristal). L'état en
+   mémoire (`intervalText`, ..., `rows`) est rempli depuis `getIntervalTicks()`,
+   `getEntries()`, etc., avec un filtre n'acceptant que des chiffres sur les champs numériques
+   (`EditBox#setFilter`).
 6. Au clic sur **"Valider"**, le client construit un `SpawnerConfigPayload` (le `BlockPos` +
-   les 6 valeurs, parsées depuis les champs) et l'envoie via
+   4 valeurs scalaires + la liste `entries` (une paire ordinal d'ennemi / nombre de base par
+   ligne), lue depuis l'état en mémoire) et l'envoie via
    `Minecraft.getInstance().getConnection().send(payload.toVanillaServerbound())`.
 7. **`ModNetworking`** (enregistré via `RegisterPayloadHandlersEvent`, voir plus haut) reçoit
    le paquet côté serveur : revérifie que le bloc à cette position est toujours un
-   `SpawnerBlockEntity` et que le joueur est encore à portée (8 blocs), puis appelle
-   `spawner.applyConfig(...)`.
+   `SpawnerBlockEntity` et que le joueur est encore à portée (8 blocs), reconstruit la liste
+   de `SpawnEntry` en validant chaque ordinal d'ennemi reçu (`0 <= ordinal <
+   SpawnableEnemy.values().length` — jamais faire confiance à une valeur reçue par le réseau
+   pour indexer un tableau), puis appelle `spawner.applyConfig(...)`.
 
 > **Pourquoi pas de vérification de portée dans `SpawnerConfigMenu#stillValid` ?** Parce que
 > ce menu ne contient ni slot ni item : la seule action possible dessus est d'envoyer le
 > paquet de config, et ce paquet revérifie déjà tout côté serveur avant d'agir. Une double
 > vérification (menu **et** paquet) n'aurait rien apporté ici.
 
-`SpawnerBlockEntity.applyConfig(...)` ne touche pas à la progression de la vague en cours
-(`spawned`/`accumulator`/`effectiveTotal`) : les nouveaux nombres de base ne prennent effet
-qu'à la prochaine vague détectée par `serverTick` (voir plus haut), pour ne pas fausser une
-vague déjà commencée.
+`SpawnerBlockEntity.applyConfig(...)` remplace entièrement la composition (`entries`) et
+**applique tout de suite** les nouveaux plafonds : `resetForWave(...)` est appelé
+immédiatement avec le multiplicateur de difficulté courant, sans attendre le prochain
+changement de vague détecté par `serverTick`. C'est un choix volontaire différent de la toute
+première version du spawner (qui attendait la vague suivante) : reconfigurer un spawner doit
+se voir tout de suite, comme le reste du GUI. Une conséquence assumée : si on reconfigure en
+plein milieu d'une vague, la progression de cette vague (`spawned`) repart de zéro pour les
+nouvelles entrées.
 
 **Ce qui n'est PAS dans ce GUI**, volontairement (voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)) :
 
-- Pas de liste d'ennemis éditable (ajouter/retirer un type) : les deux lignes
-  zombie/squelette sont fixes, seul leur nombre de base se règle. Mettre un nombre de base à
-  `0` désactive ce type en pratique, sans avoir besoin d'un bouton "retirer".
-- Pas de sélection de type par un bouton "cycler" (l'idée envisagée au départ) : inutile tant
-  qu'il n'y a que deux types possibles, voir "Ce qui reste".
 - Pas de choix de difficulté ici — c'est un réglage de partie (`ModAttachments.DIFFICULTY`),
   pas du spawner, voir plus haut.
+- Pas de défilement (scroll) si la liste d'ennemis grandit au point de dépasser la hauteur de
+  l'écran — non géré pour l'instant, acceptable tant que `SpawnableEnemy` ne contient que
+  deux valeurs.
 
 ### Le compteur d'ennemis tués — `ModEvents.onMonsterDeath`
 

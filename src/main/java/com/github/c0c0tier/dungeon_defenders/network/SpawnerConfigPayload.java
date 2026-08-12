@@ -8,19 +8,30 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
+import java.util.ArrayList;
+import java.util.List;
+
 // Envoyé par SpawnerConfigScreen (client) au clic sur "Valider", appliqué côté serveur par
-// ModNetworking à SpawnerBlockEntity.applyConfig(...). Un seul paquet, forme figée (pas de
-// liste variable) : le GUI n'édite que zombie/squelette pour l'instant, voir
-// 05-etat-et-problemes-connus.md.
+// ModNetworking à SpawnerBlockEntity.applyConfig(...). La composition est une liste de
+// longueur variable (entries) : chaque ligne du GUI = un ennemi (par ordinal SpawnableEnemy)
+// + son nombre de base. Remplace entièrement la composition existante à l'application.
 public record SpawnerConfigPayload(
         BlockPos pos,
         int intervalTicks,
         int spawnRadius,
         int waveStart,
         int waveEnd,
-        int zombieBaseCount,
-        int skeletonBaseCount
+        List<Entry> entries
 ) implements CustomPacketPayload {
+
+    /** Une ligne de composition : quel ennemi (ordinal SpawnableEnemy) et son nombre de base. */
+    public record Entry(int enemyOrdinal, int baseCount) {
+        public static final StreamCodec<RegistryFriendlyByteBuf, Entry> STREAM_CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, Entry::enemyOrdinal,
+                ByteBufCodecs.VAR_INT, Entry::baseCount,
+                Entry::new
+        );
+    }
 
     public static final CustomPacketPayload.Type<SpawnerConfigPayload> TYPE =
             new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "spawner_config"));
@@ -31,8 +42,7 @@ public record SpawnerConfigPayload(
             ByteBufCodecs.VAR_INT, SpawnerConfigPayload::spawnRadius,
             ByteBufCodecs.VAR_INT, SpawnerConfigPayload::waveStart,
             ByteBufCodecs.VAR_INT, SpawnerConfigPayload::waveEnd,
-            ByteBufCodecs.VAR_INT, SpawnerConfigPayload::zombieBaseCount,
-            ByteBufCodecs.VAR_INT, SpawnerConfigPayload::skeletonBaseCount,
+            ByteBufCodecs.collection(ArrayList::new, Entry.STREAM_CODEC), SpawnerConfigPayload::entries,
             SpawnerConfigPayload::new
     );
 

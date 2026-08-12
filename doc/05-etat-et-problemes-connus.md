@@ -73,10 +73,14 @@ vérifie la CI.
   `GameDifficulty` : `EASY`/`NORMAL`/`HARD`), démarre à `NORMAL` — censée être choisie au
   lancement de la map, mais aucun écran pour le faire n'existe encore.
 - ✅ Écran de configuration du spawner (premier GUI custom du mod) : clic droit sans shift sur
-  un `SpawnerBlock` ouvre `SpawnerConfigScreen`, 6 champs numériques (intervalle, rayon,
-  vague de début/fin, nombre de base zombie/squelette), sans slot ni item. Réseau custom
-  C2S (`SpawnerConfigPayload` + `ModNetworking`), revérifié côté serveur (portée, existence
-  du bloc) avant application. Détail complet dans
+  un `SpawnerBlock` ouvre `SpawnerConfigScreen`, sans slot ni item. Intervalle, rayon, vague
+  de début/fin, et une **liste dynamique** de composition (ajouter/retirer un ennemi, cycler
+  son type parmi `init/SpawnableEnemy.java`, régler son nombre de base) — plus la liste figée
+  zombie/squelette de la première version. Réseau custom C2S (`SpawnerConfigPayload`, avec une
+  liste de longueur variable via `ByteBufCodecs.collection` + `ModNetworking`), revérifié côté
+  serveur (portée, existence du bloc, validité de chaque ordinal d'ennemi reçu) avant
+  application — appliquée **immédiatement** (pas d'attente de la prochaine vague). Détail
+  complet dans
   [02-gameplay.md](02-gameplay.md#lécran-de-configuration--menu-network-clientguiscreenspawnerconfigscreenjava).
 
 ## Corrections apportées
@@ -181,17 +185,20 @@ tombe avant. Le `spawner` fait maintenant apparaître de vrais ennemis et
   poids des spawners actifs de la carte au démarrage du combat ;
 - rien ne fait avancer `current_wave` quand `wave_enemies_killed` atteint `wave_enemies_total`.
 
-### Le GUI du spawner ne gère que zombie/squelette, pas une liste libre
+### Le GUI du spawner ne choisit que parmi une liste fermée d'ennemis (SpawnableEnemy)
 
-`SpawnerConfigScreen` existe (voir [02-gameplay.md](02-gameplay.md)) et permet de régler
-l'intervalle, le rayon, la plage de vagues et le nombre de base de chaque type — mais la
-feuille "Idées" du plan Excel du joueur prévoyait à l'origine des **slots d'œufs** pour
-choisir librement les types (n'importe quel mob, pas juste zombie/squelette). Ce qu'on a est
-la version "plus simple" décidée avec le joueur pour cette première itération : deux lignes
-fixes, pas de bouton ajouter/retirer un type. Étendre à une vraie liste (et donc à d'autres
-ennemis que zombie/squelette, une fois qu'ils existeront) demandera de revoir le paquet réseau
-(actuellement une forme figée à 7 valeurs, pas une liste variable) et l'écran (actuellement
-une ligne codée en dur par type).
+`SpawnerConfigScreen` (voir [02-gameplay.md](02-gameplay.md)) permet maintenant d'ajouter et
+retirer des lignes de composition librement, et de cycler le type de chaque ligne — mais
+uniquement parmi les valeurs d'`init/SpawnableEnemy.java` (`ZOMBIE`, `SKELETON` pour
+l'instant), pas n'importe quel mob du jeu. La feuille "Idées" du plan Excel du joueur
+prévoyait à l'origine des **slots d'œufs** pour choisir librement n'importe quel type de mob.
+Choix assumé ici : une liste fermée plutôt qu'un `EntityType<?>` arbitraire, parce qu'il
+n'existe pas de tag vanilla générique "tout ce qui est hostile" dans cette version de
+Minecraft (vérifié) — il faudrait de toute façon une forme de liste blanche pour éviter
+qu'un joueur puisse faire spawn n'importe quelle entité (villageois, boss, etc.) depuis ce
+GUI. Ajouter un ennemi au jeu et le rendre choisissable ici se résume à une entrée dans
+`SpawnableEnemy` (une ligne, une clé de traduction) — pas de nouveau blocage architectural
+tant qu'on reste dans cette approche liste-fermée.
 
 Le seuil de déclenchement (`SPAWN_THRESHOLD = 20`) reste une constante globale non exposée
 dans le GUI, comme décidé avec le joueur (son effet se règle déjà via l'intervalle et le
@@ -266,10 +273,11 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
     (probablement via `blitSprite`, une texture par `SLOT_NAMES`), puis brancher le clic, un
     cooldown, et enfin le vrai effet de chaque compétence (soin, sorts, réparation de tour —
     aucun n'existe encore côté gameplay).
-11. Étendre `SpawnerConfigScreen`/`SpawnerConfigPayload` d'une composition figée
-    (zombie/squelette) à une vraie liste (ajouter/retirer un type, choisir parmi tous les
-    ennemis disponibles) — nécessite de revoir la forme du paquet réseau (actuellement 7
-    valeurs fixes, pas une liste variable).
+11. ~~Étendre `SpawnerConfigScreen`/`SpawnerConfigPayload` d'une composition figée à une vraie
+    liste~~ — fait : liste dynamique (ajouter/retirer/cycler), voir
+    [02-gameplay.md](02-gameplay.md#lécran-de-configuration--menu-network-clientguiscreenspawnerconfigscreenjava).
+    Reste ouvert : gérer le défilement si `SpawnableEnemy` grandit au point de dépasser la
+    hauteur de l'écran (non géré pour l'instant, deux valeurs seulement).
 12. Donner au squelette (et à tout futur ennemi à distance) un vrai comportement d'archer —
     il utilise pour l'instant le même goal de mêlée que le zombie (`AttackEterniaCrystalGoal`
     le fait juste taper le cristal au corps à corps), pas d'attaque à l'arc.

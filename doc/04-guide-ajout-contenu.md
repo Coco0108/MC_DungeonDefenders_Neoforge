@@ -333,7 +333,12 @@ Les pièces, dans l'ordre où elles interviennent :
    `RegisterMenuScreensEvent` (pas `MenuScreens.register(...)`, privée dans cette version).
 5. **Paquet C2S** : un `record` implémentant `CustomPacketPayload` (`type()`, un
    `Type<T>` déclaré avec `Identifier.fromNamespaceAndPath(...)`, un `StreamCodec` via
-   `StreamCodec.composite(...)` — jusqu'à 7 champs avec les surcharges de cette version).
+   `StreamCodec.composite(...)` — jusqu'à 7 champs avec les surcharges de cette version). Pour
+   un champ de longueur variable (une liste), un des champs peut être
+   `ByteBufCodecs.collection(ArrayList::new, elementCodec)` — voir `SpawnerConfigPayload.Entry`
+   pour un exemple d'élément avec son propre petit `StreamCodec.composite`. Toujours **revalider
+   les indices/ordinaux reçus** avant de s'en servir pour indexer un tableau côté serveur (voir
+   `ModNetworking.handleSpawnerConfig`) — un client est une source non fiable.
    Enregistré dans une classe à part (**pas** dans la classe client) via
    `RegisterPayloadHandlersEvent` + `PayloadRegistrar#playToServer(type, codec, handler)` :
    un serveur dédié doit savoir décoder ce que ses clients lui envoient, donc cet
@@ -344,6 +349,21 @@ Les pièces, dans l'ordre où elles interviennent :
 7. **Handler côté serveur** : revérifier l'existence du bloc à la position reçue et la
    portée du joueur avant d'appliquer quoi que ce soit (voir `ModNetworking`) — le client est
    toujours considéré non fiable.
+
+**Nombre de lignes variable dans l'écran (ajouter/retirer)** : si l'écran doit permettre
+d'ajouter/retirer des lignes de widgets (pas juste des champs fixes), garder l'état
+(valeurs actuelles) dans des champs Java ordinaires de l'écran (pas seulement dans les
+widgets), et reconstruire avec `Screen#clearWidgets()`/`rebuildWidgets()` à chaque
+ajout/retrait — les widgets sont détruits à la reconstruction, donc tout ce qui doit survivre
+doit déjà être recopié ailleurs juste avant (voir `SpawnerConfigScreen.syncFieldsToState()` et
+la section correspondante de [02-gameplay.md](02-gameplay.md)). Un changement qui ne modifie
+pas le nombre de lignes (ex. cycler la valeur d'un bouton) n'a pas besoin de tout reconstruire :
+`AbstractWidget#setMessage(...)` suffit pour changer son libellé en place.
+
+**Ajouter un ennemi choisissable dans le spawner** : une seule ligne dans
+`init/SpawnableEnemy.java` (nom + `EntityType`), plus sa clé de traduction
+(`dungeon_defenders.enemy.<nom>`) dans les deux fichiers de lang. Rien d'autre à toucher : le
+GUI, le réseau et la persistance passent déjà par cet enum (voir 02-gameplay.md).
 
 ## Ajouter une option de configuration
 

@@ -144,27 +144,45 @@ Lancer le client de dev :
       total n'est pas encore recalculé, c'est un `TODO` connu — voir
       05-etat-et-problemes-connus.md).
 
-## L'écran de configuration du spawner (premier GUI custom, avec réseau)
+## L'écran de configuration du spawner (GUI custom, liste dynamique, avec réseau)
 
 C'est le morceau le plus à risque de cette session (aucun test visuel possible pendant le
-développement) — à vérifier avec le plus d'attention.
+développement, ni pour la reconstruction dynamique des widgets à l'ajout/retrait de lignes) —
+à vérifier avec le plus d'attention.
 
 - [ ] Clic droit (sans shift) sur un spawner ouvre bien un écran, sans crash ni écran noir.
-- [ ] L'écran affiche 6 champs numériques avec leurs libellés (Intervalle, Rayon de spawn,
-      Première/Dernière vague active, Zombies/Squelettes) et un bouton "Valider" — rien ne
-      doit se chevaucher, chaque libellé doit être lisible juste au-dessus de son champ.
+- [ ] L'écran affiche 4 champs numériques (Intervalle, Rayon de spawn, Première/Dernière vague
+      active) avec leurs libellés, **2 lignes de composition** (un bouton avec le nom de
+      l'ennemi + un champ nombre + un bouton "X" chacune), un bouton "+ Ajouter un ennemi" et
+      un bouton "Valider" — rien ne doit se chevaucher ni sortir de l'écran.
 - [ ] Les champs sont **pré-remplis** avec les valeurs par défaut du spawner tout juste posé
-      (`20`, `0`, `1`, `5`, `15`, `5` dans cet ordre) — pas vides, pas à `0` partout.
-- [ ] Taper des lettres dans un champ : rien ne s'affiche (filtre chiffres uniquement).
-- [ ] Modifier une valeur (ex : mettre `30` dans "Zombies"), cliquer "Valider" : l'écran se
-      ferme, aucune erreur dans les logs.
-- [ ] **Rouvrir l'écran du même spawner** (clic droit à nouveau) : la nouvelle valeur (`30`)
-      doit apparaître — pas l'ancienne (`15`). C'est le test le plus important : il vérifie
-      que la config a bien été appliquée côté serveur **et** resynchronisée vers le client.
-- [ ] Avec le spawner en Combat au moment de la modification : les ennemis déjà en cours de
-      spawn pour la vague continuent avec les **anciennes** valeurs jusqu'à la vague
-      suivante (comportement voulu, pas un bug) — difficile à observer sans le système de
-      vagues complet, à noter seulement si quelque chose semble clairement incohérent.
+      (`20`, `0`, `1`, `5`, puis "Zombie"/`15` et "Squelette"/`5` sur les deux lignes).
+- [ ] Taper des lettres dans un champ numérique : rien ne s'affiche (filtre chiffres uniquement).
+- [ ] **Cliquer sur le bouton d'une ligne** (nom de l'ennemi) : son libellé change pour
+      l'ennemi suivant (Zombie → Squelette → Zombie...), sans reconstruire tout l'écran (pas
+      de clignotement des autres champs). Comme il n'y a que 2 `SpawnableEnemy` pour l'instant,
+      cycler doit systématiquement échanger avec l'autre ligne si elle utilise déjà l'autre
+      type (jamais deux lignes sur le même ennemi).
+- [ ] **Bouton "X"** : le retire, l'écran se reconstruit (les lignes/boutons suivants se
+      replacent correctement) — sauf s'il ne reste qu'une ligne, où le bouton "X" doit être
+      **absent** (toujours garder au moins un ennemi).
+- [ ] **Bouton "+ Ajouter un ennemi"** : ajoute une ligne (nombre de base `0`), l'écran se
+      reconstruit. Avec seulement 2 `SpawnableEnemy` disponibles, le bouton doit **disparaître**
+      dès que les 2 lignes sont présentes (liste fermée, rien à ajouter de plus pour l'instant).
+- [ ] Modifier une valeur dans un champ, ajouter/retirer une ligne, **puis** modifier une
+      autre valeur : vérifier que les valeurs saisies avant le rebuild n'ont pas été perdues
+      (elles sont recopiées dans l'état en mémoire de l'écran avant chaque reconstruction —
+      voir `SpawnerConfigScreen.syncFieldsToState()`).
+- [ ] Modifier la composition (ex : mettre `30` sur la ligne Zombie), cliquer "Valider" :
+      l'écran se ferme, aucune erreur dans les logs.
+- [ ] **Rouvrir l'écran du même spawner** (clic droit à nouveau) : la nouvelle valeur (`30`) et
+      la composition (nombre de lignes, type de chaque ligne) doivent apparaître telles que
+      validées — pas les anciennes. C'est le test le plus important : il vérifie que la config
+      a bien été appliquée côté serveur **et** resynchronisée vers le client.
+- [ ] Avec le spawner en Combat au moment de la modification : contrairement à la première
+      version de ce GUI, les nouveaux plafonds/composition s'appliquent **immédiatement** (pas
+      d'attente de la vague suivante) — après "Valider", les prochains spawns doivent déjà
+      suivre la nouvelle configuration.
 - [ ] Poser 2 spawners, ouvrir l'écran de l'un, le fermer sans "Valider" (touche Échap) :
       l'autre spawner ne doit pas avoir été affecté.
 - [ ] Vérifier `run/logs/latest.log` après une session de test avec cet écran : aucune

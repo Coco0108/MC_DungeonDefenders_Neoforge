@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders.network;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -10,6 +11,9 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+
+import java.util.ArrayList;
+import java.util.List;
 
 // Enregistrement des paquets custom du mod. Sans "bus" explicite sur @EventBusSubscriber,
 // RegisterPayloadHandlersEvent (qui implémente IModBusEvent) part automatiquement sur le bus
@@ -50,13 +54,23 @@ public class ModNetworking {
                 return;
             }
 
+            List<SpawnerBlockEntity.SpawnEntry> entries = new ArrayList<>();
+            SpawnableEnemy[] enemies = SpawnableEnemy.values();
+            for (SpawnerConfigPayload.Entry entry : payload.entries()) {
+                // Ordinal envoyé par un client : à valider avant indexation, jamais faire confiance
+                // à une valeur reçue par le réseau pour indexer un tableau.
+                if (entry.enemyOrdinal() < 0 || entry.enemyOrdinal() >= enemies.length) {
+                    continue;
+                }
+                entries.add(new SpawnerBlockEntity.SpawnEntry(enemies[entry.enemyOrdinal()], entry.baseCount()));
+            }
+
             spawner.applyConfig(
                     payload.intervalTicks(),
                     payload.spawnRadius(),
                     payload.waveStart(),
                     payload.waveEnd(),
-                    payload.zombieBaseCount(),
-                    payload.skeletonBaseCount()
+                    entries
             );
         });
     }

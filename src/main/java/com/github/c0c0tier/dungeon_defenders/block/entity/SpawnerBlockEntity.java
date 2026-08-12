@@ -4,18 +4,17 @@ import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.init.DifficultyScaling;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -40,45 +39,41 @@ public class SpawnerBlockEntity extends BlockEntity {
     private static final int DEFAULT_INTERVAL_TICKS = 20;
     private static final int SPAWN_THRESHOLD = 20;
 
-    /** Un type d'ennemi, son nombre de base, et sa progression pour la vague en cours. */
+    /** Un type d'ennemi (parmi la liste fermée SpawnableEnemy), son nombre de base, et sa progression pour la vague en cours. */
     public static final class SpawnEntry {
         public static final Codec<SpawnEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                BuiltInRegistries.ENTITY_TYPE.byNameCodec().fieldOf("Type").forGetter(e -> e.type),
+                Codec.INT.fieldOf("Enemy").forGetter(e -> e.enemy.ordinal()),
                 Codec.INT.fieldOf("BaseCount").forGetter(e -> e.baseCount),
                 Codec.INT.fieldOf("Spawned").forGetter(e -> e.spawned),
                 Codec.INT.fieldOf("Accumulator").forGetter(e -> e.accumulator),
                 Codec.INT.fieldOf("EffectiveTotal").forGetter(e -> e.effectiveTotal)
-        ).apply(instance, SpawnEntry::new));
+        ).apply(instance, (enemyOrdinal, baseCount, spawned, accumulator, effectiveTotal) ->
+                new SpawnEntry(SpawnableEnemy.values()[enemyOrdinal], baseCount, spawned, accumulator, effectiveTotal)));
 
-        private final EntityType<?> type;
-        private int baseCount;
+        private final SpawnableEnemy enemy;
+        private final int baseCount;
         private int spawned;
         private int accumulator;
         private int effectiveTotal;
 
-        public SpawnEntry(EntityType<?> type, int baseCount) {
-            this(type, baseCount, 0, 0, baseCount);
+        public SpawnEntry(SpawnableEnemy enemy, int baseCount) {
+            this(enemy, baseCount, 0, 0, baseCount);
         }
 
-        private SpawnEntry(EntityType<?> type, int baseCount, int spawned, int accumulator, int effectiveTotal) {
-            this.type = type;
-            this.baseCount = baseCount;
+        private SpawnEntry(SpawnableEnemy enemy, int baseCount, int spawned, int accumulator, int effectiveTotal) {
+            this.enemy = enemy;
+            this.baseCount = Math.max(0, baseCount);
             this.spawned = spawned;
             this.accumulator = accumulator;
             this.effectiveTotal = effectiveTotal;
         }
 
-        public EntityType<?> type() {
-            return this.type;
+        public SpawnableEnemy enemy() {
+            return this.enemy;
         }
 
         public int baseCount() {
             return this.baseCount;
-        }
-
-        /** Changé par le GUI de config : ne prend effet qu'à la prochaine vague (voir resetForWave). */
-        void setBaseCount(int baseCount) {
-            this.baseCount = Math.max(0, baseCount);
         }
 
         /** Recalcule le plafond de la vague à partir du multiplicateur de difficulté et remet la progression à zéro. */
@@ -107,7 +102,7 @@ public class SpawnerBlockEntity extends BlockEntity {
                             level.getRandom().nextInt(spawnRadius * 2 + 1) - spawnRadius,
                             0,
                             level.getRandom().nextInt(spawnRadius * 2 + 1) - spawnRadius);
-            this.type.spawn(level, spawnPos, EntitySpawnReason.SPAWNER);
+            this.enemy.entityType().spawn(level, spawnPos, EntitySpawnReason.SPAWNER);
             return true;
         }
     }
@@ -115,8 +110,8 @@ public class SpawnerBlockEntity extends BlockEntity {
     // Composition par défaut, avec les chiffres exacts de l'exemple du joueur
     // (15 gobelins / 5 orcs -> ici zombie/squelette, faute d'avoir plus d'ennemis).
     private List<SpawnEntry> entries = new ArrayList<>(List.of(
-            new SpawnEntry(EntityType.ZOMBIE, 15),
-            new SpawnEntry(EntityType.SKELETON, 5)
+            new SpawnEntry(SpawnableEnemy.ZOMBIE, 15),
+            new SpawnEntry(SpawnableEnemy.SKELETON, 5)
     ));
 
     private int intervalTicks = DEFAULT_INTERVAL_TICKS;
@@ -150,35 +145,36 @@ public class SpawnerBlockEntity extends BlockEntity {
         return this.waveEnd;
     }
 
-    /** @return le nombre de base configuré pour ce type, ou 0 s'il n'a pas d'entrée dans ce spawner. */
-    public int getBaseCount(EntityType<?> type) {
-        return this.entries.stream()
-                .filter(entry -> entry.type() == type)
-                .findFirst()
-                .map(SpawnEntry::baseCount)
-                .orElse(0);
+    /** @return la composition actuelle du spawner (copie défensive), pour que l'écran de config l'affiche. */
+    public List<SpawnEntry> getEntries() {
+        return List.copyOf(this.entries);
     }
 
     // --- ÉCRITURE (appliquée côté serveur par le handler du paquet de config) ---
 
     /**
-     * Applique la configuration reçue du GUI. Ne modifie pas la progression en cours : la
-     * vague en cours (le cas échéant) continue avec les anciens plafonds jusqu'à la
-     * prochaine détection de changement de vague, qui recalculera tout avec les nouvelles
-     * valeurs (voir serverTick / resetForWave).
+     * Remplace entièrement la configuration du spawner (y compris sa composition) et
+     * l'applique immédiatement : les plafonds de la vague en cours sont recalculés tout de
+     * suite avec le multiplicateur de difficulté actuel, sans attendre le prochain
+     * changement de vague détecté par serverTick. C'est un changement volontaire par rapport
+     * à la première version (qui attendait la prochaine vague) : reconfigurer un spawner
+     * doit se voir tout de suite dans le GUI comme en jeu.
      */
-    public void applyConfig(int intervalTicks, int spawnRadius, int waveStart, int waveEnd, int zombieBaseCount, int skeletonBaseCount) {
+    public void applyConfig(int intervalTicks, int spawnRadius, int waveStart, int waveEnd, List<SpawnEntry> newEntries) {
         this.intervalTicks = Math.max(1, intervalTicks);
         this.spawnRadius = Math.max(0, spawnRadius);
         this.waveStart = Math.max(1, waveStart);
         this.waveEnd = Math.max(this.waveStart, waveEnd);
+        if (!newEntries.isEmpty()) {
+            this.entries = new ArrayList<>(newEntries);
+        }
 
-        for (SpawnEntry entry : this.entries) {
-            if (entry.type() == EntityType.ZOMBIE) {
-                entry.setBaseCount(zombieBaseCount);
-            } else if (entry.type() == EntityType.SKELETON) {
-                entry.setBaseCount(skeletonBaseCount);
+        if (this.level != null) {
+            double multiplier = DifficultyScaling.getMultiplier(this.level);
+            for (SpawnEntry entry : this.entries) {
+                entry.resetForWave(multiplier);
             }
+            this.lastWaveHandled = this.level.getData(ModAttachments.CURRENT_WAVE);
         }
 
         setChanged();
