@@ -4,6 +4,7 @@ import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.github.c0c0tier.dungeon_defenders.menu.SpawnerConfigMenuProvider;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -51,7 +52,9 @@ public class SpawnerBlock extends BaseEntityBlock {
 
     /**
      * Shift + clic droit : bascule Construction/Combat (harnais de test, en attendant un
-     * vrai déclencheur). Clic droit seul : ouvre l'écran de configuration.
+     * vrai déclencheur). Clic droit seul : ouvre l'écran de configuration — créatif
+     * uniquement (voir openConfigScreen), les spawners d'une vraie partie sont censés être
+     * déjà configurés dans la structure de la map, pas modifiables en survie.
      */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
@@ -69,8 +72,11 @@ public class SpawnerBlock extends BaseEntityBlock {
         GamePhase current = GamePhase.values()[level.getData(ModAttachments.GAME_PHASE)];
         GamePhase next = current == GamePhase.BUILD ? GamePhase.COMBAT : GamePhase.BUILD;
 
-        level.setData(ModAttachments.GAME_PHASE, next.ordinal());
-        level.syncData(ModAttachments.GAME_PHASE);
+        if (next == GamePhase.COMBAT) {
+            PhaseTransitions.enterCombat(level);
+        } else {
+            PhaseTransitions.enterBuild(level);
+        }
 
         player.sendSystemMessage(Component.translatable(
                 "dungeon_defenders.spawner.phase_toggled", Component.translatable(next.translationKey())));
@@ -78,8 +84,14 @@ public class SpawnerBlock extends BaseEntityBlock {
         return InteractionResult.SUCCESS;
     }
 
+    // Comme pour un bloc de structure vanilla : la configuration d'un spawner est censée être
+    // figée une fois la map construite (voir doc/02-gameplay.md) — pas d'accès en survie.
     private static InteractionResult openConfigScreen(Level level, BlockPos pos, Player player) {
         if (level.isClientSide()) {
+            return InteractionResult.SUCCESS;
+        }
+        if (!player.isCreative()) {
+            player.sendSystemMessage(Component.translatable("dungeon_defenders.spawner.config_creative_only"));
             return InteractionResult.SUCCESS;
         }
 

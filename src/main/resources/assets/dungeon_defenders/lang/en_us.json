@@ -21,6 +21,8 @@
   "dungeon_defenders.mana_test_wand.used": "-%s mana (%s/%s)",
   "dungeon_defenders.mana_test_wand.empty": "Not enough mana!",
   "dungeon_defenders.spawner.phase_toggled": "Phase switched to: %s",
+  "dungeon_defenders.spawner.wave_cleared": "Wave cleared! Back to Build phase.",
+  "dungeon_defenders.spawner.config_creative_only": "Spawners can only be configured in Creative mode.",
   "dungeon_defenders.spawner.config_title": "Spawner configuration",
   "dungeon_defenders.spawner.config_interval": "Interval (ticks)",
   "dungeon_defenders.spawner.config_radius": "Spawn radius",

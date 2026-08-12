@@ -115,8 +115,13 @@ Lancer le client de dev :
 - [ ] **Shift + clic droit** dessus : un message système confirme le changement de phase
       (`Phase changée : Combat` / `Phase changée : Construction`), et le texte `Phase : ...`
       en haut à droite du HUD change en conséquence.
-- [ ] **Clic droit sans shift** : ouvre l'écran de configuration (voir section dédiée
-      ci-dessous), au lieu de basculer la phase.
+- [ ] **Clic droit sans shift, en créatif** : ouvre l'écran de configuration (voir section
+      dédiée ci-dessous). **En survie**, le même clic droit sans shift doit plutôt afficher le
+      message "Les spawners ne sont configurables qu'en mode créatif" et ne rien ouvrir.
+- [ ] **Avant même de passer en Combat une première fois** : `Ennemis : X/10` peut encore
+      afficher l'ancienne valeur par défaut (`/10`) — normal, le total ne se calcule qu'à
+      l'entrée en Construction, qui n'a encore jamais eu lieu explicitement au tout premier
+      chargement du monde (limite connue, voir 05-etat-et-problemes-connus.md).
 - [ ] Une fois en `Combat`, attendre : des **zombies et des squelettes** doivent apparaître
       au-dessus du bloc, les zombies plus fréquemment que les squelettes (nombre de base 15
       contre 5 par défaut — environ 3x plus de zombies sur la durée, pas un ratio exact vague
@@ -124,25 +129,32 @@ Lancer le client de dev :
 - [ ] Laisser tourner un moment : **chaque type doit finir par s'arrêter** une fois son
       plafond atteint (15 zombies et 5 squelettes par défaut, sur la vague 1 avec la
       difficulté Normal) — le spawner ne doit **pas** spawn indéfiniment tant qu'on reste en
-      combat, contrairement à avant cette évolution.
+      combat.
 - [ ] Le squelette apparu se comporte comme le zombie : il converge à pied vers le cristal et
       le frappe au corps à corps une fois arrivé — **pas de tir à l'arc**, c'est un manque
       connu (voir 05-etat-et-problemes-connus.md), pas un bug si vous vous attendiez à le
       voir tirer.
-- [ ] Reclic droit pour repasser en `Construction` : plus aucun nouveau zombie/squelette
-      n'apparaît, même en attendant.
 - [ ] Tuer un zombie ou un squelette apparu ainsi (ou n'importe quel autre monstre)
-      **pendant que la phase est Combat** : le texte `Ennemis : X/10` en haut de l'écran doit
-      voir son `X` s'incrémenter, et la jauge orange se remplir un peu.
-- [ ] Tuer un monstre **pendant que la phase est Construction** : `Ennemis : X/10` ne doit
+      **pendant que la phase est Combat** : le texte `Ennemis : X/20` (total = 15+5 par défaut,
+      sur un seul spawner) doit voir son `X` s'incrémenter, et la jauge orange se remplir.
+- [ ] **Tuer tous les ennemis de la vague** (les 20, avec un seul spawner par défaut) : la
+      phase doit **repasser automatiquement en Construction**, avec un message système "Vague
+      terminée ! Retour à la Construction." diffusé à tous les joueurs — c'est le nouveau
+      comportement principal à vérifier dans cette section.
+- [ ] Tuer un monstre **pendant que la phase est Construction** : `Ennemis : X/Y` ne doit
       **pas** bouger (le compteur ne compte que les morts en combat, c'est attendu).
+- [ ] Rebasculer manuellement en Combat (shift + clic droit) **sur la même vague** (rien ne la
+      fait encore avancer) : le spawner doit **recommencer à spawn** normalement (vérifie que
+      `COMBAT_SESSION` relance bien la progression de chaque spawner, pas seulement au premier
+      changement de vague).
+- [ ] Poser **2 spawners** avec des compositions différentes : à l'entrée en Construction,
+      `Ennemis : X/Y` doit afficher la **somme des deux** (`Y` = total du premier + total du
+      second) — vérifie le registre `ACTIVE_SPAWNERS`.
 - [ ] Casser le spawner à la pioche : il se drope (comme spike_trap), et l'accumulateur
       redémarre à 0 si on le repose (comportement attendu, pas de sauvegarde de position
       liée au bloc en tant que tel).
-- [ ] Aucune erreur dans les logs au placement, au tick, ou à la casse du bloc.
-- [ ] `Ennemis : X/10` reste bloqué sur `/10` quel que soit le nombre d'ennemis tués (le
-      total n'est pas encore recalculé, c'est un `TODO` connu — voir
-      05-etat-et-problemes-connus.md).
+- [ ] Aucune erreur dans les logs au placement, au tick, ou à la casse du bloc — en particulier
+      liée à `PhaseTransitions`, `ModAttachments.ACTIVE_SPAWNERS` ou `COMBAT_SESSION`.
 
 ## L'écran de configuration du spawner (GUI custom, liste dynamique, avec réseau)
 
@@ -150,7 +162,9 @@ C'est le morceau le plus à risque de cette session (aucun test visuel possible 
 développement, ni pour la reconstruction dynamique des widgets à l'ajout/retrait de lignes) —
 à vérifier avec le plus d'attention.
 
-- [ ] Clic droit (sans shift) sur un spawner ouvre bien un écran, sans crash ni écran noir.
+- [ ] **En mode créatif**, clic droit (sans shift) sur un spawner ouvre bien un écran, sans
+      crash ni écran noir (voir aussi la section "Le Spawner" ci-dessus pour le test du
+      verrou créatif en survie).
 - [ ] L'écran affiche 4 champs numériques (Intervalle, Rayon de spawn, Première/Dernière vague
       active) avec leurs libellés, **2 lignes de composition** (un bouton avec le nom de
       l'ennemi + un champ nombre + un bouton "X" chacune), un bouton "+ Ajouter un ennemi" et

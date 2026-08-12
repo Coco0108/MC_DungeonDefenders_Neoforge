@@ -118,13 +118,38 @@ public class SpawnerBlockEntity extends BlockEntity {
     private int spawnRadius;
     private int waveStart = 1;
     private int waveEnd = ModAttachments.MAX_WAVE;
-    // 0 = aucune vague traitée pour l'instant ; force un premier resetForWave au démarrage
-    // du combat, puisque CURRENT_WAVE démarre à 1 et ne vaudra donc jamais 0.
-    private int lastWaveHandled;
+    // 0 = aucune session de combat traitée pour l'instant ; force un premier resetForWave à
+    // l'entrée en combat, puisque COMBAT_SESSION démarre à 0 mais est déjà incrémentée à 1
+    // avant que le premier serverTick en combat ne s'exécute (voir PhaseTransitions#enterCombat).
+    private int lastCombatSessionHandled;
     private int ticksSinceLastCheck;
 
     public SpawnerBlockEntity(BlockPos pos, BlockState state) {
         super(DungeonDefendersMod.SPAWNER_BE.get(), pos, state);
+    }
+
+    // --- REGISTRE DES SPAWNERS ACTIFS ---
+    // S'enregistre/se désenregistre auprès de la Level (voir ModAttachments.ACTIVE_SPAWNERS)
+    // pour que PhaseTransitions puisse sommer tous les spawners actifs à l'entrée en
+    // Construction. setLevel(...) est appelé une fois par instance de block entity, à la pose
+    // comme au chargement d'un chunk ; setRemoved() à la casse (et peut-être au déchargement
+    // d'un chunk selon les cas — sans conséquence : une nouvelle instance se réenregistrera au
+    // rechargement du chunk).
+
+    @Override
+    public void setLevel(Level level) {
+        super.setLevel(level);
+        if (level instanceof ServerLevel) {
+            level.getData(ModAttachments.ACTIVE_SPAWNERS).add(this.worldPosition);
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        if (this.level instanceof ServerLevel) {
+            this.level.getData(ModAttachments.ACTIVE_SPAWNERS).remove(this.worldPosition);
+        }
     }
 
     // --- LECTURE (GUI de config) ---
@@ -174,7 +199,7 @@ public class SpawnerBlockEntity extends BlockEntity {
             for (SpawnEntry entry : this.entries) {
                 entry.resetForWave(multiplier);
             }
-            this.lastWaveHandled = this.level.getData(ModAttachments.CURRENT_WAVE);
+            this.lastCombatSessionHandled = this.level.getData(ModAttachments.COMBAT_SESSION);
         }
 
         setChanged();
@@ -199,12 +224,13 @@ public class SpawnerBlockEntity extends BlockEntity {
             return;
         }
 
-        if (currentWave != blockEntity.lastWaveHandled) {
+        int combatSession = serverLevel.getData(ModAttachments.COMBAT_SESSION);
+        if (combatSession != blockEntity.lastCombatSessionHandled) {
             double multiplier = DifficultyScaling.getMultiplier(serverLevel);
             for (SpawnEntry entry : blockEntity.entries) {
                 entry.resetForWave(multiplier);
             }
-            blockEntity.lastWaveHandled = currentWave;
+            blockEntity.lastCombatSessionHandled = combatSession;
             blockEntity.setChanged();
         }
 
@@ -248,7 +274,7 @@ public class SpawnerBlockEntity extends BlockEntity {
         output.putInt("SpawnRadius", this.spawnRadius);
         output.putInt("WaveStart", this.waveStart);
         output.putInt("WaveEnd", this.waveEnd);
-        output.putInt("LastWaveHandled", this.lastWaveHandled);
+        output.putInt("LastCombatSessionHandled", this.lastCombatSessionHandled);
 
         ValueOutput.TypedOutputList<SpawnEntry> list = output.list("Entries", SpawnEntry.CODEC);
         for (SpawnEntry entry : this.entries) {
@@ -263,7 +289,7 @@ public class SpawnerBlockEntity extends BlockEntity {
         this.spawnRadius = input.getIntOr("SpawnRadius", 0);
         this.waveStart = input.getIntOr("WaveStart", 1);
         this.waveEnd = input.getIntOr("WaveEnd", ModAttachments.MAX_WAVE);
-        this.lastWaveHandled = input.getIntOr("LastWaveHandled", 0);
+        this.lastCombatSessionHandled = input.getIntOr("LastCombatSessionHandled", 0);
 
         ValueInput.TypedInputList<SpawnEntry> savedEntries = input.listOrEmpty("Entries", SpawnEntry.CODEC);
         if (!savedEntries.isEmpty()) {

@@ -79,14 +79,21 @@ vérifie la CI.
   zombie/squelette de la première version. Réseau custom C2S (`SpawnerConfigPayload`, avec une
   liste de longueur variable via `ByteBufCodecs.collection` + `ModNetworking`), revérifié côté
   serveur (portée, existence du bloc, validité de chaque ordinal d'ennemi reçu) avant
-  application — appliquée **immédiatement** (pas d'attente de la prochaine vague). Détail
-  complet dans
+  application — appliquée **immédiatement** (pas d'attente de la prochaine vague). **Réservé
+  au mode créatif** (`player.isCreative()`) : une vraie partie est censée charger des
+  spawners déjà configurés, pas les reconfigurer en jouant. Détail complet dans
   [02-gameplay.md](02-gameplay.md#lécran-de-configuration--menu-network-clientguiscreenspawnerconfigscreenjava).
 - ✅ Aperçu de composition du spawner en phase Construction (`SpawnerBlockEntityRenderer`) :
   total d'ennemis à venir + détail par type affiché au-dessus du bloc, **visible à travers les
   murs** (`Font.DisplayMode.SEE_THROUGH`), comme dans le jeu de référence. Caché en phase
   Combat, texte seul pour l'instant (pas d'icône par type). Détail dans
   [02-gameplay.md](02-gameplay.md#laperçu-de-composition-en-phase-construction--spawnerblockentityrendererjava).
+- ✅ Une vague se termine maintenant toute seule : `wave_enemies_total` est calculé pour de
+  vrai (registre des spawners actifs, `ModAttachments.ACTIVE_SPAWNERS`, sommé à l'entrée en
+  Construction), et dès que `wave_enemies_killed` l'atteint, retour automatique en
+  Construction (`ModEvents.onMonsterDeath` → `PhaseTransitions.enterBuild`). Le
+  **déclenchement** du Combat reste le harnais de test, voir "Ce qui reste" ci-dessous. Détail
+  dans [02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath).
 
 ## Corrections apportées
 
@@ -176,19 +183,43 @@ de coût en mana, pas de lien avec un vrai sort ou une vraie action de réparati
 n'existent pas non plus côté gameplay). C'est un pur placeholder visuel, en attendant les
 images promises pour chaque slot et la logique derrière.
 
-### Les vagues ne se déroulent toujours pas vraiment
+### Les vagues ne se déroulent toujours pas complètement
 
-`current_wave` existe et s'affiche (`1/5`), mais rien ne le fait avancer : pas de condition
-pour passer à la vague suivante, pas de victoire à la vague 5 ni de défaite si le cristal
-tombe avant. Le `spawner` fait maintenant apparaître de vrais ennemis et
-`wave_enemies_killed` compte vraiment les morts (voir
-[02-gameplay.md](02-gameplay.md#le-spawner--blockspawnerblockjava)), mais :
+`current_wave` existe et s'affiche (`1/5`), mais rien ne le fait avancer — pas de victoire à
+la vague 5, pas de défaite si le cristal tombe avant. La partie "une vague se termine
+correctement" est faite (`wave_enemies_total` juste, retour auto en Construction, voir "Ce
+qui est implémenté" plus haut et
+[02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath)),
+mais :
 
-- `game_phase` ne bascule que via le harnais de test (clic droit sur le `SpawnerBlock`) — pas
-  de vrai déclencheur de combat, pas de retour automatique à `BUILD` une fois la vague nettoyée ;
-- `wave_enemies_total` reste bloqué à sa valeur par défaut (`10`) : personne ne somme les
-  poids des spawners actifs de la carte au démarrage du combat ;
-- rien ne fait avancer `current_wave` quand `wave_enemies_killed` atteint `wave_enemies_total`.
+- `game_phase` ne bascule vers **Combat** que via le harnais de test (clic droit sur le
+  `SpawnerBlock`) — pas de vrai déclencheur (bouton dans une taverne/hub, minuteur...) ;
+- rien ne fait avancer `current_wave` quand une vague se termine — on revient en Construction
+  sur la **même** vague, indéfiniment ;
+- pas de condition de victoire (dernière vague nettoyée) ni de défaite (cristal détruit).
+
+Le registre `ModAttachments.ACTIVE_SPAWNERS` ne reflète que les spawners **actuellement
+chargés** — fiable en test (le joueur est toujours à proximité), mais deviendra pleinement
+correct seulement une fois qu'un système force-chargera toute la zone de jeu pendant une
+partie (voir "Système de maps/structures" ci-dessous) plutôt que de compter sur le chargement
+naturel autour du joueur.
+
+### Système de maps/structures (pas commencé, discuté mais pas conçu en détail)
+
+Discuté avec le joueur en préparant le déroulement des vagues, pas encore de code : l'idée est
+qu'une map soit une **structure** Minecraft (`.nbt`, comme un bloc de structure vanilla)
+construite en créatif — spawners déjà configurés inclus, puisque le format structure
+sauvegarde aussi les données NBT des block entities. Lancer une partie chargerait cette
+structure à un endroit fixe et y téléporterait le joueur (probablement depuis un hub/"taverne"
+central). Une taille maximale de map serait définie à l'avance, et toute cette zone serait
+**force-chargée** (chunk tickets, indépendants de la position du joueur) tant qu'un joueur y
+est, relâchée au retour à la taverne — nécessaire parce que Minecraft ne charge/tick
+normalement que les chunks proches d'un joueur, ce qui ne suffit pas pour une arène fixe où
+plusieurs spawners peuvent être loin les uns des autres (voir plus haut, `ACTIVE_SPAWNERS`).
+
+C'est le prérequis pour que le verrou créatif du GUI de config (voir plus haut) ait vraiment
+son plein effet : tant que ce système n'existe pas, rien n'empêche techniquement de construire
+et tester une map "à la main" en créatif dans n'importe quel monde.
 
 ### Le GUI du spawner ne choisit que parmi une liste fermée d'ennemis (SpawnableEnemy)
 
@@ -267,11 +298,13 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 7. Définir un vrai système d'expérience/score/niveaux : comment `EXPERIENCE`, `SCORE` et
    `LEVEL` se nourrissent l'un l'autre (aujourd'hui trois compteurs indépendants, tous
    bloqués à leur valeur par défaut, comme le mana avant `ManaTestWandItem`).
-8. Définir le déroulement des vagues : un vrai déclencheur pour passer en `COMBAT` (à la
-   place du harnais de test au clic droit), sommer les poids des spawners actifs dans
-   `WAVE_ENEMIES_TOTAL` au démarrage, faire avancer `CURRENT_WAVE` et repasser en `BUILD`
-   quand `WAVE_ENEMIES_KILLED` atteint `WAVE_ENEMIES_TOTAL`, victoire à la dernière vague,
-   défaite si le cristal tombe avant.
+8. ~~Définir le déroulement des vagues~~ — partiellement fait : `WAVE_ENEMIES_TOTAL` est
+   maintenant juste (registre des spawners actifs) et le retour en `BUILD` est automatique
+   dès que `WAVE_ENEMIES_KILLED` l'atteint (voir "Ce qui est implémenté" et
+   [02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath)).
+   Reste ouvert : un vrai déclencheur pour **passer** en `COMBAT` (à la place du harnais de
+   test), faire avancer `CURRENT_WAVE` (on repasse en Construction sur la même vague pour
+   l'instant), victoire à la dernière vague, défaite si le cristal tombe avant.
 9. Donner un moyen de choisir/changer `ModAttachments.CHARACTER_NAME` (commande, écran de
    création de personnage...) — sans ça, il reste égal au pseudo Minecraft en permanence.
 10. Une fois les images des 4 compétences fournies : les afficher dans `AbilitySlotsOverlay`
@@ -293,3 +326,8 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
     (`SpawnerBlockEntityRenderer`, phase Construction) — texte seul pour l'instant. Piste
     envisagée : réutiliser les textures vanilla des œufs d'invocation
     (`zombie_spawn_egg`/`skeleton_spawn_egg`) pour ne pas dépendre d'assets custom.
+15. Système de maps/structures : sauvegarder une map construite en créatif comme structure
+    `.nbt`, la charger + téléporter le joueur au lancement d'une partie (probablement depuis
+    un hub central), force-charger toute sa zone (taille max définie à l'avance) tant que la
+    partie dure. Voir la section dédiée dans "Ce qui reste" ci-dessus — c'est aussi ce qui
+    rendra `ACTIVE_SPAWNERS` pleinement fiable (indépendant de la position du joueur).

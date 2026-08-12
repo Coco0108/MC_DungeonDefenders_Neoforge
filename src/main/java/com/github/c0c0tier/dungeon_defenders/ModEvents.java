@@ -3,6 +3,8 @@ package com.github.c0c0tier.dungeon_defenders;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackEterniaCrystalGoal;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
@@ -73,8 +75,18 @@ public class ModEvents {
             return;
         }
 
-        int killed = level.getData(ModAttachments.WAVE_ENEMIES_KILLED);
-        level.setData(ModAttachments.WAVE_ENEMIES_KILLED, killed + 1);
+        int killed = level.getData(ModAttachments.WAVE_ENEMIES_KILLED) + 1;
+        level.setData(ModAttachments.WAVE_ENEMIES_KILLED, killed);
         level.syncData(ModAttachments.WAVE_ENEMIES_KILLED);
+
+        // total > 0 : évite un retour en Construction immédiat si aucun spawner actif n'a
+        // encore pu contribuer au total (ex. mort d'un monstre resté du combat précédent
+        // avant qu'un spawner n'ait retick).
+        int total = level.getData(ModAttachments.WAVE_ENEMIES_TOTAL);
+        if (total > 0 && killed >= total) {
+            PhaseTransitions.enterBuild(level);
+            level.players().forEach(player -> player.sendSystemMessage(
+                    Component.translatable("dungeon_defenders.spawner.wave_cleared")));
+        }
     }
 }

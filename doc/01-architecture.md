@@ -22,7 +22,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── GamePhase.java                # Enum des phases de partie (BUILD, COMBAT)
     │   │   ├── GameDifficulty.java           # Enum de difficulté (EASY, NORMAL, HARD)
     │   │   ├── DifficultyScaling.java        # Multiplicateur difficulté x vague, pour les spawners
-    │   │   └── SpawnableEnemy.java           # Liste fermée des ennemis choisissables dans un spawner
+    │   │   ├── SpawnableEnemy.java           # Liste fermée des ennemis choisissables dans un spawner
+    │   │   └── PhaseTransitions.java         # enterCombat/enterBuild : transitions de phase centralisées
     │   ├── menu/
     │   │   ├── SpawnerConfigMenu.java        # AbstractContainerMenu sans slot, transmet juste le BlockPos
     │   │   └── SpawnerConfigMenuProvider.java # MenuProvider ouvert par SpawnerBlock au clic droit
@@ -146,7 +147,8 @@ Chargement FML
    ├─ RegisterEvent(ITEM)              → eternia_crystal, spike_trap, spawner (BlockItem)
    ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana, experience, current_wave,
    │                                      wave_enemies_total, wave_enemies_killed, game_phase,
-   │                                      score, level, character_name, difficulty
+   │                                      score, level, character_name, difficulty,
+   │                                      combat_session, active_spawners
    ├─ RegisterEvent(MENU)              → spawner_config (MenuType)
    ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal, spawner (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
@@ -161,11 +163,13 @@ Bus de jeu (NeoForge.EVENT_BUS)
    ├─ ModEvents.onMonsterSpawn(EntityJoinLevelEvent)
    ├─ ModEvents.onPlayerJoin(EntityJoinLevelEvent)
    └─ ModEvents.onMonsterDeath(LivingDeathEvent)
+        └─ si wave_enemies_killed >= wave_enemies_total : PhaseTransitions.enterBuild(level)
 
 Chaque SpawnerBlockEntity, en plus de ces événements :
+   ├─ setLevel(...)/setRemoved()   → s'ajoute/se retire de ModAttachments.ACTIVE_SPAWNERS
    └─ BlockEntityTicker [serveur]  → SpawnerBlockEntity.serverTick(...), une fois par tick de bloc
 
-Clic droit sur un SpawnerBlock (voir 02-gameplay.md) :
+Clic droit sur un SpawnerBlock, sans shift, en créatif uniquement (voir 02-gameplay.md) :
    └─ player.openMenu(SpawnerConfigMenuProvider)
         ├─ Serveur : SpawnerConfigMenuProvider#writeClientSideData -> écrit le BlockPos
         └─ Client : IContainerFactory reconstruit SpawnerConfigMenu, RegisterMenuScreensEvent

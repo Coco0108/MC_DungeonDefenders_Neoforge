@@ -496,9 +496,11 @@ un. `serverTick(...)` :
    combat.
 2. Sort aussi si `CURRENT_WAVE` est en dehors de `[waveStart, waveEnd]` — un spawner peut être
    configuré pour ne s'activer que sur une plage de vagues.
-3. Si la vague a changé depuis le dernier passage (`lastWaveHandled`), recalcule le plafond de
-   chaque type (`resetForWave`, voir plus bas) et remet sa progression à zéro : une nouvelle
-   vague, une nouvelle chance de spawn pour chaque type.
+3. Si une nouvelle session de combat a commencé depuis le dernier passage
+   (`lastCombatSessionHandled` vs `ModAttachments.COMBAT_SESSION`, voir "Le déroulement d'une
+   vague" plus bas), recalcule le plafond de chaque type (`resetForWave`, voir plus bas) et
+   remet sa progression à zéro : une nouvelle session de combat, une nouvelle chance de spawn
+   pour chaque type.
 4. Ne fait tourner l'algorithme qu'une fois toutes les `intervalTicks` (20 par défaut, soit
    une seconde), pas à chaque tick, pour rester lisible.
 5. Applique l'algorithme ci-dessus, une fois par entrée de la composition.
@@ -547,10 +549,20 @@ seulement plus nombreux.
 
 Comme pour le Cristal d'Eternia et `ManaTestWandItem`, un harnais de test plutôt qu'une vraie
 mécanique : **shift + clic droit** sur le `SpawnerBlock` bascule `ModAttachments.GAME_PHASE`
-entre `BUILD` et `COMBAT` (`level.setData(...)` + `level.syncData(...)`, message système
-confirmant la nouvelle phase). C'est le seul moyen de déclencher le combat pour l'instant — le
-vrai déclencheur (et la transition retour vers `BUILD` en fin de vague) reste à faire. Un clic
-droit **sans shift** ouvre l'écran de configuration (voir plus bas).
+entre `BUILD` et `COMBAT`, message système confirmant la nouvelle phase. C'est le seul moyen
+de **déclencher** le combat pour l'instant — le vrai déclencheur reste à faire (voir
+05-etat-et-problemes-connus.md). Le **retour** automatique vers `BUILD` en fin de vague, lui,
+est fait : voir [Le déroulement d'une
+vague](#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath) plus bas.
+
+Le passage effectif de phase (peu importe le déclencheur, harnais ou fin de vague) passe
+toujours par `init/PhaseTransitions.java`, pas par un `level.setData(GAME_PHASE, ...)` direct
+— ça centralise la remise à zéro des compteurs qui va avec (voir plus bas), pour que le
+harnais de test et le futur vrai déclencheur de combat se comportent pareil.
+
+Un clic droit **sans shift** ouvre l'écran de configuration (voir plus bas) — **réservé au
+mode créatif**, comme un bloc de structure vanilla : la configuration d'un spawner est censée
+être figée une fois la map construite (voir "Ce qui n'est PAS dans ce GUI" plus bas).
 
 ### L'écran de configuration — `menu/`, `network/`, `client/gui/screen/SpawnerConfigScreen.java`
 
@@ -632,6 +644,12 @@ nouvelles entrées.
 - Pas de défilement (scroll) si la liste d'ennemis grandit au point de dépasser la hauteur de
   l'écran — non géré pour l'instant, acceptable tant que `SpawnableEnemy` ne contient que
   deux valeurs.
+- **Pas accessible en survie** (`SpawnerBlock.openConfigScreen` vérifie `player.isCreative()`
+  avant d'ouvrir l'écran, message système sinon) : l'idée à terme est que les maps soient des
+  structures pré-construites (spawners déjà configurés en créatif, puis sauvegardées) posées
+  au lancement d'une partie — pas un réglage que le joueur ferait pendant qu'il joue. Ce
+  verrou permet aussi de garder simple le calcul de `wave_enemies_total` (voir plus bas) : pas
+  besoin de le recalculer à chaque reconfiguration en pleine partie, puisque ça n'arrive plus.
 
 ### L'aperçu de composition en phase Construction — `SpawnerBlockEntityRenderer.java`
 
@@ -666,15 +684,63 @@ prochaine vague fera spawn, tant que la difficulté ne change pas entre-temps.
 ### Le compteur d'ennemis tués — `ModEvents.onMonsterDeath`
 
 `WaveEnemiesOverlay` lisait déjà `ModAttachments.WAVE_ENEMIES_KILLED`, mais rien ne
-l'incrémentait. Un nouveau handler `LivingDeathEvent` dans `ModEvents` : si l'entité qui
-meurt est un `Monster` et que la phase est `COMBAT`, incrémente le compteur et le
-synchronise. Pas de filtre sur "a été spawné par un `SpawnerBlockEntity`" — tout monstre mort
-en combat compte, ce qui suffit au sens du HUD ("ennemis tués dans la vague").
+l'incrémentait. Un handler `LivingDeathEvent` dans `ModEvents` : si l'entité qui meurt est un
+`Monster` et que la phase est `COMBAT`, incrémente le compteur et le synchronise. Pas de
+filtre sur "a été spawné par un `SpawnerBlockEntity`" — tout monstre mort en combat compte, ce
+qui suffit au sens du HUD ("ennemis tués dans la vague").
 
-`ModAttachments.WAVE_ENEMIES_TOTAL`, en revanche, **n'est toujours pas branché** : chaque
-spawner connaît maintenant son propre plafond total (somme des `effectiveTotal` de ses
-entrées), mais rien ne les additionne à l'échelle de la carte — il faudrait un registre des
-spawners actifs, pas juste la logique locale à chacun. Repoussé volontairement, voir
+### Le déroulement d'une vague — `init/PhaseTransitions.java`, `ModEvents.onMonsterDeath`
+
+Ce qui manquait pour qu'une vague se déroule vraiment : un total juste (`WAVE_ENEMIES_TOTAL`
+était bloqué à sa valeur par défaut), et un retour automatique en Construction une fois ce
+total atteint. Le déclenchement du Combat, lui, reste le harnais de test (voir plus haut) — ce
+morceau ne couvre que "le total est correct" et "la vague se termine toute seule".
+
+**Le registre des spawners actifs** (`ModAttachments.ACTIVE_SPAWNERS`, un `Set<BlockPos>` sur
+la `Level`) — nécessaire parce que calculer le total demande de connaître **tous** les
+spawners de la carte, pas juste "moi-même" comme le fait déjà l'aperçu au-dessus de chaque
+bloc (voir plus haut). Chaque `SpawnerBlockEntity` s'y ajoute dans `setLevel(...)` (appelé une
+fois par instance, à la pose comme au chargement d'un chunk) et s'en retire dans
+`setRemoved()`. Ni persistant ni synchronisé : usage strictement serveur, et un spawner non
+chargé ne peut de toute façon pas spawn — l'exclure du registre est donc cohérent, pas un bug.
+Ce registre ne reflète que "les spawners actuellement chargés" ; il deviendra pleinement fiable
+une fois qu'un système force-chargera toute la zone de jeu pendant une partie (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)).
+
+**Le calcul du total** (`PhaseTransitions.enterBuild(...)`) : à chaque entrée en Construction,
+somme sur tous les spawners du registre (dont la vague courante tombe dans leur
+`[waveStart, waveEnd]`) la même formule que l'aperçu déjà affiché au-dessus de chaque bloc
+(`max(1, round(baseCount × multiplier))`). Recalculé **une seule fois**, à l'entrée en
+Construction — pas en continu — parce que le GUI de config n'est plus accessible en pleine
+partie (voir plus haut, verrou créatif) : rien ne peut changer la composition d'un spawner
+une fois la Construction commencée, donc pas besoin de retour en arrière.
+
+**La session de combat** (`ModAttachments.COMBAT_SESSION`, un compteur incrémenté à chaque
+entrée en Combat) : chaque spawner relance sa propre progression de spawn (`resetForWave`)
+au début de **chaque** session de combat, plutôt que seulement quand `CURRENT_WAVE` change
+(remplace l'ancien déclencheur `lastWaveHandled`, désormais `lastCombatSessionHandled`). Sans
+ça, rebasculer Combat → Construction → Combat sur la même vague — ce qui va arriver tout le
+temps avec le harnais de test actuel, puisque rien ne fait encore avancer `CURRENT_WAVE` — ne
+referait plus rien spawn : chaque spawner penserait avoir déjà fini cette vague.
+
+**`PhaseTransitions.java`** centralise ces deux transitions (`enterCombat`/`enterBuild`) pour
+que le harnais de test et le retour automatique de fin de vague passent par le même code,
+plutôt que de dupliquer la remise à zéro des compteurs à deux endroits :
+
+- `enterCombat(level)` : phase → `COMBAT`, incrémente `COMBAT_SESSION`, remet
+  `WAVE_ENEMIES_KILLED` à 0.
+- `enterBuild(level)` : phase → `BUILD`, recalcule `WAVE_ENEMIES_TOTAL` à partir du registre.
+
+**Le retour automatique** (`ModEvents.onMonsterDeath`) : après avoir incrémenté
+`WAVE_ENEMIES_KILLED`, si `killed >= total` (et `total > 0`, pour ne pas basculer
+immédiatement si aucun spawner n'a encore pu contribuer), appelle `enterBuild(...)` et
+diffuse un message à tous les joueurs (`dungeon_defenders.spawner.wave_cleared`, même
+mécanisme que le message de destruction du cristal).
+
+Ce qui reste **hors de ce morceau**, volontairement : rien ne fait encore avancer
+`CURRENT_WAVE` (la vague reste la même après un retour en Construction), pas de condition de
+victoire à la dernière vague ni de défaite si le cristal tombe avant, et le déclenchement du
+Combat reste le harnais de test. Voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 
 ### Apparence
