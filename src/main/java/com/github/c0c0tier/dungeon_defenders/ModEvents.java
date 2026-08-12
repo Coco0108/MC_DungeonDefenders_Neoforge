@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackEterniaCrystalGoal;
+import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
@@ -8,6 +9,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -24,19 +26,27 @@ public class ModEvents {
 
     @SubscribeEvent
     public static void onMonsterSpawn(EntityJoinLevelEvent event) {
-        // Généralisé de Zombie à Monster (le goal n'exige qu'un PathfinderMob, que Monster
-        // étend) pour couvrir le squelette sans avoir à énumérer chaque type un par un.
+        // Généralisé de Zombie à Monster (les deux goals n'exigent qu'un PathfinderMob, que
+        // Monster étend) pour couvrir tout futur ennemi sans avoir à énumérer chaque type.
         if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Monster monster)) {
             return;
         }
 
         // EntityJoinLevelEvent se déclenche aussi au rechargement d'un chunk ou au
         // changement de dimension : sans ce test, un même monstre cumulerait plusieurs
-        // fois le goal et frapperait le cristal plusieurs fois par seconde.
+        // fois le goal et attaquerait le cristal plusieurs fois par seconde.
         boolean alreadyAdded = monster.goalSelector.getAvailableGoals().stream()
-                .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal);
+                .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal
+                        || wrapped.getGoal() instanceof RangedAttackEterniaCrystalGoal);
+        if (alreadyAdded) {
+            return;
+        }
 
-        if (!alreadyAdded) {
+        // Les squelettes (et tout futur AbstractSkeleton) attaquent à distance avec l'arc
+        // déjà équipé par défaut ; les autres, au corps à corps.
+        if (monster instanceof AbstractSkeleton) {
+            monster.goalSelector.addGoal(1, new RangedAttackEterniaCrystalGoal(monster));
+        } else {
             monster.goalSelector.addGoal(1, new AttackEterniaCrystalGoal(monster));
         }
     }

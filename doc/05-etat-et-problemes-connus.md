@@ -67,8 +67,14 @@ vérifie la CI.
   harnais de test qui bascule `BUILD`/`COMBAT`. Incrémente aussi
   `ModAttachments.WAVE_ENEMIES_KILLED` via un nouveau handler `LivingDeathEvent`.
 - ✅ Squelette ajouté comme deuxième ennemi (réutilise `EntityType.SKELETON` vanilla, comme le
-  zombie) : cible le cristal comme n'importe quel `Monster`, et sort du spawner. Aucune
-  spécificité de comportement (tir à distance, etc.) pour l'instant — voir "Ce qui reste".
+  zombie) : cible le cristal comme n'importe quel `Monster`, et sort du spawner.
+- ✅ Comportement d'archer pour le squelette (`entity/ai/RangedAttackEterniaCrystalGoal.java`,
+  branché dans `ModEvents.onMonsterSpawn` pour tout `AbstractSkeleton`) : s'arrête à distance
+  de tir (10 blocs) plutôt que de venir au corps à corps, tend l'arc (pose vanilla), puis tire
+  une vraie flèche visuelle sur le cristal — les dégâts (3 PV, contre 5 au corps à corps) sont
+  appliqués directement au cristal, même logique "harnais" que `AttackEterniaCrystalGoal`.
+  Pensé pour être réutilisable tel quel par un futur ennemi à distance. Détail dans
+  [02-gameplay.md](02-gameplay.md#le-goal-à-distance--entityairangedattacketerniacrystalgoaljava).
 - ✅ Difficulté de la partie : data attachment `difficulty` sur la `Level` (ordinal de l'enum
   `GameDifficulty` : `EASY`/`NORMAL`/`HARD`), démarre à `NORMAL` — censée être choisie au
   lancement de la map, mais aucun écran pour le faire n'existe encore.
@@ -317,9 +323,9 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
     [02-gameplay.md](02-gameplay.md#lécran-de-configuration--menu-network-clientguiscreenspawnerconfigscreenjava).
     Reste ouvert : gérer le défilement si `SpawnableEnemy` grandit au point de dépasser la
     hauteur de l'écran (non géré pour l'instant, deux valeurs seulement).
-12. Donner au squelette (et à tout futur ennemi à distance) un vrai comportement d'archer —
-    il utilise pour l'instant le même goal de mêlée que le zombie (`AttackEterniaCrystalGoal`
-    le fait juste taper le cristal au corps à corps), pas d'attaque à l'arc.
+12. ~~Donner au squelette un vrai comportement d'archer~~ — fait :
+    `RangedAttackEterniaCrystalGoal` (voir "Ce qui est implémenté" et
+    [02-gameplay.md](02-gameplay.md#le-goal-à-distance--entityairangedattacketerniacrystalgoaljava)).
 13. Donner un moyen de choisir la difficulté au lancement de la map
     (`ModAttachments.DIFFICULTY`) — reste bloquée à `NORMAL`, aucun écran de lancement de
     partie n'existe encore.

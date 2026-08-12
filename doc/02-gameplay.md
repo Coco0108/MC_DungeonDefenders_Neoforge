@@ -160,26 +160,56 @@ revient vers le cristal.
 
 Avec 100 PV par défaut, un zombie seul détruit le cristal en 20 secondes.
 
+### Le goal à distance — `entity/ai/RangedAttackEterniaCrystalGoal.java`
+
+Variante pour le squelette : étend aussi `MoveToBlockGoal`, même principe (`isValidTarget`,
+`getMoveToTarget`), mais s'arrête à **portée de tir** plutôt que de venir se coller au
+cristal, tend l'arc, puis tire.
+
+| Paramètre | Valeur | Rôle |
+|---|---|---|
+| `SPEED_MODIFIER` / `SEARCH_RANGE` | `1.2D` / `16` | identiques au corps à corps |
+| `acceptedDistance` | `SHOOT_RANGE = 10.0D` | s'arrête à distance de tir, n'avance plus une fois dedans |
+| `DAMAGE_PER_HIT` | `3` | volontairement inférieur au corps à corps (`5`), valeur provisoire |
+| `DRAW_TICKS` | `20` | temps de tension de l'arc avant le tir (visuel) |
+| `TICKS_BETWEEN_SHOTS` | `20` | pause après un tir avant de retendre — cycle total ≈ 2 s, plus lent que le corps à corps |
+
+Dans `tick()`, une fois à portée (`isReachedTarget()`) : le mob se tourne vers le cristal
+(`LookControl#setLookAt`, nécessaire une fois immobile — `MoveToBlockGoal` ne le fait plus
+après l'approche), puis alterne tension (`mob.startUsingItem(MAIN_HAND)`, ce qui déclenche la
+pose vanilla "arc tendu" puisque le squelette porte déjà un arc par défaut) et tir. Au tir,
+`crystal.damage(3)` est appliqué **directement** au cristal, sur le même principe "harnais" que
+le corps à corps — la flèche réellement lancée (`spawnArrow`, une vraie entité `Arrow`, avec
+le calcul d'arc `dy + distance × 0.2` repris du tir vanilla) n'est là que pour le **visuel** du
+tir, ce n'est pas sa collision qui inflige les dégâts (le cristal n'étant pas une entité, une
+flèche vanilla ne saurait pas le "toucher" toute seule).
+
+> Pensé pour être réutilisable tel quel par un futur ennemi à distance : rien dans cette
+> classe n'est spécifique au squelette, qui fournit juste le `PathfinderMob` avec son arc déjà
+> équipé par défaut.
+
 ### L'attribution — `ModEvents.onMonsterSpawn`
 
 Écoute `EntityJoinLevelEvent` sur le bus de jeu. Pour chaque `Monster` rejoignant un monde
-côté serveur (n'importe lequel — zombie, squelette, tout futur ajout), le goal est ajouté au
-`goalSelector` **en priorité 1** (donc au-dessus de la plupart des objectifs vanilla).
+côté serveur, un goal est ajouté au `goalSelector` **en priorité 1** (donc au-dessus de la
+plupart des objectifs vanilla) — lequel dépend du type : `AbstractSkeleton` (squelette, et
+tout futur sous-type) reçoit `RangedAttackEterniaCrystalGoal`, tout le reste reçoit
+`AttackEterniaCrystalGoal` (corps à corps).
 
-> `Monster` plutôt que `PathfinderMob` : le goal n'exige techniquement qu'un `PathfinderMob`,
-> mais cette classe couvre aussi les mobs passifs (animaux, villageois...). `Monster` est la
-> bonne frontière sémantique — tout ce qui est hostile, rien de passif.
+> `Monster` plutôt que `PathfinderMob` : les deux goals n'exigent techniquement qu'un
+> `PathfinderMob`, mais cette classe couvre aussi les mobs passifs (animaux, villageois...).
+> `Monster` est la bonne frontière sémantique — tout ce qui est hostile, rien de passif.
 
 `EntityJoinLevelEvent` se déclenche aussi au rechargement d'un chunk et au changement de
-dimension. Le code vérifie donc d'abord qu'aucun `AttackEterniaCrystalGoal` n'est déjà
-présent :
+dimension. Le code vérifie donc d'abord qu'aucun des deux goals n'est déjà présent :
 
 ```java
 monster.goalSelector.getAvailableGoals().stream()
-        .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal)
+        .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal
+                || wrapped.getGoal() instanceof RangedAttackEterniaCrystalGoal)
 ```
 
-Sans ce test, un même monstre cumulerait plusieurs exemplaires du goal et frapperait le
+Sans ce test, un même monstre cumulerait plusieurs exemplaires du goal et attaquerait le
 cristal plusieurs fois par seconde.
 
 ## Onglet créatif

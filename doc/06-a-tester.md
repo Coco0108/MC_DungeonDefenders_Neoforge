@@ -155,10 +155,12 @@ puisqu'elle en dépend pour entrer en Combat autrement qu'avec le harnais de tes
       plafond atteint (15 zombies et 5 squelettes par défaut, sur la vague 1 avec la
       difficulté Normal) — le spawner ne doit **pas** spawn indéfiniment tant qu'on reste en
       combat.
-- [ ] Le squelette apparu se comporte comme le zombie : il converge à pied vers le cristal et
-      le frappe au corps à corps une fois arrivé — **pas de tir à l'arc**, c'est un manque
-      connu (voir 05-etat-et-problemes-connus.md), pas un bug si vous vous attendiez à le
-      voir tirer.
+- [ ] Le squelette apparu **s'arrête à distance** du cristal (ne vient plus au corps à
+      corps), lève son arc (pose vanilla "arc tendu"), puis tire une flèche visible vers le
+      cristal — un message de dégâts doit apparaître côté serveur (`crystal.damage(3)`), même
+      si la flèche elle-même ne "touche" pas physiquement le cristal (voir
+      02-gameplay.md pour pourquoi). Nouveau comportement à vérifier en priorité dans cette
+      section — voir aussi la section dédiée ci-dessous.
 - [ ] Tuer un zombie ou un squelette apparu ainsi (ou n'importe quel autre monstre)
       **pendant que la phase est Combat** : le texte `Ennemis : X/20` (total = 15+5 par défaut,
       sur un seul spawner) doit voir son `X` s'incrémenter, et la jauge orange se remplir.
@@ -192,6 +194,36 @@ puisqu'elle en dépend pour entrer en Combat autrement qu'avec le harnais de tes
       liée au bloc en tant que tel).
 - [ ] Aucune erreur dans les logs au placement, au tick, ou à la casse du bloc — en particulier
       liée à `PhaseTransitions`, `ModAttachments.ACTIVE_SPAWNERS` ou `COMBAT_SESSION`.
+
+## Le squelette archer (`RangedAttackEterniaCrystalGoal`)
+
+Premier ennemi à distance du mod, et première flèche jamais lancée par le mod — à vérifier
+avec attention, aucun test visuel possible pendant le développement.
+
+- [ ] Faire spawn un squelette (spawner ou `/summon minecraft:skeleton`) à plus de 10 blocs du
+      cristal : il doit **courir vers le cristal**, puis **s'arrêter** avant d'être collé
+      dessus (autour de 10 blocs, pas au corps à corps comme le zombie).
+- [ ] Une fois arrêté : le squelette doit **lever son arc** (l'animation vanilla "arc tendu",
+      la même que quand il vise un joueur) pendant environ 1 seconde, puis **tirer une
+      flèche visible** en direction du cristal.
+- [ ] La flèche tirée doit **voler vers le cristal** (trajectoire à peu près dans la bonne
+      direction, avec un peu d'arc vers le haut) — elle peut manquer visuellement ou passer à
+      travers/à côté du cristal, **ce n'est pas un bug** : les dégâts sont appliqués
+      directement au cristal au moment du tir, indépendamment de la trajectoire réelle de la
+      flèche (voir 02-gameplay.md).
+- [ ] Le cristal doit perdre **3 PV** à chaque tir (message `dungeon_defenders.eternia_crystal
+      .damaged`), au rythme d'environ un tir toutes les 2 secondes (tension + pause).
+- [ ] Faire venir un squelette très près du cristal (le pousser, ou le faire spawn juste à
+      côté) : il doit quand même tirer (pas de recul particulier attendu pour l'instant), pas
+      de crash ni de comportement bizarre à bout portant.
+- [ ] Interrompre le squelette en pleine tension (le pousser hors de portée juste après qu'il
+      commence à lever l'arc) : il doit **annuler proprement** la tension (l'animation d'arc
+      tendu doit s'arrêter) et reprendre l'approche, pas rester bloqué en position de tir.
+- [ ] Tuer le squelette pendant qu'il tire : pas d'exception dans les logs.
+- [ ] Un zombie à proximité doit continuer à se comporter normalement (corps à corps) — les
+      deux comportements ne doivent pas se mélanger entre types d'ennemis.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `RangedAttackEterniaCrystalGoal`
+      ou à la création de l'entité `Arrow`.
 
 ## L'écran de configuration du spawner (GUI custom, liste dynamique, avec réseau)
 
