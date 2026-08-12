@@ -182,6 +182,11 @@ puisqu'elle en dépend pour entrer en Combat autrement qu'avec le harnais de tes
 - [ ] Poser **2 spawners** avec des compositions différentes : à l'entrée en Construction,
       `Ennemis : X/Y` doit afficher la **somme des deux** (`Y` = total du premier + total du
       second) — vérifie le registre `ACTIVE_SPAWNERS`.
+- [ ] Poser un spawner **collé contre un mur/dans un renfoncement irrégulier**, mettre un
+      **rayon de spawn de 3-4** (via l'écran de config), passer en Combat : aucun ennemi ne
+      doit apparaître **à moitié ou totalement enlisé dans un bloc** — ils doivent tous
+      apparaître dans un espace libre, quitte à être repliés sur juste au-dessus du bloc
+      spawner si le rayon ne trouve rien de valide (`findSafeSpawnPos`).
 - [ ] Casser le spawner à la pioche : il se drope (comme spike_trap), et l'accumulateur
       redémarre à 0 si on le repose (comportement attendu, pas de sauvegarde de position
       liée au bloc en tant que tel).

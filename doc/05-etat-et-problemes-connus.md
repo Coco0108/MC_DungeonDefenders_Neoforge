@@ -97,6 +97,11 @@ vérifie la CI.
   (`ModEvents.onMonsterDeath` → `PhaseTransitions.enterBuild`) **et** `current_wave` avance de
   1 (plafonné à `MAX_WAVE`). Détail dans
   [02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath).
+- ✅ Un ennemi ne peut plus spawn à l'intérieur d'un bloc plein (`SpawnerBlockEntity
+  #findSafeSpawnPos`) : jusqu'à 8 positions aléatoires essayées dans le rayon de spawn,
+  vérifiées traversables (pieds + tête), repli sur `pos.above()` sinon. Pas de vérification
+  de sol en dessous — un ennemi qui spawn au-dessus d'un trou tombe simplement, ce n'est pas
+  traité comme un problème.
 
 ## Corrections apportées
 

@@ -509,6 +509,16 @@ type.spawn(level, spawnPos, EntitySpawnReason.SPAWNER);
 > ("Gobelin = 20 → spawn") qui ne fonctionne qu'avec `>=`. Détail d'implémentation, l'idée
 > reste identique à ce qu'il avait écrit.
 
+**La position de spawn** (`SpawnerBlockEntity#findSafeSpawnPos`) : avec un rayon supérieur à
+0, la position tirée au hasard dans ce rayon peut tomber à l'intérieur d'un bloc plein (mur,
+terrain irrégulier autour du spawner). `findSafeSpawnPos` essaie jusqu'à 8 positions
+aléatoires, en ne retenant que celles où la position **et** celle juste au-dessus (place pour
+les pieds et la tête) sont toutes les deux traversables (`BlockState#getCollisionShape(...)
+.isEmpty()`) ; si aucune des 8 ne convient, replie sur `pos.above()` — la position par défaut
+utilisée avant l'ajout du rayon, censée toujours être libre. Pas de vérification qu'il y a un
+sol en dessous (un ennemi qui spawn au-dessus d'un trou tombe simplement, ce n'est pas un bug)
+— seul l'enlisement dans un bloc plein est évité.
+
 ### L'état — `block/entity/SpawnerBlockEntity.java`
 
 `BaseEntityBlock` + `BlockEntityTicker`, sur le même principe qu'`EterniaCrystalBlockEntity`

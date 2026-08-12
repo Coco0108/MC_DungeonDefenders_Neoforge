@@ -38,6 +38,10 @@ public class SpawnerBlockEntity extends BlockEntity {
 
     private static final int DEFAULT_INTERVAL_TICKS = 20;
     private static final int SPAWN_THRESHOLD = 20;
+    // Nombre de positions aléatoires essayées dans le rayon avant de replier sur pos.above()
+    // (juste au-dessus du bloc, censé toujours être libre) — évite de faire apparaître un
+    // ennemi à l'intérieur d'un bloc plein (mur, terrain irrégulier...) sans boucler indéfiniment.
+    private static final int MAX_SPAWN_POSITION_ATTEMPTS = 8;
 
     /** Un type d'ennemi (parmi la liste fermée SpawnableEnemy), son nombre de base, et sa progression pour la vague en cours. */
     public static final class SpawnEntry {
@@ -96,15 +100,41 @@ public class SpawnerBlockEntity extends BlockEntity {
             this.accumulator -= SPAWN_THRESHOLD;
             this.spawned++;
 
-            BlockPos spawnPos = spawnRadius <= 0
-                    ? pos.above()
-                    : pos.above().offset(
-                            level.getRandom().nextInt(spawnRadius * 2 + 1) - spawnRadius,
-                            0,
-                            level.getRandom().nextInt(spawnRadius * 2 + 1) - spawnRadius);
+            BlockPos spawnPos = findSafeSpawnPos(level, pos, spawnRadius);
             this.enemy.entityType().spawn(level, spawnPos, EntitySpawnReason.SPAWNER);
             return true;
         }
+    }
+
+    /**
+     * Choisit une position de spawn dans le rayon configuré, en évitant l'intérieur d'un bloc
+     * plein (mur, terrain irrégulier...) : essaie plusieurs offsets aléatoires en vérifiant
+     * que la position et celle juste au-dessus (place pour les pieds et la tête) sont toutes
+     * les deux traversables, puis replie sur pos.above() si aucune n'a marché — cette position
+     * par défaut (juste au-dessus du bloc) est censée toujours être libre, c'est celle utilisée
+     * avant l'ajout du rayon de spawn.
+     */
+    private static BlockPos findSafeSpawnPos(ServerLevel level, BlockPos pos, int spawnRadius) {
+        BlockPos fallback = pos.above();
+        if (spawnRadius <= 0) {
+            return fallback;
+        }
+
+        for (int attempt = 0; attempt < MAX_SPAWN_POSITION_ATTEMPTS; attempt++) {
+            BlockPos candidate = fallback.offset(
+                    level.getRandom().nextInt(spawnRadius * 2 + 1) - spawnRadius,
+                    0,
+                    level.getRandom().nextInt(spawnRadius * 2 + 1) - spawnRadius);
+            if (isPassable(level, candidate) && isPassable(level, candidate.above())) {
+                return candidate;
+            }
+        }
+        return fallback;
+    }
+
+    /** @return true si aucun bloc ne bloque le passage à cette position (pieds ou tête). */
+    private static boolean isPassable(ServerLevel level, BlockPos pos) {
+        return level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
     }
 
     // Composition par défaut, avec les chiffres exacts de l'exemple du joueur
