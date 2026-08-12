@@ -365,6 +365,27 @@ pas le nombre de lignes (ex. cycler la valeur d'un bouton) n'a pas besoin de tou
 (`dungeon_defenders.enemy.<nom>`) dans les deux fichiers de lang. Rien d'autre à toucher : le
 GUI, le réseau et la persistance passent déjà par cet enum (voir 02-gameplay.md).
 
+**Donner à un nouvel ennemi une attaque sur le cristal** : dans la grande majorité des cas,
+**pas besoin d'écrire de nouvelle classe**. `AttackEterniaCrystalGoal` (corps à corps) et
+`RangedAttackEterniaCrystalGoal` (distance) ont toutes les deux un constructeur
+`(mob, damagePerHit, ticksBetweenX, ...)` — il suffit de brancher le bon type dans
+`ModEvents.onMonsterSpawn` avec les chiffres voulus (voir
+[02-gameplay.md](02-gameplay.md#ia-des-ennemis)) :
+
+```java
+if (monster instanceof AbstractSkeleton) {
+    monster.goalSelector.addGoal(1, new RangedAttackEterniaCrystalGoal(monster, 3, 20, 10.0D));
+} else {
+    monster.goalSelector.addGoal(1, new AttackEterniaCrystalGoal(monster));
+}
+```
+
+Sous-classer `AbstractEterniaCrystalAttackGoal` directement n'est nécessaire que pour un
+**nouveau style d'attaque** (une attaque de zone, un effet de poison au contact, etc.) — dans
+ce cas, implémenter `onReachedTarget(EterniaCrystalBlockEntity crystal)` (appelé chaque tick
+tant que le mob est à portée) et éventuellement `onTargetLost()` (remise à zéro d'un état en
+cours, comme l'annulation d'une tension d'arc dans la version à distance).
+
 ## Ajouter une option de configuration
 
 [`Config.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/Config.java) contient

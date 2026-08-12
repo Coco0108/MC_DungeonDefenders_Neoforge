@@ -138,55 +138,78 @@ Le dégradé **vert → jaune → rouge** vient de `red()` / `green()` (le bleu 
 
 ## IA des ennemis
 
-### Le goal — `entity/ai/AttackEterniaCrystalGoal.java`
+### La base commune — `entity/ai/AbstractEterniaCrystalAttackGoal.java`
 
-Étend `MoveToBlockGoal`. Constantes et surcharges :
+`AttackEterniaCrystalGoal` (corps à corps) et `RangedAttackEterniaCrystalGoal` (distance)
+partagent tout ce qui concerne le **ciblage et le déplacement** — identique dans les deux cas
+— via cette classe abstraite, qui étend `MoveToBlockGoal` :
 
-| Paramètre | Valeur | Rôle |
-|---|---|---|
-| `SPEED_MODIFIER` | `1.2D` | multiplicateur de vitesse de déplacement |
-| `SEARCH_RANGE` | `16` | blocs autour du mob |
-| `DAMAGE_PER_HIT` | `5` | PV retirés par coup |
-| `TICKS_BETWEEN_HITS` | `20` | 1 seconde entre deux coups |
-| `isValidTarget` | `state.is(ModBlocks.ETERNIA_CRYSTAL)` | ne cible que le cristal |
-| `getMoveToTarget` | `this.blockPos` | vise la **base** du cristal, pour éviter que le mob tente de grimper |
-| `acceptedDistance` | `2.1D` | tolérance suffisante pour un mob au sol contre une hitbox de 3 de haut |
+| Membre | Rôle |
+|---|---|
+| Constructeur `(mob, speedModifier, acceptedDistance, damagePerHit)` | `speedModifier`/`acceptedDistance` passés à `MoveToBlockGoal` ; `damagePerHit` exposé aux sous-classes via `this.damagePerHit` |
+| `isValidTarget` | `state.is(ModBlocks.ETERNIA_CRYSTAL)` — ne cible que le cristal |
+| `getMoveToTarget` | `this.blockPos` — vise la **base** du cristal, pour éviter que le mob tente de grimper |
+| `findCrystal()` | `protected final`, retrouve le `EterniaCrystalBlockEntity` à `this.blockPos` (ou `null` s'il a été cassé) |
+| `onReachedTarget(crystal)` | abstrait, appelé chaque tick tant que le mob est à `acceptedDistance()` du cristal |
+| `onTargetLost()` | appelé chaque tick tant qu'il ne l'est pas ; no-op par défaut |
 
-Dans `tick()`, si la cible est atteinte (`isReachedTarget()`), le mob appelle
-`crystal.damage(5)` et joue l'animation de bras (`mob.swing`), puis attend
-`TICKS_BETWEEN_HITS`. Le cooldown est un champ du goal (remis à zéro dans `start()` et dès
-que le mob s'éloigne), et non `mob.tickCount` : le rythme reste correct si le mob quitte puis
-revient vers le cristal.
+`SEARCH_RANGE` (16 blocs) reste une constante interne à cette classe, pas exposée au
+constructeur — contrairement aux dégâts, rien ne justifie encore qu'elle varie d'un ennemi à
+l'autre. `acceptedDistance`, en revanche, est ce qui distingue fondamentalement le corps à
+corps (une valeur fixe, faible) de la distance (une portée, potentiellement variable d'un
+ennemi à l'autre) : chaque sous-classe la fixe à sa manière (voir plus bas).
 
-Avec 100 PV par défaut, un zombie seul détruit le cristal en 20 secondes.
+> **Sous-classer `AbstractEterniaCrystalAttackGoal` directement** (plutôt que
+> `AttackEterniaCrystalGoal`/`RangedAttackEterniaCrystalGoal`) n'a d'intérêt que pour un
+> **nouveau style d'attaque** — une troisième famille, ni corps à corps ni tir à l'arc (une
+> attaque de zone, par exemple). Pour un ennemi qui attaque comme les deux familles
+> existantes mais avec d'autres chiffres, pas besoin de sous-classer quoi que ce soit : les
+> deux constructeurs `(mob, damagePerHit, ticksBetweenX, ...)` couvrent déjà ce cas (voir
+> ci-dessous).
+
+### Le goal corps à corps — `entity/ai/AttackEterniaCrystalGoal.java`
+
+```java
+public AttackEterniaCrystalGoal(PathfinderMob mob)                              // 5 dégâts / 20 ticks (par défaut)
+public AttackEterniaCrystalGoal(PathfinderMob mob, int damagePerHit, int ticksBetweenHits)
+```
+
+`SPEED_MODIFIER` (`1.2D`) et `ACCEPTED_DISTANCE` (`2.1D`, tolérance suffisante pour un mob au
+sol contre une hitbox de 3 de haut) restent des constantes internes — c'est la cadence et les
+dégâts qui varient d'un ennemi de mêlée à l'autre, pas la distance d'engagement (toujours
+"collé au cristal" par définition du corps à corps).
+
+Dans `onReachedTarget(crystal)`, une fois le cooldown écoulé : `crystal.damage(damagePerHit)`,
+animation de bras (`mob.swing`), puis attend `ticksBetweenHits`. Le cooldown est un champ du
+goal (remis à zéro dans `start()` et dans `onTargetLost()`), et non `mob.tickCount` : le
+rythme reste correct si le mob quitte puis revient vers le cristal.
+
+Avec 100 PV par défaut et les valeurs par défaut (5 dégâts/s), un zombie seul détruit le
+cristal en 20 secondes.
 
 ### Le goal à distance — `entity/ai/RangedAttackEterniaCrystalGoal.java`
 
-Variante pour le squelette : étend aussi `MoveToBlockGoal`, même principe (`isValidTarget`,
-`getMoveToTarget`), mais s'arrête à **portée de tir** plutôt que de venir se coller au
-cristal, tend l'arc, puis tire.
+```java
+public RangedAttackEterniaCrystalGoal(PathfinderMob mob)                                                    // 3 dégâts / 20 ticks / 10 blocs (par défaut)
+public RangedAttackEterniaCrystalGoal(PathfinderMob mob, int damagePerHit, int ticksBetweenShots, double shootRange)
+```
 
-| Paramètre | Valeur | Rôle |
-|---|---|---|
-| `SPEED_MODIFIER` / `SEARCH_RANGE` | `1.2D` / `16` | identiques au corps à corps |
-| `acceptedDistance` | `SHOOT_RANGE = 10.0D` | s'arrête à distance de tir, n'avance plus une fois dedans |
-| `DAMAGE_PER_HIT` | `3` | volontairement inférieur au corps à corps (`5`), valeur provisoire |
-| `DRAW_TICKS` | `20` | temps de tension de l'arc avant le tir (visuel) |
-| `TICKS_BETWEEN_SHOTS` | `20` | pause après un tir avant de retendre — cycle total ≈ 2 s, plus lent que le corps à corps |
+Contrairement au corps à corps, la **portée de tir** (`shootRange`, passée comme
+`acceptedDistance` au parent) est elle aussi exposée au constructeur : un futur ennemi à
+distance pourrait raisonnablement viser de plus près (un lanceur) ou de plus loin (un
+tireur d'élite), pas seulement avoir des dégâts/une cadence différents. `DRAW_TICKS` (20,
+temps de tension de l'arc) reste une constante interne : c'est un détail de timing
+d'animation, pas un levier d'équilibrage entre archétypes.
 
-Dans `tick()`, une fois à portée (`isReachedTarget()`) : le mob se tourne vers le cristal
+Dans `onReachedTarget(crystal)`, une fois à portée : le mob se tourne vers le cristal
 (`LookControl#setLookAt`, nécessaire une fois immobile — `MoveToBlockGoal` ne le fait plus
 après l'approche), puis alterne tension (`mob.startUsingItem(MAIN_HAND)`, ce qui déclenche la
 pose vanilla "arc tendu" puisque le squelette porte déjà un arc par défaut) et tir. Au tir,
-`crystal.damage(3)` est appliqué **directement** au cristal, sur le même principe "harnais" que
-le corps à corps — la flèche réellement lancée (`spawnArrow`, une vraie entité `Arrow`, avec
-le calcul d'arc `dy + distance × 0.2` repris du tir vanilla) n'est là que pour le **visuel** du
-tir, ce n'est pas sa collision qui inflige les dégâts (le cristal n'étant pas une entité, une
-flèche vanilla ne saurait pas le "toucher" toute seule).
-
-> Pensé pour être réutilisable tel quel par un futur ennemi à distance : rien dans cette
-> classe n'est spécifique au squelette, qui fournit juste le `PathfinderMob` avec son arc déjà
-> équipé par défaut.
+`crystal.damage(damagePerHit)` est appliqué **directement** au cristal, sur le même principe
+"harnais" que le corps à corps — la flèche réellement lancée (`spawnArrow`, une vraie entité
+`Arrow`, avec le calcul d'arc `dy + distance × 0.2` repris du tir vanilla) n'est là que pour
+le **visuel** du tir, ce n'est pas sa collision qui inflige les dégâts (le cristal n'étant pas
+une entité, une flèche vanilla ne saurait pas le "toucher" toute seule).
 
 ### L'attribution — `ModEvents.onMonsterSpawn`
 

@@ -1,16 +1,13 @@
 package com.github.c0c0tier.dungeon_defenders.entity.ai;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
-import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.ai.goal.MoveToBlockGoal;
 import net.minecraft.world.entity.projectile.arrow.Arrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.LevelReader;
+import org.jspecify.annotations.Nullable;
 
 // Variante à distance de AttackEterniaCrystalGoal : converge jusqu'à portée de tir (pas
 // jusqu'au corps à corps), tend l'arc, puis tire une flèche sur le Cristal d'Eternia à
@@ -19,46 +16,35 @@ import net.minecraft.world.level.LevelReader;
 // de la flèche — la flèche n'est là que pour le rendu visuel du tir (pertinent puisque le
 // cristal n'est pas une entité, une flèche vanilla ne saurait pas le "toucher" toute seule).
 //
-// Pensé pour être réutilisable tel quel par un futur ennemi à distance : rien ici n'est
-// spécifique au squelette (qui se contente de fournir le PathfinderMob et son arc/flèche déjà
-// équipés par défaut).
-public class RangedAttackEterniaCrystalGoal extends MoveToBlockGoal {
+// Dégâts, cadence et portée de tir configurables par le constructeur (voir
+// AbstractEterniaCrystalAttackGoal) : réutilisable tel quel par un futur ennemi à distance
+// avec d'autres chiffres — pas besoin d'une nouvelle classe juste pour ça. Rien ici n'est
+// spécifique au squelette, qui fournit juste le PathfinderMob et son arc déjà équipé.
+public class RangedAttackEterniaCrystalGoal extends AbstractEterniaCrystalAttackGoal {
 
-    /** Dégâts par tir — volontairement inférieurs au corps à corps (AttackEterniaCrystalGoal), valeur provisoire à ajuster après tests. */
-    public static final int DAMAGE_PER_HIT = 3;
-    /** Temps de tension de l'arc avant le tir, en ticks (visuel : le mob lève son arc). */
-    public static final int DRAW_TICKS = 20;
-    /** Pause après un tir avant de retendre l'arc. Cycle total = DRAW_TICKS + TICKS_BETWEEN_SHOTS. */
-    public static final int TICKS_BETWEEN_SHOTS = 20;
+    public static final int DEFAULT_DAMAGE_PER_HIT = 3;
+    public static final int DEFAULT_TICKS_BETWEEN_SHOTS = 20;
+    public static final double DEFAULT_SHOOT_RANGE = 10.0D;
 
-    private static final int SEARCH_RANGE = 16;
-    // Distance à laquelle le mob s'arrête et commence à tirer, plutôt que de continuer à
-    // avancer jusqu'au corps à corps comme AttackEterniaCrystalGoal.
-    private static final double SHOOT_RANGE = 10.0D;
     private static final double SPEED_MODIFIER = 1.2D;
+    // Temps de tension de l'arc avant le tir, en ticks (visuel : le mob lève son arc). Pas
+    // exposé au constructeur, contrairement aux dégâts/cadence/portée : c'est un détail de
+    // timing d'animation, pas un levier d'équilibrage entre archétypes d'ennemis.
+    private static final int DRAW_TICKS = 20;
     private static final float ARROW_VELOCITY = 1.6F;
     private static final float ARROW_INACCURACY = 10.0F;
 
+    private final int ticksBetweenShots;
     private int hitCooldown;
     private int drawTicks;
 
     public RangedAttackEterniaCrystalGoal(PathfinderMob mob) {
-        super(mob, SPEED_MODIFIER, SEARCH_RANGE);
+        this(mob, DEFAULT_DAMAGE_PER_HIT, DEFAULT_TICKS_BETWEEN_SHOTS, DEFAULT_SHOOT_RANGE);
     }
 
-    @Override
-    protected boolean isValidTarget(LevelReader level, BlockPos pos) {
-        return level.getBlockState(pos).is(ModBlocks.ETERNIA_CRYSTAL.get());
-    }
-
-    @Override
-    protected BlockPos getMoveToTarget() {
-        return this.blockPos;
-    }
-
-    @Override
-    public double acceptedDistance() {
-        return SHOOT_RANGE;
+    public RangedAttackEterniaCrystalGoal(PathfinderMob mob, int damagePerHit, int ticksBetweenShots, double shootRange) {
+        super(mob, SPEED_MODIFIER, shootRange, damagePerHit);
+        this.ticksBetweenShots = ticksBetweenShots;
     }
 
     @Override
@@ -78,18 +64,7 @@ public class RangedAttackEterniaCrystalGoal extends MoveToBlockGoal {
     }
 
     @Override
-    public void tick() {
-        super.tick();
-
-        if (!this.isReachedTarget()) {
-            this.hitCooldown = 0;
-            if (this.drawTicks > 0) {
-                this.mob.stopUsingItem();
-                this.drawTicks = 0;
-            }
-            return;
-        }
-
+    protected void onReachedTarget(@Nullable EterniaCrystalBlockEntity crystal) {
         // À portée : se tourne vers le cristal (MoveToBlockGoal ne le fait plus une fois
         // arrivé, contrairement à la navigation pendant l'approche).
         this.mob.getLookControl().setLookAt(
@@ -98,7 +73,7 @@ public class RangedAttackEterniaCrystalGoal extends MoveToBlockGoal {
         if (this.drawTicks > 0) {
             this.drawTicks--;
             if (this.drawTicks == 0) {
-                shoot();
+                shoot(crystal);
             }
             return;
         }
@@ -112,18 +87,25 @@ public class RangedAttackEterniaCrystalGoal extends MoveToBlockGoal {
         this.drawTicks = DRAW_TICKS;
     }
 
-    private void shoot() {
-        this.mob.stopUsingItem();
+    @Override
+    protected void onTargetLost() {
+        this.hitCooldown = 0;
+        if (this.drawTicks > 0) {
+            this.mob.stopUsingItem();
+            this.drawTicks = 0;
+        }
+    }
 
-        if (!(this.mob.level() instanceof ServerLevel serverLevel)
-                || !(serverLevel.getBlockEntity(this.blockPos) instanceof EterniaCrystalBlockEntity crystal)) {
-            this.hitCooldown = TICKS_BETWEEN_SHOTS;
+    private void shoot(@Nullable EterniaCrystalBlockEntity crystal) {
+        this.mob.stopUsingItem();
+        this.hitCooldown = this.ticksBetweenShots;
+
+        if (crystal == null || !(this.mob.level() instanceof ServerLevel serverLevel)) {
             return;
         }
 
         spawnArrow(serverLevel);
-        crystal.damage(DAMAGE_PER_HIT);
-        this.hitCooldown = TICKS_BETWEEN_SHOTS;
+        crystal.damage(this.damagePerHit);
     }
 
     private void spawnArrow(ServerLevel level) {

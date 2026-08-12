@@ -46,8 +46,9 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── CharacterOverlay.java         # Couche HUD affichant "Nom - niv X", bas centre (client uniquement)
     │   │   └── AbilitySlotsOverlay.java      # 4 emplacements de compétences, bas gauche, à côté des losanges (client uniquement)
     │   ├── entity/ai/
-    │   │   ├── AttackEterniaCrystalGoal.java       # Goal : converger vers le cristal et le frapper (corps à corps)
-    │   │   └── RangedAttackEterniaCrystalGoal.java # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal
+    │   │   ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal
+    │   │   ├── AttackEterniaCrystalGoal.java         # Goal : converger vers le cristal et le frapper (corps à corps)
+    │   │   └── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal
     │   └── block/
     │       ├── EterniaCrystalBlock.java      # Le bloc : hitbox, interaction, codec
     │       ├── SpikeTrapBlock.java           # Piège : dégâts au contact (stepOn) + cooldown
