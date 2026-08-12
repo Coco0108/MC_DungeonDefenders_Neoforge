@@ -148,7 +148,7 @@ Chargement FML
    ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana, experience, current_wave,
    │                                      wave_enemies_total, wave_enemies_killed, game_phase,
    │                                      score, level, character_name, difficulty,
-   │                                      combat_session, active_spawners
+   │                                      combat_session, active_spawners, ready
    ├─ RegisterEvent(MENU)              → spawner_config (MenuType)
    ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal, spawner (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
@@ -176,6 +176,10 @@ Clic droit sur un SpawnerBlock, sans shift, en créatif uniquement (voir 02-game
                      ouvre SpawnerConfigScreen -> au clic sur "Valider", envoie
                      SpawnerConfigPayload -> ModNetworking l'applique via
                      SpawnerBlockEntity.applyConfig(...)
+
+Clic droit sur l'EterniaCrystalBlock, en Construction (voir 02-gameplay.md) :
+   └─ EterniaCrystalBlock#toggleReady -> bascule ready (joueur), diffuse la progression
+        └─ si tous les joueurs de la Level sont prêts : PhaseTransitions.enterCombat(level)
 ```
 
 `ModEvents` est annoté `@EventBusSubscriber(modid = MODID)` sans `bus` explicite : il

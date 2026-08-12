@@ -155,6 +155,17 @@ public class ModAttachments {
             "active_spawners",
             () -> AttachmentType.<Set<BlockPos>>builder((Supplier<Set<BlockPos>>) HashSet::new).build());
 
+    // "Prêt" : état du joueur (clic droit sur le Cristal d'Eternia en phase Construction, voir
+    // EterniaCrystalBlock), pas de la Level, comme mana/experience. Faux par défaut, remis à
+    // faux pour tout le monde dès que le Combat démarre (voir PhaseTransitions#enterCombat) —
+    // pas persistant (se re-décider à chaque Construction, y compris après reconnexion, est
+    // le comportement voulu), synchronisé pour un futur indicateur HUD.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> READY = ATTACHMENT_TYPES.register(
+            "ready",
+            () -> AttachmentType.builder(() -> Boolean.FALSE)
+                    .sync(ByteBufCodecs.BOOL)
+                    .build());
+
     public static void register(IEventBus modEventBus) {
         ATTACHMENT_TYPES.register(modEventBus);
     }

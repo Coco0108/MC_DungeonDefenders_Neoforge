@@ -7,6 +7,7 @@
 
   "dungeon_defenders.eternia_crystal.damaged": "Ouch! The crystal loses %s HP. Remaining: %s",
   "dungeon_defenders.eternia_crystal.destroyed": "The Eternia Crystal has been destroyed! Game Over!",
+  "dungeon_defenders.eternia_crystal.ready_progress": "Ready: %s/%s",
 
   "dungeon_defenders.hud.mana": "Mana: %s/%s",
   "dungeon_defenders.hud.health": "Health: %s/%s",

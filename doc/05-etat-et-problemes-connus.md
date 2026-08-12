@@ -88,12 +88,15 @@ vérifie la CI.
   murs** (`Font.DisplayMode.SEE_THROUGH`), comme dans le jeu de référence. Caché en phase
   Combat, texte seul pour l'instant (pas d'icône par type). Détail dans
   [02-gameplay.md](02-gameplay.md#laperçu-de-composition-en-phase-construction--spawnerblockentityrendererjava).
-- ✅ Une vague se termine maintenant toute seule : `wave_enemies_total` est calculé pour de
-  vrai (registre des spawners actifs, `ModAttachments.ACTIVE_SPAWNERS`, sommé à l'entrée en
-  Construction), et dès que `wave_enemies_killed` l'atteint, retour automatique en
-  Construction (`ModEvents.onMonsterDeath` → `PhaseTransitions.enterBuild`). Le
-  **déclenchement** du Combat reste le harnais de test, voir "Ce qui reste" ci-dessous. Détail
-  dans [02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath).
+- ✅ Une vague se déroule maintenant de bout en bout : le Combat se **déclenche** via un vote
+  "prêt" (clic droit sur le Cristal d'Eternia en Construction, data attachment **joueur**
+  `ready`, remis à zéro pour tout le monde une fois le combat lancé) plutôt que seulement le
+  harnais de test ; `wave_enemies_total` est calculé pour de vrai (registre des spawners
+  actifs, `ModAttachments.ACTIVE_SPAWNERS`, sommé à l'entrée en Construction) ; dès que
+  `wave_enemies_killed` l'atteint, retour automatique en Construction
+  (`ModEvents.onMonsterDeath` → `PhaseTransitions.enterBuild`) **et** `current_wave` avance de
+  1 (plafonné à `MAX_WAVE`). Détail dans
+  [02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath).
 
 ## Corrections apportées
 
@@ -185,18 +188,12 @@ images promises pour chaque slot et la logique derrière.
 
 ### Les vagues ne se déroulent toujours pas complètement
 
-`current_wave` existe et s'affiche (`1/5`), mais rien ne le fait avancer — pas de victoire à
-la vague 5, pas de défaite si le cristal tombe avant. La partie "une vague se termine
-correctement" est faite (`wave_enemies_total` juste, retour auto en Construction, voir "Ce
-qui est implémenté" plus haut et
+`current_wave` avance maintenant réellement d'une vague à l'autre (plafonné à `MAX_WAVE`,
+voir "Ce qui est implémenté" plus haut et
 [02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath)),
-mais :
-
-- `game_phase` ne bascule vers **Combat** que via le harnais de test (clic droit sur le
-  `SpawnerBlock`) — pas de vrai déclencheur (bouton dans une taverne/hub, minuteur...) ;
-- rien ne fait avancer `current_wave` quand une vague se termine — on revient en Construction
-  sur la **même** vague, indéfiniment ;
-- pas de condition de victoire (dernière vague nettoyée) ni de défaite (cristal détruit).
+mais rien ne se passe une fois `MAX_WAVE` atteint : pas de condition de victoire (dernière
+vague nettoyée) ni de défaite (cristal détruit) — la partie continue simplement à boucler sur
+la dernière vague indéfiniment.
 
 Le registre `ModAttachments.ACTIVE_SPAWNERS` ne reflète que les spawners **actuellement
 chargés** — fiable en test (le joueur est toujours à proximité), mais deviendra pleinement
@@ -298,13 +295,12 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 7. Définir un vrai système d'expérience/score/niveaux : comment `EXPERIENCE`, `SCORE` et
    `LEVEL` se nourrissent l'un l'autre (aujourd'hui trois compteurs indépendants, tous
    bloqués à leur valeur par défaut, comme le mana avant `ManaTestWandItem`).
-8. ~~Définir le déroulement des vagues~~ — partiellement fait : `WAVE_ENEMIES_TOTAL` est
-   maintenant juste (registre des spawners actifs) et le retour en `BUILD` est automatique
-   dès que `WAVE_ENEMIES_KILLED` l'atteint (voir "Ce qui est implémenté" et
-   [02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath)).
-   Reste ouvert : un vrai déclencheur pour **passer** en `COMBAT` (à la place du harnais de
-   test), faire avancer `CURRENT_WAVE` (on repasse en Construction sur la même vague pour
-   l'instant), victoire à la dernière vague, défaite si le cristal tombe avant.
+8. ~~Définir le déroulement des vagues~~ — fait pour l'essentiel : vote "prêt" pour déclencher
+   le Combat, `WAVE_ENEMIES_TOTAL` juste (registre des spawners actifs), retour automatique en
+   `BUILD` dès que `WAVE_ENEMIES_KILLED` l'atteint, `CURRENT_WAVE` qui avance (plafonné à
+   `MAX_WAVE`) — voir "Ce qui est implémenté" et
+   [02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath).
+   Reste ouvert : victoire à la dernière vague, défaite si le cristal tombe avant.
 9. Donner un moyen de choisir/changer `ModAttachments.CHARACTER_NAME` (commande, écran de
    création de personnage...) — sans ça, il reste égal au pseudo Minecraft en permanence.
 10. Une fois les images des 4 compétences fournies : les afficher dans `AbilitySlotsOverlay`

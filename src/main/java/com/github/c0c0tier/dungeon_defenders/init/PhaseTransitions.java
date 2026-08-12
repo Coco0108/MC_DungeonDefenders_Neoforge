@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders.init;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
@@ -15,7 +16,13 @@ public final class PhaseTransitions {
     private PhaseTransitions() {
     }
 
-    /** Passe en Combat : nouvelle session (relance la progression de spawn de chaque spawner), compteur de tués à zéro. */
+    /**
+     * Passe en Combat : nouvelle session (relance la progression de spawn de chaque
+     * spawner), compteur de tués à zéro, et remet "prêt" à faux pour tous les joueurs
+     * présents — qu'ils aient déclenché ce combat via le vote (EterniaCrystalBlock) ou via le
+     * harnais de test (SpawnerBlock), pour repartir sur une base propre à la prochaine
+     * Construction.
+     */
     public static void enterCombat(Level level) {
         level.setData(ModAttachments.GAME_PHASE, GamePhase.COMBAT.ordinal());
         level.syncData(ModAttachments.GAME_PHASE);
@@ -25,10 +32,23 @@ public final class PhaseTransitions {
 
         level.setData(ModAttachments.WAVE_ENEMIES_KILLED, 0);
         level.syncData(ModAttachments.WAVE_ENEMIES_KILLED);
+
+        for (Player player : level.players()) {
+            player.setData(ModAttachments.READY, false);
+            player.syncData(ModAttachments.READY);
+        }
     }
 
-    /** Passe en Construction : recalcule le total de la prochaine vague à partir des spawners actifs. */
+    /**
+     * Passe en Construction : fait avancer la vague (plafonnée à MAX_WAVE — pas de condition
+     * de victoire pour l'instant, voir 05-etat-et-problemes-connus.md) et recalcule le total
+     * de la nouvelle vague à partir des spawners actifs.
+     */
     public static void enterBuild(Level level) {
+        int nextWave = Math.min(level.getData(ModAttachments.CURRENT_WAVE) + 1, ModAttachments.MAX_WAVE);
+        level.setData(ModAttachments.CURRENT_WAVE, nextWave);
+        level.syncData(ModAttachments.CURRENT_WAVE);
+
         level.setData(ModAttachments.GAME_PHASE, GamePhase.BUILD.ordinal());
         level.syncData(ModAttachments.GAME_PHASE);
 

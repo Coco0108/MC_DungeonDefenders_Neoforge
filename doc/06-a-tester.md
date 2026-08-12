@@ -108,13 +108,38 @@ Lancer le client de dev :
 - [ ] Redimensionner la fenêtre : le groupe entier (losanges + ronds + barre d'expérience)
       reste collé au coin bas-gauche et aligné.
 
+## Le vote « prêt » (déclencheur du Combat) — `EterniaCrystalBlock`
+
+Nouveau vrai déclencheur du Combat, à tester **avant** la section Spawner ci-dessous
+puisqu'elle en dépend pour entrer en Combat autrement qu'avec le harnais de test.
+
+- [ ] **En solo**, en phase Construction, clic droit à main nue sur le Cristal d'Eternia : un
+      message "Prêt : 1/1" s'affiche, et la phase bascule **immédiatement** en Combat (un seul
+      joueur = tout le monde est prêt dès son propre clic).
+- [ ] **À plusieurs** (2+ joueurs), un seul clique : message "Prêt : 1/2" pour tout le monde,
+      la phase **ne bascule pas encore**. Le second joueur clique à son tour : "Prêt : 2/2",
+      puis bascule en Combat pour tout le monde.
+- [ ] Re-cliquer sur le cristal **avant** que tout le monde soit prêt annule son propre "prêt"
+      (redevient "Prêt : 0/2" si on était seul à avoir cliqué) — vérifie que c'est bien une
+      bascule (toggle), pas juste un "je suis prêt" à sens unique.
+- [ ] Une fois en Combat, clic droit à main nue sur le cristal inflige maintenant **10 PV de
+      dégâts** (`dungeon_defenders.eternia_crystal.damaged`) — c'est l'ancien harnais de test,
+      gardé mais désormais réservé à la phase Combat (plus de vote "prêt" pendant le combat).
+- [ ] Après un Combat lancé via le vote, tuer tous les ennemis pour revenir en Construction
+      (voir section Spawner) : re-cliquer sur le cristal doit à nouveau proposer le vote
+      "prêt" (repart de 0/N, pas de résidu de l'ancien vote).
+- [ ] Un joueur qui se déconnecte puis se reconnecte pendant que d'autres sont déjà prêts ne
+      doit pas bloquer indéfiniment le décompte : il doit apparaître comme non-prêt (0 par
+      défaut) et devoir cliquer comme les autres.
+
 ## Le Spawner (premier vrai gameplay, pas juste du HUD)
 
 - [ ] Prendre `spawner` dans l'onglet créatif Dungeon Defenders (texture : cage de spawner
       vanilla), le poser.
 - [ ] **Shift + clic droit** dessus : un message système confirme le changement de phase
       (`Phase changée : Combat` / `Phase changée : Construction`), et le texte `Phase : ...`
-      en haut à droite du HUD change en conséquence.
+      en haut à droite du HUD change en conséquence — raccourci de test qui contourne le vote
+      "prêt" ci-dessus (utile seul, sans avoir à se re-cliquer soi-même dessus).
 - [ ] **Clic droit sans shift, en créatif** : ouvre l'écran de configuration (voir section
       dédiée ci-dessous). **En survie**, le même clic droit sans shift doit plutôt afficher le
       message "Les spawners ne sont configurables qu'en mode créatif" et ne rien ouvrir.
@@ -139,14 +164,21 @@ Lancer le client de dev :
       sur un seul spawner) doit voir son `X` s'incrémenter, et la jauge orange se remplir.
 - [ ] **Tuer tous les ennemis de la vague** (les 20, avec un seul spawner par défaut) : la
       phase doit **repasser automatiquement en Construction**, avec un message système "Vague
-      terminée ! Retour à la Construction." diffusé à tous les joueurs — c'est le nouveau
-      comportement principal à vérifier dans cette section.
+      terminée ! Retour à la Construction." diffusé à tous les joueurs, **et** le texte
+      `Vague X/5` du HUD doit passer de `1/5` à `2/5` — c'est le nouveau comportement
+      principal à vérifier dans cette section.
+- [ ] Sur la vague 2 (et suivantes), le total `Ennemis : X/Y` doit être **légèrement plus
+      élevé** que 20 (multiplicateur de difficulté +10 %/vague — voir `DifficultyScaling`),
+      pas figé à `/20` d'une vague à l'autre.
+- [ ] Répéter jusqu'à la vague 5 : `Vague 5/5` atteint, la vague ne doit **pas** dépasser
+      `5/5` même en nettoyant encore une vague après (plafonné à `MAX_WAVE`, pas de `6/5`) —
+      pas de message de victoire pour l'instant, c'est un manque connu.
 - [ ] Tuer un monstre **pendant que la phase est Construction** : `Ennemis : X/Y` ne doit
       **pas** bouger (le compteur ne compte que les morts en combat, c'est attendu).
-- [ ] Rebasculer manuellement en Combat (shift + clic droit) **sur la même vague** (rien ne la
-      fait encore avancer) : le spawner doit **recommencer à spawn** normalement (vérifie que
-      `COMBAT_SESSION` relance bien la progression de chaque spawner, pas seulement au premier
-      changement de vague).
+- [ ] Rebasculer manuellement en Combat (shift + clic droit) **sans avoir cliqué sur le
+      cristal** : le spawner doit **recommencer à spawn** normalement (vérifie que
+      `COMBAT_SESSION` relance bien la progression de chaque spawner) — et la vague avance
+      quand même au retour en Construction, comme n'importe quelle fin de combat.
 - [ ] Poser **2 spawners** avec des compositions différentes : à l'entrée en Construction,
       `Ennemis : X/Y` doit afficher la **somme des deux** (`Y` = total du premier + total du
       second) — vérifie le registre `ACTIVE_SPAWNERS`.

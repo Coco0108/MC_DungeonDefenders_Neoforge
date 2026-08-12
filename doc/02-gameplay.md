@@ -25,12 +25,35 @@ Propriétés définies à l'enregistrement dans `ModBlocks` :
 
 ### Interaction joueur
 
-`useWithoutItem` (clic droit à main nue) retire **10 PV** au cristal et envoie un message au
-joueur. C'est un harnais de test, pas une mécanique définitive : dans le jeu final, seuls les
-monstres devraient endommager le cristal.
+`useWithoutItem` (clic droit à main nue) se comporte différemment selon la phase :
+
+- **En Construction** : bascule "prêt" pour le joueur qui clique — voir "Le vote prêt" plus
+  bas, c'est le vrai déclencheur du Combat.
+- **En Combat** : retire **10 PV** au cristal et envoie un message au joueur — l'ancien
+  harnais de test, gardé pour pouvoir déclencher la destruction du cristal sans attendre une
+  vraie vague. Dans le jeu final, seuls les monstres devraient endommager le cristal.
 
 Le client renvoie immédiatement `SUCCESS` (prédiction, animation de bras) ; la logique ne
-tourne que côté serveur, et `PASS` est renvoyé si le block entity est absent.
+tourne que côté serveur, et `PASS` est renvoyé si le block entity est absent (uniquement
+pertinent pour la branche Combat, qui a besoin du block entity — la branche Construction n'en
+a pas besoin).
+
+### Le vote "prêt" — déclencheur du Combat
+
+Pour passer de Construction à Combat, il faut que **tous les joueurs présents dans cette
+Level** cliquent sur le cristal (pas tout le serveur : une future map/dimension différente
+aura ses propres joueurs, voir 05-etat-et-problemes-connus.md). Chaque clic bascule l'état
+"prêt" du joueur qui a cliqué (`ModAttachments.READY`, un attachment **joueur**, comme
+`mana`/`experience` — pas persistant, se re-décider à chaque Construction est voulu), diffuse
+la progression à tout le monde (`Prêt : 2/3`), et dès que tous sont prêts,
+`PhaseTransitions.enterCombat(level)` se déclenche — qui remet aussitôt "prêt" à faux pour
+tout le monde (voir plus bas), pour repartir propre à la Construction suivante. Un seul joueur
+en solo se retrouve donc à devoir cliquer une fois pour lancer le combat (1/1).
+
+Le harnais de test au clic droit du `SpawnerBlock` (shift + clic droit, voir plus bas) reste
+disponible en parallèle pour basculer directement de phase sans passer par le vote — pratique
+pour les tests, mais il passe aussi par `PhaseTransitions`, donc remet "prêt" à zéro pour tout
+le monde comme le vote, pas de comportement divergent entre les deux déclencheurs.
 
 ### L'état — `block/entity/EterniaCrystalBlockEntity.java`
 
@@ -549,16 +572,17 @@ seulement plus nombreux.
 
 Comme pour le Cristal d'Eternia et `ManaTestWandItem`, un harnais de test plutôt qu'une vraie
 mécanique : **shift + clic droit** sur le `SpawnerBlock` bascule `ModAttachments.GAME_PHASE`
-entre `BUILD` et `COMBAT`, message système confirmant la nouvelle phase. C'est le seul moyen
-de **déclencher** le combat pour l'instant — le vrai déclencheur reste à faire (voir
-05-etat-et-problemes-connus.md). Le **retour** automatique vers `BUILD` en fin de vague, lui,
-est fait : voir [Le déroulement d'une
-vague](#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath) plus bas.
+entre `BUILD` et `COMBAT` directement, message système confirmant la nouvelle phase — sans
+passer par le vote "prêt" du cristal (voir plus haut). Pratique pour tester rapidement sans
+réunir tous les joueurs, mais ça fait aussi avancer `CURRENT_WAVE` comme n'importe quelle fin
+de combat (voir [Le déroulement d'une
+vague](#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath) plus bas)
+— attention à l'utiliser en rafale en test, ça consomme les vagues vite.
 
-Le passage effectif de phase (peu importe le déclencheur, harnais ou fin de vague) passe
-toujours par `init/PhaseTransitions.java`, pas par un `level.setData(GAME_PHASE, ...)` direct
-— ça centralise la remise à zéro des compteurs qui va avec (voir plus bas), pour que le
-harnais de test et le futur vrai déclencheur de combat se comportent pareil.
+Le passage effectif de phase (peu importe le déclencheur : vote "prêt", harnais de test, ou
+fin de vague) passe toujours par `init/PhaseTransitions.java`, pas par un
+`level.setData(GAME_PHASE, ...)` direct — ça centralise la remise à zéro des compteurs qui va
+avec (voir plus bas), pour que les trois déclencheurs se comportent pareil.
 
 Un clic droit **sans shift** ouvre l'écran de configuration (voir plus bas) — **réservé au
 mode créatif**, comme un bloc de structure vanilla : la configuration d'un spawner est censée
@@ -691,10 +715,10 @@ qui suffit au sens du HUD ("ennemis tués dans la vague").
 
 ### Le déroulement d'une vague — `init/PhaseTransitions.java`, `ModEvents.onMonsterDeath`
 
-Ce qui manquait pour qu'une vague se déroule vraiment : un total juste (`WAVE_ENEMIES_TOTAL`
-était bloqué à sa valeur par défaut), et un retour automatique en Construction une fois ce
-total atteint. Le déclenchement du Combat, lui, reste le harnais de test (voir plus haut) — ce
-morceau ne couvre que "le total est correct" et "la vague se termine toute seule".
+Ce qui manquait pour qu'une vague se déroule vraiment : un vrai déclencheur pour passer en
+Combat (le vote "prêt", voir plus haut), un total juste (`WAVE_ENEMIES_TOTAL` était bloqué à
+sa valeur par défaut), un retour automatique en Construction une fois ce total atteint, et
+`CURRENT_WAVE` qui avance réellement d'une vague à l'autre.
 
 **Le registre des spawners actifs** (`ModAttachments.ACTIVE_SPAWNERS`, un `Set<BlockPos>` sur
 la `Level`) — nécessaire parce que calculer le total demande de connaître **tous** les
@@ -718,18 +742,23 @@ une fois la Construction commencée, donc pas besoin de retour en arrière.
 **La session de combat** (`ModAttachments.COMBAT_SESSION`, un compteur incrémenté à chaque
 entrée en Combat) : chaque spawner relance sa propre progression de spawn (`resetForWave`)
 au début de **chaque** session de combat, plutôt que seulement quand `CURRENT_WAVE` change
-(remplace l'ancien déclencheur `lastWaveHandled`, désormais `lastCombatSessionHandled`). Sans
-ça, rebasculer Combat → Construction → Combat sur la même vague — ce qui va arriver tout le
-temps avec le harnais de test actuel, puisque rien ne fait encore avancer `CURRENT_WAVE` — ne
-referait plus rien spawn : chaque spawner penserait avoir déjà fini cette vague.
+(remplace l'ancien déclencheur `lastWaveHandled`, désormais `lastCombatSessionHandled`). Cette
+distinction reste utile même maintenant que `CURRENT_WAVE` avance : le harnais de test au clic
+droit du `SpawnerBlock` (voir plus bas) permet toujours de rebasculer Combat → Construction →
+Combat rapidement pour tester, ce qui fait aussi avancer la vague à chaque fois (voir plus
+bas) — sans la session de combat comme déclencheur indépendant, un enchaînement de vagues très
+rapide pourrait désynchroniser la remise à zéro de la progression de spawn.
 
 **`PhaseTransitions.java`** centralise ces deux transitions (`enterCombat`/`enterBuild`) pour
-que le harnais de test et le retour automatique de fin de vague passent par le même code,
-plutôt que de dupliquer la remise à zéro des compteurs à deux endroits :
+que le vote "prêt", le harnais de test et le retour automatique de fin de vague passent tous
+par le même code, plutôt que de dupliquer la remise à zéro des compteurs à trois endroits :
 
 - `enterCombat(level)` : phase → `COMBAT`, incrémente `COMBAT_SESSION`, remet
-  `WAVE_ENEMIES_KILLED` à 0.
-- `enterBuild(level)` : phase → `BUILD`, recalcule `WAVE_ENEMIES_TOTAL` à partir du registre.
+  `WAVE_ENEMIES_KILLED` à 0, et remet "prêt" à faux pour tous les joueurs présents (voir plus
+  haut, "Le vote prêt").
+- `enterBuild(level)` : fait avancer `CURRENT_WAVE` de 1 (plafonné à `MAX_WAVE`, voir "Ce qui
+  reste" plus bas), phase → `BUILD`, recalcule `WAVE_ENEMIES_TOTAL` à partir du registre pour
+  la nouvelle vague.
 
 **Le retour automatique** (`ModEvents.onMonsterDeath`) : après avoir incrémenté
 `WAVE_ENEMIES_KILLED`, si `killed >= total` (et `total > 0`, pour ne pas basculer
@@ -737,10 +766,9 @@ immédiatement si aucun spawner n'a encore pu contribuer), appelle `enterBuild(.
 diffuse un message à tous les joueurs (`dungeon_defenders.spawner.wave_cleared`, même
 mécanisme que le message de destruction du cristal).
 
-Ce qui reste **hors de ce morceau**, volontairement : rien ne fait encore avancer
-`CURRENT_WAVE` (la vague reste la même après un retour en Construction), pas de condition de
-victoire à la dernière vague ni de défaite si le cristal tombe avant, et le déclenchement du
-Combat reste le harnais de test. Voir
+Ce qui reste **hors de ce morceau**, volontairement : `CURRENT_WAVE` reste plafonné à
+`MAX_WAVE` une fois atteint (pas de dépassement en `6/5`), mais rien ne déclenche encore de
+victoire à ce moment-là, ni de défaite si le cristal tombe avant. Voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 
 ### Apparence
