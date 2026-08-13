@@ -14,6 +14,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── DungeonDefendersMod.java          # Point d'entrée @Mod (commun)
     │   ├── DungeonDefendersModClient.java    # Point d'entrée @Mod côté CLIENT uniquement
     │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA, vie max du joueur)
+    │   ├── TavernSpawn.java                  # Point de spawn fixe + plateforme provisoire (monde vide)
     │   ├── Config.java                       # Spec de config (héritée du template, non branchée)
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
@@ -68,6 +69,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── items/{eternia_crystal,spike_trap,spawner}.json         # Modèles d'item
     │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_trap,spawner}.json
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
+    │   ├── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
     │   └── META-INF/accesstransformer.cfg         # Access Transformers
     └── templates/META-INF/neoforge.mods.toml      # Métadonnées, expansées par Gradle
 ```
@@ -164,8 +166,10 @@ Chargement FML
 Bus de jeu (NeoForge.EVENT_BUS)
    ├─ ModEvents.onMonsterSpawn(EntityJoinLevelEvent)
    ├─ ModEvents.onPlayerJoin(EntityJoinLevelEvent)
-   └─ ModEvents.onMonsterDeath(LivingDeathEvent)
-        └─ si wave_enemies_killed >= wave_enemies_total : PhaseTransitions.enterBuild(level)
+   ├─ ModEvents.onMonsterDeath(LivingDeathEvent)
+   │    └─ si wave_enemies_killed >= wave_enemies_total : PhaseTransitions.enterBuild(level)
+   └─ TavernSpawn.onLevelLoad(LevelEvent.Load)
+        └─ si Overworld : fixe le point de spawn (0,65,0) + pose la plateforme provisoire
 
 Chaque SpawnerBlockEntity, en plus de ces événements :
    ├─ setLevel(...)/setRemoved()   → s'ajoute/se retire de ModAttachments.ACTIVE_SPAWNERS

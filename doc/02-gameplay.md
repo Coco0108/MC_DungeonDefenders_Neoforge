@@ -3,6 +3,68 @@
 Boucle de jeu visée : le joueur pose un **Cristal d'Eternia**, les monstres convergent vers
 lui et le frappent, le joueur doit les en empêcher. À 0 PV, partie perdue.
 
+## Le monde et le point de spawn
+
+Le principe retenu (discuté avec le joueur) : la taverne (le hub) et chaque map seront des
+**structures** posées à des coordonnées fixes (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md), "Système de
+maps/structures") — rien dans le jeu ne dépend du terrain généré naturellement. Deux
+conséquences déjà mises en place, avant même que la vraie structure de la taverne existe :
+
+### L'Overworld est un monde vide — `data/minecraft/dimension/overworld.json`
+
+Un fichier de données (pas de code Java, purement déclaratif) remplace le générateur de
+l'Overworld par le préréglage vanilla **"The Void"** — celui utilisé par le menu de création
+de monde vanilla (bouton "Personnaliser" → préréglages), copié tel quel :
+
+```json
+{
+  "type": "minecraft:overworld",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "minecraft:the_void",
+      "features": true,
+      "lakes": false,
+      "layers": [{ "block": "minecraft:air", "height": 1 }],
+      "structure_overrides": []
+    }
+  }
+}
+```
+
+Placer ce fichier à `data/minecraft/dimension/overworld.json` (namespace **`minecraft`**,
+pas `dungeon_defenders`) remplace la définition intégrée de l'Overworld par celle-ci — c'est
+le mécanisme standard des datapacks "monde vide" (fonctionne même sans mod, un simple
+datapack peut le faire ; ici il est intégré aux ressources du mod pour s'appliquer à toute
+partie sans configuration manuelle). Choisi plutôt qu'une dimension séparée : plus simple (pas
+de nouvelle dimension à enregistrer, pas de téléportation à gérer), et cohérent avec le fait
+que ce mod ne cherche pas à cohabiter avec une survie vanilla classique dans le même monde.
+
+> **Aucun moyen de vérifier ce fichier avant de lancer le jeu** : sa syntaxe n'est validée à
+> aucune étape de la compilation (`./gradlew build` ne charge pas les datapacks). Les
+> `settings` sont recopiés à l'identique du préréglage `the_void` du jar du jeu (vérifié en
+> l'extrayant directement), mais la structure globale du fichier dimension elle-même n'a pas
+> pu être testée en jeu — voir 06-a-tester.md.
+
+### Le point de spawn — `TavernSpawn.java`
+
+Un monde vide n'a nulle part où faire apparaître un joueur "normalement" (le jeu cherche
+d'habitude un sol solide près de l'origine). `TavernSpawn`, sur `LevelEvent.Load` (une fois
+par chargement de l'Overworld) :
+
+1. Fixe le point de spawn du monde à **(0, 65, 0)** via `ServerLevel#setRespawnData(...)` —
+   remplace la recherche automatique de sol (qui échouerait dans le vide).
+2. Pose une **plateforme provisoire** en dur (9×9, `smooth_stone`, un bloc sous le point de
+   spawn) — sans elle, un joueur tomberait indéfiniment dans le vide dès sa première
+   connexion. Rejouée à chaque chargement du monde (idempotent, sans effet si déjà posée) :
+   volontairement basique, à **supprimer** une fois la vraie structure de la taverne construite
+   et posée à cet endroit (voir 05-etat-et-problemes-connus.md).
+
+`LevelEvent.Load` se déclenche pour **toute** dimension qui se charge (l'Overworld, mais
+aussi le Nether/End vanilla si un joueur y va) — le handler sort immédiatement si ce n'est
+pas l'Overworld (`serverLevel.dimension() != Level.OVERWORLD`), pour ne rien changer ailleurs.
+
 ## Le Cristal d'Eternia
 
 ### Le bloc — `block/EterniaCrystalBlock.java`

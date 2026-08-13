@@ -108,6 +108,13 @@ vérifie la CI.
   vérifiées traversables (pieds + tête), repli sur `pos.above()` sinon. Pas de vérification
   de sol en dessous — un ennemi qui spawn au-dessus d'un trou tombe simplement, ce n'est pas
   traité comme un problème.
+- ✅ L'Overworld est un monde vide (`data/minecraft/dimension/overworld.json`, préréglage
+  vanilla "The Void") et le point de spawn est fixé à `(0, 65, 0)` avec une plateforme
+  provisoire (`TavernSpawn.java`) — premier pas vers le futur système de maps/structures (voir
+  plus bas) : la taverne (hub) et chaque map seront des structures posées à coordonnées fixes,
+  donc rien dans le jeu ne doit dépendre du terrain généré naturellement. Détail dans
+  [02-gameplay.md](02-gameplay.md#le-monde-et-le-point-de-spawn). **Non vérifié en jeu** — le
+  fichier de dimension n'est validé à aucune étape de la compilation, voir 06-a-tester.md.
 
 ## Corrections apportées
 
@@ -212,22 +219,33 @@ correct seulement une fois qu'un système force-chargera toute la zone de jeu pe
 partie (voir "Système de maps/structures" ci-dessous) plutôt que de compter sur le chargement
 naturel autour du joueur.
 
-### Système de maps/structures (pas commencé, discuté mais pas conçu en détail)
+### Système de maps/structures (démarré : monde vide + spawn fixe, le reste pas commencé)
 
-Discuté avec le joueur en préparant le déroulement des vagues, pas encore de code : l'idée est
-qu'une map soit une **structure** Minecraft (`.nbt`, comme un bloc de structure vanilla)
-construite en créatif — spawners déjà configurés inclus, puisque le format structure
-sauvegarde aussi les données NBT des block entities. Lancer une partie chargerait cette
-structure à un endroit fixe et y téléporterait le joueur (probablement depuis un hub/"taverne"
-central). Une taille maximale de map serait définie à l'avance, et toute cette zone serait
-**force-chargée** (chunk tickets, indépendants de la position du joueur) tant qu'un joueur y
-est, relâchée au retour à la taverne — nécessaire parce que Minecraft ne charge/tick
-normalement que les chunks proches d'un joueur, ce qui ne suffit pas pour une arène fixe où
-plusieurs spawners peuvent être loin les uns des autres (voir plus haut, `ACTIVE_SPAWNERS`).
+Discuté avec le joueur en préparant le déroulement des vagues : l'idée est qu'une map soit une
+**structure** Minecraft (`.nbt`, comme un bloc de structure vanilla) construite en créatif —
+spawners déjà configurés inclus, puisque le format structure sauvegarde aussi les données NBT
+des block entities. Lancer une partie chargerait cette structure à un endroit fixe et y
+téléporterait le joueur, depuis un hub/"taverne" central. Une taille maximale de map serait
+définie à l'avance, et toute cette zone serait **force-chargée** (chunk tickets, indépendants
+de la position du joueur) tant qu'un joueur y est, relâchée au retour à la taverne —
+nécessaire parce que Minecraft ne charge/tick normalement que les chunks proches d'un joueur,
+ce qui ne suffit pas pour une arène fixe où plusieurs spawners peuvent être loin les uns des
+autres (voir plus haut, `ACTIVE_SPAWNERS`).
 
-C'est le prérequis pour que le verrou créatif du GUI de config (voir plus haut) ait vraiment
-son plein effet : tant que ce système n'existe pas, rien n'empêche techniquement de construire
-et tester une map "à la main" en créatif dans n'importe quel monde.
+**Fait** : l'Overworld est un monde vide et le point de spawn est fixé à `(0, 65, 0)` avec une
+plateforme provisoire (voir "Ce qui est implémenté" plus haut et
+[02-gameplay.md](02-gameplay.md#le-monde-et-le-point-de-spawn)) — choisi en monde vide plutôt
+qu'en Overworld normal justement pour éviter le problème du terrain naturel (une montagne, un
+océan... à l'endroit choisi) sans avoir à excaver quoi que ce soit à chaque structure posée.
+
+**Reste à faire** : la vraie structure de la taverne (la plateforme actuelle est un
+placeholder à supprimer une fois construite), le système de sauvegarde/chargement de
+structures `.nbt` à un point fixe, la téléportation vers une map au lancement d'une partie, le
+force-chargement des chunks pendant une partie, et une bordure/barrière pour éviter les
+chutes dans le vide en dehors des zones bâties (mentionné par le joueur comme un point à
+garder en tête). C'est aussi le prérequis pour que le verrou créatif du GUI de config du
+spawner (voir plus haut) ait vraiment son plein effet : tant que ce système n'est pas fini,
+rien n'empêche techniquement de construire et tester une map "à la main" en créatif.
 
 ### Le GUI du spawner ne choisit que parmi une liste fermée d'ennemis (SpawnableEnemy)
 
@@ -333,8 +351,10 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
     (`SpawnerBlockEntityRenderer`, phase Construction) — texte seul pour l'instant. Piste
     envisagée : réutiliser les textures vanilla des œufs d'invocation
     (`zombie_spawn_egg`/`skeleton_spawn_egg`) pour ne pas dépendre d'assets custom.
-15. Système de maps/structures : sauvegarder une map construite en créatif comme structure
-    `.nbt`, la charger + téléporter le joueur au lancement d'une partie (probablement depuis
-    un hub central), force-charger toute sa zone (taille max définie à l'avance) tant que la
-    partie dure. Voir la section dédiée dans "Ce qui reste" ci-dessus — c'est aussi ce qui
-    rendra `ACTIVE_SPAWNERS` pleinement fiable (indépendant de la position du joueur).
+15. Système de maps/structures : ~~monde vide + point de spawn fixe~~ fait (voir "Ce qui est
+    implémenté"). Reste : la vraie structure de la taverne (remplacer la plateforme
+    provisoire), sauvegarder une map construite en créatif comme structure `.nbt`, la charger
+    + téléporter le joueur au lancement d'une partie, force-charger toute sa zone (taille max
+    définie à l'avance) tant que la partie dure, une bordure anti-chute dans le vide. Voir la
+    section dédiée dans "Ce qui reste" ci-dessus — c'est aussi ce qui rendra
+    `ACTIVE_SPAWNERS` pleinement fiable (indépendant de la position du joueur).

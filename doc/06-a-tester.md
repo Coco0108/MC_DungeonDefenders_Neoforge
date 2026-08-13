@@ -11,6 +11,36 @@ Lancer le client de dev :
 ./gradlew runClient
 ```
 
+## Le monde vide et le point de spawn (`data/minecraft/dimension/overworld.json`, `TavernSpawn.java`)
+
+**Le point le plus à risque de tout le projet jusqu'ici** : c'est la première fois qu'un
+fichier de données (pas de code Java) contrôle le comportement du jeu — `./gradlew build` ne
+charge ni ne valide les datapacks, donc une erreur de syntaxe ou de structure dans
+`overworld.json` ne se verrait **qu'au lancement**, probablement par un monde qui ne se crée
+pas du tout ou une erreur au chargement. Impossible à vérifier sans lancer le client.
+
+- [ ] **Créer un nouveau monde** avec le mod actif : la création ne doit **pas planter**. Si
+      elle échoue, vérifier `run/logs/latest.log` pour une erreur de parsing autour de
+      `overworld.json` (chemin exact, indentation JSON, valeur de `type`/`generator`).
+- [ ] Une fois dans le monde : l'environnement doit être **entièrement vide** (pas de sol, pas
+      de biome visible, ciel présent) — hormis la plateforme provisoire (voir plus bas). Si
+      un sol "normal" apparaît (herbe, pierre generée), le remplacement du générateur n'a pas
+      pris effet — vérifier que le fichier est bien à `data/minecraft/dimension/overworld.json`
+      (namespace **`minecraft`**, pas `dungeon_defenders`).
+- [ ] Le joueur doit apparaître **debout sur une plateforme carrée** (`smooth_stone`, environ
+      9×9) centrée en `(0, 64, 0)`, pas en train de tomber dans le vide.
+- [ ] Se déplacer hors de la plateforme : confirme qu'il n'y a **rien d'autre** autour (vide
+      total), pas de terrain résiduel.
+- [ ] Quitter le monde et le recharger : le joueur doit réapparaître **au même endroit**, sur
+      la même plateforme (pas de nouvelle position aléatoire, pas de nouvelle plateforme
+      décalée).
+- [ ] Mourir (`/kill @s` ou tomber du bord) sans lit ni ancre de réapparition posés : doit
+      réapparaître sur la plateforme, pas à un autre endroit du vide.
+- [ ] Aller dans le Nether ou l'End (si accessible) : ces dimensions doivent rester **normales**
+      (générées comme d'habitude) — seul l'Overworld doit être affecté.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `TavernSpawn`,
+      `LevelEvent.Load`, ou au chargement de la dimension `overworld`.
+
 ## HUD — groupe bas-gauche (mana, vie, expérience)
 
 - [ ] En bas à gauche de l'écran : deux **losanges** côte à côte (mana en bleu à gauche, vie
