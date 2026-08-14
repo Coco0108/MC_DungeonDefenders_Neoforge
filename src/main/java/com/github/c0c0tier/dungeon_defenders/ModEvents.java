@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders;
 
+import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackBlockadeGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackEterniaCrystalGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
@@ -37,16 +38,20 @@ public class ModEvents {
         // fois le goal et attaquerait le cristal plusieurs fois par seconde.
         boolean alreadyAdded = monster.goalSelector.getAvailableGoals().stream()
                 .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal
-                        || wrapped.getGoal() instanceof RangedAttackEterniaCrystalGoal);
+                        || wrapped.getGoal() instanceof RangedAttackEterniaCrystalGoal
+                        || wrapped.getGoal() instanceof AttackBlockadeGoal);
         if (alreadyAdded) {
             return;
         }
 
         // Les squelettes (et tout futur AbstractSkeleton) attaquent à distance avec l'arc
-        // déjà équipé par défaut ; les autres, au corps à corps.
+        // déjà équipé par défaut ; les autres, au corps à corps. Seule la mêlée reçoit en plus
+        // AttackBlockadeGoal (priorité 0, avant le cristal en priorité 1) : un archer peut
+        // tirer par-dessus/à côté d'un Spike Blockade sans avoir besoin de le détruire.
         if (monster instanceof AbstractSkeleton) {
             monster.goalSelector.addGoal(1, new RangedAttackEterniaCrystalGoal(monster));
         } else {
+            monster.goalSelector.addGoal(0, new AttackBlockadeGoal(monster));
             monster.goalSelector.addGoal(1, new AttackEterniaCrystalGoal(monster));
         }
     }

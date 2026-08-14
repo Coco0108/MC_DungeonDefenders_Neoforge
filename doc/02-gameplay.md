@@ -384,22 +384,27 @@ une entité, une flèche vanilla ne saurait pas le "toucher" toute seule).
 ### L'attribution — `ModEvents.onMonsterSpawn`
 
 Écoute `EntityJoinLevelEvent` sur le bus de jeu. Pour chaque `Monster` rejoignant un monde
-côté serveur, un goal est ajouté au `goalSelector` **en priorité 1** (donc au-dessus de la
-plupart des objectifs vanilla) — lequel dépend du type : `AbstractSkeleton` (squelette, et
-tout futur sous-type) reçoit `RangedAttackEterniaCrystalGoal`, tout le reste reçoit
-`AttackEterniaCrystalGoal` (corps à corps).
+côté serveur, un ou deux goals sont ajoutés au `goalSelector`, selon le type :
 
-> `Monster` plutôt que `PathfinderMob` : les deux goals n'exigent techniquement qu'un
+- `AbstractSkeleton` (squelette, et tout futur sous-type) reçoit uniquement
+  `RangedAttackEterniaCrystalGoal`, **priorité 1**.
+- Tout le reste reçoit `AttackBlockadeGoal` en **priorité 0** (voir "Le Spike Blockade" plus
+  bas) **et** `AttackEterniaCrystalGoal` en priorité 1 — un numéro de priorité plus petit passe
+  avant dans le `GoalSelector` vanilla, donc un ennemi de mêlée préfère toujours s'occuper d'un
+  Spike Blockade à portée avant de continuer vers le cristal.
+
+> `Monster` plutôt que `PathfinderMob` : les trois goals n'exigent techniquement qu'un
 > `PathfinderMob`, mais cette classe couvre aussi les mobs passifs (animaux, villageois...).
 > `Monster` est la bonne frontière sémantique — tout ce qui est hostile, rien de passif.
 
 `EntityJoinLevelEvent` se déclenche aussi au rechargement d'un chunk et au changement de
-dimension. Le code vérifie donc d'abord qu'aucun des deux goals n'est déjà présent :
+dimension. Le code vérifie donc d'abord qu'aucun des trois goals n'est déjà présent :
 
 ```java
 monster.goalSelector.getAvailableGoals().stream()
         .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal
-                || wrapped.getGoal() instanceof RangedAttackEterniaCrystalGoal)
+                || wrapped.getGoal() instanceof RangedAttackEterniaCrystalGoal
+                || wrapped.getGoal() instanceof AttackBlockadeGoal)
 ```
 
 Sans ce test, un même monstre cumulerait plusieurs exemplaires du goal et attaquerait le
@@ -408,7 +413,8 @@ cristal plusieurs fois par seconde.
 ## Onglet créatif
 
 `dungeon_defenders_tab`, titre `Component.translatable("itemGroup.dungeon_defenders")`,
-contient l'item du cristal et celui du piège à pics.
+contient l'item du cristal, celui du Spike Blockade, le spawner, la baguette de mana et le
+cristal de la taverne.
 
 ## Apparence du Cristal d'Eternia
 
@@ -419,30 +425,91 @@ vanilla `minecraft:block/diamond_block` : il n'y a pas encore de texture dédié
 Le bloc est miné à la pioche en diamant (tags `mineable/pickaxe` et `needs_diamond_tool`) et
 se drope lui-même via `data/dungeon_defenders/loot_table/blocks/eternia_crystal.json`.
 
-## Le Piège à Pics — `block/SpikeTrapBlock.java`
+## Le Spike Blockade — `block/SpikeBlockadeBlock.java`
 
-Bloc de défense simple, sans block entity : c'est un premier piège pour ralentir/blesser les
-monstres avant qu'ils n'atteignent le cristal.
+Premier **tower** du mod (nom repris tel quel du plan Excel du joueur, feuille "Tours" —
+Squire), au sens propre du terme cette fois : un mur avec ses propres PV, que les ennemis
+doivent détruire pour continuer vers le cristal, plutôt qu'un piège de sol qu'on traverse sans
+y prêter attention. Remplace l'ancien `SpikeTrapBlock` (piège au sol via `stepOn`, mécanisme
+différent — supprimé, pas juste renommé) : les deux idées ne se recoupent pas assez pour
+garder les deux, et le joueur a choisi de repartir sur la vraie mécanique de blocage/PV du
+plan Excel plutôt que de garder l'ancien piège en parallèle.
 
-| Aspect | Implémentation |
-|---|---|
-| Classe | `Block` (pas de `BaseEntityBlock`, aucun état à persister) |
-| Hook de déclenchement | `stepOn(Level, BlockPos, BlockState, Entity)` — appelé quand une entité **marche sur** le bloc (même mécanisme que `MagmaBlock` pour la lave/feu, à ne pas confondre avec `entityInside`, utilisé par le cactus pour un chevauchement latéral) |
-| Cible | `entity instanceof Monster` (tout monstre hostile vanilla ou modded) |
-| Dégâts | `2.0F`, via `level.damageSources().stalagmite()` |
-| Cooldown | `20` ticks (1 s) **par entité**, pas par bloc : un `WeakHashMap<Entity, Long>` en champ d'instance stocke le dernier `level.getGameTime()` de déclenchement pour chaque monstre. `WeakHashMap` évite de retenir indéfiniment des entités mortes/déchargées |
-| Garde côté client | `level.isClientSide()` sort immédiatement — toute la logique (dégâts + cooldown) tourne uniquement côté serveur |
+**Le blocage du passage est gratuit** : un bloc plein (propriété par défaut de n'importe quel
+`Block` Minecraft, rien à coder) bloque déjà la marche d'un mob. Toute la logique custom sert
+donc uniquement à donner des PV au blockade et à faire en sorte qu'un ennemi choisisse de
+l'attaquer plutôt que de rester bloqué bêtement devant.
 
-Propriétés définies à l'enregistrement dans `ModBlocks` : `strength(2.0F)` (dureté/résistance
-aux explosions comparables à la pierre), pas de `requiresCorrectToolForDrops()` — n'importe
-quel outil (ou la main) suffit à le récupérer.
+### L'état — `block/entity/SpikeBlockadeBlockEntity.java`
+
+Même schéma que `EterniaCrystalBlockEntity` (PV, `damage(int)`, détruit le bloc à 0 — `false`
+en dernier paramètre de `destroyBlock` pour empêcher le drop, comme le cristal), avec en plus
+un `serverTick(...)` (le bloc a donc besoin d'un `BlockEntityTicker`, via `BaseEntityBlock`,
+comme le spawner) qui inflige des dégâts à **tout** monstre à son contact, à intervalle
+régulier :
+
+| Paramètre | Valeur | Rôle |
+|---|---|---|
+| `DEFAULT_HEALTH` | `30` | PV du blockade, valeur provisoire |
+| `CONTACT_DAMAGE` | `2.0F` | dégâts infligés à un monstre en contact, via `level.damageSources().stalagmite()` (même source que l'ancien piège) |
+| `CONTACT_DAMAGE_INTERVAL_TICKS` | `20` (1 s) | cooldown **par monstre**, pas par bloc — même technique `WeakHashMap<Monster, Long>` que l'ancien `SpikeTrapBlock` |
+| `CONTACT_RANGE` | `1.0` bloc | rayon d'inflation de la boîte du bloc pour détecter un "contact" — approximation grossière de la portée de mêlée, pas une vraie détection de collision |
+
+`serverTick` scanne `serverLevel.getEntitiesOfClass(Monster.class, contactArea)` à chaque
+tick de bloc et applique les dégâts à ceux dont le cooldown est écoulé — **indépendant** de
+`AttackBlockadeGoal` ci-dessous : les pointes piquent n'importe quel monstre à portée, qu'il
+soit ou non en train d'attaquer activement le blockade via ce goal.
+
+### Le goal — `entity/ai/AttackBlockadeGoal.java`
+
+Un monstre ne s'attaque pas naturellement à un bloc plein dans Minecraft (il chercherait
+plutôt à le contourner) : il faut donc une IA dédiée pour qu'un ennemi de mêlée choisisse de
+détruire un Spike Blockade sur son chemin, plutôt que de rester bloqué devant indéfiniment ou
+de l'ignorer complètement.
+
+| Paramètre | Valeur | Rôle |
+|---|---|---|
+| `SEARCH_RANGE` | `8` | plus court que la portée de détection du cristal (`16`) — ne détourne l'ennemi que si un blockade est vraiment proche, pas n'importe où sur la carte |
+| `SPEED_MODIFIER` / `ACCEPTED_DISTANCE` | `1.2D` / `2.1D` | identiques à `AttackEterniaCrystalGoal` |
+| `DAMAGE_PER_HIT` | `5` | dégâts infligés au blockade par coup — même valeur que le corps à corps sur le cristal |
+| `TICKS_BETWEEN_HITS` | `20` (1 s) | cadence des coups |
+
+Structure similaire à `AttackEterniaCrystalGoal` (`MoveToBlockGoal`, convergence + cooldown de
+coups), mais **n'étend pas** `AbstractEterniaCrystalAttackGoal` : cette base est pensée pour
+cibler le cristal (un seul exemplaire sur la carte), alors qu'un Spike Blockade est cherché
+par proximité et qu'il n'y a pour l'instant qu'un seul tower de mêlée — forcer une base commune
+maintenant reviendrait à deviner une forme partagée plutôt qu'à la constater sur un second
+exemple concret (voir le commentaire de classe d'`AbstractEterniaCrystalAttackGoal`, même
+principe qui a mené à sa création après coup plutôt qu'avant).
+
+Une fois le blockade détruit, `isValidTarget` ne trouve plus rien à cette position :
+`MoveToBlockGoal` termine le goal tout seul (comportement vanilla, rien à coder), et l'ennemi
+retombe sur `AttackEterniaCrystalGoal` (priorité 1) au prochain choix de goal.
+
+Pas de version à distance : un archer peut tirer par-dessus/à côté d'un blockade sans avoir
+besoin de le détruire, contrairement à un ennemi de mêlée qui doit littéralement passer au
+travers — voir "L'attribution" plus bas, seuls les non-`AbstractSkeleton` reçoivent ce goal.
 
 ### Apparence
 
 Modèle `cube_all` pointant **provisoirement** sur la texture vanilla
-`minecraft:block/dripstone_block` (choisie pour son aspect visuellement "pointu"). Miné à la
-pioche (tag `mineable/pickaxe` uniquement, pas de tag de niveau d'outil) et se drope lui-même
-via `data/dungeon_defenders/loot_table/blocks/spike_trap.json`.
+`minecraft:block/dripstone_block` (choisie pour son aspect visuellement "pointu", reprise de
+l'ancien `SpikeTrapBlock`). Miné à la pioche (tag `mineable/pickaxe` uniquement, pas de tag de
+niveau d'outil) et se drope lui-même via
+`data/dungeon_defenders/loot_table/blocks/spike_blockade.json`.
+
+**Ce qui n'est PAS fait**, volontairement — voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) :
+
+- Pas de coût en mana pour le placer : un bloc posable depuis l'inventaire comme les autres
+  pour l'instant, comme l'était l'ancien piège.
+- Pas de remboursement de mana en le cassant.
+- Pas d'indicateur visuel de PV restants (barre de vie, changement de texture...) — seul
+  `getHealth()` existe côté code, rien ne l'affiche encore.
+- Un seul tower de mêlée pour l'instant : pas encore de tower à distance, d'aura/piège non
+  attaquable, ni de piège de sol (les quatre autres catégories envisagées par le joueur, voir
+  05-etat-et-problemes-connus.md) — chacune aura probablement besoin de sa propre base, une
+  fois qu'un second exemple concret de chaque existera.
 
 ## Le mana du joueur
 

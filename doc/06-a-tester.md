@@ -428,6 +428,50 @@ Deuxième morceau à risque de cette session : premier texte du mod rendu "à tr
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `SpawnerBlockEntityRenderer`
       ou `SpawnerRenderState` (en particulier au chargement du monde ou à la casse du bloc).
 
+## Le Spike Blockade (`SpikeBlockadeBlock`, `SpikeBlockadeBlockEntity`, `AttackBlockadeGoal`)
+
+Première tour du mod (catégorie "corps à corps" de la taxonomie, voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#système-de-tours-démarré--spike-blockade-le-reste-de-la-taxonomie-pas-commencé)) :
+remplace l'ancien `spike_trap` (piège de sol au `stepOn`) par un vrai bloc à PV, bloquant le
+passage, que les monstres doivent maintenant activement attaquer pour détruire — premier goal
+d'IA du mod qui cible un bloc plutôt qu'une entité, jamais vérifié visuellement.
+
+- [ ] Prendre `spike_blockade` dans l'onglet créatif Dungeon Defenders (texture provisoire :
+      bloc de dripstone), le poser. Doit **bloquer le passage** comme n'importe quel bloc plein
+      (pas de hitbox custom, collision vanilla normale).
+- [ ] Faire spawn un zombie à proximité (spawner ou `/summon minecraft:zombie`) avec un Spike
+      Blockade posé entre lui et le Cristal d'Eternia, sur son chemin le plus direct : le
+      zombie doit se diriger vers le **Spike Blockade en premier** (pas continuer tout droit
+      vers le cristal en l'ignorant), s'arrêter à son contact, puis lui donner des coups (les
+      mêmes animations que taper une entité) — vérifie la priorité `AttackBlockadeGoal` (0)
+      devant `AttackEterniaCrystalGoal` (1).
+- [ ] Après quelques coups (`DAMAGE_PER_HIT=5` toutes les `TICKS_BETWEEN_HITS=20` ticks), le
+      bloc doit finir par se **casser** (PV par défaut : 30, donc 6 coups) — pas de recul
+      visuel de dégâts pour l'instant (pas d'indicateur de PV, comportement attendu).
+- [ ] Une fois le Spike Blockade détruit : le même zombie doit **reprendre son chemin vers le
+      cristal** normalement (bascule vers `AttackEterniaCrystalGoal`), sans rester bloqué à
+      l'ancien emplacement du bloc.
+- [ ] Se tenir soi-même (joueur) au contact du Spike Blockade : vérifier qu'il n'inflige
+      **aucun dégât au joueur** — la détection de contact (`serverTick`,
+      `getEntitiesOfClass(Monster.class, ...)`) ne cible que les `Monster`, pas les joueurs.
+- [ ] Faire stationner un zombie **au contact** du bloc sans qu'il ait besoin d'attaquer
+      explicitement (le pousser dessus, ou le laisser s'arrêter dessus) : il doit prendre des
+      **dégâts de contact périodiques** (`CONTACT_DAMAGE=2`, toutes les `CONTACT_DAMAGE_
+      INTERVAL_TICKS=20`, soit 1 fois par seconde) — indépendamment des dégâts de
+      `AttackBlockadeGoal`, ce sont deux mécanismes séparés qui peuvent s'additionner.
+- [ ] Faire spawn un squelette à distance avec un Spike Blockade sur le chemin : contrairement
+      au zombie, le squelette **ne doit pas** se dérouter vers le bloc (il ne l'attaque pas au
+      corps à corps) — il doit continuer à viser le cristal à distance comme avant, le Spike
+      Blockade ne bloque pas ses flèches.
+- [ ] Casser le Spike Blockade soi-même à la pioche (hors combat) : il se drope (comme
+      l'ancien `spike_trap`), pas de coût en mana ni remboursement pour l'instant (manques
+      connus, voir 05-etat-et-problemes-connus.md).
+- [ ] Poser plusieurs Spike Blockade côte à côte formant un mur : un zombie coincé derrière
+      doit s'attaquer à **celui qui bloque effectivement son chemin**, pas se figer ou choisir
+      un bloc au hasard plus loin.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `SpikeBlockadeBlock`,
+      `SpikeBlockadeBlockEntity`, ou `AttackBlockadeGoal`.
+
 ## HUD vanilla masqué
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.SpikeBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
@@ -39,6 +40,12 @@ public class DungeonDefendersMod {
                     ModBlocks.SPAWNER.get()
             ));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SpikeBlockadeBlockEntity>> SPIKE_BLOCKADE_BE =
+            BLOCK_ENTITIES.register("spike_blockade", () -> new BlockEntityType<>(
+                    SpikeBlockadeBlockEntity::new,
+                    ModBlocks.SPIKE_BLOCKADE.get()
+            ));
+
     // 3. L'onglet Créatif
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> DUNGEON_DEFENDERS_TAB = CREATIVE_MODE_TABS.register("dungeon_defenders_tab",
             () -> CreativeModeTab.builder()
@@ -46,7 +53,7 @@ public class DungeonDefendersMod {
                     .icon(() -> ModBlocks.ETERNIA_CRYSTAL_ITEM.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
                         output.accept(ModBlocks.ETERNIA_CRYSTAL_ITEM.get());
-                        output.accept(ModBlocks.SPIKE_TRAP_ITEM.get());
+                        output.accept(ModBlocks.SPIKE_BLOCKADE_ITEM.get());
                         output.accept(ModBlocks.MANA_TEST_WAND.get());
                         output.accept(ModBlocks.SPAWNER_ITEM.get());
                         output.accept(ModBlocks.TAVERN_CRYSTAL_ITEM.get());

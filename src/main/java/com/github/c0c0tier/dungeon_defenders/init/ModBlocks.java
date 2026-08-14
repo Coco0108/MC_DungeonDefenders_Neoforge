@@ -3,7 +3,7 @@ package com.github.c0c0tier.dungeon_defenders.init;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.EterniaCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpawnerBlock;
-import com.github.c0c0tier.dungeon_defenders.block.SpikeTrapBlock;
+import com.github.c0c0tier.dungeon_defenders.block.SpikeBlockadeBlock;
 import com.github.c0c0tier.dungeon_defenders.block.TavernCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.item.ManaTestWandItem;
 import net.minecraft.world.item.BlockItem;
@@ -30,13 +30,14 @@ public class ModBlocks {
     public static final DeferredItem<BlockItem> ETERNIA_CRYSTAL_ITEM =
             ITEMS.registerSimpleBlockItem("eternia_crystal", ETERNIA_CRYSTAL);
 
-    // 3. Le piège à pics : dégâts au contact, cooldown géré dans SpikeTrapBlock
-    public static final DeferredBlock<SpikeTrapBlock> SPIKE_TRAP = BLOCKS.registerBlock("spike_trap",
-            SpikeTrapBlock::new,
+    // 3. Spike Blockade (nom repris du plan Excel — Squire) : premier tower du mod, un mur à
+    // PV qui pique les monstres à son contact. Voir SpikeBlockadeBlockEntity pour le détail.
+    public static final DeferredBlock<SpikeBlockadeBlock> SPIKE_BLOCKADE = BLOCKS.registerBlock("spike_blockade",
+            SpikeBlockadeBlock::new,
             properties -> properties.strength(2.0F));
 
-    public static final DeferredItem<BlockItem> SPIKE_TRAP_ITEM =
-            ITEMS.registerSimpleBlockItem("spike_trap", SPIKE_TRAP);
+    public static final DeferredItem<BlockItem> SPIKE_BLOCKADE_ITEM =
+            ITEMS.registerSimpleBlockItem("spike_blockade", SPIKE_BLOCKADE);
 
     // 4. Baguette de test : retire 10 de mana au clic droit, pour vérifier le HUD (mana)
     public static final DeferredItem<ManaTestWandItem> MANA_TEST_WAND =
