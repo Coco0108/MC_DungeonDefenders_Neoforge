@@ -1,7 +1,9 @@
 package com.github.c0c0tier.dungeon_defenders.init;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
@@ -51,6 +53,48 @@ public final class PhaseTransitions {
 
         level.setData(ModAttachments.GAME_PHASE, GamePhase.BUILD.ordinal());
         level.syncData(ModAttachments.GAME_PHASE);
+
+        recomputeWaveEnemiesTotal(level);
+    }
+
+    /**
+     * La dernière vague (MAX_WAVE) vient d'être nettoyée : diffuse un message de victoire et
+     * remet la partie à zéro (vague 1, phase Construction) pour pouvoir relancer une partie
+     * proprement. N'agit pas sur le Cristal d'Eternia lui-même — voir
+     * 05-etat-et-problemes-connus.md, la remise à neuf de la map (tours, cristal) reste à
+     * faire, liée au futur système de maps/structures.
+     */
+    public static void onVictory(Level level) {
+        resetGameState(level);
+        for (Player player : level.players()) {
+            player.sendSystemMessage(Component.translatable("dungeon_defenders.game.victory")
+                    .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
+        }
+    }
+
+    /**
+     * Le Cristal d'Eternia vient d'être détruit : diffuse un message de défaite et remet la
+     * partie à zéro (vague 1, phase Construction), pour que les spawners arrêtent de faire
+     * apparaître des ennemis sur une partie déjà perdue. Le cristal détruit lui-même n'est pas
+     * replacé automatiquement — même remarque que pour onVictory.
+     */
+    public static void onDefeat(Level level) {
+        resetGameState(level);
+        for (Player player : level.players()) {
+            player.sendSystemMessage(Component.translatable("dungeon_defenders.game.defeat")
+                    .withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
+        }
+    }
+
+    private static void resetGameState(Level level) {
+        level.setData(ModAttachments.CURRENT_WAVE, 1);
+        level.syncData(ModAttachments.CURRENT_WAVE);
+
+        level.setData(ModAttachments.GAME_PHASE, GamePhase.BUILD.ordinal());
+        level.syncData(ModAttachments.GAME_PHASE);
+
+        level.setData(ModAttachments.WAVE_ENEMIES_KILLED, 0);
+        level.syncData(ModAttachments.WAVE_ENEMIES_KILLED);
 
         recomputeWaveEnemiesTotal(level);
     }

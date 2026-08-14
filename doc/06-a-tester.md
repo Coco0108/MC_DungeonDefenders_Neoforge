@@ -195,6 +195,35 @@ puisqu'elle en dépend pour entrer en Combat autrement qu'avec le harnais de tes
 - [ ] Aucune erreur dans les logs au placement, au tick, ou à la casse du bloc — en particulier
       liée à `PhaseTransitions`, `ModAttachments.ACTIVE_SPAWNERS` ou `COMBAT_SESSION`.
 
+## Victoire et défaite (`PhaseTransitions.onVictory/onDefeat`)
+
+- [ ] Jouer jusqu'à la vague `5/5` (la valeur actuelle de `MAX_WAVE`) et la nettoyer
+      entièrement (tuer tous les ennemis) : message **"Victoire ! Toutes les vagues sont
+      nettoyées."** (vert, gras) diffusé à tous les joueurs — pas le message habituel "Vague
+      terminée !".
+- [ ] Après la victoire : `Vague X/5` doit être revenu à `1/5`, et `Phase : ...` doit être
+      repassé à `Construction` — la partie doit être immédiatement rejouable depuis le début
+      (pas besoin de relancer le monde).
+- [ ] Sur une vague **avant** la dernière (ex. vague 2/5), la nettoyer : doit toujours afficher
+      le message habituel **"Vague terminée !"**, pas le message de victoire — vérifie que la
+      distinction "était-ce la dernière vague" fonctionne dans les deux sens.
+- [ ] Détruire le Cristal d'Eternia (attaques répétées, ou clic droit dessus en Combat) :
+      message **"Défaite ! Le Cristal d'Eternia est tombé."** (rouge, gras), en plus du
+      message habituel de destruction du cristal — les deux doivent apparaître.
+- [ ] Après la défaite : `Vague X/5` doit être revenu à `1/5`, `Phase : ...` repassé à
+      `Construction` — mais le **bloc du cristal reste absent** (pas replacé automatiquement,
+      comportement attendu pour l'instant, voir 05-etat-et-problemes-connus.md). Il faut le
+      reposer à la main pour continuer à tester.
+- [ ] Provoquer une défaite **en pleine vague 3** (par exemple) : vérifie que ça fonctionne à
+      n'importe quel moment de la partie, pas seulement en fin de vague — la défaite doit
+      pouvoir interrompre une vague en cours.
+- [ ] Poser un spawner avec une plage de vagues incluant la vague 1 (ex. `waveStart=1`) et
+      relancer une partie après victoire/défaite : les spawners doivent redémarrer
+      normalement sur la nouvelle vague 1, pas rester bloqués sur l'ancien état de la partie
+      précédente.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `PhaseTransitions.onVictory`,
+      `onDefeat`, ou `resetGameState`.
+
 ## Le squelette archer (`RangedAttackEterniaCrystalGoal`)
 
 Premier ennemi à distance du mod, et première flèche jamais lancée par le mod — à vérifier

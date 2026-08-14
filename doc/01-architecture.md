@@ -165,7 +165,12 @@ Bus de jeu (NeoForge.EVENT_BUS)
    ├─ ModEvents.onMonsterSpawn(EntityJoinLevelEvent)
    ├─ ModEvents.onPlayerJoin(EntityJoinLevelEvent)
    └─ ModEvents.onMonsterDeath(LivingDeathEvent)
-        └─ si wave_enemies_killed >= wave_enemies_total : PhaseTransitions.enterBuild(level)
+        └─ si wave_enemies_killed >= wave_enemies_total :
+             PhaseTransitions.enterBuild(level) (vague suivante)
+             ou PhaseTransitions.onVictory(level) si c'était déjà MAX_WAVE
+
+EterniaCrystalBlockEntity#setCrystalHealth, à 0 PV :
+   └─ level.destroyBlock(...) + message + PhaseTransitions.onDefeat(level)
 
 Chaque SpawnerBlockEntity, en plus de ces événements :
    ├─ setLevel(...)/setRemoved()   → s'ajoute/se retire de ModAttachments.ACTIVE_SPAWNERS

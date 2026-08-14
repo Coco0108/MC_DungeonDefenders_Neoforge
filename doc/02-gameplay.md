@@ -72,7 +72,8 @@ private int crystalHealth = DEFAULT_HEALTH;
   - appelle `level.sendBlockUpdated(...)` pour pousser les nouveaux PV vers les clients ;
   - si les PV tombent à ≤ 0 : `level.destroyBlock(worldPosition, false)` — le `false` empêche
     le drop de l'item — puis message `dungeon_defenders.eternia_crystal.destroyed` en rouge
-    gras à tous les joueurs.
+    gras à tous les joueurs, et `PhaseTransitions.onDefeat(level)` (voir plus bas, "Victoire et
+    défaite") pour remettre la partie à zéro.
 
 **Persistance.** `saveAdditional` / `loadAdditional` utilisent l'API `ValueOutput` /
 `ValueInput` (le remplaçant des `CompoundTag` bruts) :
@@ -825,14 +826,47 @@ par le même code, plutôt que de dupliquer la remise à zéro des compteurs à 
 
 **Le retour automatique** (`ModEvents.onMonsterDeath`) : après avoir incrémenté
 `WAVE_ENEMIES_KILLED`, si `killed >= total` (et `total > 0`, pour ne pas basculer
-immédiatement si aucun spawner n'a encore pu contribuer), appelle `enterBuild(...)` et
-diffuse un message à tous les joueurs (`dungeon_defenders.spawner.wave_cleared`, même
-mécanisme que le message de destruction du cristal).
+immédiatement si aucun spawner n'a encore pu contribuer), regarde si la vague qu'on vient de
+nettoyer était déjà `MAX_WAVE` (capturé **avant** d'appeler `enterBuild`/`onVictory`, puisque
+les deux modifient `CURRENT_WAVE`) :
 
-Ce qui reste **hors de ce morceau**, volontairement : `CURRENT_WAVE` reste plafonné à
-`MAX_WAVE` une fois atteint (pas de dépassement en `6/5`), mais rien ne déclenche encore de
-victoire à ce moment-là, ni de défaite si le cristal tombe avant. Voir
-[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+- Si ce n'était **pas** la dernière vague : `enterBuild(...)` comme avant, message
+  `dungeon_defenders.spawner.wave_cleared`.
+- Si c'**était** la dernière vague : `PhaseTransitions.onVictory(level)` à la place.
+
+### Victoire et défaite — `PhaseTransitions.onVictory/onDefeat`
+
+Deux nouvelles transitions, sur le même principe que `enterCombat`/`enterBuild`
+(centralisées dans `PhaseTransitions`, pas dupliquées à chaque appelant) :
+
+- **`onVictory(level)`** — appelée par `ModEvents.onMonsterDeath` quand la dernière vague
+  vient d'être nettoyée. Diffuse `dungeon_defenders.game.victory` (vert, gras) à tous les
+  joueurs, puis remet la partie à zéro.
+- **`onDefeat(level)`** — appelée par `EterniaCrystalBlockEntity` juste après la destruction
+  du bloc à 0 PV (à la suite du message `eternia_crystal.destroyed` déjà existant). Diffuse
+  `dungeon_defenders.game.defeat` (rouge, gras), puis remet la partie à zéro.
+
+Les deux passent par le même `resetGameState(level)` privé : `CURRENT_WAVE` → 1, phase →
+`BUILD`, `WAVE_ENEMIES_KILLED` → 0, et `WAVE_ENEMIES_TOTAL` recalculé (réutilise
+`recomputeWaveEnemiesTotal`, la même méthode privée qu'`enterBuild`) — pour que la partie soit
+immédiatement prête à relancer une vague 1 propre, sans qu'un spawner continue à faire
+apparaître des ennemis sur une partie déjà gagnée ou perdue.
+
+**Ce qui n'est PAS fait ici**, volontairement — voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) :
+
+- Le Cristal d'Eternia détruit **n'est pas replacé automatiquement** : `resetGameState` remet
+  les compteurs à zéro, mais le bloc lui-même reste absent tant que personne n'en repose un à
+  la main. Remettre "le cristal" en jeu après une défaite fait partie de la future remise à
+  neuf d'une map (structure reposée, tours retirées, PV du cristal restaurés), pas de ce
+  morceau-ci.
+- Pas d'écran dédié "Victoire"/"Game Over" (juste un message système) — l'idée d'un écran avec
+  choix "rejouer/retour à la taverne" existe (vue dans le plan Excel du joueur), mais dépend du
+  système de maps/structures (savoir où "rejouer" ou "la taverne" veulent dire concrètement),
+  pas encore construit.
+- Rien ne distingue encore une partie "terminée" (victoire/défaite) d'une simple pause entre
+  deux vagues : les deux ramènent en phase `BUILD`, vague 1. Un joueur qui n'a pas vu le
+  message peut ne pas remarquer que la partie a recommencé à zéro.
 
 ### Apparence
 

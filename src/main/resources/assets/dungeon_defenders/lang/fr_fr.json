@@ -8,6 +8,8 @@
   "dungeon_defenders.eternia_crystal.damaged": "Aïe ! Le cristal perd %s PV. PV restants : %s",
   "dungeon_defenders.eternia_crystal.destroyed": "Le cristal a été détruit !! Game Over !",
   "dungeon_defenders.eternia_crystal.ready_progress": "Prêt : %s/%s",
+  "dungeon_defenders.game.victory": "Victoire ! Toutes les vagues sont nettoyées.",
+  "dungeon_defenders.game.defeat": "Défaite ! Le Cristal d'Eternia est tombé.",
 
   "dungeon_defenders.hud.mana": "Mana : %s/%s",
   "dungeon_defenders.hud.health": "Vie : %s/%s",

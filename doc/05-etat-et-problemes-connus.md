@@ -108,6 +108,13 @@ vérifie la CI.
   vérifiées traversables (pieds + tête), repli sur `pos.above()` sinon. Pas de vérification
   de sol en dessous — un ennemi qui spawn au-dessus d'un trou tombe simplement, ce n'est pas
   traité comme un problème.
+- ✅ Victoire et défaite (`PhaseTransitions.onVictory/onDefeat`) : la partie se termine
+  vraiment maintenant. Nettoyer la dernière vague (`current_wave == MAX_WAVE`) diffuse un
+  message de victoire ; la destruction du Cristal d'Eternia diffuse un message de défaite. Les
+  deux remettent la partie à zéro (vague 1, phase Construction) pour pouvoir relancer
+  proprement. Le cristal détruit **n'est pas replacé automatiquement** et il n'y a pas encore
+  d'écran dédié (juste un message système) — voir "Ce qui reste" plus bas. Détail dans
+  [02-gameplay.md](02-gameplay.md#victoire-et-défaite--phasetransitionsonvictoryondefeat).
 
 ## Corrections apportées
 
@@ -197,14 +204,23 @@ de coût en mana, pas de lien avec un vrai sort ou une vraie action de réparati
 n'existent pas non plus côté gameplay). C'est un pur placeholder visuel, en attendant les
 images promises pour chaque slot et la logique derrière.
 
-### Les vagues ne se déroulent toujours pas complètement
+### La partie se termine, mais sans vraie conclusion visuelle
 
-`current_wave` avance maintenant réellement d'une vague à l'autre (plafonné à `MAX_WAVE`,
-voir "Ce qui est implémenté" plus haut et
-[02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath)),
-mais rien ne se passe une fois `MAX_WAVE` atteint : pas de condition de victoire (dernière
-vague nettoyée) ni de défaite (cristal détruit) — la partie continue simplement à boucler sur
-la dernière vague indéfiniment.
+Victoire et défaite existent maintenant (voir "Ce qui est implémenté" plus haut et
+[02-gameplay.md](02-gameplay.md#victoire-et-défaite--phasetransitionsonvictoryondefeat)), mais
+de façon minimale :
+
+- Un simple message système annonce la victoire/défaite — pas d'écran dédié. L'idée d'un
+  écran avec choix "rejouer/retour à la taverne" existe (vue dans le plan Excel du joueur),
+  mais dépend du système de maps/structures (savoir concrètement où "rejouer" et "la taverne"
+  mènent), pas encore construit.
+- Le Cristal d'Eternia détruit à la défaite **n'est pas replacé automatiquement** —
+  `resetGameState` remet les compteurs à zéro, mais le bloc reste absent tant que personne
+  n'en repose un à la main. Ça fait partie de la future remise à neuf d'une map (structure
+  reposée, tours retirées, PV du cristal restaurés), pas de ce morceau.
+- Rien ne distingue une partie "terminée" d'une simple pause entre deux vagues : les deux
+  ramènent en phase `BUILD`, vague 1 — un joueur qui manque le message système ne verra pas
+  forcément que la partie a recommencé à zéro.
 
 Le registre `ModAttachments.ACTIVE_SPAWNERS` ne reflète que les spawners **actuellement
 chargés** — fiable en test (le joueur est toujours à proximité), mais deviendra pleinement
@@ -306,12 +322,14 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 7. Définir un vrai système d'expérience/score/niveaux : comment `EXPERIENCE`, `SCORE` et
    `LEVEL` se nourrissent l'un l'autre (aujourd'hui trois compteurs indépendants, tous
    bloqués à leur valeur par défaut, comme le mana avant `ManaTestWandItem`).
-8. ~~Définir le déroulement des vagues~~ — fait pour l'essentiel : vote "prêt" pour déclencher
-   le Combat, `WAVE_ENEMIES_TOTAL` juste (registre des spawners actifs), retour automatique en
-   `BUILD` dès que `WAVE_ENEMIES_KILLED` l'atteint, `CURRENT_WAVE` qui avance (plafonné à
-   `MAX_WAVE`) — voir "Ce qui est implémenté" et
+8. ~~Définir le déroulement des vagues~~ — fait : vote "prêt" pour déclencher le Combat,
+   `WAVE_ENEMIES_TOTAL` juste (registre des spawners actifs), retour automatique en `BUILD`
+   dès que `WAVE_ENEMIES_KILLED` l'atteint, `CURRENT_WAVE` qui avance (plafonné à `MAX_WAVE`),
+   et maintenant victoire (dernière vague nettoyée) / défaite (cristal détruit) — voir "Ce qui
+   est implémenté" et
    [02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath).
-   Reste ouvert : victoire à la dernière vague, défaite si le cristal tombe avant.
+   Reste ouvert : un vrai écran de fin de partie (juste un message système pour l'instant), et
+   remettre en jeu le cristal détruit automatiquement — voir la section dédiée plus haut.
 9. Donner un moyen de choisir/changer `ModAttachments.CHARACTER_NAME` (commande, écran de
    création de personnage...) — sans ça, il reste égal au pseudo Minecraft en permanence.
 10. Une fois les images des 4 compétences fournies : les afficher dans `AbilitySlotsOverlay`
