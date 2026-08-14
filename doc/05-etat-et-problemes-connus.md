@@ -248,7 +248,7 @@ correct seulement une fois qu'un système force-chargera toute la zone de jeu pe
 partie (voir "Système de maps/structures" ci-dessous) plutôt que de compter sur le chargement
 naturel autour du joueur.
 
-### Système de maps/structures (démarré : monde vide + spawn fixe + choix de map/difficulté, le chargement de map lui-même pas commencé)
+### Système de maps/structures (démarré : monde vide, taverne, choix de map/difficulté, mécanisme de chargement avec placeholder — les vraies structures restent à faire)
 
 Plan affiné au fil de plusieurs échanges avec le joueur, pas encore tout codé :
 
@@ -288,21 +288,31 @@ Plan affiné au fil de plusieurs échanges avec le joueur, pas encore tout codé
   version du mod resterait invisible sur une sauvegarde existante — le joueur garderait la
   version posée lors de sa toute première visite, rien ne la reposant ensuite.
 
-**Fait** : monde vide + point de spawn fixe, reposé (pour l'instant une plateforme provisoire)
-à chaque chargement du monde plutôt qu'une seule fois — voir plus haut ; l'écran de choix de
-map/difficulté dans la taverne (`TavernCrystalBlock`/`MapSelectionScreen`, voir plus haut et
-[02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté)) — la difficulté
-choisie s'applique réellement, le choix de map non.
+**Fait** :
+- Monde vide + point de spawn fixe, reposé (pour l'instant une plateforme provisoire) à chaque
+  chargement du monde plutôt qu'une seule fois — voir plus haut.
+- L'écran de choix de map/difficulté dans la taverne (`TavernCrystalBlock`/
+  `MapSelectionScreen`, voir plus haut et
+  [02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté)) — la difficulté
+  choisie s'applique réellement.
+- Le **mécanisme** de chargement de map (`MapInstance.java`) : un emplacement partagé
+  (`MAP_POS`, une seule map active à la fois), nettoyé puis reposé avec un placeholder
+  générique au clic sur "Jouer" (`startGame`), tout le monde téléporté ensemble. Retour à la
+  taverne via la commande `/dd_leave` (`returnToTavern`), aussi accessible comme lien
+  cliquable dans les messages de victoire/défaite (voir "Ce qui est implémenté" plus haut).
+  Voir [02-gameplay.md](02-gameplay.md#la-map-active--mapinstancejava).
 
-**Reste à faire** : la vraie structure de la taverne (la plateforme actuelle est un
-placeholder à supprimer une fois construite) ; au moins une vraie map ; le mécanisme
-"poser la structure choisie à la coordonnée partagée + téléporter les joueurs + transition
-fabriquée" déclenché par le bouton "Jouer" ; le nettoyage (effacer la zone) au retour à la
-taverne ; la réinitialisation tours/PV du cristal entre deux tentatives ; le force-chargement
-pendant une partie ; une bordure/barrière anti-chute dans le vide en dehors des zones bâties.
-C'est aussi le prérequis pour que le verrou créatif du GUI de config du spawner (voir plus
-haut) ait vraiment son plein effet : tant que ce système n'est pas fini, rien n'empêche
-techniquement de construire et tester une map "à la main" en créatif.
+**Reste à faire** : le choix de map précis dans le carrousel n'a toujours aucun effet (une
+seule map placeholder générique pour l'instant, quel que soit l'élément sélectionné) ; la
+vraie structure de la taverne (la plateforme actuelle est un placeholder) ; au moins une
+vraie map, et le vrai chargement de sa structure `.nbt` (remplacerait
+`buildPlaceholderArena()`) ; la réinitialisation tours/PV du cristal entre deux tentatives ;
+le force-chargement pendant une partie ; une bordure/barrière anti-chute dans le vide en
+dehors des zones bâties ; un vrai point de sortie posé dans chaque map (`/dd_leave` reste une
+commande de harnais, utilisable à tout moment, pas seulement après victoire/défaite). C'est
+aussi le prérequis pour que le verrou créatif du GUI de config du spawner (voir plus haut) ait
+vraiment son plein effet : tant que ce système n'est pas fini, rien n'empêche techniquement de
+construire et tester une map "à la main" en créatif.
 
 ### Le GUI du spawner ne choisit que parmi une liste fermée d'ennemis (SpawnableEnemy)
 
@@ -410,11 +420,12 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
     (`SpawnerBlockEntityRenderer`, phase Construction) — texte seul pour l'instant. Piste
     envisagée : réutiliser les textures vanilla des œufs d'invocation
     (`zombie_spawn_egg`/`skeleton_spawn_egg`) pour ne pas dépendre d'assets custom.
-15. Système de maps/structures : ~~monde vide + point de spawn fixe~~ et ~~écran de choix de
-    map/difficulté~~ faits (voir "Ce qui est implémenté"). Reste : la vraie structure de la
-    taverne (remplacer la plateforme provisoire), au moins une vraie map, le mécanisme
-    "poser la structure choisie + téléporter + transition" au clic sur "Jouer", le nettoyage
-    de la zone au retour à la taverne, la réinitialisation tours/PV du cristal entre deux
-    tentatives, le force-chargement pendant une partie, une bordure anti-chute dans le vide.
-    Voir la section dédiée dans "Ce qui reste" ci-dessus — c'est aussi ce qui rendra
-    `ACTIVE_SPAWNERS` pleinement fiable (indépendant de la position du joueur).
+15. Système de maps/structures : ~~monde vide + point de spawn fixe~~, ~~écran de choix de
+    map/difficulté~~ et ~~mécanisme de chargement de map (placeholder)~~ faits (voir "Ce qui
+    est implémenté"). Reste : la vraie structure de la taverne (remplacer la plateforme
+    provisoire), au moins une vraie map avec sa vraie structure `.nbt` (remplacerait
+    `MapInstance.buildPlaceholderArena()`), la réinitialisation tours/PV du cristal entre deux
+    tentatives, le force-chargement pendant une partie, une bordure anti-chute dans le vide,
+    un vrai point de sortie posé dans chaque map (plutôt que la commande de harnais
+    `/dd_leave`). Voir la section dédiée dans "Ce qui reste" ci-dessus — c'est aussi ce qui
+    rendra `ACTIVE_SPAWNERS` pleinement fiable (indépendant de la position du joueur).

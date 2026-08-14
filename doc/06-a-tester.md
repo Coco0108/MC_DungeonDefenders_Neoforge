@@ -76,12 +76,39 @@ visuellement.
       l'écran (reclic sur le bloc) : la difficulté doit maintenant s'afficher comme
       **Difficile** déjà sélectionnée — vérifie que le choix a bien été appliqué côté serveur
       et resynchronisé (test le plus important de cette section).
-- [ ] "Jouer" ne doit **rien faire d'autre** pour l'instant : pas de téléportation, pas de
-      changement de phase, pas de construction de structure — normal, ce système n'existe pas
-      encore (voir 05-etat-et-problemes-connus.md).
+- [ ] Cliquer sur "Jouer" (n'importe quelle map/difficulté) : doit **téléporter** vers un
+      nouvel emplacement, loin de la taverne — une petite plateforme provisoire similaire à
+      celle de la taverne (voir section dédiée ci-dessous pour le détail).
+- [ ] Le choix de map dans le carrousel (flèches `◀`/`▶`) n'a **aucun effet** sur ce qui se
+      passe au clic sur "Jouer" — normal, une seule map placeholder générique existe pour
+      l'instant (voir 05-etat-et-problemes-connus.md), pas un bug.
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `TavernCrystalBlock`,
-      `MapSelectionScreen`, `GameMap`, `SetDifficultyPayload`, ou au chargement de la texture
-      `textures/gui/maps/test_map.png` (identifiant de texture introuvable, etc.).
+      `MapSelectionScreen`, `GameMap`, `SetDifficultyPayload`, `StartGamePayload`, ou au
+      chargement de la texture `textures/gui/maps/test_map.png` (identifiant de texture
+      introuvable, etc.).
+
+## "Jouer" et le retour à la taverne (`MapInstance.java`, `/dd_leave`)
+
+- [ ] Depuis la taverne, cliquer "Jouer" : tous les joueurs présents (pas juste celui qui a
+      cliqué, si plusieurs) doivent être téléportés **ensemble** vers le même nouvel
+      emplacement, loin des coordonnées de la taverne (`~10000, 65, 0`).
+- [ ] À l'arrivée : une plateforme carrée (`smooth_stone`, ~17×17) doit être là, le joueur
+      doit apparaître dessus, pas en train de tomber dans le vide.
+- [ ] Taper `/dd_leave` : doit nettoyer la plateforme de map (tout redevient du vide à cet
+      emplacement) et téléporter tous les joueurs présents vers la taverne — sur la
+      plateforme de la taverne, pas ailleurs dans le vide.
+- [ ] Retourner sur "Jouer" une seconde fois après un premier aller-retour : la plateforme de
+      map doit être reposée normalement (pas de blocs résiduels d'un tour précédent, pas de
+      trous), même chose pour la taverne après un `/dd_leave`.
+- [ ] Casser un bloc de la plateforme de map, revenir à la taverne (`/dd_leave`), puis
+      recliquer "Jouer" : la plateforme doit être entièrement reconstituée (le nettoyage +
+      repose s'exécute à chaque "Jouer", pas juste la première fois).
+- [ ] Après une **victoire** ou une **défaite** (voir section dédiée plus bas) : un message
+      cliquable **"[Retour à la taverne]"** (bleu clair, souligné) doit apparaître juste après
+      le message de victoire/défaite. Cliquer dessus doit avoir le même effet que taper
+      `/dd_leave` — retour à la taverne.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `MapInstance`, `ModCommands`,
+      ou `StartGamePayload`.
 
 ## HUD — groupe bas-gauche (mana, vie, expérience)
 
@@ -279,9 +306,12 @@ puisqu'elle en dépend pour entrer en Combat autrement qu'avec le harnais de tes
 - [ ] Sur une vague **avant** la dernière (ex. vague 2/5), la nettoyer : doit toujours afficher
       le message habituel **"Vague terminée !"**, pas le message de victoire — vérifie que la
       distinction "était-ce la dernière vague" fonctionne dans les deux sens.
+- [ ] Après la victoire, un message **"[Retour à la taverne]"** (bleu clair, souligné) doit
+      apparaître juste en dessous — cliquable, voir la section dédiée plus haut pour le détail.
 - [ ] Détruire le Cristal d'Eternia (attaques répétées, ou clic droit dessus en Combat) :
       message **"Défaite ! Le Cristal d'Eternia est tombé."** (rouge, gras), en plus du
-      message habituel de destruction du cristal — les deux doivent apparaître.
+      message habituel de destruction du cristal — les deux doivent apparaître, suivis eux
+      aussi du lien **"[Retour à la taverne]"**.
 - [ ] Après la défaite : `Vague X/5` doit être revenu à `1/5`, `Phase : ...` repassé à
       `Construction` — mais le **bloc du cristal reste absent** (pas replacé automatiquement,
       comportement attendu pour l'instant, voir 05-etat-et-problemes-connus.md). Il faut le

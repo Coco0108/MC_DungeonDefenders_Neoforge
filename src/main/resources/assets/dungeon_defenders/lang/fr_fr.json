@@ -11,6 +11,7 @@
   "dungeon_defenders.eternia_crystal.ready_progress": "Prêt : %s/%s",
   "dungeon_defenders.game.victory": "Victoire ! Toutes les vagues sont nettoyées.",
   "dungeon_defenders.game.defeat": "Défaite ! Le Cristal d'Eternia est tombé.",
+  "dungeon_defenders.game.return_to_tavern": "[Retour à la taverne]",
 
   "dungeon_defenders.hud.mana": "Mana : %s/%s",
   "dungeon_defenders.hud.health": "Vie : %s/%s",

@@ -134,13 +134,43 @@ Deux zones, comme demandé :
   que `"Facile"`, via `AbstractWidget#setMessage(...)`) plutôt qu'en reconstruisant quoi que
   ce soit.
 
-Le bouton **"Jouer"** envoie `SetDifficultyPayload(difficultyOrdinal)` — validé côté serveur
-(`ModNetworking`, même garde-fou que pour les ordinaux d'ennemis du spawner : jamais indexer
-un tableau avec une valeur reçue du réseau sans la vérifier) puis appliqué à
-`ModAttachments.DIFFICULTY`. C'est la **seule** chose que ce bouton fait réellement pour
-l'instant : le choix de map, lui, n'a aucun effet — le système de chargement de map (poser la
-structure à la coordonnée partagée, téléporter les joueurs) n'existe pas encore, voir
+Le bouton **"Jouer"** envoie deux paquets, dans cet ordre (reçus et traités dans le même ordre
+côté serveur, même connexion) :
+
+1. `SetDifficultyPayload(difficultyOrdinal)` — validé côté serveur (`ModNetworking`, même
+   garde-fou que pour les ordinaux d'ennemis du spawner : jamais indexer un tableau avec une
+   valeur reçue du réseau sans la vérifier) puis appliqué à `ModAttachments.DIFFICULTY`.
+2. `StartGamePayload` (sans champ) — déclenche `MapInstance.startGame(level)`, voir plus bas.
+
+Le choix de map **précis** dans le carrousel n'a en revanche toujours aucun effet : une seule
+map "placeholder" générique existe pour l'instant (voir `MapInstance`), donc "Jouer" lance
+toujours la même chose quel que soit l'élément sélectionné — le vrai chargement d'une
+structure par map reste à faire, voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
+### "La map active" — `MapInstance.java`
+
+Puisqu'une seule partie est active à la fois sur tout le serveur (confirmé avec le joueur —
+voir [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md), "Système de
+maps/structures"), toutes les maps partagent la **même coordonnée fixe**
+(`MAP_POS = (10000, 65, 0)`, loin de la taverne) plutôt que d'avoir chacune la leur — pas
+besoin d'une grille de coordonnées puisqu'il n'y en a jamais deux en même temps.
+
+- **`startGame(level)`** (déclenché par `StartGamePayload`) : nettoie la zone (remplace tout
+  par de l'air dans un volume autour de `MAP_POS` — plus large que le placeholder lui-même,
+  pour rattraper d'éventuelles tours posées autour une fois qu'elles existeront), pose un
+  placeholder générique (même technique que `TavernSpawn`, une simple plateforme), puis
+  téléporte **tous** les joueurs de la `Level` — pas seulement celui qui a cliqué "Jouer",
+  puisqu'une seule partie est partagée par tout le monde (confirmé explicitement : "de toute
+  façon on devra le faire").
+- **`returnToTavern(level)`** : même nettoyage de la zone, puis téléporte tout le monde vers
+  `TavernSpawn.SPAWN_POS`. Déclenché par la commande `/dd_leave` (voir `ModCommands` et
+  "Victoire et défaite" plus bas) — pas encore par un vrai point de sortie posé dans la map
+  elle-même, puisqu'aucune vraie map n'existe.
+
+`MapInstance` est pensé pour que le seul changement nécessaire, une fois de vraies maps
+prêtes, soit de remplacer `buildPlaceholderArena()` par un vrai chargement de structure
+`.nbt` — même logique que ce qui est prévu pour `TavernSpawn` (voir plus haut).
 
 ## Le Cristal d'Eternia
 
@@ -991,6 +1021,14 @@ Les deux passent par le même `resetGameState(level)` privé : `CURRENT_WAVE` �
 immédiatement prête à relancer une vague 1 propre, sans qu'un spawner continue à faire
 apparaître des ennemis sur une partie déjà gagnée ou perdue.
 
+**Le lien "Retour à la taverne"** : les deux méthodes diffusent aussi, juste après le message
+de victoire/défaite, un second message — un simple `Component.translatable(...)` stylé
+(`ChatFormatting.AQUA`, souligné) avec un `ClickEvent.RunCommand("/dd_leave")` accroché via
+`Style#withClickEvent(...)`. Cliquer dessus revient à taper la commande `/dd_leave`
+(`ModCommands`), qui appelle `MapInstance.returnToTavern(level)` — nettoie l'emplacement de
+map et téléporte tout le monde. Pas de nouveau paquet réseau : le clic déclenche directement
+une commande déjà existante, exactement comme si le joueur l'avait tapée lui-même.
+
 **Ce qui n'est PAS fait ici**, volontairement — voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) :
 
@@ -999,13 +1037,17 @@ apparaître des ennemis sur une partie déjà gagnée ou perdue.
   la main. Remettre "le cristal" en jeu après une défaite fait partie de la future remise à
   neuf d'une map (structure reposée, tours retirées, PV du cristal restaurés), pas de ce
   morceau-ci.
-- Pas d'écran dédié "Victoire"/"Game Over" (juste un message système) — l'idée d'un écran avec
-  choix "rejouer/retour à la taverne" existe (vue dans le plan Excel du joueur), mais dépend du
-  système de maps/structures (savoir où "rejouer" ou "la taverne" veulent dire concrètement),
-  pas encore construit.
+- Pas d'écran dédié "Victoire"/"Game Over" — juste deux messages système (le résultat, puis le
+  lien de retour). L'idée d'un écran avec choix "rejouer/retour à la taverne" existe (vue dans
+  le plan Excel du joueur) ; pour l'instant, revenir à la taverne permet déjà de "rejouer" en
+  rouvrant `MapSelectionScreen`, donc un vrai écran dédié reste un raffinement visuel, pas un
+  vrai manque fonctionnel.
 - Rien ne distingue encore une partie "terminée" (victoire/défaite) d'une simple pause entre
   deux vagues : les deux ramènent en phase `BUILD`, vague 1. Un joueur qui n'a pas vu le
   message peut ne pas remarquer que la partie a recommencé à zéro.
+- `/dd_leave` reste une commande de harnais, pas un vrai point de sortie posé dans chaque
+  map — un joueur pourrait aussi la taper à tout moment, pas seulement après une victoire/
+  défaite (pas grave en soi, mais pas le vrai flux prévu à terme).
 
 ### Apparence
 

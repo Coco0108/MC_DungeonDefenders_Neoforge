@@ -15,6 +15,8 @@ MC_DungeonDefenders_Neoforge/
     │   ├── DungeonDefendersModClient.java    # Point d'entrée @Mod côté CLIENT uniquement
     │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA, vie max du joueur)
     │   ├── TavernSpawn.java                  # Point de spawn fixe + plateforme provisoire (monde vide)
+    │   ├── MapInstance.java                  # "La map active" : emplacement partagé, placeholder, téléportation
+    │   ├── ModCommands.java                  # /dd_leave (retour à la taverne, harnais de test)
     │   ├── Config.java                       # Spec de config (héritée du template, non branchée)
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
@@ -32,6 +34,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── network/
     │   │   ├── SpawnerConfigPayload.java     # Paquet C2S (BlockPos + config du spawner)
     │   │   ├── SetDifficultyPayload.java     # Paquet C2S (difficulté choisie dans MapSelectionScreen)
+    │   │   ├── StartGamePayload.java         # Paquet C2S (déclenche MapInstance.startGame, pas de champ)
     │   │   └── ModNetworking.java            # Enregistrement des paquets custom (RegisterPayloadHandlersEvent)
     │   ├── client/gui/screen/
     │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
@@ -161,7 +164,8 @@ Chargement FML
    ├─ RegisterEvent(MENU)              → spawner_config (MenuType)
    ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal, spawner (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
-   ├─ RegisterPayloadHandlersEvent     → SpawnerConfigPayload, SetDifficultyPayload (C2S, ModNetworking — commun, pas client-only)
+   ├─ RegisterPayloadHandlersEvent     → SpawnerConfigPayload, SetDifficultyPayload,
+   │                                      StartGamePayload (C2S, ModNetworking — commun, pas client-only)
    ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer, SpawnerBlockEntityRenderer
    ├─ RegisterGuiLayersEvent [client]  → ManaOverlay, HealthOverlay, ExperienceOverlay,
    │                                      WaveOverlay, WaveEnemiesOverlay, PhaseOverlay,
@@ -175,8 +179,10 @@ Bus de jeu (NeoForge.EVENT_BUS)
    │    └─ si wave_enemies_killed >= wave_enemies_total :
    │         PhaseTransitions.enterBuild(level) (vague suivante)
    │         ou PhaseTransitions.onVictory(level) si c'était déjà MAX_WAVE
-   └─ TavernSpawn.onLevelLoad(LevelEvent.Load)
-        └─ si Overworld : fixe le point de spawn (0,65,0) + pose la plateforme provisoire
+   ├─ TavernSpawn.onLevelLoad(LevelEvent.Load)
+   │    └─ si Overworld : fixe le point de spawn (0,65,0) + pose la plateforme provisoire
+   └─ ModCommands.onRegisterCommands(RegisterCommandsEvent)
+        └─ enregistre /dd_leave -> MapInstance.returnToTavern(level)
 
 EterniaCrystalBlockEntity#setCrystalHealth, à 0 PV :
    └─ level.destroyBlock(...) + message + PhaseTransitions.onDefeat(level)
@@ -199,8 +205,13 @@ Clic droit sur l'EterniaCrystalBlock, en Construction (voir 02-gameplay.md) :
 
 Clic droit sur un TavernCrystalBlock (voir 02-gameplay.md) :
    └─ Client uniquement : Minecraft.getInstance().setScreen(new MapSelectionScreen())
-        └─ au clic sur "Jouer", envoie SetDifficultyPayload -> ModNetworking l'applique
-                     à ModAttachments.DIFFICULTY (le choix de map n'a pas encore d'effet)
+        └─ au clic sur "Jouer", envoie deux paquets (dans cet ordre) :
+             SetDifficultyPayload -> ModNetworking l'applique à ModAttachments.DIFFICULTY
+             StartGamePayload -> ModNetworking appelle MapInstance.startGame(level)
+                  (nettoie l'emplacement de map, pose le placeholder, téléporte tout le monde)
+
+Lien "Retour à la taverne" (messages de victoire/défaite, voir PhaseTransitions) :
+   └─ ClickEvent.RunCommand("/dd_leave") -> ModCommands -> MapInstance.returnToTavern(level)
 ```
 
 `ModEvents` est annoté `@EventBusSubscriber(modid = MODID)` sans `bus` explicite : il
