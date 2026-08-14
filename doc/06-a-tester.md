@@ -34,6 +34,10 @@ pas du tout ou une erreur au chargement. Impossible à vérifier sans lancer le 
 - [ ] Quitter le monde et le recharger : le joueur doit réapparaître **au même endroit**, sur
       la même plateforme (pas de nouvelle position aléatoire, pas de nouvelle plateforme
       décalée).
+- [ ] **Casser un bloc de la plateforme** (pioche), puis quitter le monde et le recharger : le
+      bloc cassé doit être **réapparu**, la plateforme entièrement reconstituée — vérifie que
+      le contenu de la taverne est bien reposé à chaque chargement (volontaire, voir
+      02-gameplay.md), pas juste construit une fois à la création du monde.
 - [ ] Mourir (`/kill @s` ou tomber du bord) sans lit ni ancre de réapparition posés : doit
       réapparaître sur la plateforme, pas à un autre endroit du vide.
 - [ ] Aller dans le Nether ou l'End (si accessible) : ces dimensions doivent rester **normales**

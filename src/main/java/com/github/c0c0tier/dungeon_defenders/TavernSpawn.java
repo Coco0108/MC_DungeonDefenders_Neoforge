@@ -13,10 +13,21 @@ import net.neoforged.neoforge.event.level.LevelEvent;
 // L'Overworld est maintenant un monde vide (voir
 // data/minecraft/dimension/overworld.json, qui remplace son générateur par le préréglage
 // vanilla "The Void") : sans point de spawn fixe ni sol, un nouveau joueur tomberait
-// indéfiniment dans le vide dès sa première connexion. En attendant la vraie structure de la
-// taverne (voir doc/05-etat-et-problemes-connus.md, "Système de maps/structures"), cette
-// classe fixe le point de spawn du monde et pose une plateforme provisoire en dur — à
-// supprimer une fois la structure posée à la main à cet endroit.
+// indéfiniment dans le vide dès sa première connexion. Cette classe fixe le point de spawn du
+// monde et (re)pose le contenu de la taverne à chaque chargement du monde.
+//
+// Pourquoi reposer le contenu à CHAQUE chargement, plutôt qu'une seule fois : la taverne est
+// censée suivre le même principe que les maps (voir doc/05-etat-et-problemes-connus.md,
+// "Système de maps/structures") — sa structure sera reposée à cet emplacement fixe à chaque
+// fois qu'on y "entre", plutôt que construite une fois pour toutes. Sans ça, une mise à jour
+// du mod qui change la structure de la taverne resterait invisible sur une sauvegarde
+// existante (le joueur garderait l'ancienne version, posée lors de sa toute première
+// connexion). Recharger à chaque fois est le déclencheur le plus simple qui garantit que la
+// version affichée correspond toujours à celle livrée avec le mod installé.
+//
+// En attendant la vraie structure `.nbt`, la "taverne" posée ici n'est qu'une plateforme
+// provisoire en dur — mais le principe (reposer à chaque chargement) restera le même une fois
+// remplacée par un vrai chargement de structure.
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class TavernSpawn {
 
@@ -36,7 +47,13 @@ public class TavernSpawn {
         buildPlaceholderPlatform(serverLevel);
     }
 
-    /** Plateforme carrée, un bloc sous SPAWN_POS. Idempotent : sans effet si déjà posée (rejoué à chaque chargement du monde). */
+    /**
+     * Plateforme carrée, un bloc sous SPAWN_POS — représente pour l'instant tout le contenu de
+     * la taverne. Idempotent (sans effet si déjà posée), volontairement rejoué à chaque
+     * chargement du monde : voir le commentaire de classe pour pourquoi. Le jour où une vraie
+     * structure `.nbt` existe, cette méthode deviendra "charger la structure de la taverne à
+     * SPAWN_POS", appelée au même endroit, avec le même principe de rechargement systématique.
+     */
     private static void buildPlaceholderPlatform(ServerLevel level) {
         BlockState floor = Blocks.SMOOTH_STONE.defaultBlockState();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();

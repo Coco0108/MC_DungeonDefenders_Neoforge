@@ -55,11 +55,21 @@ par chargement de l'Overworld) :
 
 1. Fixe le point de spawn du monde à **(0, 65, 0)** via `ServerLevel#setRespawnData(...)` —
    remplace la recherche automatique de sol (qui échouerait dans le vide).
-2. Pose une **plateforme provisoire** en dur (9×9, `smooth_stone`, un bloc sous le point de
-   spawn) — sans elle, un joueur tomberait indéfiniment dans le vide dès sa première
-   connexion. Rejouée à chaque chargement du monde (idempotent, sans effet si déjà posée) :
-   volontairement basique, à **supprimer** une fois la vraie structure de la taverne construite
-   et posée à cet endroit (voir 05-etat-et-problemes-connus.md).
+2. **(Re)pose le contenu de la taverne** à cet emplacement — pour l'instant une plateforme
+   provisoire en dur (9×9, `smooth_stone`, un bloc sous le point de spawn), en attendant une
+   vraie structure `.nbt`.
+
+**Pourquoi rejouer l'étape 2 à *chaque* chargement du monde**, plutôt qu'une seule fois : la
+taverne suit le même principe que les futures maps (voir 05-etat-et-problemes-connus.md,
+"Système de maps/structures") — sa structure sera reposée à cet emplacement fixe à chaque
+fois qu'on y "entre", pas construite une fois pour toutes. Sans ça, mettre à jour la structure
+de la taverne dans une future version du mod resterait invisible sur une sauvegarde
+existante : le joueur garderait la version posée lors de sa toute première connexion, le mod
+n'ayant plus aucune raison de la reposer ensuite. Recharger à chaque démarrage du monde est le
+déclencheur le plus simple qui garantit que ce qui est affiché correspond toujours à la
+version livrée avec le mod installé. Le remplacement de la plateforme provisoire par un vrai
+chargement de structure `.nbt` gardera ce même principe (voir le commentaire de
+`TavernSpawn#buildPlaceholderPlatform`).
 
 `LevelEvent.Load` se déclenche pour **toute** dimension qui se charge (l'Overworld, mais
 aussi le Nether/End vanilla si un joueur y va) — le handler sort immédiatement si ce n'est

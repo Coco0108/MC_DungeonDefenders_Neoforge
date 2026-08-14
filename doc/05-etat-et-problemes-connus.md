@@ -110,9 +110,12 @@ vérifie la CI.
   traité comme un problème.
 - ✅ L'Overworld est un monde vide (`data/minecraft/dimension/overworld.json`, préréglage
   vanilla "The Void") et le point de spawn est fixé à `(0, 65, 0)` avec une plateforme
-  provisoire (`TavernSpawn.java`) — premier pas vers le futur système de maps/structures (voir
-  plus bas) : la taverne (hub) et chaque map seront des structures posées à coordonnées fixes,
-  donc rien dans le jeu ne doit dépendre du terrain généré naturellement. Détail dans
+  provisoire (`TavernSpawn.java`), **reposée à chaque chargement du monde** plutôt qu'une
+  seule fois — pour que le contenu de la taverne reste toujours à jour avec le mod installé,
+  même après une mise à jour de sa structure (voir "Système de maps/structures" plus bas pour
+  le détail du raisonnement) — premier pas vers le futur système de maps/structures : la
+  taverne (hub) et chaque map seront des structures posées à coordonnées fixes, donc rien dans
+  le jeu ne doit dépendre du terrain généré naturellement. Détail dans
   [02-gameplay.md](02-gameplay.md#le-monde-et-le-point-de-spawn). **Non vérifié en jeu** — le
   fichier de dimension n'est validé à aucune étape de la compilation, voir 06-a-tester.md.
 - ✅ Cristal de la taverne (`TavernCrystalBlock`, distinct d'`EterniaCrystalBlock` — pas de PV,
@@ -246,20 +249,30 @@ Plan affiné au fil de plusieurs échanges avec le joueur, pas encore tout codé
   chargement) **fabriquée par le mod** plutôt qu'un vrai changement de dimension — choisi pour
   éviter un temps de chargement de dimension trop long. Au départ (retour à la taverne, fin de
   partie) : effacer toute la zone occupée (remplacer par de l'air) avant la prochaine map.
-- Pas de dégât de terrain en jeu (confirmé par le joueur) : la structure de la map n'a besoin
-  d'être posée **qu'une seule fois**, pas reposée à chaque tentative. Ce qui doit se
-  réinitialiser entre deux tentatives, ce sont les **tours posées par le joueur** (à retirer —
-  prévoir un registre de tours similaire à `ACTIVE_SPAWNERS` quand elles existeront) et les
-  **PV du cristal** (à remettre au max), pas la structure elle-même.
+- Pas de dégât de terrain en jeu (confirmé par le joueur) : au sein d'une **même visite** d'une
+  map, sa structure n'a besoin d'être posée **qu'une seule fois**, pas reposée à chaque
+  tentative de vague. Ce qui doit se réinitialiser entre deux tentatives, ce sont les **tours
+  posées par le joueur** (à retirer — prévoir un registre de tours similaire à
+  `ACTIVE_SPAWNERS` quand elles existeront) et les **PV du cristal** (à remettre au max), pas
+  la structure elle-même.
 - Toute la zone active serait **force-chargée** (chunk tickets, indépendants de la position du
   joueur) tant qu'un joueur y est, relâchée au retour à la taverne — nécessaire parce que
   Minecraft ne charge/tick normalement que les chunks proches d'un joueur, ce qui ne suffit
   pas pour une arène fixe où plusieurs spawners peuvent être loin les uns des autres (voir
   plus haut, `ACTIVE_SPAWNERS`). Comme une seule map est active à la fois, au maximum une
   seule zone (plus la taverne) est force-chargée simultanément.
+- **La taverne suit le même principe que les maps**, à un détail près : chaque **nouvelle
+  visite** (choisir une map, quitter puis revenir à la taverne, etc.) repose sa structure
+  depuis le fichier — jamais construite une fois pour toutes. Pour la taverne, "chaque visite"
+  se traduit par "à chaque chargement du monde" (voir `TavernSpawn.java`), puisque c'est
+  l'endroit où le serveur place systématiquement les joueurs par défaut. Sans ce
+  rechargement, mettre à jour la structure de la taverne (ou d'une map) dans une future
+  version du mod resterait invisible sur une sauvegarde existante — le joueur garderait la
+  version posée lors de sa toute première visite, rien ne la reposant ensuite.
 
-**Fait** : monde vide + point de spawn fixe (voir plus haut) ; l'écran de choix de map/
-difficulté dans la taverne (`TavernCrystalBlock`/`MapSelectionScreen`, voir plus haut et
+**Fait** : monde vide + point de spawn fixe, reposé (pour l'instant une plateforme provisoire)
+à chaque chargement du monde plutôt qu'une seule fois — voir plus haut ; l'écran de choix de
+map/difficulté dans la taverne (`TavernCrystalBlock`/`MapSelectionScreen`, voir plus haut et
 [02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté)) — la difficulté
 choisie s'applique réellement, le choix de map non.
 
