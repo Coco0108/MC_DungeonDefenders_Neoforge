@@ -3,6 +3,7 @@
   "block.dungeon_defenders.eternia_crystal": "Eternia Crystal",
   "block.dungeon_defenders.spike_trap": "Spike Trap",
   "block.dungeon_defenders.spawner": "Spawner",
+  "block.dungeon_defenders.tavern_crystal": "Tavern Crystal",
   "item.dungeon_defenders.mana_test_wand": "Mana Test Wand",
 
   "dungeon_defenders.eternia_crystal.damaged": "Ouch! The crystal loses %s HP. Remaining: %s",
@@ -39,6 +40,10 @@
   "dungeon_defenders.difficulty.hard": "Hard",
   "dungeon_defenders.enemy.zombie": "Zombie",
   "dungeon_defenders.enemy.skeleton": "Skeleton",
+  "dungeon_defenders.map_selection.title": "Choose a map",
+  "dungeon_defenders.map_selection.play": "Play",
+  "dungeon_defenders.map_selection.none": "No maps available",
+  "dungeon_defenders.map.test_map": "Test Map",
 
   "dungeon_defenders.configuration.title": "Dungeon Defenders Configs",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml": "Dungeon Defenders Configs",

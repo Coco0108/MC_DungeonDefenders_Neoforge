@@ -24,15 +24,18 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── GameDifficulty.java           # Enum de difficulté (EASY, NORMAL, HARD)
     │   │   ├── DifficultyScaling.java        # Multiplicateur difficulté x vague, pour les spawners
     │   │   ├── SpawnableEnemy.java           # Liste fermée des ennemis choisissables dans un spawner
-    │   │   └── PhaseTransitions.java         # enterCombat/enterBuild : transitions de phase centralisées
+    │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild : transitions de phase centralisées
+    │   │   └── GameMap.java                  # Liste des maps proposées dans l'écran de choix (visible = false pour masquer une map en cours de conception)
     │   ├── menu/
     │   │   ├── SpawnerConfigMenu.java        # AbstractContainerMenu sans slot, transmet juste le BlockPos
     │   │   └── SpawnerConfigMenuProvider.java # MenuProvider ouvert par SpawnerBlock au clic droit
     │   ├── network/
     │   │   ├── SpawnerConfigPayload.java     # Paquet C2S (BlockPos + config du spawner)
+    │   │   ├── SetDifficultyPayload.java     # Paquet C2S (difficulté choisie dans MapSelectionScreen)
     │   │   └── ModNetworking.java            # Enregistrement des paquets custom (RegisterPayloadHandlersEvent)
     │   ├── client/gui/screen/
-    │   │   └── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
+    │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
+    │   │   └── MapSelectionScreen.java       # Écran de choix de map + difficulté (client uniquement, pas de Menu)
     │   ├── client/gui/
     │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)
     │   │   ├── DiamondGauge.java             # Dessine une jauge en forme de losange (fill() empilés, sans texture)
@@ -54,6 +57,7 @@ MC_DungeonDefenders_Neoforge/
     │       ├── EterniaCrystalBlock.java      # Le bloc : hitbox, interaction, codec
     │       ├── SpikeTrapBlock.java           # Piège : dégâts au contact (stepOn) + cooldown
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
+    │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
     │       └── entity/
     │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
@@ -64,10 +68,11 @@ MC_DungeonDefenders_Neoforge/
     ├── resources/
     │   ├── assets/dungeon_defenders/
     │   │   ├── lang/{en_us,fr_fr}.json                     # Traductions
-    │   │   ├── blockstates/{eternia_crystal,spike_trap,spawner}.json   # Variante unique par bloc
-    │   │   ├── models/block/{eternia_crystal,spike_trap,spawner}.json  # Modèles (texture vanilla provisoire)
-    │   │   └── items/{eternia_crystal,spike_trap,spawner}.json         # Modèles d'item
-    │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_trap,spawner}.json
+    │   │   ├── blockstates/{eternia_crystal,spike_trap,spawner,tavern_crystal}.json   # Variante unique par bloc
+    │   │   ├── models/block/{eternia_crystal,spike_trap,spawner,tavern_crystal}.json  # Modèles (texture vanilla provisoire)
+    │   │   ├── items/{eternia_crystal,spike_trap,spawner,tavern_crystal}.json         # Modèles d'item
+    │   │   └── textures/gui/maps/<id>.png                  # Aperçu de chaque GameMap (une image par map)
+    │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_trap,spawner,tavern_crystal}.json
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
     │   ├── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
     │   └── META-INF/accesstransformer.cfg         # Access Transformers
@@ -147,8 +152,8 @@ Chargement FML
         └─ CREATIVE_MODE_TABS.register(bus)
 
 Événements du bus mod
-   ├─ RegisterEvent(BLOCK)             → eternia_crystal, spike_trap, spawner
-   ├─ RegisterEvent(ITEM)              → eternia_crystal, spike_trap, spawner (BlockItem)
+   ├─ RegisterEvent(BLOCK)             → eternia_crystal, spike_trap, spawner, tavern_crystal
+   ├─ RegisterEvent(ITEM)              → eternia_crystal, spike_trap, spawner, tavern_crystal (BlockItem)
    ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana, experience, current_wave,
    │                                      wave_enemies_total, wave_enemies_killed, game_phase,
    │                                      score, level, character_name, difficulty,
@@ -156,7 +161,7 @@ Chargement FML
    ├─ RegisterEvent(MENU)              → spawner_config (MenuType)
    ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal, spawner (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
-   ├─ RegisterPayloadHandlersEvent     → SpawnerConfigPayload (C2S, ModNetworking — commun, pas client-only)
+   ├─ RegisterPayloadHandlersEvent     → SpawnerConfigPayload, SetDifficultyPayload (C2S, ModNetworking — commun, pas client-only)
    ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer, SpawnerBlockEntityRenderer
    ├─ RegisterGuiLayersEvent [client]  → ManaOverlay, HealthOverlay, ExperienceOverlay,
    │                                      WaveOverlay, WaveEnemiesOverlay, PhaseOverlay,
@@ -186,6 +191,11 @@ Clic droit sur un SpawnerBlock, sans shift, en créatif uniquement (voir 02-game
 Clic droit sur l'EterniaCrystalBlock, en Construction (voir 02-gameplay.md) :
    └─ EterniaCrystalBlock#toggleReady -> bascule ready (joueur), diffuse la progression
         └─ si tous les joueurs de la Level sont prêts : PhaseTransitions.enterCombat(level)
+
+Clic droit sur un TavernCrystalBlock (voir 02-gameplay.md) :
+   └─ Client uniquement : Minecraft.getInstance().setScreen(new MapSelectionScreen())
+        └─ au clic sur "Jouer", envoie SetDifficultyPayload -> ModNetworking l'applique
+                     à ModAttachments.DIFFICULTY (le choix de map n'a pas encore d'effet)
 ```
 
 `ModEvents` est annoté `@EventBusSubscriber(modid = MODID)` sans `bus` explicite : il

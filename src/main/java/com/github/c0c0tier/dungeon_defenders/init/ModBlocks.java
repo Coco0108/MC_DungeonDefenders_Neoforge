@@ -4,6 +4,7 @@ import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.EterniaCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpawnerBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpikeTrapBlock;
+import com.github.c0c0tier.dungeon_defenders.block.TavernCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.item.ManaTestWandItem;
 import net.minecraft.world.item.BlockItem;
 import net.neoforged.bus.api.IEventBus;
@@ -49,6 +50,18 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> SPAWNER_ITEM =
             ITEMS.registerSimpleBlockItem("spawner", SPAWNER);
+
+    // 6. Cristal de la taverne : pas de PV, pas de mécanique de combat — ouvre l'écran de
+    // choix de map au clic droit (voir TavernCrystalBlock).
+    public static final DeferredBlock<TavernCrystalBlock> TAVERN_CRYSTAL = BLOCKS.registerBlock("tavern_crystal",
+            TavernCrystalBlock::new,
+            properties -> properties
+                    .destroyTime(50.0F)
+                    .explosionResistance(1200.0F)
+                    .requiresCorrectToolForDrops());
+
+    public static final DeferredItem<BlockItem> TAVERN_CRYSTAL_ITEM =
+            ITEMS.registerSimpleBlockItem("tavern_crystal", TAVERN_CRYSTAL);
 
     // Connexion au bus d'événements
     public static void register(IEventBus modEventBus) {

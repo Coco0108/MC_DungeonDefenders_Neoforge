@@ -41,6 +41,44 @@ pas du tout ou une erreur au chargement. Impossible à vérifier sans lancer le 
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `TavernSpawn`,
       `LevelEvent.Load`, ou au chargement de la dimension `overworld`.
 
+## Le cristal de la taverne et l'écran de choix de map (`TavernCrystalBlock`, `MapSelectionScreen`)
+
+Premier écran du mod qui affiche une **image** (pas juste du texte/des widgets) — le calcul
+d'UV du `blit` et le chargement de la texture `test_map.png` n'ont jamais pu être vérifiés
+visuellement.
+
+- [ ] Prendre `tavern_crystal` dans l'onglet créatif (texture provisoire : bloc d'améthyste,
+      **différente** de celle du Cristal d'Eternia — diamant), le poser.
+- [ ] Clic droit dessus : ouvre `MapSelectionScreen`, sans crash ni écran noir. **Aucune**
+      interaction avec les PV/le combat ne doit se produire (contrairement au Cristal
+      d'Eternia, ce bloc ne doit jamais être visé par un ennemi ni afficher de dégâts).
+- [ ] L'écran affiche : à gauche une image (aplat de couleur bleu-gris, `test_map.png`) avec
+      le nom "Map de test" en dessous et des flèches `◀`/`▶` de part et d'autre ; à droite
+      trois boutons Facile/Normal/Difficile ; un bouton "Jouer" en bas. Rien ne doit se
+      chevaucher ni sortir de l'écran.
+- [ ] L'image doit s'afficher **entièrement remplie** de la couleur bleu-gris unie, sans
+      déformation ni répétition/troncature visible — si l'image apparaît coupée, étirée de
+      travers ou totalement absente (juste un cadre vide), c'est un signe que les UV du
+      `blit` (`0,0,1,1`) ou le chemin de la texture sont faux.
+- [ ] Cliquer sur `▶` puis `◀` : avec une seule map disponible (`TEST_MAP`), l'affichage doit
+      **rester identique** à chaque clic (bouclage sur une liste à un seul élément) — pas de
+      crash, pas d'image qui disparaît.
+- [ ] Cliquer sur chacun des 3 boutons de difficulté : le bouton cliqué doit afficher un
+      **marqueur de sélection** (`> Facile <` plutôt que `Facile`), et les deux autres revenir
+      à leur libellé normal — un seul sélectionné à la fois.
+- [ ] À l'ouverture, le bouton de difficulté déjà **sélectionné** doit correspondre à la
+      difficulté actuelle de la partie (Normal par défaut, tant que rien ne l'a changée).
+- [ ] Cliquer sur "Jouer" après avoir choisi "Difficile" : l'écran doit se fermer. Rouvrir
+      l'écran (reclic sur le bloc) : la difficulté doit maintenant s'afficher comme
+      **Difficile** déjà sélectionnée — vérifie que le choix a bien été appliqué côté serveur
+      et resynchronisé (test le plus important de cette section).
+- [ ] "Jouer" ne doit **rien faire d'autre** pour l'instant : pas de téléportation, pas de
+      changement de phase, pas de construction de structure — normal, ce système n'existe pas
+      encore (voir 05-etat-et-problemes-connus.md).
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `TavernCrystalBlock`,
+      `MapSelectionScreen`, `GameMap`, `SetDifficultyPayload`, ou au chargement de la texture
+      `textures/gui/maps/test_map.png` (identifiant de texture introuvable, etc.).
+
 ## HUD — groupe bas-gauche (mana, vie, expérience)
 
 - [ ] En bas à gauche de l'écran : deux **losanges** côte à côte (mana en bleu à gauche, vie

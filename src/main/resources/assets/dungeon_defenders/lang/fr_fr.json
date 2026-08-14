@@ -3,6 +3,7 @@
   "block.dungeon_defenders.eternia_crystal": "Cristal d'Eternia",
   "block.dungeon_defenders.spike_trap": "Piège à Pics",
   "block.dungeon_defenders.spawner": "Générateur",
+  "block.dungeon_defenders.tavern_crystal": "Cristal de la Taverne",
   "item.dungeon_defenders.mana_test_wand": "Baguette de test (mana)",
 
   "dungeon_defenders.eternia_crystal.damaged": "Aïe ! Le cristal perd %s PV. PV restants : %s",
@@ -39,6 +40,10 @@
   "dungeon_defenders.difficulty.hard": "Difficile",
   "dungeon_defenders.enemy.zombie": "Zombie",
   "dungeon_defenders.enemy.skeleton": "Squelette",
+  "dungeon_defenders.map_selection.title": "Choisir une map",
+  "dungeon_defenders.map_selection.play": "Jouer",
+  "dungeon_defenders.map_selection.none": "Aucune map disponible",
+  "dungeon_defenders.map.test_map": "Map de test",
 
   "dungeon_defenders.configuration.title": "Configuration de Dungeon Defenders",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml": "Configuration de Dungeon Defenders",

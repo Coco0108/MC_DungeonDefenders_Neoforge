@@ -115,6 +115,14 @@ vérifie la CI.
   donc rien dans le jeu ne doit dépendre du terrain généré naturellement. Détail dans
   [02-gameplay.md](02-gameplay.md#le-monde-et-le-point-de-spawn). **Non vérifié en jeu** — le
   fichier de dimension n'est validé à aucune étape de la compilation, voir 06-a-tester.md.
+- ✅ Cristal de la taverne (`TavernCrystalBlock`, distinct d'`EterniaCrystalBlock` — pas de PV,
+  pas de combat) : clic droit ouvre `MapSelectionScreen`, un carrousel de maps
+  (`init/GameMap.java`, extensible, chaque entrée peut être masquée du carrousel tant qu'elle
+  est en cours de conception) avec image d'aperçu + nom, et un choix de difficulté
+  (Facile/Normal/Difficile). Le bouton "Jouer" applique réellement la difficulté choisie
+  (`ModAttachments.DIFFICULTY`, via `SetDifficultyPayload`) — le choix de map, lui, n'a encore
+  aucun effet (pas de système de chargement de map, voir plus bas). Détail dans
+  [02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté).
 
 ## Corrections apportées
 
@@ -219,33 +227,51 @@ correct seulement une fois qu'un système force-chargera toute la zone de jeu pe
 partie (voir "Système de maps/structures" ci-dessous) plutôt que de compter sur le chargement
 naturel autour du joueur.
 
-### Système de maps/structures (démarré : monde vide + spawn fixe, le reste pas commencé)
+### Système de maps/structures (démarré : monde vide + spawn fixe + choix de map/difficulté, le chargement de map lui-même pas commencé)
 
-Discuté avec le joueur en préparant le déroulement des vagues : l'idée est qu'une map soit une
-**structure** Minecraft (`.nbt`, comme un bloc de structure vanilla) construite en créatif —
-spawners déjà configurés inclus, puisque le format structure sauvegarde aussi les données NBT
-des block entities. Lancer une partie chargerait cette structure à un endroit fixe et y
-téléporterait le joueur, depuis un hub/"taverne" central. Une taille maximale de map serait
-définie à l'avance, et toute cette zone serait **force-chargée** (chunk tickets, indépendants
-de la position du joueur) tant qu'un joueur y est, relâchée au retour à la taverne —
-nécessaire parce que Minecraft ne charge/tick normalement que les chunks proches d'un joueur,
-ce qui ne suffit pas pour une arène fixe où plusieurs spawners peuvent être loin les uns des
-autres (voir plus haut, `ACTIVE_SPAWNERS`).
+Plan affiné au fil de plusieurs échanges avec le joueur, pas encore tout codé :
 
-**Fait** : l'Overworld est un monde vide et le point de spawn est fixé à `(0, 65, 0)` avec une
-plateforme provisoire (voir "Ce qui est implémenté" plus haut et
-[02-gameplay.md](02-gameplay.md#le-monde-et-le-point-de-spawn)) — choisi en monde vide plutôt
-qu'en Overworld normal justement pour éviter le problème du terrain naturel (une montagne, un
-océan... à l'endroit choisi) sans avoir à excaver quoi que ce soit à chaque structure posée.
+- Une map est une **structure** Minecraft (`.nbt`, comme un bloc de structure vanilla)
+  construite en créatif — spawners déjà configurés inclus, puisque le format structure
+  sauvegarde aussi les données NBT des block entities.
+- **Une seule partie active à la fois** sur tout le monde/serveur (comme dans le vrai jeu) —
+  pas plusieurs groupes qui jouent des maps différentes en parallèle. Confirmé explicitement :
+  ça correspond déjà à ce qui est construit (`GAME_PHASE`, `CURRENT_WAVE`,
+  `WAVE_ENEMIES_TOTAL/KILLED`, `COMBAT_SESSION` sont tous des états de la `Level` entière, pas
+  par joueur/groupe).
+- Conséquence directe : **toutes les maps partagent la même coordonnée fixe** plutôt que
+  d'avoir chacune la leur (pas besoin d'une grille de coordonnées puisqu'il n'y en a jamais
+  deux en même temps). Au choix d'une map dans `MapSelectionScreen` : téléporter les joueurs à
+  cette coordonnée, poser la structure de la map choisie, avec une transition (fondu/écran de
+  chargement) **fabriquée par le mod** plutôt qu'un vrai changement de dimension — choisi pour
+  éviter un temps de chargement de dimension trop long. Au départ (retour à la taverne, fin de
+  partie) : effacer toute la zone occupée (remplacer par de l'air) avant la prochaine map.
+- Pas de dégât de terrain en jeu (confirmé par le joueur) : la structure de la map n'a besoin
+  d'être posée **qu'une seule fois**, pas reposée à chaque tentative. Ce qui doit se
+  réinitialiser entre deux tentatives, ce sont les **tours posées par le joueur** (à retirer —
+  prévoir un registre de tours similaire à `ACTIVE_SPAWNERS` quand elles existeront) et les
+  **PV du cristal** (à remettre au max), pas la structure elle-même.
+- Toute la zone active serait **force-chargée** (chunk tickets, indépendants de la position du
+  joueur) tant qu'un joueur y est, relâchée au retour à la taverne — nécessaire parce que
+  Minecraft ne charge/tick normalement que les chunks proches d'un joueur, ce qui ne suffit
+  pas pour une arène fixe où plusieurs spawners peuvent être loin les uns des autres (voir
+  plus haut, `ACTIVE_SPAWNERS`). Comme une seule map est active à la fois, au maximum une
+  seule zone (plus la taverne) est force-chargée simultanément.
+
+**Fait** : monde vide + point de spawn fixe (voir plus haut) ; l'écran de choix de map/
+difficulté dans la taverne (`TavernCrystalBlock`/`MapSelectionScreen`, voir plus haut et
+[02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté)) — la difficulté
+choisie s'applique réellement, le choix de map non.
 
 **Reste à faire** : la vraie structure de la taverne (la plateforme actuelle est un
-placeholder à supprimer une fois construite), le système de sauvegarde/chargement de
-structures `.nbt` à un point fixe, la téléportation vers une map au lancement d'une partie, le
-force-chargement des chunks pendant une partie, et une bordure/barrière pour éviter les
-chutes dans le vide en dehors des zones bâties (mentionné par le joueur comme un point à
-garder en tête). C'est aussi le prérequis pour que le verrou créatif du GUI de config du
-spawner (voir plus haut) ait vraiment son plein effet : tant que ce système n'est pas fini,
-rien n'empêche techniquement de construire et tester une map "à la main" en créatif.
+placeholder à supprimer une fois construite) ; au moins une vraie map ; le mécanisme
+"poser la structure choisie à la coordonnée partagée + téléporter les joueurs + transition
+fabriquée" déclenché par le bouton "Jouer" ; le nettoyage (effacer la zone) au retour à la
+taverne ; la réinitialisation tours/PV du cristal entre deux tentatives ; le force-chargement
+pendant une partie ; une bordure/barrière anti-chute dans le vide en dehors des zones bâties.
+C'est aussi le prérequis pour que le verrou créatif du GUI de config du spawner (voir plus
+haut) ait vraiment son plein effet : tant que ce système n'est pas fini, rien n'empêche
+techniquement de construire et tester une map "à la main" en créatif.
 
 ### Le GUI du spawner ne choisit que parmi une liste fermée d'ennemis (SpawnableEnemy)
 
@@ -344,17 +370,18 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 12. ~~Donner au squelette un vrai comportement d'archer~~ — fait :
     `RangedAttackEterniaCrystalGoal` (voir "Ce qui est implémenté" et
     [02-gameplay.md](02-gameplay.md#le-goal-à-distance--entityairangedattacketerniacrystalgoaljava)).
-13. Donner un moyen de choisir la difficulté au lancement de la map
-    (`ModAttachments.DIFFICULTY`) — reste bloquée à `NORMAL`, aucun écran de lancement de
-    partie n'existe encore.
+13. ~~Donner un moyen de choisir la difficulté au lancement de la map~~ — fait :
+    `MapSelectionScreen` (voir "Ce qui est implémenté" et
+    [02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté)).
 14. Ajouter une icône par type de monstre dans l'aperçu de composition du spawner
     (`SpawnerBlockEntityRenderer`, phase Construction) — texte seul pour l'instant. Piste
     envisagée : réutiliser les textures vanilla des œufs d'invocation
     (`zombie_spawn_egg`/`skeleton_spawn_egg`) pour ne pas dépendre d'assets custom.
-15. Système de maps/structures : ~~monde vide + point de spawn fixe~~ fait (voir "Ce qui est
-    implémenté"). Reste : la vraie structure de la taverne (remplacer la plateforme
-    provisoire), sauvegarder une map construite en créatif comme structure `.nbt`, la charger
-    + téléporter le joueur au lancement d'une partie, force-charger toute sa zone (taille max
-    définie à l'avance) tant que la partie dure, une bordure anti-chute dans le vide. Voir la
-    section dédiée dans "Ce qui reste" ci-dessus — c'est aussi ce qui rendra
+15. Système de maps/structures : ~~monde vide + point de spawn fixe~~ et ~~écran de choix de
+    map/difficulté~~ faits (voir "Ce qui est implémenté"). Reste : la vraie structure de la
+    taverne (remplacer la plateforme provisoire), au moins une vraie map, le mécanisme
+    "poser la structure choisie + téléporter + transition" au clic sur "Jouer", le nettoyage
+    de la zone au retour à la taverne, la réinitialisation tours/PV du cristal entre deux
+    tentatives, le force-chargement pendant une partie, une bordure anti-chute dans le vide.
+    Voir la section dédiée dans "Ce qui reste" ci-dessus — c'est aussi ce qui rendra
     `ACTIVE_SPAWNERS` pleinement fiable (indépendant de la position du joueur).

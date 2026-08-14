@@ -1,0 +1,7 @@
+{
+  "comment": "Placeholder : réutilise une texture vanilla en attendant une texture dédiée. Volontairement différente de eternia_crystal (diamond_block) pour bien distinguer les deux cristaux en jeu.",
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "minecraft:block/amethyst_block"
+  }
+}

@@ -65,6 +65,73 @@ par chargement de l'Overworld) :
 aussi le Nether/End vanilla si un joueur y va) — le handler sort immédiatement si ce n'est
 pas l'Overworld (`serverLevel.dimension() != Level.OVERWORLD`), pour ne rien changer ailleurs.
 
+## La taverne — choix de map et difficulté
+
+### Le bloc — `block/TavernCrystalBlock.java`
+
+Un cristal, mais **différent** d'`EterniaCrystalBlock` : pas de block entity, pas de PV, pas
+de mécanique de combat — juste un point d'interaction dans la taverne. Clic droit ouvre
+`MapSelectionScreen`, **entièrement côté client** :
+
+```java
+protected InteractionResult useWithoutItem(...) {
+    if (level.isClientSide()) {
+        Minecraft.getInstance().setScreen(new MapSelectionScreen());
+    }
+    return InteractionResult.SUCCESS;
+}
+```
+
+Pas de `player.openMenu(...)` ni de `Menu`/`MenuProvider` comme pour le spawner — cet écran
+n'a besoin d'aucune donnée propre à un bloc précis (contrairement au spawner, qui devait
+savoir *quel* spawner configurer via son `BlockPos`) : la liste des maps est statique côté
+client, et la difficulté actuelle vient d'un attachment de `Level` déjà synchronisé
+(`ModAttachments.DIFFICULTY`). Le système de `Menu` sert à transmettre des données du serveur
+au client à l'ouverture ; ici il n'y a rien à transmettre, donc pas besoin de ce système.
+
+### La liste des maps — `init/GameMap.java`
+
+Un enum, sur le même principe que `SpawnableEnemy` : chaque valeur porte un `id` (utilisé
+pour la clé de traduction `dungeon_defenders.map.<id>` et le chemin de la texture d'aperçu
+`assets/dungeon_defenders/textures/gui/maps/<id>.png`) et un booléen `visible`.
+
+> **Pourquoi `visible`, pas juste retirer l'entrée de l'enum ?** Pour pouvoir ajouter une map
+> en cours de conception au mod (la coder, la tester) **sans** qu'elle apparaisse dans le
+> carrousel du joueur — demandé explicitement : pouvoir avancer sur une map par étapes sans
+> la montrer avant qu'elle soit prête. `GameMap.visibleMaps()` filtre sur ce booléen ; l'écran
+> ne voit jamais les entrées masquées.
+
+Une seule entrée pour l'instant, `TEST_MAP` — une image d'aperçu provisoire (un simple aplat
+de couleur bleu-gris généré à la main, pas une vraie capture d'écran) le temps qu'une vraie
+première map existe. Aucune texture manquante ne fait planter le jeu : si une map ajoutée à
+l'enum n'a pas encore son fichier `.png`, le jeu affiche la texture "manquante" habituelle à
+sa place.
+
+### L'écran — `client/gui/screen/MapSelectionScreen.java`
+
+Deux zones, comme demandé :
+
+- **Carrousel de maps** (gauche) : boutons `◀`/`▶` qui font tourner un index dans
+  `GameMap.visibleMaps()` (bouclant), image d'aperçu (`GuiGraphicsExtractor#blit(Identifier,
+  x, y, largeur, hauteur, 0f, 0f, 1f, 1f)` — les quatre derniers paramètres sont les UV en
+  fractions 0..1, donc `0,0,1,1` = la texture entière) et nom de la map traduit en dessous.
+  Changer de map ne reconstruit **pas** les widgets (contrairement au spawner qui
+  ajoute/retire des lignes) : seul l'index change, `extractRenderState` relit `GameMap`
+  correspondant à chaque frame.
+- **Choix de difficulté** (droite) : trois boutons `GameDifficulty.values()` (Facile/Normal/
+  Difficile), un seul "sélectionné" à la fois — pas de vrai composant radio-bouton dans cette
+  version, donc simulé en changeant le **texte** du bouton sélectionné (`"> Facile <"` plutôt
+  que `"Facile"`, via `AbstractWidget#setMessage(...)`) plutôt qu'en reconstruisant quoi que
+  ce soit.
+
+Le bouton **"Jouer"** envoie `SetDifficultyPayload(difficultyOrdinal)` — validé côté serveur
+(`ModNetworking`, même garde-fou que pour les ordinaux d'ennemis du spawner : jamais indexer
+un tableau avec une valeur reçue du réseau sans la vérifier) puis appliqué à
+`ModAttachments.DIFFICULTY`. C'est la **seule** chose que ce bouton fait réellement pour
+l'instant : le choix de map, lui, n'a aucun effet — le système de chargement de map (poser la
+structure à la coordonnée partagée, téléporter les joueurs) n'existe pas encore, voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
 ## Le Cristal d'Eternia
 
 ### Le bloc — `block/EterniaCrystalBlock.java`
