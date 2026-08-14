@@ -4,6 +4,7 @@ import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GameMap;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.network.SetDifficultyPayload;
+import com.github.c0c0tier.dungeon_defenders.network.StartGamePayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -22,9 +23,10 @@ import java.util.Map;
 // la difficulté actuelle vient de ModAttachments.DIFFICULTY, déjà synchronisé) — seul le clic
 // sur "Jouer" envoie quelque chose au serveur.
 //
-// Le choix de map n'a pour l'instant aucun effet au clic sur "Jouer" : le système de
-// chargement de map (poser la structure, téléporter les joueurs) n'existe pas encore, voir
-// 05-etat-et-problemes-connus.md. Seule la difficulté est vraiment appliquée.
+// Le choix de map précis n'a pour l'instant aucun effet : une seule map "placeholder"
+// générique existe (voir MapInstance), donc "Jouer" lance toujours la même chose quelle que
+// soit la map sélectionnée dans le carrousel — le vrai chargement d'une structure par map
+// reste à faire, voir 05-etat-et-problemes-connus.md.
 public class MapSelectionScreen extends Screen {
 
     private static final int IMAGE_WIDTH = 128;
@@ -149,10 +151,13 @@ public class MapSelectionScreen extends Screen {
     }
 
     private void onPlay() {
-        SetDifficultyPayload payload = new SetDifficultyPayload(this.selectedDifficulty.ordinal());
         ClientPacketListener connection = Minecraft.getInstance().getConnection();
         if (connection != null) {
-            connection.send(payload.toVanillaServerbound());
+            // Deux paquets distincts, envoyés l'un après l'autre sur la même connexion (donc
+            // reçus et traités dans cet ordre côté serveur) : la difficulté d'abord, puis le
+            // vrai déclenchement de la partie.
+            connection.send(new SetDifficultyPayload(this.selectedDifficulty.ordinal()).toVanillaServerbound());
+            connection.send(new StartGamePayload().toVanillaServerbound());
         }
         this.onClose();
     }
