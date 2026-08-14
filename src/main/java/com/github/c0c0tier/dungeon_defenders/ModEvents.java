@@ -94,9 +94,17 @@ public class ModEvents {
         // avant qu'un spawner n'ait retick).
         int total = level.getData(ModAttachments.WAVE_ENEMIES_TOTAL);
         if (total > 0 && killed >= total) {
-            PhaseTransitions.enterBuild(level);
-            level.players().forEach(player -> player.sendSystemMessage(
-                    Component.translatable("dungeon_defenders.spawner.wave_cleared")));
+            // Capturé avant enterBuild/onVictory, qui font tous les deux avancer/réinitialiser
+            // current_wave : c'est la vague qu'on vient de nettoyer qui détermine la victoire,
+            // pas celle qui suit.
+            boolean wasLastWave = level.getData(ModAttachments.CURRENT_WAVE) >= ModAttachments.MAX_WAVE;
+            if (wasLastWave) {
+                PhaseTransitions.onVictory(level);
+            } else {
+                PhaseTransitions.enterBuild(level);
+                level.players().forEach(player -> player.sendSystemMessage(
+                        Component.translatable("dungeon_defenders.spawner.wave_cleared")));
+            }
         }
     }
 }

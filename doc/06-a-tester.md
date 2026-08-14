@@ -11,6 +11,105 @@ Lancer le client de dev :
 ./gradlew runClient
 ```
 
+## Le monde vide et le point de spawn (`data/minecraft/dimension/overworld.json`, `TavernSpawn.java`)
+
+**Le point le plus à risque de tout le projet jusqu'ici** : c'est la première fois qu'un
+fichier de données (pas de code Java) contrôle le comportement du jeu — `./gradlew build` ne
+charge ni ne valide les datapacks, donc une erreur de syntaxe ou de structure dans
+`overworld.json` ne se verrait **qu'au lancement**, probablement par un monde qui ne se crée
+pas du tout ou une erreur au chargement. Impossible à vérifier sans lancer le client.
+
+- [ ] **Créer un nouveau monde** avec le mod actif : la création ne doit **pas planter**. Si
+      elle échoue, vérifier `run/logs/latest.log` pour une erreur de parsing autour de
+      `overworld.json` (chemin exact, indentation JSON, valeur de `type`/`generator`).
+- [ ] Une fois dans le monde : l'environnement doit être **entièrement vide** (pas de sol, pas
+      de biome visible, ciel présent) — hormis la plateforme provisoire (voir plus bas). Si
+      un sol "normal" apparaît (herbe, pierre generée), le remplacement du générateur n'a pas
+      pris effet — vérifier que le fichier est bien à `data/minecraft/dimension/overworld.json`
+      (namespace **`minecraft`**, pas `dungeon_defenders`).
+- [ ] Le joueur doit apparaître **debout sur une plateforme carrée** (`smooth_stone`, environ
+      9×9) centrée en `(0, 64, 0)`, pas en train de tomber dans le vide.
+- [ ] Se déplacer hors de la plateforme : confirme qu'il n'y a **rien d'autre** autour (vide
+      total), pas de terrain résiduel.
+- [ ] Quitter le monde et le recharger : le joueur doit réapparaître **au même endroit**, sur
+      la même plateforme (pas de nouvelle position aléatoire, pas de nouvelle plateforme
+      décalée).
+- [ ] **Casser un bloc de la plateforme** (pioche), puis quitter le monde et le recharger : le
+      bloc cassé doit être **réapparu**, la plateforme entièrement reconstituée — vérifie que
+      le contenu de la taverne est bien reposé à chaque chargement (volontaire, voir
+      02-gameplay.md), pas juste construit une fois à la création du monde.
+- [ ] Mourir (`/kill @s` ou tomber du bord) sans lit ni ancre de réapparition posés : doit
+      réapparaître sur la plateforme, pas à un autre endroit du vide.
+- [ ] Aller dans le Nether ou l'End (si accessible) : ces dimensions doivent rester **normales**
+      (générées comme d'habitude) — seul l'Overworld doit être affecté.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `TavernSpawn`,
+      `LevelEvent.Load`, ou au chargement de la dimension `overworld`.
+
+## Le cristal de la taverne et l'écran de choix de map (`TavernCrystalBlock`, `MapSelectionScreen`)
+
+Premier écran du mod qui affiche une **image** (pas juste du texte/des widgets) — le calcul
+d'UV du `blit` et le chargement de la texture `test_map.png` n'ont jamais pu être vérifiés
+visuellement.
+
+- [ ] Prendre `tavern_crystal` dans l'onglet créatif (texture provisoire : bloc d'améthyste,
+      **différente** de celle du Cristal d'Eternia — diamant), le poser.
+- [ ] Clic droit dessus : ouvre `MapSelectionScreen`, sans crash ni écran noir. **Aucune**
+      interaction avec les PV/le combat ne doit se produire (contrairement au Cristal
+      d'Eternia, ce bloc ne doit jamais être visé par un ennemi ni afficher de dégâts).
+- [ ] L'écran affiche : à gauche une image (aplat de couleur bleu-gris, `test_map.png`) avec
+      le nom "Map de test" en dessous et des flèches `◀`/`▶` de part et d'autre ; à droite
+      trois boutons Facile/Normal/Difficile ; un bouton "Jouer" en bas. Rien ne doit se
+      chevaucher ni sortir de l'écran.
+- [ ] L'image doit s'afficher **entièrement remplie** de la couleur bleu-gris unie, sans
+      déformation ni répétition/troncature visible — si l'image apparaît coupée, étirée de
+      travers ou totalement absente (juste un cadre vide), c'est un signe que les UV du
+      `blit` (`0,0,1,1`) ou le chemin de la texture sont faux.
+- [ ] Cliquer sur `▶` puis `◀` : avec une seule map disponible (`TEST_MAP`), l'affichage doit
+      **rester identique** à chaque clic (bouclage sur une liste à un seul élément) — pas de
+      crash, pas d'image qui disparaît.
+- [ ] Cliquer sur chacun des 3 boutons de difficulté : le bouton cliqué doit afficher un
+      **marqueur de sélection** (`> Facile <` plutôt que `Facile`), et les deux autres revenir
+      à leur libellé normal — un seul sélectionné à la fois.
+- [ ] À l'ouverture, le bouton de difficulté déjà **sélectionné** doit correspondre à la
+      difficulté actuelle de la partie (Normal par défaut, tant que rien ne l'a changée).
+- [ ] Cliquer sur "Jouer" après avoir choisi "Difficile" : l'écran doit se fermer. Rouvrir
+      l'écran (reclic sur le bloc) : la difficulté doit maintenant s'afficher comme
+      **Difficile** déjà sélectionnée — vérifie que le choix a bien été appliqué côté serveur
+      et resynchronisé (test le plus important de cette section).
+- [ ] Cliquer sur "Jouer" (n'importe quelle map/difficulté) : doit **téléporter** vers un
+      nouvel emplacement, loin de la taverne — une petite plateforme provisoire similaire à
+      celle de la taverne (voir section dédiée ci-dessous pour le détail).
+- [ ] Le choix de map dans le carrousel (flèches `◀`/`▶`) n'a **aucun effet** sur ce qui se
+      passe au clic sur "Jouer" — normal, une seule map placeholder générique existe pour
+      l'instant (voir 05-etat-et-problemes-connus.md), pas un bug.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `TavernCrystalBlock`,
+      `MapSelectionScreen`, `GameMap`, `SetDifficultyPayload`, `StartGamePayload`, ou au
+      chargement de la texture `textures/gui/maps/test_map.png` (identifiant de texture
+      introuvable, etc.).
+
+## "Jouer" et le retour à la taverne (`MapInstance.java`, `/dd_leave`)
+
+- [ ] Depuis la taverne, cliquer "Jouer" : tous les joueurs présents (pas juste celui qui a
+      cliqué, si plusieurs) doivent être téléportés **ensemble** vers le même nouvel
+      emplacement, loin des coordonnées de la taverne (`~10000, 65, 0`).
+- [ ] À l'arrivée : une plateforme carrée (`smooth_stone`, ~17×17) doit être là, le joueur
+      doit apparaître dessus, pas en train de tomber dans le vide.
+- [ ] Taper `/dd_leave` : doit nettoyer la plateforme de map (tout redevient du vide à cet
+      emplacement) et téléporter tous les joueurs présents vers la taverne — sur la
+      plateforme de la taverne, pas ailleurs dans le vide.
+- [ ] Retourner sur "Jouer" une seconde fois après un premier aller-retour : la plateforme de
+      map doit être reposée normalement (pas de blocs résiduels d'un tour précédent, pas de
+      trous), même chose pour la taverne après un `/dd_leave`.
+- [ ] Casser un bloc de la plateforme de map, revenir à la taverne (`/dd_leave`), puis
+      recliquer "Jouer" : la plateforme doit être entièrement reconstituée (le nettoyage +
+      repose s'exécute à chaque "Jouer", pas juste la première fois).
+- [ ] Après une **victoire** ou une **défaite** (voir section dédiée plus bas) : un message
+      cliquable **"[Retour à la taverne]"** (bleu clair, souligné) doit apparaître juste après
+      le message de victoire/défaite. Cliquer dessus doit avoir le même effet que taper
+      `/dd_leave` — retour à la taverne.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `MapInstance`, `ModCommands`,
+      ou `StartGamePayload`.
+
 ## HUD — groupe bas-gauche (mana, vie, expérience)
 
 - [ ] En bas à gauche de l'écran : deux **losanges** côte à côte (mana en bleu à gauche, vie
@@ -194,6 +293,38 @@ puisqu'elle en dépend pour entrer en Combat autrement qu'avec le harnais de tes
       liée au bloc en tant que tel).
 - [ ] Aucune erreur dans les logs au placement, au tick, ou à la casse du bloc — en particulier
       liée à `PhaseTransitions`, `ModAttachments.ACTIVE_SPAWNERS` ou `COMBAT_SESSION`.
+
+## Victoire et défaite (`PhaseTransitions.onVictory/onDefeat`)
+
+- [ ] Jouer jusqu'à la vague `5/5` (la valeur actuelle de `MAX_WAVE`) et la nettoyer
+      entièrement (tuer tous les ennemis) : message **"Victoire ! Toutes les vagues sont
+      nettoyées."** (vert, gras) diffusé à tous les joueurs — pas le message habituel "Vague
+      terminée !".
+- [ ] Après la victoire : `Vague X/5` doit être revenu à `1/5`, et `Phase : ...` doit être
+      repassé à `Construction` — la partie doit être immédiatement rejouable depuis le début
+      (pas besoin de relancer le monde).
+- [ ] Sur une vague **avant** la dernière (ex. vague 2/5), la nettoyer : doit toujours afficher
+      le message habituel **"Vague terminée !"**, pas le message de victoire — vérifie que la
+      distinction "était-ce la dernière vague" fonctionne dans les deux sens.
+- [ ] Après la victoire, un message **"[Retour à la taverne]"** (bleu clair, souligné) doit
+      apparaître juste en dessous — cliquable, voir la section dédiée plus haut pour le détail.
+- [ ] Détruire le Cristal d'Eternia (attaques répétées, ou clic droit dessus en Combat) :
+      message **"Défaite ! Le Cristal d'Eternia est tombé."** (rouge, gras), en plus du
+      message habituel de destruction du cristal — les deux doivent apparaître, suivis eux
+      aussi du lien **"[Retour à la taverne]"**.
+- [ ] Après la défaite : `Vague X/5` doit être revenu à `1/5`, `Phase : ...` repassé à
+      `Construction` — mais le **bloc du cristal reste absent** (pas replacé automatiquement,
+      comportement attendu pour l'instant, voir 05-etat-et-problemes-connus.md). Il faut le
+      reposer à la main pour continuer à tester.
+- [ ] Provoquer une défaite **en pleine vague 3** (par exemple) : vérifie que ça fonctionne à
+      n'importe quel moment de la partie, pas seulement en fin de vague — la défaite doit
+      pouvoir interrompre une vague en cours.
+- [ ] Poser un spawner avec une plage de vagues incluant la vague 1 (ex. `waveStart=1`) et
+      relancer une partie après victoire/défaite : les spawners doivent redémarrer
+      normalement sur la nouvelle vague 1, pas rester bloqués sur l'ancien état de la partie
+      précédente.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `PhaseTransitions.onVictory`,
+      `onDefeat`, ou `resetGameState`.
 
 ## Le squelette archer (`RangedAttackEterniaCrystalGoal`)
 

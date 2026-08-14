@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -59,6 +60,11 @@ public class EterniaCrystalBlockEntity extends BlockEntity {
             this.level.players().forEach(player -> player.sendSystemMessage(
                     Component.translatable("dungeon_defenders.eternia_crystal.destroyed")
                             .withStyle(ChatFormatting.RED, ChatFormatting.BOLD)));
+
+            // Remet la partie à zéro (vague, phase) pour que les spawners arrêtent de faire
+            // apparaître des ennemis sur une partie déjà perdue. Le cristal détruit n'est pas
+            // replacé automatiquement, voir 05-etat-et-problemes-connus.md.
+            PhaseTransitions.onDefeat(this.level);
         }
     }
 

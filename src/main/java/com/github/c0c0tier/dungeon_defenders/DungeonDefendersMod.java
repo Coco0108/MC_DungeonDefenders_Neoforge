@@ -49,6 +49,7 @@ public class DungeonDefendersMod {
                         output.accept(ModBlocks.SPIKE_TRAP_ITEM.get());
                         output.accept(ModBlocks.MANA_TEST_WAND.get());
                         output.accept(ModBlocks.SPAWNER_ITEM.get());
+                        output.accept(ModBlocks.TAVERN_CRYSTAL_ITEM.get());
                     })
                     .build());
 

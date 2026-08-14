@@ -3,6 +3,175 @@
 Boucle de jeu visée : le joueur pose un **Cristal d'Eternia**, les monstres convergent vers
 lui et le frappent, le joueur doit les en empêcher. À 0 PV, partie perdue.
 
+## Le monde et le point de spawn
+
+Le principe retenu (discuté avec le joueur) : la taverne (le hub) et chaque map seront des
+**structures** posées à des coordonnées fixes (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md), "Système de
+maps/structures") — rien dans le jeu ne dépend du terrain généré naturellement. Deux
+conséquences déjà mises en place, avant même que la vraie structure de la taverne existe :
+
+### L'Overworld est un monde vide — `data/minecraft/dimension/overworld.json`
+
+Un fichier de données (pas de code Java, purement déclaratif) remplace le générateur de
+l'Overworld par le préréglage vanilla **"The Void"** — celui utilisé par le menu de création
+de monde vanilla (bouton "Personnaliser" → préréglages), copié tel quel :
+
+```json
+{
+  "type": "minecraft:overworld",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "minecraft:the_void",
+      "features": true,
+      "lakes": false,
+      "layers": [{ "block": "minecraft:air", "height": 1 }],
+      "structure_overrides": []
+    }
+  }
+}
+```
+
+Placer ce fichier à `data/minecraft/dimension/overworld.json` (namespace **`minecraft`**,
+pas `dungeon_defenders`) remplace la définition intégrée de l'Overworld par celle-ci — c'est
+le mécanisme standard des datapacks "monde vide" (fonctionne même sans mod, un simple
+datapack peut le faire ; ici il est intégré aux ressources du mod pour s'appliquer à toute
+partie sans configuration manuelle). Choisi plutôt qu'une dimension séparée : plus simple (pas
+de nouvelle dimension à enregistrer, pas de téléportation à gérer), et cohérent avec le fait
+que ce mod ne cherche pas à cohabiter avec une survie vanilla classique dans le même monde.
+
+> **Aucun moyen de vérifier ce fichier avant de lancer le jeu** : sa syntaxe n'est validée à
+> aucune étape de la compilation (`./gradlew build` ne charge pas les datapacks). Les
+> `settings` sont recopiés à l'identique du préréglage `the_void` du jar du jeu (vérifié en
+> l'extrayant directement), mais la structure globale du fichier dimension elle-même n'a pas
+> pu être testée en jeu — voir 06-a-tester.md.
+
+### Le point de spawn — `TavernSpawn.java`
+
+Un monde vide n'a nulle part où faire apparaître un joueur "normalement" (le jeu cherche
+d'habitude un sol solide près de l'origine). `TavernSpawn`, sur `LevelEvent.Load` (une fois
+par chargement de l'Overworld) :
+
+1. Fixe le point de spawn du monde à **(0, 65, 0)** via `ServerLevel#setRespawnData(...)` —
+   remplace la recherche automatique de sol (qui échouerait dans le vide).
+2. **(Re)pose le contenu de la taverne** à cet emplacement — pour l'instant une plateforme
+   provisoire en dur (9×9, `smooth_stone`, un bloc sous le point de spawn), en attendant une
+   vraie structure `.nbt`.
+
+**Pourquoi rejouer l'étape 2 à *chaque* chargement du monde**, plutôt qu'une seule fois : la
+taverne suit le même principe que les futures maps (voir 05-etat-et-problemes-connus.md,
+"Système de maps/structures") — sa structure sera reposée à cet emplacement fixe à chaque
+fois qu'on y "entre", pas construite une fois pour toutes. Sans ça, mettre à jour la structure
+de la taverne dans une future version du mod resterait invisible sur une sauvegarde
+existante : le joueur garderait la version posée lors de sa toute première connexion, le mod
+n'ayant plus aucune raison de la reposer ensuite. Recharger à chaque démarrage du monde est le
+déclencheur le plus simple qui garantit que ce qui est affiché correspond toujours à la
+version livrée avec le mod installé. Le remplacement de la plateforme provisoire par un vrai
+chargement de structure `.nbt` gardera ce même principe (voir le commentaire de
+`TavernSpawn#buildPlaceholderPlatform`).
+
+`LevelEvent.Load` se déclenche pour **toute** dimension qui se charge (l'Overworld, mais
+aussi le Nether/End vanilla si un joueur y va) — le handler sort immédiatement si ce n'est
+pas l'Overworld (`serverLevel.dimension() != Level.OVERWORLD`), pour ne rien changer ailleurs.
+
+## La taverne — choix de map et difficulté
+
+### Le bloc — `block/TavernCrystalBlock.java`
+
+Un cristal, mais **différent** d'`EterniaCrystalBlock` : pas de block entity, pas de PV, pas
+de mécanique de combat — juste un point d'interaction dans la taverne. Clic droit ouvre
+`MapSelectionScreen`, **entièrement côté client** :
+
+```java
+protected InteractionResult useWithoutItem(...) {
+    if (level.isClientSide()) {
+        Minecraft.getInstance().setScreen(new MapSelectionScreen());
+    }
+    return InteractionResult.SUCCESS;
+}
+```
+
+Pas de `player.openMenu(...)` ni de `Menu`/`MenuProvider` comme pour le spawner — cet écran
+n'a besoin d'aucune donnée propre à un bloc précis (contrairement au spawner, qui devait
+savoir *quel* spawner configurer via son `BlockPos`) : la liste des maps est statique côté
+client, et la difficulté actuelle vient d'un attachment de `Level` déjà synchronisé
+(`ModAttachments.DIFFICULTY`). Le système de `Menu` sert à transmettre des données du serveur
+au client à l'ouverture ; ici il n'y a rien à transmettre, donc pas besoin de ce système.
+
+### La liste des maps — `init/GameMap.java`
+
+Un enum, sur le même principe que `SpawnableEnemy` : chaque valeur porte un `id` (utilisé
+pour la clé de traduction `dungeon_defenders.map.<id>` et le chemin de la texture d'aperçu
+`assets/dungeon_defenders/textures/gui/maps/<id>.png`) et un booléen `visible`.
+
+> **Pourquoi `visible`, pas juste retirer l'entrée de l'enum ?** Pour pouvoir ajouter une map
+> en cours de conception au mod (la coder, la tester) **sans** qu'elle apparaisse dans le
+> carrousel du joueur — demandé explicitement : pouvoir avancer sur une map par étapes sans
+> la montrer avant qu'elle soit prête. `GameMap.visibleMaps()` filtre sur ce booléen ; l'écran
+> ne voit jamais les entrées masquées.
+
+Une seule entrée pour l'instant, `TEST_MAP` — une image d'aperçu provisoire (un simple aplat
+de couleur bleu-gris généré à la main, pas une vraie capture d'écran) le temps qu'une vraie
+première map existe. Aucune texture manquante ne fait planter le jeu : si une map ajoutée à
+l'enum n'a pas encore son fichier `.png`, le jeu affiche la texture "manquante" habituelle à
+sa place.
+
+### L'écran — `client/gui/screen/MapSelectionScreen.java`
+
+Deux zones, comme demandé :
+
+- **Carrousel de maps** (gauche) : boutons `◀`/`▶` qui font tourner un index dans
+  `GameMap.visibleMaps()` (bouclant), image d'aperçu (`GuiGraphicsExtractor#blit(Identifier,
+  x, y, largeur, hauteur, 0f, 0f, 1f, 1f)` — les quatre derniers paramètres sont les UV en
+  fractions 0..1, donc `0,0,1,1` = la texture entière) et nom de la map traduit en dessous.
+  Changer de map ne reconstruit **pas** les widgets (contrairement au spawner qui
+  ajoute/retire des lignes) : seul l'index change, `extractRenderState` relit `GameMap`
+  correspondant à chaque frame.
+- **Choix de difficulté** (droite) : trois boutons `GameDifficulty.values()` (Facile/Normal/
+  Difficile), un seul "sélectionné" à la fois — pas de vrai composant radio-bouton dans cette
+  version, donc simulé en changeant le **texte** du bouton sélectionné (`"> Facile <"` plutôt
+  que `"Facile"`, via `AbstractWidget#setMessage(...)`) plutôt qu'en reconstruisant quoi que
+  ce soit.
+
+Le bouton **"Jouer"** envoie deux paquets, dans cet ordre (reçus et traités dans le même ordre
+côté serveur, même connexion) :
+
+1. `SetDifficultyPayload(difficultyOrdinal)` — validé côté serveur (`ModNetworking`, même
+   garde-fou que pour les ordinaux d'ennemis du spawner : jamais indexer un tableau avec une
+   valeur reçue du réseau sans la vérifier) puis appliqué à `ModAttachments.DIFFICULTY`.
+2. `StartGamePayload` (sans champ) — déclenche `MapInstance.startGame(level)`, voir plus bas.
+
+Le choix de map **précis** dans le carrousel n'a en revanche toujours aucun effet : une seule
+map "placeholder" générique existe pour l'instant (voir `MapInstance`), donc "Jouer" lance
+toujours la même chose quel que soit l'élément sélectionné — le vrai chargement d'une
+structure par map reste à faire, voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
+### "La map active" — `MapInstance.java`
+
+Puisqu'une seule partie est active à la fois sur tout le serveur (confirmé avec le joueur —
+voir [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md), "Système de
+maps/structures"), toutes les maps partagent la **même coordonnée fixe**
+(`MAP_POS = (10000, 65, 0)`, loin de la taverne) plutôt que d'avoir chacune la leur — pas
+besoin d'une grille de coordonnées puisqu'il n'y en a jamais deux en même temps.
+
+- **`startGame(level)`** (déclenché par `StartGamePayload`) : nettoie la zone (remplace tout
+  par de l'air dans un volume autour de `MAP_POS` — plus large que le placeholder lui-même,
+  pour rattraper d'éventuelles tours posées autour une fois qu'elles existeront), pose un
+  placeholder générique (même technique que `TavernSpawn`, une simple plateforme), puis
+  téléporte **tous** les joueurs de la `Level` — pas seulement celui qui a cliqué "Jouer",
+  puisqu'une seule partie est partagée par tout le monde (confirmé explicitement : "de toute
+  façon on devra le faire").
+- **`returnToTavern(level)`** : même nettoyage de la zone, puis téléporte tout le monde vers
+  `TavernSpawn.SPAWN_POS`. Déclenché par la commande `/dd_leave` (voir `ModCommands` et
+  "Victoire et défaite" plus bas) — pas encore par un vrai point de sortie posé dans la map
+  elle-même, puisqu'aucune vraie map n'existe.
+
+`MapInstance` est pensé pour que le seul changement nécessaire, une fois de vraies maps
+prêtes, soit de remplacer `buildPlaceholderArena()` par un vrai chargement de structure
+`.nbt` — même logique que ce qui est prévu pour `TavernSpawn` (voir plus haut).
+
 ## Le Cristal d'Eternia
 
 ### Le bloc — `block/EterniaCrystalBlock.java`
@@ -72,7 +241,8 @@ private int crystalHealth = DEFAULT_HEALTH;
   - appelle `level.sendBlockUpdated(...)` pour pousser les nouveaux PV vers les clients ;
   - si les PV tombent à ≤ 0 : `level.destroyBlock(worldPosition, false)` — le `false` empêche
     le drop de l'item — puis message `dungeon_defenders.eternia_crystal.destroyed` en rouge
-    gras à tous les joueurs.
+    gras à tous les joueurs, et `PhaseTransitions.onDefeat(level)` (voir plus bas, "Victoire et
+    défaite") pour remettre la partie à zéro.
 
 **Persistance.** `saveAdditional` / `loadAdditional` utilisent l'API `ValueOutput` /
 `ValueInput` (le remplaçant des `CompoundTag` bruts) :
@@ -825,14 +995,59 @@ par le même code, plutôt que de dupliquer la remise à zéro des compteurs à 
 
 **Le retour automatique** (`ModEvents.onMonsterDeath`) : après avoir incrémenté
 `WAVE_ENEMIES_KILLED`, si `killed >= total` (et `total > 0`, pour ne pas basculer
-immédiatement si aucun spawner n'a encore pu contribuer), appelle `enterBuild(...)` et
-diffuse un message à tous les joueurs (`dungeon_defenders.spawner.wave_cleared`, même
-mécanisme que le message de destruction du cristal).
+immédiatement si aucun spawner n'a encore pu contribuer), regarde si la vague qu'on vient de
+nettoyer était déjà `MAX_WAVE` (capturé **avant** d'appeler `enterBuild`/`onVictory`, puisque
+les deux modifient `CURRENT_WAVE`) :
 
-Ce qui reste **hors de ce morceau**, volontairement : `CURRENT_WAVE` reste plafonné à
-`MAX_WAVE` une fois atteint (pas de dépassement en `6/5`), mais rien ne déclenche encore de
-victoire à ce moment-là, ni de défaite si le cristal tombe avant. Voir
-[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+- Si ce n'était **pas** la dernière vague : `enterBuild(...)` comme avant, message
+  `dungeon_defenders.spawner.wave_cleared`.
+- Si c'**était** la dernière vague : `PhaseTransitions.onVictory(level)` à la place.
+
+### Victoire et défaite — `PhaseTransitions.onVictory/onDefeat`
+
+Deux nouvelles transitions, sur le même principe que `enterCombat`/`enterBuild`
+(centralisées dans `PhaseTransitions`, pas dupliquées à chaque appelant) :
+
+- **`onVictory(level)`** — appelée par `ModEvents.onMonsterDeath` quand la dernière vague
+  vient d'être nettoyée. Diffuse `dungeon_defenders.game.victory` (vert, gras) à tous les
+  joueurs, puis remet la partie à zéro.
+- **`onDefeat(level)`** — appelée par `EterniaCrystalBlockEntity` juste après la destruction
+  du bloc à 0 PV (à la suite du message `eternia_crystal.destroyed` déjà existant). Diffuse
+  `dungeon_defenders.game.defeat` (rouge, gras), puis remet la partie à zéro.
+
+Les deux passent par le même `resetGameState(level)` privé : `CURRENT_WAVE` → 1, phase →
+`BUILD`, `WAVE_ENEMIES_KILLED` → 0, et `WAVE_ENEMIES_TOTAL` recalculé (réutilise
+`recomputeWaveEnemiesTotal`, la même méthode privée qu'`enterBuild`) — pour que la partie soit
+immédiatement prête à relancer une vague 1 propre, sans qu'un spawner continue à faire
+apparaître des ennemis sur une partie déjà gagnée ou perdue.
+
+**Le lien "Retour à la taverne"** : les deux méthodes diffusent aussi, juste après le message
+de victoire/défaite, un second message — un simple `Component.translatable(...)` stylé
+(`ChatFormatting.AQUA`, souligné) avec un `ClickEvent.RunCommand("/dd_leave")` accroché via
+`Style#withClickEvent(...)`. Cliquer dessus revient à taper la commande `/dd_leave`
+(`ModCommands`), qui appelle `MapInstance.returnToTavern(level)` — nettoie l'emplacement de
+map et téléporte tout le monde. Pas de nouveau paquet réseau : le clic déclenche directement
+une commande déjà existante, exactement comme si le joueur l'avait tapée lui-même.
+
+**Ce qui n'est PAS fait ici**, volontairement — voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) :
+
+- Le Cristal d'Eternia détruit **n'est pas replacé automatiquement** : `resetGameState` remet
+  les compteurs à zéro, mais le bloc lui-même reste absent tant que personne n'en repose un à
+  la main. Remettre "le cristal" en jeu après une défaite fait partie de la future remise à
+  neuf d'une map (structure reposée, tours retirées, PV du cristal restaurés), pas de ce
+  morceau-ci.
+- Pas d'écran dédié "Victoire"/"Game Over" — juste deux messages système (le résultat, puis le
+  lien de retour). L'idée d'un écran avec choix "rejouer/retour à la taverne" existe (vue dans
+  le plan Excel du joueur) ; pour l'instant, revenir à la taverne permet déjà de "rejouer" en
+  rouvrant `MapSelectionScreen`, donc un vrai écran dédié reste un raffinement visuel, pas un
+  vrai manque fonctionnel.
+- Rien ne distingue encore une partie "terminée" (victoire/défaite) d'une simple pause entre
+  deux vagues : les deux ramènent en phase `BUILD`, vague 1. Un joueur qui n'a pas vu le
+  message peut ne pas remarquer que la partie a recommencé à zéro.
+- `/dd_leave` reste une commande de harnais, pas un vrai point de sortie posé dans chaque
+  map — un joueur pourrait aussi la taper à tout moment, pas seulement après une victoire/
+  défaite (pas grave en soi, mais pas le vrai flux prévu à terme).
 
 ### Apparence
 

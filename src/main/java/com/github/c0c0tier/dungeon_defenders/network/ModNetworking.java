@@ -1,9 +1,13 @@
 package com.github.c0c0tier.dungeon_defenders.network;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.MapInstance;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
+import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -35,6 +39,47 @@ public class ModNetworking {
                 SpawnerConfigPayload.STREAM_CODEC,
                 ModNetworking::handleSpawnerConfig
         );
+        registrar.playToServer(
+                SetDifficultyPayload.TYPE,
+                SetDifficultyPayload.STREAM_CODEC,
+                ModNetworking::handleSetDifficulty
+        );
+        registrar.playToServer(
+                StartGamePayload.TYPE,
+                StartGamePayload.STREAM_CODEC,
+                ModNetworking::handleStartGame
+        );
+    }
+
+    private static void handleStartGame(StartGamePayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (!(level instanceof ServerLevel serverLevel)) {
+                return;
+            }
+            MapInstance.startGame(serverLevel);
+        });
+    }
+
+    private static void handleSetDifficulty(SetDifficultyPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (level.isClientSide()) {
+                return;
+            }
+
+            // Ordinal envoyé par un client : à valider avant indexation, jamais faire
+            // confiance à une valeur reçue par le réseau pour indexer un tableau.
+            GameDifficulty[] difficulties = GameDifficulty.values();
+            if (payload.difficultyOrdinal() < 0 || payload.difficultyOrdinal() >= difficulties.length) {
+                return;
+            }
+
+            level.setData(ModAttachments.DIFFICULTY, payload.difficultyOrdinal());
+            level.syncData(ModAttachments.DIFFICULTY);
+        });
     }
 
     private static void handleSpawnerConfig(SpawnerConfigPayload payload, IPayloadContext context) {
