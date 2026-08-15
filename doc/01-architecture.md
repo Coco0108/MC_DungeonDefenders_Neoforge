@@ -28,7 +28,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── DifficultyScaling.java        # Multiplicateur difficulté x vague, pour les spawners
     │   │   ├── SpawnableEnemy.java           # Liste fermée des ennemis choisissables dans un spawner
     │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild : transitions de phase centralisées
-    │   │   └── GameMap.java                  # Liste des maps proposées dans l'écran de choix (visible = false pour masquer une map en cours de conception)
+    │   │   ├── GameMap.java                  # Liste des maps proposées dans l'écran de choix (visible = false pour masquer une map en cours de conception)
+    │   │   └── TowerDefinition.java          # Catalogue des tours posables via la roue (voir client/gui/screen/TowerWheelScreen.java)
     │   ├── menu/
     │   │   ├── SpawnerConfigMenu.java        # AbstractContainerMenu sans slot, transmet juste le BlockPos
     │   │   └── SpawnerConfigMenuProvider.java # MenuProvider ouvert par SpawnerBlock au clic droit
@@ -36,10 +37,17 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── SpawnerConfigPayload.java     # Paquet C2S (BlockPos + config du spawner)
     │   │   ├── SetDifficultyPayload.java     # Paquet C2S (difficulté choisie dans MapSelectionScreen)
     │   │   ├── StartGamePayload.java         # Paquet C2S (déclenche MapInstance.startGame, pas de champ)
+    │   │   ├── PlaceTowerPayload.java        # Paquet C2S (tour + position + rotation, confirmation finale de la roue)
     │   │   └── ModNetworking.java            # Enregistrement des paquets custom (RegisterPayloadHandlersEvent)
+    │   ├── client/
+    │   │   ├── ModKeyMappings.java           # Touches roue des tours + rotation (RegisterKeyMappingsEvent)
+    │   │   ├── TowerPlacementState.java      # État transitoire du mode pose (AIMING/ORIENTING, tour choisie, rotation)
+    │   │   ├── TowerPlacementRenderState.java # Instantané pour le rendu de l'hologramme (ContextKey sur LevelRenderState)
+    │   │   └── TowerPlacementClientEvents.java # Ouverture roue, rayon de visée, rotation, confirmation, rendu hologramme/portée
     │   ├── client/gui/screen/
     │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
-    │   │   └── MapSelectionScreen.java       # Écran de choix de map + difficulté (client uniquement, pas de Menu)
+    │   │   ├── MapSelectionScreen.java       # Écran de choix de map + difficulté (client uniquement, pas de Menu)
+    │   │   └── TowerWheelScreen.java         # Roue radiale de sélection des tours (client uniquement, pas de Menu)
     │   ├── client/gui/
     │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)
     │   │   ├── DiamondGauge.java             # Dessine une jauge en forme de losange (fill() empilés, sans texture)

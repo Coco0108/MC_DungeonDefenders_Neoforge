@@ -487,6 +487,69 @@ que le tag fonctionne correctement, pas seulement le Spike Blockade en particuli
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `SpikeBlockadeBlock`,
       `SpikeBlockadeBlockEntity`, ou `AttackBlockadeGoal`.
 
+## La roue de sélection des tours et la pose (`TowerWheelScreen`, `TowerPlacementClientEvents`)
+
+Premier menu radial du mod, premier hologramme de pose, et première utilisation du pipeline de
+rendu "submit node" (`ExtractLevelRenderStateEvent`/`SubmitCustomGeometryEvent`) en dehors d'un
+block entity — rien de tout ça n'a pu être vérifié visuellement pendant le développement.
+
+- [ ] Appuyer sur `R` (touche par défaut, configurable dans Options > Touches > Gameplay,
+      libellé "Ouvrir la roue des tours") : un écran radial s'ouvre, sans crash ni écran noir.
+      Avec une seule tour existante (Spike Blockade), un seul secteur/icône doit apparaître.
+- [ ] Bouger la souris tout autour du centre de l'écran, en restant proche du centre (moins de
+      ~20px) : **aucun** secteur ne doit être en surbrillance (zone morte).
+- [ ] Éloigner la souris du centre (au-delà de la zone morte), dans n'importe quelle direction :
+      le secteur (unique pour l'instant) doit passer en surbrillance, et son nom + son coût en
+      mana ("Coût : 30 mana") doivent s'afficher sous la roue.
+- [ ] **Cliquer directement** sur l'icône en surbrillance : l'écran se ferme, aucune erreur
+      dans les logs — doit démarrer le mode pose (voir plus bas).
+- [ ] Rouvrir la roue, **maintenir `R`**, viser le secteur (surbrillance visible), puis
+      **relâcher `R`** (sans cliquer) : doit avoir le même effet que le clic direct — démarre
+      le mode pose. Les deux gestes doivent être équivalents.
+- [ ] Ouvrir la roue puis appuyer sur `Échap` sans cliquer : l'écran se ferme, **aucun** mode
+      pose ne démarre (pas d'hologramme qui apparaît ensuite en jeu).
+- [ ] Après avoir sélectionné une tour (mode pose, étape "visée") : un **contour filaire**
+      (hologramme) doit suivre le curseur/la visée du joueur en regardant le monde, collé sur
+      la position juste après le premier bloc visé (comme la pose d'un bloc normal).
+- [ ] Viser un emplacement **libre** (air, herbe remplaçable...) : le contour doit être
+      **vert**. Viser un bloc plein existant (mur, sol, une autre tour déjà posée...) : le
+      contour affiché doit être sur la position **adjacente** à ce bloc, toujours en fonction
+      de sa propre validité — et viser un endroit où la position candidate est déjà occupée
+      (ex. coincé entre deux blocs) doit donner un contour **rouge**.
+- [ ] Regarder au loin (>20 blocs, hors de portée du rayon) ou vers le ciel/le vide sans rien
+      viser : l'hologramme doit **disparaître** (pas de contour flottant sans cible).
+- [ ] **Clic gauche** pendant l'étape "visée" : annule tout le mode pose, l'hologramme
+      disparaît, rien n'est posé.
+- [ ] **Clic droit** sur une position **verte** : l'hologramme doit **arrêter de suivre le
+      regard** (position verrouillée) — bouger la caméra ne doit plus déplacer le contour.
+- [ ] **Clic droit** sur une position **rouge** (viser un bloc invalide) : ne doit **rien**
+      faire (pas de verrouillage, reste en étape "visée").
+- [ ] Une fois la position verrouillée (étape "orientation") : appuyer sur `T` (touche par
+      défaut, "Faire pivoter la tour (pose)") plusieurs fois : aucune erreur, mais **aucun
+      changement visuel attendu** sur Spike Blockade (cube symétrique, limite connue — voir
+      05-etat-et-problemes-connus.md) — vérifie surtout l'absence de crash/d'exception.
+- [ ] **Clic droit** une seconde fois (étape "orientation") : doit **poser réellement** le bloc
+      à la position verrouillée, fermer le mode pose (hologramme disparaît), et débiter le mana
+      exactement comme une pose par `BlockItem` (message `-30 mana pour la blockade (X/100)`,
+      voir section HUD mana) — test le plus important de cette section : vérifie que
+      `PlaceTowerPayload` déclenche bien `ModEvents.onBlockadePlace` via le hook NeoForge
+      réutilisé, sans double implémentation.
+- [ ] **Clic gauche** pendant l'étape "orientation" : annule tout (pas de pose, pas de
+      débit de mana), retour à zéro — pas de retour à l'étape "visée".
+- [ ] Refaire tout le mode pose avec **moins de 30 mana disponible** : le clic droit final doit
+      **échouer** comme pour le `BlockItem` (message "Pas assez de mana...", le bloc
+      n'apparaît pas dans le monde) — vérifie que la vérification de mana s'applique
+      identiquement, quelle que soit la façon dont le bloc a été posé.
+- [ ] Poser une tour via la roue à un endroit, puis ouvrir la roue une seconde fois et essayer
+      de poser une autre tour **au même endroit exact** : doit apparaître **rouge** (position
+      occupée par la tour tout juste posée), pas vert.
+- [ ] Redimensionner la fenêtre pendant que la roue est ouverte : les secteurs doivent rester
+      centrés sur le nouveau centre de l'écran, pas figés à une position absolue.
+- [ ] Vérifier `run/logs/latest.log` après une session de test complète : aucune exception liée
+      à `TowerWheelScreen`, `TowerPlacementClientEvents`, `TowerPlacementState`,
+      `PlaceTowerPayload`, ou au rendu (`ExtractLevelRenderStateEvent`/
+      `SubmitCustomGeometryEvent`).
+
 ## HUD vanilla masqué
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

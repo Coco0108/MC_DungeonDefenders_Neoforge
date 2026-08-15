@@ -2,9 +2,12 @@
   "itemGroup.dungeon_defenders": "Dungeon Defenders",
   "block.dungeon_defenders.eternia_crystal": "Eternia Crystal",
   "block.dungeon_defenders.spike_blockade": "Spike Blockade",
+  "dungeon_defenders.tower.spike_blockade": "Spike Blockade",
   "block.dungeon_defenders.spawner": "Spawner",
   "block.dungeon_defenders.tavern_crystal": "Tavern Crystal",
   "item.dungeon_defenders.mana_test_wand": "Mana Test Wand",
+  "key.dungeon_defenders.tower_wheel": "Open tower wheel",
+  "key.dungeon_defenders.rotate_tower": "Rotate tower (placement)",
 
   "dungeon_defenders.eternia_crystal.damaged": "Ouch! The crystal loses %s HP. Remaining: %s",
   "dungeon_defenders.eternia_crystal.destroyed": "The Eternia Crystal has been destroyed! Game Over!",
@@ -49,6 +52,8 @@
   "dungeon_defenders.map_selection.play": "Play",
   "dungeon_defenders.map_selection.none": "No maps available",
   "dungeon_defenders.map.test_map": "Test Map",
+  "dungeon_defenders.tower_wheel.title": "Choose a tower",
+  "dungeon_defenders.tower_wheel.mana_cost": "Cost: %s mana",
 
   "dungeon_defenders.configuration.title": "Dungeon Defenders Configs",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml": "Dungeon Defenders Configs",
