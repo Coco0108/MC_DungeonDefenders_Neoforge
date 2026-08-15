@@ -1,19 +1,22 @@
 package com.github.c0c0tier.dungeon_defenders.entity.ai;
 
-import com.github.c0c0tier.dungeon_defenders.block.entity.SpikeBlockadeBlockEntity;
-import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
+import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractBlockadeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.ModBlockTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.MoveToBlockGoal;
 import net.minecraft.world.level.LevelReader;
 
-// Détourne un ennemi de mêlée vers un Spike Blockade proche plutôt que le Cristal d'Eternia —
+// Détourne un ennemi de mêlée vers n'importe quel bloc de la catégorie "Blockade" (tag
+// dungeon_defenders:blockades — voir ModBlockTags) plutôt que le Cristal d'Eternia —
 // "premier rempart" : tant qu'un blockade lui bloque le passage à courte portée, il doit le
 // détruire avant de pouvoir continuer. Enregistré à une priorité plus haute (numéro plus
 // petit) qu'AttackEterniaCrystalGoal dans ModEvents.onMonsterSpawn, donc préféré quand les deux
 // sont utilisables ; une fois le blockade détruit, ce goal ne trouve plus de cible et le mob
-// retombe sur le goal du cristal.
+// retombe sur le goal du cristal. Le ciblage par tag (plutôt qu'un bloc précis en dur) permet
+// à toute future blockade (Bouncer, Slice N Dice, etc.) d'hériter de ce comportement sans
+// toucher au goal — il suffit de l'ajouter au tag.
 //
 // Pas de version à distance pour l'instant (voir doc/02-gameplay.md) : un archer peut tirer
 // par-dessus/à côté d'un blockade sans avoir besoin de le détruire, contrairement à un ennemi
@@ -21,10 +24,10 @@ import net.minecraft.world.level.LevelReader;
 //
 // N'étend pas AbstractEterniaCrystalAttackGoal : la structure (convergence + cooldown de coups)
 // se ressemble, mais ce goal a une responsabilité en plus que celui du cristal n'a pas
-// (viser un type de bloc différent, trouvé par recherche plutôt qu'un cristal unique sur la
-// carte) — voir le commentaire de AbstractEterniaCrystalAttackGoal : forcer une base commune
-// maintenant, avant d'avoir un deuxième tower de mêlée, serait deviner une forme partagée
-// plutôt que la constater.
+// (viser un tag de bloc plutôt qu'un cristal unique sur la carte) — voir le commentaire de
+// AbstractEterniaCrystalAttackGoal : forcer une base commune maintenant, avant d'avoir une
+// deuxième catégorie de tour au comportement de convergence comparable, serait deviner une
+// forme partagée plutôt que la constater.
 public class AttackBlockadeGoal extends MoveToBlockGoal {
 
     public static final int DAMAGE_PER_HIT = 5;
@@ -43,7 +46,7 @@ public class AttackBlockadeGoal extends MoveToBlockGoal {
 
     @Override
     protected boolean isValidTarget(LevelReader level, BlockPos pos) {
-        return level.getBlockState(pos).is(ModBlocks.SPIKE_BLOCKADE.get());
+        return level.getBlockState(pos).is(ModBlockTags.BLOCKADES);
     }
 
     @Override
@@ -76,7 +79,7 @@ public class AttackBlockadeGoal extends MoveToBlockGoal {
             return;
         }
 
-        if (!(this.mob.level().getBlockEntity(this.blockPos) instanceof SpikeBlockadeBlockEntity blockade)) {
+        if (!(this.mob.level().getBlockEntity(this.blockPos) instanceof AbstractBlockadeBlockEntity blockade)) {
             return;
         }
 

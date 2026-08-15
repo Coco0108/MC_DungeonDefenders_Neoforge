@@ -20,6 +20,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── Config.java                       # Spec de config (héritée du template, non branchée)
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
+    │   │   ├── ModBlockTags.java              # TagKey<Block> BLOCKADES, ciblé par AttackBlockadeGoal
     │   │   ├── ModAttachments.java           # DeferredRegister des data attachments (mana, vagues, phase...)
     │   │   ├── ModMenus.java                 # DeferredRegister des MenuType (GUI de config)
     │   │   ├── GamePhase.java                # Enum des phases de partie (BUILD, COMBAT)
@@ -56,17 +57,18 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal
     │   │   ├── AttackEterniaCrystalGoal.java         # Goal : converger vers le cristal et le frapper (corps à corps)
     │   │   ├── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal
-    │   │   └── AttackBlockadeGoal.java               # Goal (priorité 0) : détourne un ennemi de mêlée vers un Spike Blockade proche
+    │   │   └── AttackBlockadeGoal.java               # Goal (priorité 0) : détourne un ennemi de mêlée vers tout bloc du tag blockades
     │   └── block/
     │       ├── EterniaCrystalBlock.java      # Le bloc : hitbox, interaction, codec
-    │       ├── SpikeBlockadeBlock.java       # Premier tower : mur à PV qui pique au contact
+    │       ├── SpikeBlockadeBlock.java       # Premier tower "Blockade" : mur à PV qui pique au contact
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
     │       └── entity/
     │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
     │           ├── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D (client)
-    │           ├── SpikeBlockadeBlockEntity.java           # PV + dégâts de contact périodiques (voir 02-gameplay.md)
+    │           ├── AbstractBlockadeBlockEntity.java        # Base commune catégorie "Blockade" : PV, coût mana, dégâts de contact optionnels (voir 02-gameplay.md)
+    │           ├── SpikeBlockadeBlockEntity.java           # Sous-classe : fixe les stats du Spike Blockade (voir 02-gameplay.md)
     │           ├── SpawnerBlockEntity.java                 # Algorithme de spawn pondéré (voir 02-gameplay.md)
     │           ├── SpawnerRenderState.java                 # Instantané pour le rendu (client)
     │           └── SpawnerBlockEntityRenderer.java         # Aperçu de composition en phase Construction, à travers les murs (client)
@@ -78,6 +80,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── items/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json         # Modèles d'item
     │   │   └── textures/gui/maps/<id>.png                  # Aperçu de chaque GameMap (une image par map)
     │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json
+    │   ├── data/dungeon_defenders/tags/block/blockades.json # Blocs ciblés par AttackBlockadeGoal (spike_blockade pour l'instant)
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
     │   ├── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
     │   └── META-INF/accesstransformer.cfg         # Access Transformers

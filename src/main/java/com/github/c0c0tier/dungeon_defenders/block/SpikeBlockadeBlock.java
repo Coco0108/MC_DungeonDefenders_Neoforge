@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.block;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpikeBlockadeBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -43,6 +44,6 @@ public class SpikeBlockadeBlock extends BaseEntityBlock {
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
         return level.isClientSide()
                 ? null
-                : createTickerHelper(blockEntityType, DungeonDefendersMod.SPIKE_BLOCKADE_BE.get(), SpikeBlockadeBlockEntity::serverTick);
+                : createTickerHelper(blockEntityType, DungeonDefendersMod.SPIKE_BLOCKADE_BE.get(), AbstractBlockadeBlockEntity::serverTick);
     }
 }

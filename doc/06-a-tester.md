@@ -428,13 +428,15 @@ Deuxième morceau à risque de cette session : premier texte du mod rendu "à tr
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `SpawnerBlockEntityRenderer`
       ou `SpawnerRenderState` (en particulier au chargement du monde ou à la casse du bloc).
 
-## Le Spike Blockade (`SpikeBlockadeBlock`, `SpikeBlockadeBlockEntity`, `AttackBlockadeGoal`)
+## Le Spike Blockade (`SpikeBlockadeBlock`, `AbstractBlockadeBlockEntity`, `AttackBlockadeGoal`)
 
-Première tour du mod (catégorie "corps à corps" de la taxonomie, voir
-[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#système-de-tours-démarré--spike-blockade-le-reste-de-la-taxonomie-pas-commencé)) :
+Premier membre concret de la catégorie de tours "Blockade" (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#système-de-tours-catégorie-blockade-démarrée)) :
 remplace l'ancien `spike_trap` (piège de sol au `stepOn`) par un vrai bloc à PV, bloquant le
 passage, que les monstres doivent maintenant activement attaquer pour détruire — premier goal
-d'IA du mod qui cible un bloc plutôt qu'une entité, jamais vérifié visuellement.
+d'IA du mod qui cible un bloc plutôt qu'une entité, jamais vérifié visuellement. Le ciblage se
+fait via le tag `dungeon_defenders:blockades` (pas un bloc en dur) : ce test valide donc aussi
+que le tag fonctionne correctement, pas seulement le Spike Blockade en particulier.
 
 - [ ] Prendre `spike_blockade` dans l'onglet créatif Dungeon Defenders (texture provisoire :
       bloc de dripstone), le poser. Doit **bloquer le passage** comme n'importe quel bloc plein

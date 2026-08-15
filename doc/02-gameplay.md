@@ -440,54 +440,82 @@ plan Excel plutôt que de garder l'ancien piège en parallèle.
 donc uniquement à donner des PV au blockade et à faire en sorte qu'un ennemi choisisse de
 l'attaquer plutôt que de rester bloqué bêtement devant.
 
-### L'état — `block/entity/SpikeBlockadeBlockEntity.java`
+### La catégorie "Blockade" — `block/entity/AbstractBlockadeBlockEntity.java`, tag `dungeon_defenders:blockades`
 
-Même schéma que `EterniaCrystalBlockEntity` (PV, `damage(int)`, détruit le bloc à 0 — `false`
-en dernier paramètre de `destroyBlock` pour empêcher le drop, comme le cristal), avec en plus
-un `serverTick(...)` (le bloc a donc besoin d'un `BlockEntityTicker`, via `BaseEntityBlock`,
-comme le spawner) qui inflige des dégâts à **tout** monstre à son contact, à intervalle
-régulier :
+Le Spike Blockade est le premier membre concret d'une **catégorie de code** commune à toutes
+les futures tours "mur à PV" (voir la taxonomie du joueur dans
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#système-de-tours-catégorie-blockade-démarrée)) : elle
+fusionne ce que la première version de la taxonomie séparait en "block passif" et "corps à
+corps" — un blockade passif n'est qu'un blockade avec les dégâts de contact désactivés.
 
-| Paramètre | Valeur | Rôle |
-|---|---|---|
-| `DEFAULT_HEALTH` | `30` | PV du blockade, valeur provisoire |
-| `CONTACT_DAMAGE` | `2.0F` | dégâts infligés à un monstre en contact, via `level.damageSources().stalagmite()` (même source que l'ancien piège) |
-| `CONTACT_DAMAGE_INTERVAL_TICKS` | `20` (1 s) | cooldown **par monstre**, pas par bloc — même technique `WeakHashMap<Monster, Long>` que l'ancien `SpikeTrapBlock` |
-| `CONTACT_RANGE` | `1.0` bloc | rayon d'inflation de la boîte du bloc pour détecter un "contact" — approximation grossière de la portée de mêlée, pas une vraie détection de collision |
+`AbstractBlockadeBlockEntity` porte les stats communes à toute la catégorie, fixées par chaque
+sous-classe via son constructeur :
 
-`serverTick` scanne `serverLevel.getEntitiesOfClass(Monster.class, contactArea)` à chaque
-tick de bloc et applique les dégâts à ceux dont le cooldown est écoulé — **indépendant** de
-`AttackBlockadeGoal` ci-dessous : les pointes piquent n'importe quel monstre à portée, qu'il
-soit ou non en train d'attaquer activement le blockade via ce goal.
+| Paramètre | Rôle |
+|---|---|
+| `maxHealth` | PV du blockade (`getHealth()`/`damage(int)` détruit le bloc à 0 — `false` en dernier paramètre de `destroyBlock` pour empêcher le drop, comme le cristal) |
+| `manaCost` | coût en mana à la pose — stat réservée pour la future économie de mana, **pas encore consommée** nulle part (aucun système de dépense au placement n'existe pour l'instant) |
+| `dealsContactDamage` | booléen : ce blockade pique-t-il au contact, ou est-il purement passif ? |
+| `contactDamage` / `contactDamageIntervalTicks` / `contactRange` | ignorés si `dealsContactDamage=false` ; sinon, dégâts et cadence des dégâts de contact |
+
+Pas de stat "portée" sur cette base : une blockade n'a pas de portée d'attaque, seulement une
+zone de contact — cohérent avec le fait qu'elle bloque physiquement le passage plutôt que de
+tirer dessus.
+
+`serverTick(...)` (défini une fois sur la base, réutilisé tel quel par chaque sous-classe via
+`createTickerHelper(type, MON_TYPE.get(), AbstractBlockadeBlockEntity::serverTick)`) scanne
+`serverLevel.getEntitiesOfClass(Monster.class, contactArea)` à chaque tick et applique les
+dégâts de contact aux monstres dont le cooldown (`WeakHashMap<Monster, Long>` — évite de
+retenir des entités mortes/déchargées) est écoulé, **uniquement si** `dealsContactDamage` est
+actif — sinon la méthode ne fait rien.
+
+`SpikeBlockadeBlockEntity` n'est donc plus qu'une déclaration de stats : `MAX_HEALTH=30`,
+`MANA_COST=0`, `dealsContactDamage=true`, `CONTACT_DAMAGE=2.0F`,
+`CONTACT_DAMAGE_INTERVAL_TICKS=20` (1 s), `CONTACT_RANGE=1.0` — toute la logique vit dans la
+base.
 
 ### Le goal — `entity/ai/AttackBlockadeGoal.java`
 
 Un monstre ne s'attaque pas naturellement à un bloc plein dans Minecraft (il chercherait
 plutôt à le contourner) : il faut donc une IA dédiée pour qu'un ennemi de mêlée choisisse de
-détruire un Spike Blockade sur son chemin, plutôt que de rester bloqué devant indéfiniment ou
-de l'ignorer complètement.
+détruire une blockade sur son chemin, plutôt que de rester bloqué devant indéfiniment ou de
+l'ignorer complètement.
+
+`isValidTarget` cible **n'importe quel bloc du tag `dungeon_defenders:blockades`**
+(`init/ModBlockTags.java`), pas spécifiquement `spike_blockade` en dur — ajouter une future
+blockade (Bouncer, Slice N Dice…) au tag JSON
+(`data/dungeon_defenders/tags/block/blockades.json`) suffit pour qu'elle hérite de ce
+comportement, sans toucher au goal. Idem côté dégâts : `tick()` interagit avec
+`AbstractBlockadeBlockEntity` (le type de base), pas avec `SpikeBlockadeBlockEntity`.
 
 | Paramètre | Valeur | Rôle |
 |---|---|---|
-| `SEARCH_RANGE` | `8` | plus court que la portée de détection du cristal (`16`) — ne détourne l'ennemi que si un blockade est vraiment proche, pas n'importe où sur la carte |
+| `SEARCH_RANGE` | `8` | plus court que la portée de détection du cristal (`16`) — ne détourne l'ennemi que si une blockade est vraiment proche, pas n'importe où sur la carte |
 | `SPEED_MODIFIER` / `ACCEPTED_DISTANCE` | `1.2D` / `2.1D` | identiques à `AttackEterniaCrystalGoal` |
 | `DAMAGE_PER_HIT` | `5` | dégâts infligés au blockade par coup — même valeur que le corps à corps sur le cristal |
 | `TICKS_BETWEEN_HITS` | `20` (1 s) | cadence des coups |
 
+**Priorité confirmée avec le joueur** : toute blockade **à portée de recherche** (8 blocs)
+l'emporte sur le cristal, même si elle n'est pas strictement sur le trajet le plus direct du
+monstre — pas de vérification de trajet/pathfinding, un simple scan par rayon suffit. Cette
+règle est actée comme convention par défaut pour les futures catégories de tours aussi (une
+blockade doit rester prioritaire sur le cristal **et** sur les autres types de tours une fois
+qu'ils existeront).
+
 Structure similaire à `AttackEterniaCrystalGoal` (`MoveToBlockGoal`, convergence + cooldown de
 coups), mais **n'étend pas** `AbstractEterniaCrystalAttackGoal` : cette base est pensée pour
-cibler le cristal (un seul exemplaire sur la carte), alors qu'un Spike Blockade est cherché
-par proximité et qu'il n'y a pour l'instant qu'un seul tower de mêlée — forcer une base commune
-maintenant reviendrait à deviner une forme partagée plutôt qu'à la constater sur un second
-exemple concret (voir le commentaire de classe d'`AbstractEterniaCrystalAttackGoal`, même
-principe qui a mené à sa création après coup plutôt qu'avant).
+cibler le cristal (un seul exemplaire sur la carte), alors qu'une blockade est cherchée par
+proximité via un tag — forcer une base commune entre les deux reviendrait à deviner une forme
+partagée plutôt qu'à la constater sur un second exemple concret (voir le commentaire de classe
+d'`AbstractEterniaCrystalAttackGoal`, même principe qui a mené à sa création après coup plutôt
+qu'avant).
 
-Une fois le blockade détruit, `isValidTarget` ne trouve plus rien à cette position :
+Une fois la blockade détruite, `isValidTarget` ne trouve plus rien à cette position :
 `MoveToBlockGoal` termine le goal tout seul (comportement vanilla, rien à coder), et l'ennemi
 retombe sur `AttackEterniaCrystalGoal` (priorité 1) au prochain choix de goal.
 
-Pas de version à distance : un archer peut tirer par-dessus/à côté d'un blockade sans avoir
-besoin de le détruire, contrairement à un ennemi de mêlée qui doit littéralement passer au
+Pas de version à distance : un archer peut tirer par-dessus/à côté d'une blockade sans avoir
+besoin de la détruire, contrairement à un ennemi de mêlée qui doit littéralement passer au
 travers — voir "L'attribution" plus bas, seuls les non-`AbstractSkeleton` reçoivent ce goal.
 
 ### Apparence
@@ -506,10 +534,11 @@ niveau d'outil) et se drope lui-même via
 - Pas de remboursement de mana en le cassant.
 - Pas d'indicateur visuel de PV restants (barre de vie, changement de texture...) — seul
   `getHealth()` existe côté code, rien ne l'affiche encore.
-- Un seul tower de mêlée pour l'instant : pas encore de tower à distance, d'aura/piège non
-  attaquable, ni de piège de sol (les quatre autres catégories envisagées par le joueur, voir
-  05-etat-et-problemes-connus.md) — chacune aura probablement besoin de sa propre base, une
-  fois qu'un second exemple concret de chaque existera.
+- Un seul membre concret de la catégorie "Blockade" pour l'instant (Spike Blockade) : la base
+  `AbstractBlockadeBlockEntity` existe déjà (voir plus haut), mais pas encore de tower à
+  distance, d'aura/piège non attaquable, ni de piège de sol (les autres catégories envisagées
+  par le joueur, voir 05-etat-et-problemes-connus.md) — chacune aura probablement besoin de sa
+  propre base, une fois qu'un second exemple concret de chaque existera.
 
 ## Le mana du joueur
 

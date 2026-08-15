@@ -50,7 +50,7 @@ Pour un bloc qui blesse une entité quand elle marche dessus (piège, sol danger
 besoin de block entity : surcharger `stepOn` suffit. C'était le patron de l'ancien
 `SpikeTrapBlock` (supprimé, remplacé par le Spike Blockade — un corps à corps attaquable,
 catégorie 2 de la taxonomie des tours, voir
-[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#système-de-tours-démarré--spike-blockade-le-reste-de-la-taxonomie-pas-commencé)) ;
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#système-de-tours-catégorie-blockade-démarrée)) ;
 ce patron `stepOn` reste le bon point de départ pour les futurs **pièges de sol** (catégorie 5,
 non attaquables) de cette taxonomie — aucun exemple actuel dans le code à recopier tel quel,
 reconstruire à partir du squelette ci-dessous.
@@ -234,7 +234,12 @@ Noter le dossier `loot_table` au **singulier** depuis 1.21. Et comme le bloc uti
 
 Tous ces fichiers peuvent aussi être générés par datagen (`./gradlew runData`, sortie dans
 `src/generated/resources/`). `eternia_crystal` et `spike_blockade` (deux blocs avec block
-entity) sont deux exemples complets à recopier.
+entity) sont deux exemples complets à recopier. Pour un nouveau membre de la catégorie
+"Blockade" (mur à PV, voir `05-etat-et-problemes-connus.md`), pas besoin de repartir de zéro :
+étendre `block/entity/AbstractBlockadeBlockEntity.java` (stats seulement, voir
+`SpikeBlockadeBlockEntity` comme modèle) et ajouter le nouveau bloc au tag
+`data/dungeon_defenders/tags/block/blockades.json` pour qu'`AttackBlockadeGoal` le vise
+automatiquement.
 
 ## Ajouter une donnée persistante sur le joueur (data attachment)
 
