@@ -69,6 +69,7 @@ MC_DungeonDefenders_Neoforge/
     │   └── block/
     │       ├── EterniaCrystalBlock.java      # Le bloc : hitbox, interaction, codec
     │       ├── SpikeBlockadeBlock.java       # Premier tower "Blockade" : mur à PV qui pique au contact
+    │       ├── BlockadeBlockItem.java        # Item de la catégorie "Blockade" : useOn() ne pose plus rien (roue uniquement)
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
     │       └── entity/

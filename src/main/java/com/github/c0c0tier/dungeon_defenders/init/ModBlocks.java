@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.init;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.block.BlockadeBlockItem;
 import com.github.c0c0tier.dungeon_defenders.block.EterniaCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpawnerBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpikeBlockadeBlock;
@@ -36,8 +37,10 @@ public class ModBlocks {
             SpikeBlockadeBlock::new,
             properties -> properties.strength(2.0F));
 
+    // BlockadeBlockItem plutôt que registerSimpleBlockItem : useOn() ne pose plus rien, la
+    // roue (TowerWheelScreen) est l'unique façon de poser une tour de la catégorie "Blockade".
     public static final DeferredItem<BlockItem> SPIKE_BLOCKADE_ITEM =
-            ITEMS.registerSimpleBlockItem("spike_blockade", SPIKE_BLOCKADE);
+            ITEMS.registerItem("spike_blockade", properties -> new BlockadeBlockItem(SPIKE_BLOCKADE.get(), properties));
 
     // 4. Baguette de test : retire 10 de mana au clic droit, pour vérifier le HUD (mana)
     public static final DeferredItem<ManaTestWandItem> MANA_TEST_WAND =

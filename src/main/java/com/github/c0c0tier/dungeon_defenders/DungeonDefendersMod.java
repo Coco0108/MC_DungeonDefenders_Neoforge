@@ -53,7 +53,9 @@ public class DungeonDefendersMod {
                     .icon(() -> ModBlocks.ETERNIA_CRYSTAL_ITEM.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
                         output.accept(ModBlocks.ETERNIA_CRYSTAL_ITEM.get());
-                        output.accept(ModBlocks.SPIKE_BLOCKADE_ITEM.get());
+                        // Pas de SPIKE_BLOCKADE_ITEM ici : les tours de la catégorie "Blockade"
+                        // ne se posent plus qu'via la roue (TowerWheelScreen) — voir
+                        // BlockadeBlockItem, dont useOn() ne fait plus rien.
                         output.accept(ModBlocks.MANA_TEST_WAND.get());
                         output.accept(ModBlocks.SPAWNER_ITEM.get());
                         output.accept(ModBlocks.TAVERN_CRYSTAL_ITEM.get());

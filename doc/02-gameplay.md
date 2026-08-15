@@ -496,6 +496,27 @@ exemption pour le mode créatif — un joueur en créatif sans mana suffisant se
 la pose, comme en survie (même convention que `ManaTestWandItem`, qui ne distingue pas non
 plus les modes de jeu).
 
+**Restriction de phase, ajoutée dans le même handler** : avant même de vérifier le mana,
+`onBlockadePlace` vérifie `level.getData(ModAttachments.GAME_PHASE) == GamePhase.BUILD.ordinal()`
+— sinon, placement annulé (même mécanisme de restauration que pour un mana insuffisant) et
+message dédié (`dungeon_defenders.blockade.build_phase_only`), pour ne pas laisser croire à un
+problème de mana alors que c'est la phase qui bloque. Cette vérification étant dans
+`ModEvents.onBlockadePlace` (déclenché via `BlockEvent.EntityPlaceEvent`), elle s'applique à
+**toute** pose d'une blockade, quel que soit le chemin emprunté pour y arriver — actuellement
+un seul chemin existe (la roue, voir plus bas), mais rien à refaire si un second apparaît un
+jour. Doublée côté client (`TowerPlacementClientEvents`) : la roue elle-même refuse de s'ouvrir
+hors phase Construction, pour éviter de faire tout le mode pose avant un refus final.
+
+### L'item ne pose plus rien — `block/BlockadeBlockItem.java`
+
+Décidé avec le joueur : la roue est **l'unique façon de poser une tour**, plus d'item posable à
+la main. `SPIKE_BLOCKADE_ITEM` (existe toujours pour un éventuel drop à la casse) n'est plus un
+`BlockItem` classique mais un `BlockadeBlockItem`, dont `useOn(...)` retourne systématiquement
+`InteractionResult.PASS` — clic droit avec en main : rien ne se passe, comme si l'item n'avait
+aucune interaction avec le monde. Retiré de l'onglet créatif pour la même raison (plus aucun
+intérêt à le sortir directement). Base commune à toute la catégorie "Blockade" : une future
+blockade utilisera la même classe d'item, pas besoin de la réécrire.
+
 ### Le goal — `entity/ai/AttackBlockadeGoal.java`
 
 Un monstre ne s'attaque pas naturellement à un bloc plein dans Minecraft (il chercherait
@@ -657,19 +678,19 @@ confirmer une position invalide).
 Le point important : **la vérification et le débit de mana ne sont PAS réimplémentés ici**.
 Le handler pose le bloc (`level.setBlock(...)`, avec la rotation appliquée seulement si le
 bloc a `BlockStateProperties.HORIZONTAL_FACING`), puis appelle directement
-`EventHooks.onBlockPlace(player, snapshot, direction)` — **le même hook NeoForge que
-`BlockItem` utilise déjà en interne** pour déclencher `BlockEvent.EntityPlaceEvent`. Résultat :
-`ModEvents.onBlockadePlace` s'exécute exactement comme pour une pose par `BlockItem`, sans
-aucune duplication. Si annulé (mana insuffisant), le `BlockSnapshot` capturé avant la pose est
-restauré (`before.restore(...)`) — le bloc disparaît comme s'il n'avait jamais été posé.
+`EventHooks.onBlockPlace(player, snapshot, direction)` — **le même hook NeoForge qu'utilise en
+interne la pose par `BlockItem` classique** pour déclencher `BlockEvent.EntityPlaceEvent`
+(désormais théorique pour `BlockadeBlockItem`, dont `useOn` ne place plus rien lui-même — voir
+"L'item ne pose plus rien" plus haut — mais le hook reste le même point d'entrée). Résultat :
+`ModEvents.onBlockadePlace` s'exécute pour la pose via la roue exactement comme il le ferait
+pour n'importe quel autre déclencheur de `BlockEvent.EntityPlaceEvent`, sans aucune
+duplication — y compris la restriction de phase (Construction uniquement). Si annulé (mana
+insuffisant ou mauvaise phase), le `BlockSnapshot` capturé avant la pose est restauré
+(`before.restore(...)`) — le bloc disparaît comme s'il n'avait jamais été posé.
 
 **Ce qui n'est PAS fait**, volontairement :
 
 - Pas de filtrage par héros — la roue liste toutes les tours, en attendant ce système.
-- Le `BlockItem` de Spike Blockade (onglet créatif) n'a pas été retiré : les deux façons de
-  poser coexistent pour l'instant.
-- Pas de restriction de phase (Construction vs Combat) sur la pose via la roue — le `BlockItem`
-  n'en a pas non plus.
 - Pas de remplissage translucide de l'hologramme, juste le contour filaire.
 
 ## Le mana du joueur

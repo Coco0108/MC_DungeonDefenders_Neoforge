@@ -2,6 +2,8 @@ package com.github.c0c0tier.dungeon_defenders.client;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.TowerWheelScreen;
+import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
+import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
 import com.github.c0c0tier.dungeon_defenders.network.PlaceTowerPayload;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -12,6 +14,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.context.ContextKey;
@@ -59,7 +62,16 @@ public class TowerPlacementClientEvents {
         Minecraft minecraft = Minecraft.getInstance();
 
         if (ModKeyMappings.TOWER_WHEEL.consumeClick() && minecraft.screen == null) {
-            minecraft.setScreen(new TowerWheelScreen());
+            // Autant prévenir tout de suite plutôt que de laisser le joueur faire tout le
+            // mode pose pour se faire refuser à la toute fin (voir ModEvents.onBlockadePlace,
+            // seule autorité réelle côté serveur) : la roue elle-même ne s'ouvre qu'en phase
+            // Construction.
+            if (minecraft.level != null && minecraft.player != null
+                    && minecraft.level.getData(ModAttachments.GAME_PHASE) == GamePhase.BUILD.ordinal()) {
+                minecraft.setScreen(new TowerWheelScreen());
+            } else if (minecraft.player != null) {
+                minecraft.player.sendSystemMessage(Component.translatable("dungeon_defenders.blockade.build_phase_only"));
+            }
         }
 
         if (!TowerPlacementState.isActive()) {

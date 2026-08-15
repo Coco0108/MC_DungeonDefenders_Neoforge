@@ -68,6 +68,19 @@ public class ModEvents {
             return;
         }
 
+        if (!(event.getLevel() instanceof Level level)) {
+            return;
+        }
+
+        // Décidé avec le joueur : les tours ne se posent qu'en phase Construction, jamais
+        // pendant le Combat — vérifié avant même le mana, pour ne pas laisser croire qu'un
+        // refus vient d'un manque de mana alors que c'est la phase qui bloque.
+        if (level.getData(ModAttachments.GAME_PHASE) != GamePhase.BUILD.ordinal()) {
+            player.sendSystemMessage(Component.translatable("dungeon_defenders.blockade.build_phase_only"));
+            event.setCanceled(true);
+            return;
+        }
+
         int manaCost = blockade.getManaCost();
         int currentMana = player.getData(ModAttachments.MANA);
 
