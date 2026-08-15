@@ -11,7 +11,9 @@ import net.minecraft.world.level.block.state.BlockState;
 public class SpikeBlockadeBlockEntity extends AbstractBlockadeBlockEntity {
 
     public static final int MAX_HEALTH = 30;
-    public static final int MANA_COST = 0;
+    // Valeur de test demandée par le joueur pour vérifier que la dépense de mana à la pose
+    // fonctionne (voir ModEvents.onBlockadePlace) — pas encore équilibrée pour de vrai.
+    public static final int MANA_COST = 30;
     private static final float CONTACT_DAMAGE = 2.0F;
     private static final long CONTACT_DAMAGE_INTERVAL_TICKS = 20L;
     // Distance sur laquelle le blockade "gonfle" sa propre boîte pour détecter un contact —

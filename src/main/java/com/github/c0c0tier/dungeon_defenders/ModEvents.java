@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders;
 
+import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackBlockadeGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackEterniaCrystalGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
@@ -17,6 +18,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
 
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class ModEvents {
@@ -54,6 +56,35 @@ public class ModEvents {
             monster.goalSelector.addGoal(0, new AttackBlockadeGoal(monster));
             monster.goalSelector.addGoal(1, new AttackEterniaCrystalGoal(monster));
         }
+    }
+
+    @SubscribeEvent
+    public static void onBlockadePlace(BlockEvent.EntityPlaceEvent event) {
+        if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Player player)) {
+            return;
+        }
+
+        if (!(event.getLevel().getBlockEntity(event.getPos()) instanceof AbstractBlockadeBlockEntity blockade)) {
+            return;
+        }
+
+        int manaCost = blockade.getManaCost();
+        int currentMana = player.getData(ModAttachments.MANA);
+
+        if (currentMana < manaCost) {
+            player.sendSystemMessage(Component.translatable(
+                    "dungeon_defenders.blockade.not_enough_mana", manaCost, currentMana));
+            // Annule le placement : NeoForge restaure le bloc précédent (via le BlockSnapshot)
+            // et rend l'item au joueur, comme si la pose n'avait jamais eu lieu.
+            event.setCanceled(true);
+            return;
+        }
+
+        int newMana = currentMana - manaCost;
+        player.setData(ModAttachments.MANA, newMana);
+        player.syncData(ModAttachments.MANA);
+        player.sendSystemMessage(Component.translatable(
+                "dungeon_defenders.blockade.mana_spent", manaCost, newMana, ModAttachments.MAX_MANA));
     }
 
     @SubscribeEvent

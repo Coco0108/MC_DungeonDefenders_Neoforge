@@ -24,9 +24,10 @@ vérifie la CI.
   membre concret de la catégorie de code "Blockade" (voir "Système de tours" plus bas). Un
   goal d'IA (`AttackBlockadeGoal`, priorité 0, avant le cristal en priorité 1) détourne les
   ennemis de mêlée vers tout bloc du tag `dungeon_defenders:blockades` plutôt que le cristal,
-  tant qu'il n'est pas détruit — pas les archers, qui peuvent tirer par-dessus/à côté. Modèle,
-  blockstate, loot table, tag `mineable/pickaxe`, traductions `en_us`/`fr_fr`, onglet créatif.
-  Détail dans
+  tant qu'il n'est pas détruit — pas les archers, qui peuvent tirer par-dessus/à côté. Coûte
+  30 mana à la pose (`ModEvents.onBlockadePlace`, valeur de test pas encore équilibrée),
+  placement refusé et item rendu si mana insuffisant. Modèle, blockstate, loot table, tag
+  `mineable/pickaxe`, traductions `en_us`/`fr_fr`, onglet créatif. Détail dans
   [02-gameplay.md](02-gameplay.md#le-spike-blockade--blockspikeblockadeblockjava).
 - ✅ Mana du joueur : data attachment `mana` (persistant, synchronisé), maximum par défaut de
   100, affiché en HUD via `ManaOverlay` — losange en bas à gauche de l'écran (`DiamondGauge`,
@@ -259,10 +260,16 @@ demandé d'établir dès maintenant une base de code pour la catégorie "Blockad
 connaît déjà son comportement commun avant même d'écrire une deuxième blockade concrète :
 
 - `block/entity/AbstractBlockadeBlockEntity.java` porte les stats communes : PV (`maxHealth`),
-  coût en mana à la pose (`manaCost`, stat réservée, pas encore consommée — aucune économie de
-  mana au placement n'existe pour l'instant), et un booléen `dealsContactDamage` (+ dégâts/
-  intervalle/portée de contact si actif). **Pas de stat "portée d'attaque"** sur cette base :
-  une blockade n'attaque pas à distance, seulement au contact.
+  coût en mana à la pose (`manaCost`, **désormais consommé** via `ModEvents.onBlockadePlace`,
+  voir plus bas), et un booléen `dealsContactDamage` (+ dégâts/intervalle/portée de contact si
+  actif). **Pas de stat "portée d'attaque"** sur cette base : une blockade n'attaque pas à
+  distance, seulement au contact.
+- **Le coût en mana à la pose est branché** (`ModEvents.onBlockadePlace`, écoute
+  `BlockEvent.EntityPlaceEvent`) : générique à toute la catégorie via
+  `getBlockEntity(pos) instanceof AbstractBlockadeBlockEntity`, pas seulement Spike Blockade.
+  Mana insuffisant → placement annulé, NeoForge restaure le bloc précédent et rend l'item
+  automatiquement. Valeur de test sur Spike Blockade : `MANA_COST = 30`, pas encore équilibrée.
+  Aucune exemption créative (même convention que `ManaTestWandItem`).
 - `entity/ai/AttackBlockadeGoal.java` cible désormais **tout bloc du tag**
   `dungeon_defenders:blockades` (`init/ModBlockTags.java`,
   `data/dungeon_defenders/tags/block/blockades.json`) plutôt que `spike_blockade` en dur —
@@ -283,10 +290,9 @@ connaît déjà son comportement commun avant même d'écrire une deuxième bloc
   construite en autonomie d'abord (comme prévu à l'origine), sauf nouvelle décision explicite
   du joueur au moment de s'y attaquer.
 
-**Reste à faire, même pour Spike Blockade** : coût en mana au placement (champ `manaCost`
-présent sur la base mais pas encore branché sur une dépense réelle), remboursement de mana à
-la casse, indicateur visuel de PV restants. Et bien sûr, les catégories 2 à 5 n'ont aucune
-implémentation.
+**Reste à faire, même pour Spike Blockade** : équilibrage réel du coût en mana (30 est une
+valeur de test, pas réfléchie), remboursement de mana à la casse, indicateur visuel de PV
+restants. Et bien sûr, les catégories 2 à 5 n'ont aucune implémentation.
 
 ### La partie se termine, mais sans vraie conclusion visuelle
 

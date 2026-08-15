@@ -439,8 +439,21 @@ fait via le tag `dungeon_defenders:blockades` (pas un bloc en dur) : ce test val
 que le tag fonctionne correctement, pas seulement le Spike Blockade en particulier.
 
 - [ ] Prendre `spike_blockade` dans l'onglet créatif Dungeon Defenders (texture provisoire :
-      bloc de dripstone), le poser. Doit **bloquer le passage** comme n'importe quel bloc plein
-      (pas de hitbox custom, collision vanilla normale).
+      bloc de dripstone). Avec **30 mana ou plus** (défaut : 100/100), le poser : doit
+      **réussir**, et un message confirme `-30 mana pour la blockade (70/100)` (ou équivalent
+      selon le mana restant). Doit **bloquer le passage** comme n'importe quel bloc plein (pas
+      de hitbox custom, collision vanilla normale) — nouveau comportement à vérifier en
+      priorité dans cette section (`ModEvents.onBlockadePlace`), jamais testé en jeu.
+- [ ] Descendre son mana sous 30 (`mana_test_wand`, 3 clics droits suffisent), puis essayer de
+      poser un Spike Blockade : le placement doit être **refusé**, un message affiche "Pas
+      assez de mana pour poser cette blockade ! (30 requis, X disponible)", **et l'item doit
+      être rendu** au joueur (ne pas disparaître de l'inventaire/de la main malgré la tentative
+      de pose) — le bloc ne doit **pas** apparaître dans le monde.
+- [ ] Reposer un Spike Blockade avec assez de mana juste après un refus : doit fonctionner
+      normalement (le refus précédent n'a pas laissé le joueur dans un état bloqué).
+- [ ] En mode créatif, avec moins de 30 mana : le placement doit **quand même être refusé**
+      (pas d'exemption créative pour l'instant, comportement volontaire — voir
+      05-etat-et-problemes-connus.md).
 - [ ] Faire spawn un zombie à proximité (spawner ou `/summon minecraft:zombie`) avec un Spike
       Blockade posé entre lui et le Cristal d'Eternia, sur son chemin le plus direct : le
       zombie doit se diriger vers le **Spike Blockade en premier** (pas continuer tout droit
@@ -466,7 +479,7 @@ que le tag fonctionne correctement, pas seulement le Spike Blockade en particuli
       corps à corps) — il doit continuer à viser le cristal à distance comme avant, le Spike
       Blockade ne bloque pas ses flèches.
 - [ ] Casser le Spike Blockade soi-même à la pioche (hors combat) : il se drope (comme
-      l'ancien `spike_trap`), pas de coût en mana ni remboursement pour l'instant (manques
+      l'ancien `spike_trap`), pas de remboursement de mana pour l'instant (manques
       connus, voir 05-etat-et-problemes-connus.md).
 - [ ] Poser plusieurs Spike Blockade côte à côte formant un mur : un zombie coincé derrière
       doit s'attaquer à **celui qui bloque effectivement son chemin**, pas se figer ou choisir

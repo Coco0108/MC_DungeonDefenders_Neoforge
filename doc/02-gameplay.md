@@ -454,7 +454,7 @@ sous-classe via son constructeur :
 | Paramètre | Rôle |
 |---|---|
 | `maxHealth` | PV du blockade (`getHealth()`/`damage(int)` détruit le bloc à 0 — `false` en dernier paramètre de `destroyBlock` pour empêcher le drop, comme le cristal) |
-| `manaCost` | coût en mana à la pose — stat réservée pour la future économie de mana, **pas encore consommée** nulle part (aucun système de dépense au placement n'existe pour l'instant) |
+| `manaCost` | coût en mana à la pose, consommé au joueur qui pose le bloc (voir "Le coût en mana à la pose" plus bas) |
 | `dealsContactDamage` | booléen : ce blockade pique-t-il au contact, ou est-il purement passif ? |
 | `contactDamage` / `contactDamageIntervalTicks` / `contactRange` | ignorés si `dealsContactDamage=false` ; sinon, dégâts et cadence des dégâts de contact |
 
@@ -470,9 +470,31 @@ retenir des entités mortes/déchargées) est écoulé, **uniquement si** `deals
 actif — sinon la méthode ne fait rien.
 
 `SpikeBlockadeBlockEntity` n'est donc plus qu'une déclaration de stats : `MAX_HEALTH=30`,
-`MANA_COST=0`, `dealsContactDamage=true`, `CONTACT_DAMAGE=2.0F`,
+`MANA_COST=30`, `dealsContactDamage=true`, `CONTACT_DAMAGE=2.0F`,
 `CONTACT_DAMAGE_INTERVAL_TICKS=20` (1 s), `CONTACT_RANGE=1.0` — toute la logique vit dans la
 base.
+
+### Le coût en mana à la pose — `ModEvents.onBlockadePlace`
+
+Contrairement au reste de la catégorie (état + dégâts de contact), la dépense de mana à la
+pose ne vit pas dans `AbstractBlockadeBlockEntity` : elle écoute `BlockEvent.EntityPlaceEvent`
+(NeoForge, bus de jeu, annulable), qui se déclenche pour **tout** bloc placé par une entité,
+pas seulement les blockades — d'où le filtre `getBlockEntity(pos) instanceof
+AbstractBlockadeBlockEntity` en tout début de handler, générique à toute la catégorie sans
+avoir besoin d'un tag séparé (le block entity venant d'être créé au moment où l'événement se
+déclenche).
+
+Logique : si `player.getData(ModAttachments.MANA) < blockade.getManaCost()`, l'événement est
+annulé (`event.setCanceled(true)`) — NeoForge restaure alors le `BlockSnapshot` précédent
+**et** rend l'item au joueur automatiquement (le bloc n'est jamais réellement resté posé), pas
+besoin de le faire à la main. Sinon, le mana est débité et resynchronisé
+(`setData`/`syncData`, même paire que `ManaTestWandItem`) et un message confirme la dépense.
+
+Valeur de test actuelle : `SpikeBlockadeBlockEntity.MANA_COST = 30`, choisie par le joueur pour
+vérifier que le mécanisme fonctionne (pas encore une valeur d'équilibrage réfléchie). Aucune
+exemption pour le mode créatif — un joueur en créatif sans mana suffisant se voit aussi refuser
+la pose, comme en survie (même convention que `ManaTestWandItem`, qui ne distingue pas non
+plus les modes de jeu).
 
 ### Le goal — `entity/ai/AttackBlockadeGoal.java`
 
@@ -529,8 +551,9 @@ niveau d'outil) et se drope lui-même via
 **Ce qui n'est PAS fait**, volontairement — voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) :
 
-- Pas de coût en mana pour le placer : un bloc posable depuis l'inventaire comme les autres
-  pour l'instant, comme l'était l'ancien piège.
+- Coût en mana à la pose branché (30, valeur de test — voir "Le coût en mana à la pose"
+  plus haut), mais **pas encore équilibré** : choisi arbitrairement pour vérifier que le
+  mécanisme fonctionne, pas après réflexion sur l'économie de mana globale.
 - Pas de remboursement de mana en le cassant.
 - Pas d'indicateur visuel de PV restants (barre de vie, changement de texture...) — seul
   `getHealth()` existe côté code, rien ne l'affiche encore.
