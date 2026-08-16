@@ -233,13 +233,23 @@ Noter le dossier `loot_table` au **singulier** depuis 1.21. Et comme le bloc uti
 (`needs_diamond_tool`, `needs_iron_tool`…), avec `"replace": false`.
 
 Tous ces fichiers peuvent aussi être générés par datagen (`./gradlew runData`, sortie dans
-`src/generated/resources/`). `eternia_crystal` et `spike_blockade` (deux blocs avec block
-entity) sont deux exemples complets à recopier. Pour un nouveau membre de la catégorie
-"Blockade" (mur à PV, voir `05-etat-et-problemes-connus.md`), pas besoin de repartir de zéro :
-étendre `block/entity/AbstractBlockadeBlockEntity.java` (stats seulement, voir
-`SpikeBlockadeBlockEntity` comme modèle) et ajouter le nouveau bloc au tag
-`data/dungeon_defenders/tags/block/blockades.json` pour qu'`AttackBlockadeGoal` le vise
-automatiquement.
+`src/generated/resources/`). `eternia_crystal`, `spike_blockade` et `harpoon_turret` (blocs
+avec block entity) sont des exemples complets à recopier. Pour un nouveau membre d'une
+catégorie de tour existante (mur à PV type "Blockade", ou tour à distance type "Turret" — voir
+`05-etat-et-problemes-connus.md`), pas besoin de repartir de zéro :
+
+- **Blockade** : étendre `block/entity/AbstractBlockadeBlockEntity.java` (stats seulement, voir
+  `SpikeBlockadeBlockEntity` comme modèle) et ajouter le nouveau bloc au tag
+  `data/dungeon_defenders/tags/block/blockades.json` pour qu'`AttackBlockadeGoal` le vise
+  automatiquement.
+- **Turret** : étendre `block/entity/AbstractTurretBlockEntity.java` (stats seulement, voir
+  `HarpoonTurretBlockEntity` comme modèle) ; si la tour doit avoir une orientation, déclarer
+  `BlockStateProperties.HORIZONTAL_FACING` sur le bloc (voir `HarpoonTurretBlock` — la rotation
+  choisie dans la roue est déjà appliquée automatiquement par
+  `ModNetworking.handlePlaceTower`, rien à faire côté réseau).
+- Dans tous les cas, ajouter un membre à `init/TowerDefinition.java` pour que la tour
+  apparaisse dans la roue (`TowerWheelScreen`) — c'est l'unique façon de la poser, voir
+  `block/TowerBlockItem.java`.
 
 ## Ajouter une donnée persistante sur le joueur (data attachment)
 

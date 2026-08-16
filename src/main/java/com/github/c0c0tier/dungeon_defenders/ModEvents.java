@@ -1,6 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders;
 
-import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractBlockadeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackBlockadeGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackEterniaCrystalGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
@@ -58,13 +58,17 @@ public class ModEvents {
         }
     }
 
+    // Générique à TOUTE catégorie de tour (Blockade, Turret, ...) : filtre sur
+    // AbstractTowerBlockEntity, pas une catégorie précise, sinon une nouvelle catégorie
+    // (catégories sœurs, pas descendantes les unes des autres) échapperait silencieusement à
+    // la vérification de mana/phase. Un seul handler, jamais dupliqué par catégorie.
     @SubscribeEvent
-    public static void onBlockadePlace(BlockEvent.EntityPlaceEvent event) {
+    public static void onTowerPlace(BlockEvent.EntityPlaceEvent event) {
         if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Player player)) {
             return;
         }
 
-        if (!(event.getLevel().getBlockEntity(event.getPos()) instanceof AbstractBlockadeBlockEntity blockade)) {
+        if (!(event.getLevel().getBlockEntity(event.getPos()) instanceof AbstractTowerBlockEntity tower)) {
             return;
         }
 
@@ -76,17 +80,17 @@ public class ModEvents {
         // pendant le Combat — vérifié avant même le mana, pour ne pas laisser croire qu'un
         // refus vient d'un manque de mana alors que c'est la phase qui bloque.
         if (level.getData(ModAttachments.GAME_PHASE) != GamePhase.BUILD.ordinal()) {
-            player.sendSystemMessage(Component.translatable("dungeon_defenders.blockade.build_phase_only"));
+            player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.build_phase_only"));
             event.setCanceled(true);
             return;
         }
 
-        int manaCost = blockade.getManaCost();
+        int manaCost = tower.getManaCost();
         int currentMana = player.getData(ModAttachments.MANA);
 
         if (currentMana < manaCost) {
             player.sendSystemMessage(Component.translatable(
-                    "dungeon_defenders.blockade.not_enough_mana", manaCost, currentMana));
+                    "dungeon_defenders.tower.not_enough_mana", manaCost, currentMana));
             // Annule le placement : NeoForge restaure le bloc précédent (via le BlockSnapshot)
             // et rend l'item au joueur, comme si la pose n'avait jamais eu lieu.
             event.setCanceled(true);
@@ -97,7 +101,7 @@ public class ModEvents {
         player.setData(ModAttachments.MANA, newMana);
         player.syncData(ModAttachments.MANA);
         player.sendSystemMessage(Component.translatable(
-                "dungeon_defenders.blockade.mana_spent", manaCost, newMana, ModAttachments.MAX_MANA));
+                "dungeon_defenders.tower.mana_spent", manaCost, newMana, ModAttachments.MAX_MANA));
     }
 
     @SubscribeEvent

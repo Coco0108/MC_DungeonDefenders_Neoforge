@@ -441,7 +441,7 @@ que le tag fonctionne correctement, pas seulement le Spike Blockade en particuli
 - [ ] Prendre `spike_blockade` en créatif via `/give` (ex. `/give @s dungeon_defenders:spike_blockade`) —
       **il n'apparaît plus dans l'onglet créatif** du mod, c'est attendu. Clic droit avec en
       main, viser un bloc : **rien ne doit se passer** (pas de pose, pas d'interaction) — vérifie
-      que `BlockadeBlockItem#useOn` ne fait plus rien, la roue étant l'unique façon de poser
+      que `TowerBlockItem#useOn` ne fait plus rien, la roue étant l'unique façon de poser
       (voir section dédiée plus bas pour les tests de pose/mana/mana insuffisant/phase, qui ne
       passent maintenant que par la roue).
 - [ ] Poser un Spike Blockade via la roue (voir section dédiée plus bas) pour les tests
@@ -476,12 +476,54 @@ que le tag fonctionne correctement, pas seulement le Spike Blockade en particuli
       l'ancien `spike_trap`), pas de remboursement de mana pour l'instant (manques
       connus, voir 05-etat-et-problemes-connus.md). Récupérer l'item droppé et essayer de le
       reposer à la main : **doit échouer** comme l'item obtenu par `/give` plus haut — même
-      classe `BlockadeBlockItem`, aucune exception pour un item légitimement récupéré en jeu.
+      classe `TowerBlockItem`, aucune exception pour un item légitimement récupéré en jeu.
 - [ ] Poser plusieurs Spike Blockade côte à côte formant un mur : un zombie coincé derrière
       doit s'attaquer à **celui qui bloque effectivement son chemin**, pas se figer ou choisir
       un bloc au hasard plus loin.
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `SpikeBlockadeBlock`,
       `SpikeBlockadeBlockEntity`, ou `AttackBlockadeGoal`.
+
+## Le Harpoon Turret (`HarpoonTurretBlock`, `AbstractTurretBlockEntity`)
+
+Premier membre de la catégorie "Turret" (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#système-de-tours-catégories-blockade-et-turret-démarrées)) :
+contrairement au Spike Blockade, c'est la tour elle-même qui scanne et tire à chaque tick (pas
+de goal porté par un monstre) — jamais vérifié visuellement, y compris le premier vrai cône de
+détection et la première vraie propriété d'orientation (`HORIZONTAL_FACING`) du mod. Poser un
+Harpoon Turret via la roue (voir section dédiée plus bas) avant les tests suivants.
+
+- [ ] Poser un Harpoon Turret, orienté (via la rotation en étape "orientation" de la roue) dans
+      une direction connue (ex. NORD). Vérifier que la texture visible (face avant façon
+      furnace) pointe bien dans cette direction une fois le bloc réellement posé — sinon la
+      convention `HORIZONTAL_FACING`/blockstate est inversée quelque part.
+- [ ] Faire spawn un zombie **dans le cône** (à moins de 12 blocs, dans un secteur de 45°
+      devant la face avant du turret) : au bout d'au plus 1,5 s (`ATTACK_INTERVAL_TICKS=30`),
+      une **flèche visuelle** doit partir du turret vers le zombie, et le zombie doit perdre
+      **6 PV** (message de dégâts habituel) — pas besoin que la flèche touche physiquement
+      (dégâts appliqués directement, comme le squelette archer sur le cristal).
+- [ ] Faire spawn un zombie **derrière** le turret (hors du cône de 45°, même à moins de 12
+      blocs) : le turret ne doit **jamais** tirer dessus tant qu'aucune autre cible n'entre
+      dans le cône — vérifie le filtre d'angle (`AbstractTurretBlockEntity.findTarget`).
+- [ ] Faire spawn un zombie **dans l'axe mais au-delà de 12 blocs** : pas de tir tant qu'il
+      reste hors de portée ; s'approcher jusqu'à passer sous les 12 blocs (en restant dans le
+      cône) doit déclencher le tir.
+- [ ] Avec plusieurs zombies dans le cône à des distances différentes : le turret doit tirer
+      sur **le plus proche**, pas un zombie plus loin.
+- [ ] Chronométrer la cadence : deux tirs successifs sur une cible qui reste à portée doivent
+      être espacés d'environ 1,5 s (30 ticks), pas plus vite.
+- [ ] Le Harpoon Turret **bloque le passage** comme n'importe quel bloc plein (gratuit, comme
+      Spike Blockade) — mais aucun monstre ne doit se dérouter pour l'attaquer au corps à corps
+      (pas dans le tag `dungeon_defenders:blockades`, pas de goal dédié, décidé avec le joueur) :
+      un zombie qui le percute doit rester bloqué dessus sans lui donner de coups, contrairement
+      à un Spike Blockade.
+- [ ] Casser le Harpoon Turret à la pioche : il se drope (comme Spike Blockade), pas de
+      remboursement de mana. L'item récupéré ne doit **pas** se poser à la main (même
+      comportement que Spike Blockade, voir section dédiée plus haut).
+- [ ] Un squelette (archer) dans le cône : doit se faire tirer dessus comme un zombie, le
+      turret ne fait pas de distinction entre types de `Monster`.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `HarpoonTurretBlock`,
+      `HarpoonTurretBlockEntity`, `AbstractTurretBlockEntity`, ou à la création de l'entité
+      `Arrow` sans propriétaire.
 
 ## La roue de sélection des tours et la pose (`TowerWheelScreen`, `TowerPlacementClientEvents`)
 
@@ -495,13 +537,14 @@ block entity — rien de tout ça n'a pu être vérifié visuellement pendant le
       (`TowerPlacementClientEvents`), avant même d'atteindre le serveur.
 - [ ] **En phase Construction**, appuyer sur `R` (touche par défaut, configurable dans
       Options > Touches > Gameplay, libellé "Ouvrir la roue des tours") : un écran radial
-      s'ouvre, sans crash ni écran noir. Avec une seule tour existante (Spike Blockade), un
-      seul secteur/icône doit apparaître.
+      s'ouvre, sans crash ni écran noir. **Deux** secteurs/icônes doivent apparaître désormais
+      (Spike Blockade et Harpoon Turret), répartis autour du centre — pas superposés.
 - [ ] Bouger la souris tout autour du centre de l'écran, en restant proche du centre (moins de
       ~20px) : **aucun** secteur ne doit être en surbrillance (zone morte).
-- [ ] Éloigner la souris du centre (au-delà de la zone morte), dans n'importe quelle direction :
-      le secteur (unique pour l'instant) doit passer en surbrillance, et son nom + son coût en
-      mana ("Coût : 30 mana") doivent s'afficher sous la roue.
+- [ ] Éloigner la souris du centre (au-delà de la zone morte) vers chacun des deux secteurs :
+      le bon secteur doit passer en surbrillance à chaque fois (pas l'autre), et son nom + son
+      coût en mana ("Coût : 30 mana" pour Spike Blockade, "Coût : 50 mana" pour Harpoon
+      Turret) doivent s'afficher sous la roue.
 - [ ] **Cliquer directement** sur l'icône en surbrillance : l'écran se ferme, aucune erreur
       dans les logs — doit démarrer le mode pose (voir plus bas).
 - [ ] Rouvrir la roue, **maintenir `R`**, viser le secteur (surbrillance visible), puis
@@ -525,19 +568,39 @@ block entity — rien de tout ça n'a pu être vérifié visuellement pendant le
       regard** (position verrouillée) — bouger la caméra ne doit plus déplacer le contour.
 - [ ] **Clic droit** sur une position **rouge** (viser un bloc invalide) : ne doit **rien**
       faire (pas de verrouillage, reste en étape "visée").
-- [ ] Une fois la position verrouillée (étape "orientation") : appuyer sur `T` (touche par
-      défaut, "Faire pivoter la tour (pose)") plusieurs fois : aucune erreur, mais **aucun
-      changement visuel attendu** sur Spike Blockade (cube symétrique, limite connue — voir
-      05-etat-et-problemes-connus.md) — vérifie surtout l'absence de crash/d'exception.
-- [ ] **Clic droit** une seconde fois (étape "orientation") : doit **poser réellement** le bloc
-      à la position verrouillée, fermer le mode pose (hologramme disparaît), et débiter le mana
-      (message `-30 mana pour la blockade (X/100)`, voir section HUD mana) — test le plus
-      important de cette section : vérifie que `PlaceTowerPayload` déclenche bien
-      `ModEvents.onBlockadePlace` via le hook NeoForge réutilisé, sans double implémentation.
+- [ ] Sélectionner **Spike Blockade** et verrouiller une position (étape "orientation") :
+      appuyer sur `T` (touche par défaut, "Faire pivoter la tour (pose)") plusieurs fois :
+      aucune erreur, mais **aucun changement visuel attendu** sur le contour (cube symétrique,
+      limite connue — voir 05-etat-et-problemes-connus.md) — vérifie surtout l'absence de
+      crash/d'exception.
+- [ ] Recommencer avec **Harpoon Turret** : dès l'étape "visée" (avant même de verrouiller), un
+      **cône jaune** (pas un cercle complet) doit apparaître autour de l'hologramme, orienté
+      par défaut vers le NORD — nouveau test important, jamais vérifié visuellement (premier
+      cône du mod). Une fois la position verrouillée, appuyer sur `T` plusieurs fois : le cône
+      doit **pivoter par pas de 90°** avec l'hologramme, dans le même sens que le contour du
+      bloc.
+- [ ] Avec Harpoon Turret, comparer visuellement le cône à la face avant du bloc une fois posé
+      (texture directionnelle de la furnace, voir "Apparence" dans doc/02-gameplay.md) : le
+      cône doit pointer **du même côté que la face avant**, à chaque rotation (Nord/Est/Sud/
+      Ouest) — **point non garanti** (convention de rotation du cône vérifiée par construction
+      seulement pour NORD, pas les 3 autres, voir 02-gameplay.md) : si le cône pointe à
+      l'envers ou sur le côté pour EST/SUD/OUEST, c'est une inversion de sens de rotation à
+      corriger dans `TowerPlacementClientEvents.renderRangeArea`/`onSubmitCustomGeometry`.
+- [ ] **Clic droit** une seconde fois (étape "orientation"), pour Spike Blockade **et** Harpoon
+      Turret séparément : doit **poser réellement** le bloc à la position verrouillée, fermer
+      le mode pose (hologramme disparaît), et débiter le mana (`-30 mana pour la tour (X/100)`
+      pour Spike Blockade, `-50 mana pour la tour (X/100)` pour Harpoon Turret, voir section HUD
+      mana) — test le plus important de cette section : vérifie que `PlaceTowerPayload`
+      déclenche bien `ModEvents.onTowerPlace` via le hook NeoForge réutilisé, pour les deux
+      catégories, sans double implémentation.
+- [ ] Une fois un Harpoon Turret réellement posé : vérifier qu'il est bien **orienté** dans la
+      direction choisie pendant l'étape "orientation" (comparer au cône prévisualisé) — valide
+      que `ModNetworking.handlePlaceTower` applique correctement `HORIZONTAL_FACING`.
 - [ ] **Clic gauche** pendant l'étape "orientation" : annule tout (pas de pose, pas de
       débit de mana), retour à zéro — pas de retour à l'étape "visée".
-- [ ] Refaire tout le mode pose avec **moins de 30 mana disponible** : le clic droit final doit
-      **échouer** (message "Pas assez de mana...", le bloc n'apparaît pas dans le monde).
+- [ ] Refaire tout le mode pose avec **moins de mana que le coût de la tour choisie** (30 pour
+      Spike Blockade, 50 pour Harpoon Turret) : le clic droit final doit **échouer** (message
+      "Pas assez de mana...", le bloc n'apparaît pas dans le monde).
 - [ ] Démarrer le mode pose **en phase Construction**, puis faire basculer la partie en Combat
       pendant que le mode pose est actif (ex. via le harnais de test du spawner, shift + clic
       droit) avant de confirmer : le clic droit final doit être **refusé** côté serveur (message
@@ -551,7 +614,7 @@ block entity — rien de tout ça n'a pu être vérifié visuellement pendant le
       centrés sur le nouveau centre de l'écran, pas figés à une position absolue.
 - [ ] Vérifier `run/logs/latest.log` après une session de test complète : aucune exception liée
       à `TowerWheelScreen`, `TowerPlacementClientEvents`, `TowerPlacementState`,
-      `PlaceTowerPayload`, `BlockadeBlockItem`, ou au rendu
+      `PlaceTowerPayload`, `TowerBlockItem`, ou au rendu
       (`ExtractLevelRenderStateEvent`/`SubmitCustomGeometryEvent`).
 
 ## HUD vanilla masqué

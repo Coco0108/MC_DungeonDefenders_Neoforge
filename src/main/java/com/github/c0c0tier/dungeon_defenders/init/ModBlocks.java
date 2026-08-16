@@ -1,11 +1,12 @@
 package com.github.c0c0tier.dungeon_defenders.init;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
-import com.github.c0c0tier.dungeon_defenders.block.BlockadeBlockItem;
 import com.github.c0c0tier.dungeon_defenders.block.EterniaCrystalBlock;
+import com.github.c0c0tier.dungeon_defenders.block.HarpoonTurretBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpawnerBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpikeBlockadeBlock;
 import com.github.c0c0tier.dungeon_defenders.block.TavernCrystalBlock;
+import com.github.c0c0tier.dungeon_defenders.block.TowerBlockItem;
 import com.github.c0c0tier.dungeon_defenders.item.ManaTestWandItem;
 import net.minecraft.world.item.BlockItem;
 import net.neoforged.bus.api.IEventBus;
@@ -37,10 +38,19 @@ public class ModBlocks {
             SpikeBlockadeBlock::new,
             properties -> properties.strength(2.0F));
 
-    // BlockadeBlockItem plutôt que registerSimpleBlockItem : useOn() ne pose plus rien, la
-    // roue (TowerWheelScreen) est l'unique façon de poser une tour de la catégorie "Blockade".
+    // TowerBlockItem plutôt que registerSimpleBlockItem : useOn() ne pose plus rien, la roue
+    // (TowerWheelScreen) est l'unique façon de poser une tour, toute catégorie confondue.
     public static final DeferredItem<BlockItem> SPIKE_BLOCKADE_ITEM =
-            ITEMS.registerItem("spike_blockade", properties -> new BlockadeBlockItem(SPIKE_BLOCKADE.get(), properties));
+            ITEMS.registerItem("spike_blockade", properties -> new TowerBlockItem(SPIKE_BLOCKADE.get(), properties));
+
+    // 3bis. Harpoon Turret (nom repris du plan Excel — Squire) : première tour de la catégorie
+    // "Turret", tire dans un cône orienté. Voir HarpoonTurretBlockEntity pour le détail.
+    public static final DeferredBlock<HarpoonTurretBlock> HARPOON_TURRET = BLOCKS.registerBlock("harpoon_turret",
+            HarpoonTurretBlock::new,
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> HARPOON_TURRET_ITEM =
+            ITEMS.registerItem("harpoon_turret", properties -> new TowerBlockItem(HARPOON_TURRET.get(), properties));
 
     // 4. Baguette de test : retire 10 de mana au clic droit, pour vérifier le HUD (mana)
     public static final DeferredItem<ManaTestWandItem> MANA_TEST_WAND =

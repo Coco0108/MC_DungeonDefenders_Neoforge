@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.HarpoonTurretBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpikeBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -46,6 +47,12 @@ public class DungeonDefendersMod {
                     ModBlocks.SPIKE_BLOCKADE.get()
             ));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<HarpoonTurretBlockEntity>> HARPOON_TURRET_BE =
+            BLOCK_ENTITIES.register("harpoon_turret", () -> new BlockEntityType<>(
+                    HarpoonTurretBlockEntity::new,
+                    ModBlocks.HARPOON_TURRET.get()
+            ));
+
     // 3. L'onglet Créatif
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> DUNGEON_DEFENDERS_TAB = CREATIVE_MODE_TABS.register("dungeon_defenders_tab",
             () -> CreativeModeTab.builder()
@@ -53,9 +60,10 @@ public class DungeonDefendersMod {
                     .icon(() -> ModBlocks.ETERNIA_CRYSTAL_ITEM.get().getDefaultInstance())
                     .displayItems((parameters, output) -> {
                         output.accept(ModBlocks.ETERNIA_CRYSTAL_ITEM.get());
-                        // Pas de SPIKE_BLOCKADE_ITEM ici : les tours de la catégorie "Blockade"
-                        // ne se posent plus qu'via la roue (TowerWheelScreen) — voir
-                        // BlockadeBlockItem, dont useOn() ne fait plus rien.
+                        // Pas de SPIKE_BLOCKADE_ITEM ni HARPOON_TURRET_ITEM ici : les tours
+                        // (toute catégorie) ne se posent plus qu'via la roue
+                        // (TowerWheelScreen) — voir TowerBlockItem, dont useOn() ne fait plus
+                        // rien.
                         output.accept(ModBlocks.MANA_TEST_WAND.get());
                         output.accept(ModBlocks.SPAWNER_ITEM.get());
                         output.accept(ModBlocks.TAVERN_CRYSTAL_ITEM.get());
