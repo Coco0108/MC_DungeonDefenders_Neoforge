@@ -13,11 +13,15 @@ import java.util.WeakHashMap;
 
 // Catégorie de tours "Blockade" (voir doc/05-etat-et-problemes-connus.md, section Système de
 // tours) : un mur qui bloque le passage gratuitement (un bloc plein bloque déjà naturellement)
-// et que les monstres doivent détruire pour continuer (voir entity/ai/AttackBlockadeGoal.java,
-// qui vise tout bloc du tag dungeon_defenders:blockades). Regroupe ce que la première version
-// de la taxonomie séparait en "block passif" et "corps à corps" : un blockade passif est juste
-// un sous-type avec dealsContactDamage=false. PV/coût mana/persistance/sync viennent de
+// et que les monstres doivent détruire pour continuer (voir
+// entity/ai/AttackPriorityTargetGoal.java). Regroupe ce que la première version de la
+// taxonomie séparait en "block passif" et "corps à corps" : un blockade passif est juste un
+// sous-type avec dealsContactDamage=false. PV/coût mana/persistance/sync viennent de
 // AbstractTowerBlockEntity, commun à toutes les catégories de tours.
+//
+// dealsContactDamage détermine aussi la priorité IA (voir AiAttackTarget) : "block" pur
+// (false) est priorité 10, "corps à corps" (true, le cas de Spike Blockade) est priorité 20 —
+// aucun nouveau champ, décidé avec le joueur pour réutiliser ce qui existait déjà.
 public abstract class AbstractBlockadeBlockEntity extends AbstractTowerBlockEntity {
 
     private final boolean dealsContactDamage;
@@ -36,6 +40,11 @@ public abstract class AbstractBlockadeBlockEntity extends AbstractTowerBlockEnti
         this.contactDamage = contactDamage;
         this.contactDamageIntervalTicks = contactDamageIntervalTicks;
         this.contactRange = contactRange;
+    }
+
+    @Override
+    public int getAiPriority() {
+        return this.dealsContactDamage ? AiAttackTarget.PRIORITY_MELEE_TOWER : AiAttackTarget.PRIORITY_BLOCK;
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, AbstractBlockadeBlockEntity blockEntity) {

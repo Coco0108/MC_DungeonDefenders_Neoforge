@@ -8,16 +8,17 @@ import net.minecraft.world.entity.ai.goal.MoveToBlockGoal;
 import net.minecraft.world.level.LevelReader;
 import org.jspecify.annotations.Nullable;
 
-// Base commune aux goals qui font converger un mob vers le Cristal d'Eternia pour l'attaquer
-// (voir AttackEterniaCrystalGoal pour le corps à corps, RangedAttackEterniaCrystalGoal pour la
-// distance). Porte le ciblage/déplacement — identique dans les deux cas — et les dégâts,
-// configurables par le constructeur pour qu'un futur type d'ennemi puisse réutiliser l'une ou
-// l'autre sous-classe telle quelle avec ses propres chiffres, sans avoir besoin d'écrire une
-// nouvelle classe juste pour une variation de stats.
+// Base commune aux goals qui font converger un mob vers le Cristal d'Eternia pour l'attaquer.
+// Un seul sous-classeur aujourd'hui : RangedAttackEterniaCrystalGoal (utilisé par les archers,
+// qui ignorent Blockade/Turret — voir AttackPriorityTargetGoal pour les monstres de mêlée,
+// qui n'étendent PAS cette classe-ci : leur cible varie selon un système de priorité à
+// plusieurs paliers, pas seulement le cristal). Porte le ciblage/déplacement et les dégâts,
+// configurables par le constructeur pour qu'un futur ennemi à distance puisse réutiliser
+// RangedAttackEterniaCrystalGoal tel quel avec d'autres chiffres, sans nouvelle classe.
 //
-// Sous-classer directement cette classe-ci (plutôt que AttackEterniaCrystalGoal ou
-// RangedAttackEterniaCrystalGoal) n'a d'intérêt que pour un **nouveau style d'attaque** — une
-// troisième famille, ni corps à corps ni tir à l'arc (une attaque de zone, par exemple).
+// Sous-classer directement cette classe-ci n'a d'intérêt que pour un **nouveau style
+// d'attaque à distance sur le cristal spécifiquement** — un ennemi de mêlée n'en a plus besoin
+// depuis AttackPriorityTargetGoal.
 public abstract class AbstractEterniaCrystalAttackGoal extends MoveToBlockGoal {
 
     private static final int DEFAULT_SEARCH_RANGE = 16;

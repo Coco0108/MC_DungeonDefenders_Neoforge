@@ -16,7 +16,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
-public class EterniaCrystalBlockEntity extends BlockEntity {
+// implements AiAttackTarget : priorité 30 (voir AiAttackTarget), entre les tours "corps à
+// corps" (20) et les tourelles (40) — ciblé par entity/ai/AttackPriorityTargetGoal.java au
+// même titre qu'une Blockade ou un Turret, mais le cristal n'a et n'aura pas de lien de code
+// avec AbstractTowerBlockEntity (aucun coût en mana, aucune pose possible).
+public class EterniaCrystalBlockEntity extends BlockEntity implements AiAttackTarget {
 
     public static final int DEFAULT_HEALTH = 100;
     private int crystalHealth = DEFAULT_HEALTH;
@@ -29,7 +33,13 @@ public class EterniaCrystalBlockEntity extends BlockEntity {
         return this.crystalHealth;
     }
 
+    @Override
+    public int getAiPriority() {
+        return AiAttackTarget.PRIORITY_CRYSTAL;
+    }
+
     /** Retire {@code amount} PV au cristal. */
+    @Override
     public void damage(int amount) {
         this.setCrystalHealth(this.crystalHealth - amount);
     }

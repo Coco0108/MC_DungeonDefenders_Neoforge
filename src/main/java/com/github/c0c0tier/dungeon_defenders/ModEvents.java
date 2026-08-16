@@ -1,8 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
-import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackBlockadeGoal;
-import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackEterniaCrystalGoal;
+import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackPriorityTargetGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -39,22 +38,22 @@ public class ModEvents {
         // changement de dimension : sans ce test, un même monstre cumulerait plusieurs
         // fois le goal et attaquerait le cristal plusieurs fois par seconde.
         boolean alreadyAdded = monster.goalSelector.getAvailableGoals().stream()
-                .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal
-                        || wrapped.getGoal() instanceof RangedAttackEterniaCrystalGoal
-                        || wrapped.getGoal() instanceof AttackBlockadeGoal);
+                .anyMatch(wrapped -> wrapped.getGoal() instanceof RangedAttackEterniaCrystalGoal
+                        || wrapped.getGoal() instanceof AttackPriorityTargetGoal);
         if (alreadyAdded) {
             return;
         }
 
         // Les squelettes (et tout futur AbstractSkeleton) attaquent à distance avec l'arc
-        // déjà équipé par défaut ; les autres, au corps à corps. Seule la mêlée reçoit en plus
-        // AttackBlockadeGoal (priorité 0, avant le cristal en priorité 1) : un archer peut
-        // tirer par-dessus/à côté d'un Spike Blockade sans avoir besoin de le détruire.
+        // déjà équipé par défaut, et ignorent Blockade/Turret (un archer peut tirer par-dessus/
+        // à côté sans avoir besoin de les détruire) ; les autres reçoivent un seul goal qui
+        // choisit lui-même la meilleure cible à portée selon les paliers de priorité (voir
+        // AiAttackTarget) : Block, puis Corps à corps, puis Cristal, puis Tourelle en dernier
+        // recours.
         if (monster instanceof AbstractSkeleton) {
             monster.goalSelector.addGoal(1, new RangedAttackEterniaCrystalGoal(monster));
         } else {
-            monster.goalSelector.addGoal(0, new AttackBlockadeGoal(monster));
-            monster.goalSelector.addGoal(1, new AttackEterniaCrystalGoal(monster));
+            monster.goalSelector.addGoal(0, new AttackPriorityTargetGoal(monster));
         }
     }
 
