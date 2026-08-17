@@ -652,6 +652,45 @@ block entity — rien de tout ça n'a pu être vérifié visuellement pendant le
       `PlaceTowerPayload`, `TowerBlockItem`, ou au rendu
       (`ExtractLevelRenderStateEvent`/`SubmitCustomGeometryEvent`).
 
+## Les cristaux de mana et le remboursement (`ManaCrystalEntity`, `ModEvents.onTowerBreak`)
+
+Premier `Entity` custom du mod (jusqu'ici, uniquement des `Block`/`BlockEntity`) — jamais
+vérifié visuellement, y compris le tout premier ramassage "hors inventaire" (comme l'XP
+vanilla) et la toute première fois que le mana remonte en jeu.
+
+- [ ] Tuer un zombie ou un squelette (spawner ou `/summon`) : un petit objet flottant doit
+      apparaître à l'endroit de sa mort (visuellement une orbe verte/jaune — c'est le renderer
+      vanilla de l'XP réutilisé tel quel, pas encore de couleur "mana" dédiée, comportement
+      attendu). Il doit **flotter/bobiner** comme une vraie orbe d'XP, pas rester figé au sol.
+- [ ] S'approcher du cristal flottant : il doit se **magnétiser** vers le joueur (accélérer
+      dans sa direction) à mesure qu'on s'approche, comme une orbe d'XP vanilla.
+- [ ] Marcher dessus : le cristal disparaît (son + petite animation de ramassage), le mana du
+      joueur augmente de **5** (HUD mana à gauche + message système), sans qu'aucun item
+      n'apparaisse dans l'inventaire/la hotbar — c'est le point le plus important de cette
+      section : vérifie que `playerTouch` donne bien du mana et pas de l'XP vanilla.
+- [ ] Vérifier que le joueur ne gagne **aucune XP/niveau vanilla** en tuant un monstre du mod
+      (regarder la barre d'XP vanilla — masquée, donc regarder plutôt l'absence de son de
+      "level up" et l'attribut `experience` custom du joueur qui ne doit PAS bouger avec ça) —
+      vérifie que `ModEvents.onExperienceDrop` annule bien le drop d'XP vanilla.
+- [ ] Ramasser un cristal alors que le mana est déjà à 100/100 : le mana doit **rester à
+      100**, pas dépasser (`Math.min(MAX_MANA, ...)`), et le cristal doit quand même disparaître
+      (pas de "refus" de ramassage).
+- [ ] Tuer plusieurs monstres proches les uns des autres : leurs cristaux doivent **fusionner**
+      en un seul (comportement hérité d'`ExperienceOrb`, `count` cumulé) — ramasser ce cristal
+      fusionné doit donner le mana correspondant au nombre de monstres tués (5 × count), pas
+      juste 5.
+- [ ] Poser une tour (30 ou 50 mana selon laquelle), puis la **casser soi-même à la pioche**
+      (hors combat) : le mana doit remonter de **50% du coût** (15 pour Spike Blockade, 25 pour
+      Harpoon Turret), avec un message dédié — vérifie `ModEvents.onTowerBreak`.
+- [ ] Poser une tour, puis la laisser être **détruite par un monstre en combat** (0 PV) : le
+      mana **ne doit PAS** être remboursé cette fois — vérifie que `BreakBlockEvent` ne se
+      déclenche bien que pour une casse volontaire du joueur, pas pour
+      `AbstractTowerBlockEntity.setHealth()` à 0.
+- [ ] Casser un bloc qui n'est **pas** une tour (terrain quelconque) : aucun message de
+      remboursement, aucune exception.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ManaCrystalEntity`,
+      `ModEntities`, `ModEvents.onExperienceDrop` ou `onTowerBreak`.
+
 ## HUD vanilla masqué
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

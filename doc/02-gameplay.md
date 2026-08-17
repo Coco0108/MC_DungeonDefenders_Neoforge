@@ -824,8 +824,10 @@ restauré (`before.restore(...)`) — le bloc disparaît comme s'il n'avait jama
 
 ## Le mana du joueur
 
-Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore : pour
-l'instant le mana ne se dépense ni ne se régénère, il reste affiché plein).
+Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore) **et** la
+pose de tours (voir `ModEvents.onTowerPlace`, plus haut). Se dépense à la pose, remonte
+uniquement en ramassant des cristaux de mana lâchés par les monstres — voir "Les cristaux de
+mana" plus bas. **Pas de régénération passive dans le temps** (décidé avec le joueur).
 
 ### L'état — `init/ModAttachments.java`
 
@@ -869,7 +871,77 @@ ci-dessous :
 
 Lit `player.getData(ModAttachments.MANA)` à chaque frame ; pas d'état côté overlay lui-même.
 Voir [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) pour ce qu'il reste à
-faire (texture, régénération).
+faire (texture).
+
+### Les cristaux de mana — `entity/ManaCrystalEntity.java`, `init/ManaCrystalType.java`
+
+Décidé avec le joueur, comme le vrai Dungeon Defenders : un monstre tué lâche un **cristal de
+mana** au sol, ramassé en marchant dessus — jamais un item d'inventaire, un ramassage direct
+comme l'expérience vanilla. Premier vrai `Entity` custom du mod (tout ce qui précède était des
+`Block`/`BlockEntity`).
+
+`ManaCrystalEntity extends net.minecraft.world.entity.ExperienceOrb` — pas une simple
+inspiration, une vraie sous-classe : `ExperienceOrb` a déjà tout ce qu'il faut pour ce
+comportement (flotte, gravité, se magnétise vers le joueur le plus proche, fusionne avec les
+cristaux voisins, disparaît après un temps), et son point d'entrée de ramassage,
+`playerTouch(Player)`, est `public` (pas `final`) — directement surchargeable. Seuls le
+constructeur (position/vélocité initiale) et `playerTouch` sont réécrits ; tout le reste
+(mouvement, fusion, despawn) vient gratuitement de la classe parente.
+
+```java
+@Override
+public void playerTouch(Player player) {
+    if (!(player instanceof ServerPlayer) || player.takeXpDelay != 0) {
+        return;
+    }
+    player.takeXpDelay = 2;
+    player.take(this, 1); // anime le ramassage (son + particule), purement visuel
+
+    int newMana = Math.min(ModAttachments.MAX_MANA, player.getData(ModAttachments.MANA) + this.getValue());
+    player.setData(ModAttachments.MANA, newMana);
+    player.syncData(ModAttachments.MANA);
+    this.discard();
+}
+```
+
+**Point de sécurité important** : `ExperienceOrb` fusionne automatiquement les orbes proches de
+même valeur (`scanForMerges`/`tryMergeToExisting`, `private`, non surchargeables) — sans
+précaution, un cristal de mana pourrait fusionner avec une **vraie** orbe d'XP vanilla si elles
+ont la même valeur numérique, corrompant le ramassage (l'orbe fusionnée ne se ramasse plus
+qu'une fois, avec le comportement de celle qui "survit" à la fusion). Réglé à la racine par
+`ModEvents.onExperienceDrop`, qui annule `LivingExperienceDropEvent` (NeoForge) pour tout
+`Monster` : les monstres de ce mod n'ont de toute façon thématiquement aucune raison de donner
+de la vraie XP Minecraft (le système `experience` custom du mod est déjà séparé et sans
+rapport) — plus aucune vraie orbe d'XP ne peut donc exister dans une partie.
+
+`init/ModEntities.java` (nouveau registre, `DeferredRegister.Entities` — API NeoForge dédiée
+qui applique déjà la `ResourceKey` correctement, même esprit que `registerBlock` pour les
+blocs) enregistre l'`EntityType`. Le rendu réutilise **tel quel** le renderer vanilla de l'orbe
+d'XP (`ExperienceOrbRenderer`, pas `final`, paramétré sur `ExperienceOrb` donc valide pour une
+sous-classe) — le cristal de mana a donc visuellement l'air d'une orbe d'XP verte/jaune,
+**pas** de couleur "mana" dédiée pour l'instant (limite connue, voir
+05-etat-et-problemes-connus.md).
+
+`init/ManaCrystalType.java` (enum) porte la valeur du cristal — `SMALL(5)`, un seul membre pour
+l'instant (valeur de test), prêt à en accueillir au moins 6 plus tard (le joueur prévoit des
+paliers différents, comme le vrai jeu) sans logique de sélection pondérée tant qu'un second
+palier concret n'existe pas.
+
+`ModEvents.onMonsterDeath` (existant, voir "Le déroulement d'une vague" plus bas) fait tomber
+un cristal à **chaque** mort de `Monster`, **quelle que soit la phase** — contrairement au
+comptage de vague juste à côté, qui reste réservé au Combat.
+
+### Le remboursement à la casse — `ModEvents.onTowerBreak`
+
+Casser sa propre tour à la pioche rembourse **50%** du coût de pose en mana (valeur de test,
+décidé avec le joueur — "remboursement partiel"). Écoute
+`net.neoforged.neoforge.event.level.block.BreakBlockEvent` — **pas** `BlockEvent.BreakEvent`,
+qui n'existe plus dans cette version de NeoForge (renommé/déplacé). Ce point est ce qui rend le
+mécanisme sûr sans code supplémentaire : `BreakBlockEvent` ne se déclenche que pour une casse
+**initiée par un joueur** (son constructeur exige un `Player` non nul), jamais pour
+`Level#destroyBlock` déclenché par `AbstractTowerBlockEntity.setHealth()` à 0 PV en combat (qui
+n'implique aucun joueur) — le remboursement ne s'applique donc **jamais** à une tour détruite
+au combat, cohérent avec "détruite au combat ne se récupère pas" déjà en place pour les PV.
 
 ### La baguette de test — `item/ManaTestWandItem.java`
 

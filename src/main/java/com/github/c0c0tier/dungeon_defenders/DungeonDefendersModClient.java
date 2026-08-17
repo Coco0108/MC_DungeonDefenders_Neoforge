@@ -13,8 +13,10 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScreen;
+import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 
+import net.minecraft.client.renderer.entity.ExperienceOrbRenderer;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -57,6 +59,13 @@ public class DungeonDefendersModClient {
         event.registerBlockEntityRenderer(
                 DungeonDefendersMod.SPAWNER_BE.get(),
                 SpawnerBlockEntityRenderer::new
+        );
+        // Réutilise tel quel le renderer vanilla de l'orbe d'XP (pas final, paramétré sur
+        // ExperienceOrb) : le cristal de mana aura donc l'air d'une orbe d'XP verte/jaune, pas
+        // encore de couleur "mana" dédiée — voir doc/05-etat-et-problemes-connus.md.
+        event.registerEntityRenderer(
+                ModEntities.MANA_CRYSTAL.get(),
+                ExperienceOrbRenderer::new
         );
     }
 

@@ -68,6 +68,16 @@ vérifie la CI.
   `ModEvents.onTowerPlace` (renommé depuis `onBlockadePlace`, généralisé aux deux catégories).
   Détail dans
   [02-gameplay.md](02-gameplay.md#la-roue-de-sélection-des-tours-et-la-pose--clientguiscreentowerwheelscreenjava).
+- ✅ Cristaux de mana (`entity/ManaCrystalEntity.java`, premier `Entity` custom du mod,
+  `extends ExperienceOrb`) : chaque monstre tué (toute phase) lâche un cristal ramassable au
+  sol (pas un item d'inventaire), qui donne 5 mana (`ManaCrystalType.SMALL`, un seul palier
+  pour l'instant, au moins 6 prévus). Vraies orbes d'XP vanilla désactivées pour tout `Monster`
+  (`ModEvents.onExperienceDrop`) pour éviter qu'elles fusionnent avec un cristal de même
+  valeur. Rendu = renderer vanilla de l'orbe d'XP réutilisé tel quel (vert/jaune, pas de
+  couleur "mana" dédiée). **Casser sa propre tour à la pioche rembourse 50% du coût de pose**
+  (`ModEvents.onTowerBreak`, `BreakBlockEvent` — jamais déclenché par une destruction en
+  combat). Détail dans
+  [02-gameplay.md](02-gameplay.md#les-cristaux-de-mana--entitymanacrystalentityjava-initmanacrystaltypejava).
 - ✅ Mana du joueur : data attachment `mana` (persistant, synchronisé), maximum par défaut de
   100, affiché en HUD via `ManaOverlay` — losange en bas à gauche de l'écran (`DiamondGauge`,
   couleurs plates), très provisoire. Testable en jeu avec l'item `mana_test_wand` (clic droit
@@ -226,14 +236,39 @@ Même situation pour `models/block/spike_blockade.json`, qui pointe sur
 mécanique. Il est conservé volontairement (c'est le seul moyen simple de tester sans faire
 spawner un zombie), mais il n'a rien à faire dans une version jouable.
 
-### Le mana n'a pas de vraie utilité de gameplay
+### Le mana n'a pas encore de vraie capacité/sort qui le consomme
 
-`ManaTestWandItem` retire 10 de mana au clic droit, mais c'est un harnais de test au même
-titre que le clic droit sur le cristal : aucun sort ni capacité réelle ne consomme de mana,
-et il n'y a pas de régénération, donc le mana ne remonte jamais une fois dépensé (à part en
-se reconnectant, puisque l'attachment n'est pas remis à `MAX_MANA` ailleurs qu'à sa création).
-Prochaines étapes logiques : une vraie capacité qui consomme du mana, une régénération
-passive (tick côté serveur, borné à `MAX_MANA`), puis retrait de la baguette de test.
+Le mana a désormais une vraie utilité (coût de pose des tours, voir "Ce qui est implémenté" et
+[02-gameplay.md](02-gameplay.md#le-mana-du-joueur)) et remonte via les cristaux lâchés par les
+monstres (voir "Les cristaux de mana" plus bas, `ManaCrystalEntity`) — **pas de régénération
+passive dans le temps**, décidé avec le joueur, uniquement via les cristaux. `ManaTestWandItem`
+(retire 10 de mana au clic droit) reste un harnais de test au même titre que le clic droit sur
+le cristal, maintenant redondant avec la vraie dépense (pose d'une tour) mais gardé pour tester
+rapidement sans avoir à poser quoi que ce soit. Aucun sort/capacité de joueur ne consomme
+encore de mana (les emplacements de compétences sont toujours inertes, voir plus bas).
+
+### Les cristaux de mana (drop des monstres, `ManaCrystalEntity`)
+
+Décidé avec le joueur, comme le vrai Dungeon Defenders : chaque monstre tué (toute phase, pas
+seulement Combat) lâche un cristal de mana, ramassé en marchant dessus — jamais un item
+d'inventaire. Premier vrai `Entity` custom du mod (`extends ExperienceOrb`, réutilise sa
+physique/magnétisme/fusion, réécrit seulement `playerTouch` pour donner du mana au lieu d'XP).
+Un seul palier pour l'instant (`ManaCrystalType.SMALL`, 5 mana), le joueur en prévoit au moins
+6 à terme (couleurs/valeurs différentes) — pas encore construit, juste la structure prête
+(enum extensible). Les cristaux dans des coffres entre les vagues sont **explicitement hors
+scope** pour l'instant (reporté par le joueur).
+
+**Limite assumée** : le rendu réutilise tel quel le renderer vanilla de l'orbe d'XP — le
+cristal de mana a donc l'air d'une orbe d'XP verte/jaune, pas de couleur "mana" (bleue) dédiée.
+Les vraies orbes d'XP vanilla sont désactivées pour tout `Monster` du mod
+(`ModEvents.onExperienceDrop`, annule `LivingExperienceDropEvent`) — nécessaire pour éviter
+qu'une vraie orbe d'XP fusionne avec un cristal de mana de même valeur (`ExperienceOrb` fusionne
+les orbes proches en fonction de leur seule valeur numérique, pas de leur type réel), en plus
+d'être thématiquement cohérent (ce mod a son propre système `experience`, sans rapport avec
+l'XP vanilla).
+
+Détail complet dans
+[02-gameplay.md](02-gameplay.md#les-cristaux-de-mana--entitymanacrystalentityjava-initmanacrystaltypejava).
 
 ### Faim et hotbar masqués sans remplacement
 
@@ -359,9 +394,10 @@ Détail complet dans
 [02-gameplay.md](02-gameplay.md#le-goal-de-mêlée-unifié--entityaiattackprioritytargetgoaljava-blockentityaiattacktargetjava).
 
 **Reste à faire** : équilibrage réel des coûts en mana (30/50, valeurs de test, pas
-réfléchies), remboursement de mana à la casse, indicateur visuel de PV restants (Blockade et
-Turret), pas de "block" pur concret pour exercer le palier 10 (la logique le supporte, aucune
-tour ne l'utilise encore). Et bien sûr, les catégories 3 à 5 n'ont aucune implémentation.
+réfléchies — le remboursement à la casse existe désormais, voir "Les cristaux de mana" plus
+bas), indicateur visuel de PV restants (Blockade et Turret), pas de "block" pur concret pour
+exercer le palier 10 (la logique le supporte, aucune tour ne l'utilise encore). Et bien sûr,
+les catégories 3 à 5 n'ont aucune implémentation.
 
 **Comment on pose les tours, décidé avec le joueur** : dans le vrai Dungeon Defenders, les
 tours ne se posent pas depuis l'inventaire (la liste dépend du héros choisi) — une **roue
@@ -542,10 +578,11 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 3. Externaliser les constantes de gameplay (`DEFAULT_HEALTH`, `DAMAGE_PER_HIT`,
    `SEARCH_RANGE`) dans `Config`, et enregistrer la spec.
 4. Retirer le harnais de test du clic droit quand une autre source de dégâts existera.
-5. Donner une vraie utilité au mana (un sort/une capacité qui le consomme, une régénération
-   passive), retirer `ManaTestWandItem`, puis habiller `ManaOverlay`/`HealthOverlay`/
-   `ExperienceOverlay` de vraies textures (sprites, cadre) une fois disponibles — la forme
-   (losange) se rapproche déjà du jeu de référence, il manque la matière.
+5. Donner une vraie utilité au mana côté **sorts/capacités du joueur** (la pose de tours et le
+   ramassage de cristaux existent déjà), retirer `ManaTestWandItem`, puis habiller
+   `ManaOverlay`/`HealthOverlay`/`ExperienceOverlay` de vraies textures (sprites, cadre) une
+   fois disponibles — la forme (losange) se rapproche déjà du jeu de référence, il manque la
+   matière.
 6. Concevoir et implémenter les remplacements custom de la faim et de la hotbar (masquées
    mais vides pour l'instant).
 7. Définir un vrai système d'expérience/score/niveaux : comment `EXPERIENCE`, `SCORE` et
