@@ -15,7 +15,7 @@ import net.neoforged.neoforge.client.gui.GuiLayer;
 // encore monter, voir 05-etat-et-problemes-connus.md.
 public class CharacterOverlay implements GuiLayer {
     private static final int GAP = 2;
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
 
     @Override
     public void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {

@@ -21,7 +21,7 @@ public class WaveEnemiesOverlay implements GuiLayer {
     private static final int BAR_HEIGHT = 10;
     private static final int FILLED_COLOR = 0xFFF97316;
     private static final int EMPTY_COLOR = 0xFF2B2B2B;
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
 
     @Override
     public void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {

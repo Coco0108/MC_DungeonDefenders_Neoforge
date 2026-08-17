@@ -19,7 +19,7 @@ import net.neoforged.neoforge.client.gui.GuiLayer;
 public class HealthOverlay implements GuiLayer {
     private static final int FILLED_COLOR = 0xFFEF4444;
     private static final int EMPTY_COLOR = 0xFF2B2B2B;
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
 
     @Override
     public void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {

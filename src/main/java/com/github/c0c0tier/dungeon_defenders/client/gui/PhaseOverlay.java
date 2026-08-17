@@ -15,7 +15,7 @@ import net.neoforged.neoforge.client.gui.GuiLayer;
 public class PhaseOverlay implements GuiLayer {
     private static final int MARGIN = 4;
     private static final int ROW_Y = WaveOverlay.ROW_Y + WaveOverlay.ROW_HEIGHT;
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
 
     @Override
     public void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {

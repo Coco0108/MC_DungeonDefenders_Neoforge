@@ -17,7 +17,7 @@ public class WaveOverlay implements GuiLayer {
     // PhaseOverlay se place dans la rangée suivante via ROW_Y + ROW_HEIGHT.
     static final int ROW_Y = MARGIN;
     static final int ROW_HEIGHT = 14;
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
 
     @Override
     public void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
