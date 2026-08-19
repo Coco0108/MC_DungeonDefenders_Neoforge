@@ -40,7 +40,11 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
     private final float damage;
     private final long attackIntervalTicks;
 
-    private long lastFireTick = Long.MIN_VALUE;
+    // -attackIntervalTicks (pas Long.MIN_VALUE) : permet de tirer dès la première cible
+    // trouvée sans délai, tout en évitant l'overflow de `now - lastFireTick` qu'un sentinel
+    // trop extrême provoquerait (Long.MIN_VALUE faisait déborder la soustraction vers un
+    // nombre toujours négatif, empêchant tout tir pour toujours).
+    private long lastFireTick;
 
     protected AbstractTurretBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state,
             int maxHealth, int manaCost, double range, double coneAngleDegrees,
@@ -50,6 +54,7 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
         this.coneAngleDegrees = coneAngleDegrees;
         this.damage = damage;
         this.attackIntervalTicks = attackIntervalTicks;
+        this.lastFireTick = -attackIntervalTicks;
     }
 
     @Override
