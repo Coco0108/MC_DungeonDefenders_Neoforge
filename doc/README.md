@@ -24,6 +24,7 @@ que les monstres tentent de détruire, et peut se défendre avec des pièges com
 4. [Guide : ajouter du contenu](04-guide-ajout-contenu.md) — recettes pour ajouter un bloc, un block entity, une traduction.
 5. [État du projet & problèmes connus](05-etat-et-problemes-connus.md) — ce qui reste du template, ce qui est cassé, pistes.
 6. [À tester en jeu](06-a-tester.md) — fonctionnalités écrites mais jamais lancées en jeu, checklist à cocher.
+7. [Idées & backlog](07-idees-et-backlog.md) — boîte à idées en vrac + backlog trié par catégorie/difficulté, pour lancer une fonctionnalité à la demande.
 
 ## Démarrage rapide
 
