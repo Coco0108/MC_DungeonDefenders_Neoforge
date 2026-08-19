@@ -60,5 +60,5 @@ utile pour le contenu à venir, notamment :
   `05-etat-et-problemes-connus.md`).
 
 Ce n'est qu'une base d'inspiration : toute idée qui en vient doit quand même
-passer par la Boîte à idées / le Backlog ci-dessus pour être suivie dans ce
+passer par une issue `Idea` / le Backlog ci-dessus pour être suivie dans ce
 dépôt.
