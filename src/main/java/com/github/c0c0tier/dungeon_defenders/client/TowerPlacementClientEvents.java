@@ -14,6 +14,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
@@ -198,7 +199,7 @@ public class TowerPlacementClientEvents {
             // rotation n'a donc aucun effet visuel sur lui — prête pour une future tour
             // asymétrique (voir doc/02-gameplay.md).
             poseStack.translate(0.5D, 0.5D, 0.5D);
-            poseStack.mulPose(Axis.YP.rotationDegrees(state.rotation.toYRot()));
+            poseStack.mulPose(Axis.YP.rotationDegrees(facingYRot(state.rotation)));
             poseStack.translate(-0.5D, -0.5D, -0.5D);
         }
         event.getSubmitNodeCollector().submitCustomGeometry(poseStack, RenderTypes.lines(),
@@ -215,7 +216,7 @@ public class TowerPlacementClientEvents {
             // qui ne montre de toute façon jamais sa rotation visuellement pour un cube
             // parfait) : le cône doit refléter state.rotation dès l'étape "visée" (NORTH par
             // défaut), pas seulement une fois la position verrouillée.
-            poseStack.mulPose(Axis.YP.rotationDegrees(state.rotation.toYRot()));
+            poseStack.mulPose(Axis.YP.rotationDegrees(facingYRot(state.rotation)));
             double coneAngle = state.coneAngleDegrees;
             event.getSubmitNodeCollector().submitCustomGeometry(poseStack, RenderTypes.lines(),
                     (pose, buffer) -> renderRangeArea(pose, buffer, state.range, coneAngle, COLOR_RANGE, LINE_WIDTH));
@@ -235,15 +236,31 @@ public class TowerPlacementClientEvents {
         });
     }
 
+    // Rotation Y (degrés) à appliquer au gabarit du cône/contour pour qu'il pointe dans la
+    // direction donnée. Volontairement PAS Direction.toYRot() : cette méthode a une convention
+    // différente (SOUTH=0°, WEST=90°, NORTH=180°, EAST=270°, utilisée pour le yaw des entités),
+    // qui avait fait pointer le cône de prévisualisation à 180° de la vraie direction de tir
+    // (bug constaté en jeu). Cette table suit au contraire la convention du blockstate posé
+    // (voir harpoon_turret.json : facing=north → y:0, facing=east → y:90, etc.), pour que
+    // l'aperçu corresponde exactement à l'orientation réellement appliquée au bloc.
+    private static float facingYRot(Direction direction) {
+        return switch (direction) {
+            case EAST -> 90.0F;
+            case SOUTH -> 180.0F;
+            case WEST -> 270.0F;
+            default -> 0.0F; // NORTH (et UP/DOWN, qui n'arrivent jamais ici)
+        };
+    }
+
     // Cercle complet si coneAngleDegrees >= 360 (omnidirectionnel, ex. Spike Blockade si un
     // jour range() > 0), sinon un secteur/cône borné : l'arc PLUS deux segments droits vers
     // l'origine, pour lire visuellement un cône et pas un arc flottant dans le vide.
     //
     // Convention du gabarit local (avant rotation par l'appelant) : angle -90° = (0,0,-radius),
-    // soit la direction NORTH — cohérent avec Direction.NORTH.toYRot() == 0 (rotation identité)
-    // déjà utilisé pour le contour du bloc. Non vérifié visuellement pour EAST/SOUTH/WEST (seul
-    // NORTH est à l'abri d'une éventuelle inversion de sens de rotation) — voir
-    // doc/06-a-tester.md, à confirmer avec une vraie texture directionnelle (Harpoon Turret).
+    // soit la direction NORTH — cohérent avec facingYRot(NORTH) == 0 (rotation identité),
+    // vérifiée pour les 4 directions (voir facingYRot ci-dessus ; ce gabarit utilisait
+    // auparavant Direction.toYRot(), qui a une convention différente et faisait pointer le
+    // cône à 180° de la vraie direction de tir — corrigé).
     private static void renderRangeArea(
             PoseStack.Pose pose, VertexConsumer buffer, double radius, double coneAngleDegrees, int color, float width) {
         Vector3f normal = new Vector3f(0.0F, 1.0F, 0.0F);

@@ -19,10 +19,13 @@ public class ModKeyMappings {
             KeyMapping.Category.GAMEPLAY);
 
     // Pressée pendant l'étape "orientation" du mode pose : fait pivoter l'hologramme de 90°.
+    // G et non T : T est déjà le raccourci vanilla "Ouvrir le chat" (key.chat, code 84) — un
+    // même code de touche pour deux KeyMapping fait que le chat s'ouvre à la place de la
+    // rotation (l'écran de chat capte l'entrée clavier en premier).
     public static final KeyMapping ROTATE_TOWER = new KeyMapping(
             "key.dungeon_defenders.rotate_tower",
             InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_T,
+            GLFW.GLFW_KEY_G,
             KeyMapping.Category.GAMEPLAY);
 
     public static void register(RegisterKeyMappingsEvent event) {

@@ -610,17 +610,18 @@ block entity — rien de tout ça n'a pu être vérifié visuellement pendant le
       crash/d'exception.
 - [ ] Recommencer avec **Harpoon Turret** : dès l'étape "visée" (avant même de verrouiller), un
       **cône jaune** (pas un cercle complet) doit apparaître autour de l'hologramme, orienté
-      par défaut vers le NORD — nouveau test important, jamais vérifié visuellement (premier
-      cône du mod). Une fois la position verrouillée, appuyer sur `T` plusieurs fois : le cône
-      doit **pivoter par pas de 90°** avec l'hologramme, dans le même sens que le contour du
-      bloc.
+      par défaut vers le NORD. Une fois la position verrouillée, appuyer sur `G` (touche par
+      défaut de rotation — **pas `T`**, qui est le raccourci vanilla du chat et entrait en
+      conflit avec l'ancienne touche par défaut, empêchant toute rotation ; voir
+      05-etat-et-problemes-connus.md) plusieurs fois : le cône doit **pivoter par pas de 90°**
+      avec l'hologramme, dans le même sens que le contour du bloc.
 - [ ] Avec Harpoon Turret, comparer visuellement le cône à la face avant du bloc une fois posé
       (texture directionnelle de la furnace, voir "Apparence" dans doc/02-gameplay.md) : le
       cône doit pointer **du même côté que la face avant**, à chaque rotation (Nord/Est/Sud/
-      Ouest) — **point non garanti** (convention de rotation du cône vérifiée par construction
-      seulement pour NORD, pas les 3 autres, voir 02-gameplay.md) : si le cône pointe à
-      l'envers ou sur le côté pour EST/SUD/OUEST, c'est une inversion de sens de rotation à
-      corriger dans `TowerPlacementClientEvents.renderRangeArea`/`onSubmitCustomGeometry`.
+      Ouest) — corrigé (le cône pointait auparavant à 180° de la vraie direction de tir, la
+      tour tirant à l'opposé de la range affichée ; `TowerPlacementClientEvents` utilisait
+      `Direction.toYRot()`, dont la convention ne correspond pas à celle du blockstate posé,
+      remplacé par une table dédiée `facingYRot`) — à reconfirmer en jeu pour les 4 directions.
 - [ ] **Clic droit** une seconde fois (étape "orientation"), pour Spike Blockade **et** Harpoon
       Turret séparément : doit **poser réellement** le bloc à la position verrouillée, fermer
       le mode pose (hologramme disparaît), et débiter le mana (`-30 mana pour la tour (X/100)`
