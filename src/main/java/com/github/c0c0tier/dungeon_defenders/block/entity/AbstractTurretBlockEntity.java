@@ -83,7 +83,7 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
         }
 
         turret.lastFireTick = now;
-        turret.fireAt(serverLevel, pos, target);
+        turret.fireAt(serverLevel, pos, target, facing);
     }
 
     private @Nullable Monster findTarget(ServerLevel level, BlockPos pos, Direction facing) {
@@ -118,17 +118,23 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
         return nearest;
     }
 
-    private void fireAt(ServerLevel level, BlockPos pos, Monster target) {
-        spawnArrow(level, pos, target);
+    private void fireAt(ServerLevel level, BlockPos pos, Monster target, Direction facing) {
+        spawnArrow(level, pos, target, facing);
         target.hurt(level.damageSources().generic(), this.damage);
     }
 
     // Flèche purement visuelle, comme RangedAttackEterniaCrystalGoal pour le squelette archer :
     // les dégâts sont appliqués directement (voir fireAt), pas via une détection de collision.
-    private void spawnArrow(ServerLevel level, BlockPos pos, Monster target) {
-        double originX = pos.getX() + 0.5D;
+    //
+    // L'origine est décalée hors du cube du bloc (0.6 > la demi-largeur de 0.5) : une flèche qui
+    // apparaît DANS la géométrie pleine de son propre bloc se fige immédiatement au premier tick
+    // (AbstractArrow#tick considère qu'elle est "in ground" dès que sa position de spawn est
+    // contenue dans la forme de collision du bloc sous elle) — c'est ce qui empêchait tout tir
+    // visible avant ce correctif, même une fois le cooldown réparé.
+    private void spawnArrow(ServerLevel level, BlockPos pos, Monster target, Direction facing) {
+        double originX = pos.getX() + 0.5D + facing.getStepX() * 0.6D;
         double originY = pos.getY() + 0.5D;
-        double originZ = pos.getZ() + 0.5D;
+        double originZ = pos.getZ() + 0.5D + facing.getStepZ() * 0.6D;
 
         // Pas de LivingEntity propriétaire (c'est un bloc) : constructeur Arrow sans owner.
         Arrow arrow = new Arrow(level, originX, originY, originZ, new ItemStack(Items.ARROW), null);
