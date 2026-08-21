@@ -43,6 +43,8 @@ un chiffrage précis). Statut : **Idée** (brute, pas encore creusée) / **Prêt
 | Catégorie | Idée | Difficulté | Statut | Notes |
 |---|---|---|---|---|
 | HUD / UI | Voir la range d'une tour déjà posée (pas seulement à la pose) : un clic droit ou une touche paramétrable sur une tour affiche sa range comme lors de la pose ; reste 5s ou se referme sur un second clic (sur elle ou une autre tour). | Moyen | Prête | Réutilise le renderer de range déjà construit pour la pose (`client/TowerPlacementRenderState`) — le nouveau est le déclenchement hors phase de pose (input + timer/toggle). [Issue #13](https://github.com/Coco0108/MC_DungeonDefenders_Neoforge/issues/13) |
+| HUD / UI | Voir la barre de vie d'une tour déjà posée — idéalement juste en la regardant (survol), plutôt qu'uniquement via un clic. | Moyen | Prête | Même famille d'interaction que la range (ligne au-dessus, issue #13) : peut se construire ensemble (un seul déclencheur "regarder/cliquer une tour" affichant range + PV). Nécessite un raycast continu en phase Construction pour détecter la tour visée. [Issue #16](https://github.com/Coco0108/MC_DungeonDefenders_Neoforge/issues/16) |
+| Tours | Roue de sélection des tours : afficher sous chaque tour (empilé) son nom, une courte description, et son coût en mana — actuellement seuls le nom et le coût s'affichent, pas de description. | Facile | Prête | `TowerWheelScreen.extractRenderState` affiche déjà `displayName()` + `mana_cost` ; il manque un champ description sur `TowerDefinition` (+ une clé de lang par tour) et une ligne de texte de plus. [Issue #15](https://github.com/Coco0108/MC_DungeonDefenders_Neoforge/issues/15) |
 
 ## Référence : roadmap de l'ancien prototype
 
