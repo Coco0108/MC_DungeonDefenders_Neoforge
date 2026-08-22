@@ -1449,8 +1449,9 @@ par le même code, plutôt que de dupliquer la remise à zéro des compteurs à 
   `WAVE_ENEMIES_KILLED` à 0, et remet "prêt" à faux pour tous les joueurs présents (voir plus
   haut, "Le vote prêt").
 - `enterBuild(level)` : fait avancer `CURRENT_WAVE` de 1 (plafonné à `MAX_WAVE`, voir "Ce qui
-  reste" plus bas), phase → `BUILD`, recalcule `WAVE_ENEMIES_TOTAL` à partir du registre pour
-  la nouvelle vague.
+  reste" plus bas), phase → `BUILD`, remet `WAVE_ENEMIES_KILLED` à 0 (corrigé — restait
+  auparavant à l'ancienne valeur pendant toute la Construction suivante), recalcule
+  `WAVE_ENEMIES_TOTAL` à partir du registre pour la nouvelle vague.
 
 **Le retour automatique** (`ModEvents.onMonsterDeath`) : après avoir incrémenté
 `WAVE_ENEMIES_KILLED`, si `killed >= total` (et `total > 0`, pour ne pas basculer
@@ -1476,9 +1477,15 @@ Deux nouvelles transitions, sur le même principe que `enterCombat`/`enterBuild`
 
 Les deux passent par le même `resetGameState(level)` privé : `CURRENT_WAVE` → 1, phase →
 `BUILD`, `WAVE_ENEMIES_KILLED` → 0, et `WAVE_ENEMIES_TOTAL` recalculé (réutilise
-`recomputeWaveEnemiesTotal`, la même méthode privée qu'`enterBuild`) — pour que la partie soit
+`recomputeWaveEnemiesTotal`, aussi appelée par `enterBuild`) — pour que la partie soit
 immédiatement prête à relancer une vague 1 propre, sans qu'un spawner continue à faire
 apparaître des ennemis sur une partie déjà gagnée ou perdue.
+
+`recomputeWaveEnemiesTotal` est **publique** (pas seulement appelée aux transitions de phase) :
+`SpawnerBlockEntity.setLevel`/`setRemoved` et `ModNetworking.handleSpawnerConfig` l'appellent
+aussi, pour que `WAVE_ENEMIES_TOTAL` reste juste dès qu'un spawner apparaît, disparaît ou est
+reconfiguré — plutôt que de rester bloqué sur la valeur par défaut de l'attachment (`10`)
+jusqu'à la toute première transition de phase d'une partie (bug constaté en jeu, corrigé).
 
 **Le lien "Retour à la taverne"** : les deux méthodes diffusent aussi, juste après le message
 de victoire/défaite, un second message — un simple `Component.translatable(...)` stylé

@@ -117,7 +117,14 @@ public final class PhaseTransitions {
         recomputeWaveEnemiesTotal(level);
     }
 
-    private static void recomputeWaveEnemiesTotal(Level level) {
+    /**
+     * Recalcule WAVE_ENEMIES_TOTAL à partir des spawners actifs et de la vague courante.
+     * Appelée à l'entrée en Construction, mais aussi chaque fois qu'un spawner apparaît,
+     * disparaît ou est reconfiguré (voir SpawnerBlockEntity, ModNetworking.handleSpawnerConfig)
+     * — pour que le total affiché au joueur ne reste jamais bloqué à la valeur par défaut avant
+     * la toute première transition de phase d'une partie.
+     */
+    public static void recomputeWaveEnemiesTotal(Level level) {
         int currentWave = level.getData(ModAttachments.CURRENT_WAVE);
         double multiplier = DifficultyScaling.getMultiplier(level);
 

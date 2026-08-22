@@ -4,6 +4,7 @@ import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.init.DifficultyScaling;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -171,6 +172,10 @@ public class SpawnerBlockEntity extends BlockEntity {
         super.setLevel(level);
         if (level instanceof ServerLevel) {
             level.getData(ModAttachments.ACTIVE_SPAWNERS).add(this.worldPosition);
+            // Sinon le total affiché au HUD reste bloqué sur la valeur par défaut de
+            // l'attachment tant qu'aucune vague n'a encore été nettoyée une première fois
+            // (recomputeWaveEnemiesTotal n'était sinon appelée qu'aux transitions de phase).
+            PhaseTransitions.recomputeWaveEnemiesTotal(level);
         }
     }
 
@@ -179,6 +184,7 @@ public class SpawnerBlockEntity extends BlockEntity {
         super.setRemoved();
         if (this.level instanceof ServerLevel) {
             this.level.getData(ModAttachments.ACTIVE_SPAWNERS).remove(this.worldPosition);
+            PhaseTransitions.recomputeWaveEnemiesTotal(this.level);
         }
     }
 

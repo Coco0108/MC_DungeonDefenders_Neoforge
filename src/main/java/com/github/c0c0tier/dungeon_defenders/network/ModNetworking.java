@@ -5,6 +5,7 @@ import com.github.c0c0tier.dungeon_defenders.MapInstance;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
 import net.minecraft.core.BlockPos;
@@ -181,6 +182,10 @@ public class ModNetworking {
                     payload.waveEnd(),
                     entries
             );
+
+            // applyConfig ne recalcule que les plafonds internes DE ce spawner ; le total
+            // affiché au HUD (somme de tous les spawners actifs) doit être recalculé à part.
+            PhaseTransitions.recomputeWaveEnemiesTotal(level);
         });
     }
 }

@@ -26,7 +26,7 @@ public class TowerWheelScreen extends Screen {
     private static final double DEAD_ZONE_RADIUS = 20.0D;
     private static final int ICON_SIZE = 16;
     private static final int HIGHLIGHT_COLOR = 0x80FFFF55;
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
 
     private final List<TowerDefinition> towers = List.of(TowerDefinition.values());
     private int hoveredIndex = -1;

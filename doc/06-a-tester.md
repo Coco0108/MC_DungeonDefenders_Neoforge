@@ -242,10 +242,18 @@ puisqu'elle en dépend pour entrer en Combat autrement qu'avec le harnais de tes
 - [ ] **Clic droit sans shift, en créatif** : ouvre l'écran de configuration (voir section
       dédiée ci-dessous). **En survie**, le même clic droit sans shift doit plutôt afficher le
       message "Les spawners ne sont configurables qu'en mode créatif" et ne rien ouvrir.
-- [ ] **Avant même de passer en Combat une première fois** : `Ennemis : X/10` peut encore
-      afficher l'ancienne valeur par défaut (`/10`) — normal, le total ne se calcule qu'à
-      l'entrée en Construction, qui n'a encore jamais eu lieu explicitement au tout premier
-      chargement du monde (limite connue, voir 05-etat-et-problemes-connus.md).
+- [ ] **Avant même de passer en Combat une première fois** : poser un spawner doit mettre à
+      jour `Ennemis : 0/Y` immédiatement (recalcul déclenché par `SpawnerBlockEntity.setLevel`,
+      plus besoin d'attendre une première Construction) — corrigé, affichait auparavant
+      systématiquement l'ancienne valeur par défaut (`/10`) jusqu'à la première transition de
+      phase.
+- [ ] Poser un second spawner (composition différente) **avant** toute Construction : le total
+      doit inclure la somme des deux immédiatement. Casser l'un des deux : le total redescend
+      aussitôt (recalcul déclenché par `setRemoved`).
+- [ ] Modifier la composition via l'écran de config (bouton "Valider") : le total du HUD doit
+      changer immédiatement, pas seulement les plafonds internes du spawner — recalcul
+      déclenché depuis `ModNetworking.handleSpawnerConfig`, distinct de celui de
+      `SpawnerBlockEntity.applyConfig` (qui ne touchait que ce spawner).
 - [ ] Une fois en `Combat`, attendre : des **zombies et des squelettes** doivent apparaître
       au-dessus du bloc, les zombies plus fréquemment que les squelettes (nombre de base 15
       contre 5 par défaut — environ 3x plus de zombies sur la durée, pas un ratio exact vague

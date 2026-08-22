@@ -37,7 +37,7 @@ public class MapSelectionScreen extends Screen {
     private static final int DIFFICULTY_BUTTON_GAP = 6;
     private static final int PLAY_BUTTON_WIDTH = 100;
     private static final int PLAY_BUTTON_HEIGHT = 16;
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
 
     private final List<GameMap> maps = GameMap.visibleMaps();
     private final Map<GameDifficulty, Button> difficultyButtons = new EnumMap<>(GameDifficulty.class);
