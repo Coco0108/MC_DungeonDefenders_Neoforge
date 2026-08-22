@@ -716,9 +716,13 @@ portée, `coneAngleDegrees` sans effet) ; `HARPOON_TURRET` a `range=12.0`,
 
 ### Les touches — `client/ModKeyMappings.java`
 
-Deux `KeyMapping` (catégorie vanilla `GAMEPLAY`) : `tower_wheel` (ouvre la roue, `R` par
-défaut) et `rotate_tower` (fait pivoter l'hologramme pendant l'étape orientation, `G` par
-défaut — pas `T`, déjà pris par le chat vanilla).
+Deux `KeyMapping`, sous une catégorie dédiée `ModKeyMappings.CATEGORY` (pas la catégorie
+vanilla `GAMEPLAY`) — enregistrée via `RegisterKeyMappingsEvent#registerCategory`, avec sa
+propre clé de lang `key.category.dungeon_defenders.keys` ("Dungeon Defenders") : regroupées
+sous leur propre en-tête dans Options > Contrôles > Touches, plus simples à retrouver que
+noyées parmi les touches vanilla. `tower_wheel` (ouvre la roue, `R` par défaut) et
+`rotate_tower` (fait pivoter l'hologramme pendant l'étape orientation, `G` par défaut — pas
+`T`, déjà pris par le chat vanilla).
 
 ### La roue — `TowerWheelScreen`
 

@@ -571,9 +571,13 @@ block entity — rien de tout ça n'a pu être vérifié visuellement pendant le
       phase de Construction !" doit apparaître — vérifie le refus côté client
       (`TowerPlacementClientEvents`), avant même d'atteindre le serveur.
 - [ ] **En phase Construction**, appuyer sur `R` (touche par défaut, configurable dans
-      Options > Touches > Gameplay, libellé "Ouvrir la roue des tours") : un écran radial
-      s'ouvre, sans crash ni écran noir. **Deux** secteurs/icônes doivent apparaître désormais
-      (Spike Blockade et Harpoon Turret), répartis autour du centre — pas superposés.
+      Options > Contrôles > Touches, sous une catégorie dédiée **"Dungeon Defenders"** — pas
+      "Gameplay" — libellé "Ouvrir la roue des tours") : un écran radial s'ouvre, sans crash ni
+      écran noir. **Deux** secteurs/icônes doivent apparaître désormais (Spike Blockade et
+      Harpoon Turret), répartis autour du centre — pas superposés.
+- [ ] Vérifier que la catégorie **"Dungeon Defenders"** apparaît bien comme un groupe distinct
+      dans Options > Contrôles > Touches (les deux touches du mod dessous, pas mélangées avec
+      les touches vanilla de Gameplay) — nouveau, jamais vérifié visuellement.
 - [ ] Bouger la souris tout autour du centre de l'écran, en restant proche du centre (moins de
       ~20px) : **aucun** secteur ne doit être en surbrillance (zone morte).
 - [ ] Éloigner la souris du centre (au-delà de la zone morte) vers chacun des deux secteurs :
