@@ -29,7 +29,8 @@ vérifie la CI.
   pas détruit — pas les archers, qui peuvent tirer par-dessus/à côté. Coûte
   30 mana à la pose, placement refusé et item rendu si mana insuffisant. Modèle, blockstate,
   loot table, tag `mineable/pickaxe`, traductions `en_us`/`fr_fr`. Détail dans
-  [02-gameplay.md](02-gameplay.md#le-spike-blockade--blockspikeblockadeblockjava).
+  [02-gameplay.md](02-gameplay.md#le-spike-blockade--blockspikeblockadeblockjava). **Testé en
+  jeu** (2026-08-23).
 - ✅ Bloc `harpoon_turret` ("Harpoon Turret") : premier membre de la catégorie "Turret" —
   tour à distance qui scanne et tire toute seule à chaque tick (pas de `Goal` porté par un
   monstre, contrairement à Blockade), dans un **cône** de 45° orienté selon
@@ -47,7 +48,11 @@ vérifie la CI.
   vanilla, `minecraft:block/orientable`) — premier bloc du mod à avoir une vraie propriété de
   `BlockState` (`HORIZONTAL_FACING`), et premier vrai consommateur de la rotation choisie dans
   la roue (`ModNetworking.handlePlaceTower` l'appliquait déjà par anticipation). Détail dans
-  [02-gameplay.md](02-gameplay.md#le-harpoon-turret--blockharpoonturretblockjava).
+  [02-gameplay.md](02-gameplay.md#le-harpoon-turret--blockharpoonturretblockjava). **Testé en
+  jeu** (2026-08-23) : trois bugs trouvés et corrigés (voir "Corrections apportées") — le
+  cooldown de tir ne se déclenchait jamais (overflow sur `long`), la flèche se figeait dans le
+  bloc de la tourelle elle-même, et la rotation à la pose était incorrecte (voir la roue
+  ci-dessous).
 - ✅ Système de priorité IA unifié (`block/entity/AiAttackTarget.java`,
   `entity/ai/AttackPriorityTargetGoal.java`, voir "Système de priorité IA" plus bas) :
   remplace les deux anciens goals séparés (`AttackBlockadeGoal`/`AttackEterniaCrystalGoal`,
@@ -56,10 +61,16 @@ vérifie la CI.
   Cristal (30) / Tourelle (40), palier par palier. Décidé avec le joueur : indices espacés
   pour laisser de la place à une future provocation. Détail dans
   [02-gameplay.md](02-gameplay.md#le-goal-de-mêlée-unifié--entityaiattackprioritytargetgoaljava-blockentityaiattacktargetjava).
-- ✅ Roue de sélection des tours (`TowerWheelScreen`, touche `R` par défaut) + mode pose en
-  deux étapes (viser puis orienter, `TowerPlacementState`/`TowerPlacementClientEvents`) avec
-  hologramme vert/rouge et zone de portée (cercle ou **cône**, premier vrai test avec le
-  Harpoon Turret — jamais vérifié visuellement, voir 06-a-tester.md). **Unique façon de poser
+  **Testé en jeu** (2026-08-23) via les tests des tours ci-dessus : les monstres priorisent
+  bien les tours avant le cristal.
+- ✅ Roue de sélection des tours (`TowerWheelScreen`, touche `R` par défaut) + mode pose en une
+  seule étape (`TowerPlacementState`/`TowerPlacementClientEvents` — position et rotation
+  évoluent en parallèle, un seul clic droit pose la tour, simplifié depuis un flux à deux
+  étapes/deux clics) avec hologramme vert/rouge et zone de portée (cercle ou **cône**). **Testé
+  en jeu** (2026-08-23) : deux bugs de rotation trouvés et corrigés (voir "Corrections
+  apportées" plus bas) — cône à l'opposé de la direction de tir, puis Est/Ouest inversés dans
+  l'aperçu — et un conflit de touche par défaut (`T`, déjà pris par le chat vanilla) qui
+  empêchait toute rotation, désormais `G`. **Unique façon de poser
   une tour**, toute catégorie confondue : le `BlockItem` classique ne pose plus rien
   (`TowerBlockItem#useOn` renvoie systématiquement `PASS`, retiré de l'onglet créatif).
   Pas de filtrage par héros (système inexistant). Le paquet de confirmation
@@ -123,7 +134,13 @@ vérifie la CI.
   est mis à l'échelle par `DifficultyScaling` (difficulté × vague). Configurable par spawner
   (intervalle, rayon de spawn, plage de vagues, nombre de base par type). Shift + clic droit =
   harnais de test qui bascule `BUILD`/`COMBAT`. Incrémente aussi
-  `ModAttachments.WAVE_ENEMIES_KILLED` via un nouveau handler `LivingDeathEvent`.
+  `ModAttachments.WAVE_ENEMIES_KILLED` via un nouveau handler `LivingDeathEvent`. **Testé en
+  jeu** (2026-08-23) : deux bugs trouvés et corrigés (voir "Corrections apportées") — un
+  `StackOverflowError` au chargement/pose d'un spawner (récursion via
+  `recomputeWaveEnemiesTotal` appelée depuis `setLevel`), et `WAVE_ENEMIES_TOTAL` qui restait
+  bloqué à sa valeur par défaut (`10`) tant qu'aucune vague n'avait encore été nettoyée — se
+  recalcule maintenant dès qu'un spawner apparaît/disparaît/est reconfiguré, pas seulement aux
+  transitions de phase.
 - ✅ Squelette ajouté comme deuxième ennemi (réutilise `EntityType.SKELETON` vanilla, comme le
   zombie) : cible le cristal comme n'importe quel `Monster`, et sort du spawner.
 - ✅ Comportement d'archer pour le squelette (`entity/ai/RangedAttackEterniaCrystalGoal.java`,
@@ -133,6 +150,7 @@ vérifie la CI.
   appliqués directement au cristal, même logique "harnais" que `AttackEterniaCrystalGoal`.
   Pensé pour être réutilisable tel quel par un futur ennemi à distance. Détail dans
   [02-gameplay.md](02-gameplay.md#le-goal-à-distance--entityairangedattacketerniacrystalgoaljava).
+  **Testé en jeu** (2026-08-23).
 - ✅ Difficulté de la partie : data attachment `difficulty` sur la `Level` (ordinal de l'enum
   `GameDifficulty` : `EASY`/`NORMAL`/`HARD`), démarre à `NORMAL` — censée être choisie au
   lancement de la map, mais aucun écran pour le faire n'existe encore.
@@ -147,11 +165,15 @@ vérifie la CI.
   au mode créatif** (`player.isCreative()`) : une vraie partie est censée charger des
   spawners déjà configurés, pas les reconfigurer en jouant. Détail complet dans
   [02-gameplay.md](02-gameplay.md#lécran-de-configuration--menu-network-clientguiscreenspawnerconfigscreenjava).
+  **Testé en jeu** (2026-08-23) : un bug trouvé et corrigé (voir "Corrections apportées") — le
+  titre et les 4 libellés (Intervalle, Rayon, Vague début/fin) étaient invisibles (couleur
+  sans canal alpha), l'écran semblait n'avoir aucune indication sur les champs.
 - ✅ Aperçu de composition du spawner en phase Construction (`SpawnerBlockEntityRenderer`) :
   total d'ennemis à venir + détail par type affiché au-dessus du bloc, **visible à travers les
   murs** (`Font.DisplayMode.SEE_THROUGH`), comme dans le jeu de référence. Caché en phase
   Combat, texte seul pour l'instant (pas d'icône par type). Détail dans
   [02-gameplay.md](02-gameplay.md#laperçu-de-composition-en-phase-construction--spawnerblockentityrendererjava).
+  **Testé en jeu** (2026-08-23).
 - ✅ Une vague se déroule maintenant de bout en bout : le Combat se **déclenche** via un vote
   "prêt" (clic droit sur le Cristal d'Eternia en Construction, data attachment **joueur**
   `ready`, remis à zéro pour tout le monde une fois le combat lancé) plutôt que seulement le
@@ -161,6 +183,10 @@ vérifie la CI.
   (`ModEvents.onMonsterDeath` → `PhaseTransitions.enterBuild`) **et** `current_wave` avance de
   1 (plafonné à `MAX_WAVE`). Détail dans
   [02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath).
+  **Testé en jeu** (2026-08-23) : vote "prêt", dégâts au cristal en combat (mêlée et
+  squelette archer), et fin de vague/retour en Construction fonctionnent. Un bug trouvé et
+  corrigé au passage : `WAVE_ENEMIES_KILLED` ne se remettait pas à 0 en repassant en
+  Construction (voir "Corrections apportées").
 - ✅ Un ennemi ne peut plus spawn à l'intérieur d'un bloc plein (`SpawnerBlockEntity
   #findSafeSpawnPos`) : jusqu'à 8 positions aléatoires essayées dans le rayon de spawn,
   vérifiées traversables (pieds + tête), repli sur `pos.above()` sinon. Pas de vérification
@@ -174,8 +200,8 @@ vérifie la CI.
   le détail du raisonnement) — premier pas vers le futur système de maps/structures : la
   taverne (hub) et chaque map seront des structures posées à coordonnées fixes, donc rien dans
   le jeu ne doit dépendre du terrain généré naturellement. Détail dans
-  [02-gameplay.md](02-gameplay.md#le-monde-et-le-point-de-spawn). **Non vérifié en jeu** — le
-  fichier de dimension n'est validé à aucune étape de la compilation, voir 06-a-tester.md.
+  [02-gameplay.md](02-gameplay.md#le-monde-et-le-point-de-spawn). **Testé en jeu** (2026-08-23) :
+  le monde se crée bien vide, la plateforme de la taverne apparaît et se repose correctement.
 - ✅ Cristal de la taverne (`TavernCrystalBlock`, distinct d'`EterniaCrystalBlock` — pas de PV,
   pas de combat) : clic droit ouvre `MapSelectionScreen`, un carrousel de maps
   (`init/GameMap.java`, extensible, chaque entrée peut être masquée du carrousel tant qu'elle
@@ -184,7 +210,8 @@ vérifie la CI.
   (`ModAttachments.DIFFICULTY`, via `SetDifficultyPayload`) et téléporte tous les joueurs vers
   `MapInstance` (l'emplacement partagé de "la map en cours", voir plus bas) — le choix de map
   précis, lui, n'a encore aucun effet (une seule map placeholder générique pour l'instant).
-  Détail dans [02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté).
+  Détail dans [02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté). **Testé
+  en jeu** (2026-08-23), aller-retour taverne/map inclus (`/dd_leave`) : fonctionne.
 - ✅ Victoire et défaite (`PhaseTransitions.onVictory/onDefeat`) : la partie se termine
   vraiment maintenant. Nettoyer la dernière vague (`current_wave == MAX_WAVE`) diffuse un
   message de victoire ; la destruction du Cristal d'Eternia diffuse un message de défaite. Les
@@ -193,6 +220,7 @@ vérifie la CI.
   l'emplacement de map et téléporte tout le monde. Le cristal détruit **n'est pas replacé
   automatiquement** — voir "Ce qui reste" plus bas. Détail dans
   [02-gameplay.md](02-gameplay.md#victoire-et-défaite--phasetransitionsonvictoryondefeat).
+  **Testé en jeu** (2026-08-23).
 
 ## Corrections apportées
 
@@ -217,6 +245,23 @@ Les points suivants figuraient dans la première version de cette page et sont r
 
 Le goal des zombies a par ailleurs été sorti de `ModEvents` (classe anonyme) vers
 `entity/ai/AttackEterniaCrystalGoal.java`, ce qui rend le test anti-doublon possible.
+
+### Corrections trouvées lors des tests en jeu du 2026-08-23
+
+Première vraie session de test en jeu (taverne, cristal en combat, spawners, tours, roue des
+tours) — tous les points suivants ont été trouvés en jouant, pas en relisant le code.
+
+| Problème | Correction |
+|---|---|
+| Tout le texte du HUD (mana/vie/vague/score/...) était invisible | `TEXT_COLOR` sans canal alpha (`0xFFFFFF`, alpha=0) dans 3 écrans + les overlays HUD — `GuiGraphicsExtractor.text()` ignore le rendu si `alpha == 0` ; corrigé en `0xFFFFFFFF` partout |
+| La tourelle Harpoon ne tirait jamais | `lastFireTick` initialisé à `Long.MIN_VALUE` : `now - lastFireTick` débordait vers un nombre toujours négatif (overflow sur `long`), le cooldown ne se déclenchait jamais — remplacé par `-attackIntervalTicks` |
+| La flèche de la tourelle ne partait jamais (figée sur place) | elle apparaissait au centre du bloc de la tourelle, un cube plein — `AbstractArrow#tick` fige toute flèche dont la position de spawn est déjà dans la géométrie solide du bloc sous elle ; origine décalée de 0.6 bloc devant la face avant |
+| Rotation de la roue des tours impossible | touche par défaut `T`, déjà prise par le chat vanilla (`key.chat`) — changée en `G` |
+| La tour tirait à l'opposé de la range affichée à la pose | le cône utilisait `Direction.toYRot()`, convention différente de celle du blockstate posé |
+| Est/Ouest inversés dans l'aperçu de rotation (après le correctif précédent) | les valeurs `y` du blockstate, correctes pour Minecraft, ne le sont pas pour `Axis.YP.rotationDegrees(...)` (rotation main-droite JOML, sens inverse avec les axes de Minecraft) — vérifié par calcul, Est et Ouest inversés dans `facingYRot()` |
+| Le compteur `Ennemis : X/Y` ne se remettait pas à 0 en repassant en Construction | `PhaseTransitions.enterBuild()` oubliait de remettre `WAVE_ENEMIES_KILLED` à 0 |
+| `Ennemis : X/10` restait bloqué sur la valeur par défaut avant la première fin de vague | `WAVE_ENEMIES_TOTAL` ne se recalculait qu'aux transitions de phase — recalculé désormais aussi à la pose/casse/reconfiguration d'un spawner |
+| `StackOverflowError` au chargement/à la pose d'un spawner | le recalcul ci-dessus, appelé directement depuis `setLevel()`, récursait via `getBlockEntity` (appelé avant l'insertion du block entity dans le chunk) — différé via `serverLevel.getServer().execute(...)` |
 
 ## Ce qui reste
 
