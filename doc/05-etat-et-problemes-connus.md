@@ -579,7 +579,8 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
    `SEARCH_RANGE`) dans `Config`, et enregistrer la spec.
 4. Retirer le harnais de test du clic droit quand une autre source de dégâts existera.
 5. Donner une vraie utilité au mana côté **sorts/capacités du joueur** (la pose de tours et le
-   ramassage de cristaux existent déjà), retirer `ManaTestWandItem`, puis habiller
+   ramassage de cristaux existent déjà), retirer `ManaTestWandItem`/`ManaFillWandItem`, puis
+   habiller
    `ManaOverlay`/`HealthOverlay`/`ExperienceOverlay` de vraies textures (sprites, cadre) une
    fois disponibles — la forme (losange) se rapproche déjà du jeu de référence, il manque la
    matière.

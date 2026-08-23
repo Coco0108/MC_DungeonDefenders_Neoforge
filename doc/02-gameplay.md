@@ -982,6 +982,16 @@ clic droit du Cristal d'Eternia :
 - toute la logique est côté serveur (`level.isClientSide()` en sortie anticipée) ; le client
   reçoit juste `InteractionResult.SUCCESS` pour l'animation de bras.
 
+### La baguette de remplissage — `item/ManaFillWandItem.java`
+
+Symétrique de `ManaTestWandItem` (même enregistrement dans `ModBlocks`, texture vanilla
+`glowstone_dust` pour rester visuellement distincte) : clic droit remplit le mana au maximum
+(`ModAttachments.MAX_MANA`) plutôt que d'en retirer — pour tester la pose de tours (Spike
+Blockade 30, Harpoon Turret 50) sans avoir à farmer des cristaux de mana à chaque essai. Message
+`dungeon_defenders.mana_fill_wand.used`, ou `.full` si déjà au maximum. Harnais de test, comme
+`ManaTestWandItem` : pas destiné à survivre une fois un vrai système de sorts/capacités en
+place.
+
 Modèle provisoire : texture vanilla `minecraft:item/blaze_rod`, pas de modèle dédié.
 
 ## La vie du joueur

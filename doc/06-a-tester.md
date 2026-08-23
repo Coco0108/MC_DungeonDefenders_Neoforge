@@ -137,6 +137,10 @@ visuellement.
       système confirme `-10 mana (90/100)`.
 - [ ] Répéter jusqu'à `0/100` : le losange mana doit être entièrement vide (fond gris), et un
       nouveau clic droit affiche le message « Pas assez de mana ! » sans repasser en négatif.
+- [ ] Prendre `mana_fill_wand` (icône poudre de glowstone) : clic droit à `0/100` remplit le
+      losange mana d'un coup (`100/100`), message « Mana rempli (100/100) ». Un second clic
+      droit affiche « Le mana est déjà au maximum ! » sans erreur. Nouveau, jamais vérifié
+      visuellement.
 - [ ] Quitter le monde et y revenir (ou `/reload` + relog) : le mana affiché doit être celui
       d'avant la déconnexion, pas remis à 100 (l'attachment est censé persister).
 - [ ] Se prendre des dégâts (chute, mob, `/damage`) : le losange vie diminue par le haut, en

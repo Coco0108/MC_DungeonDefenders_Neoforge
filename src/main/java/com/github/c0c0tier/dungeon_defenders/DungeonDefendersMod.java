@@ -66,6 +66,7 @@ public class DungeonDefendersMod {
                         // (TowerWheelScreen) — voir TowerBlockItem, dont useOn() ne fait plus
                         // rien.
                         output.accept(ModBlocks.MANA_TEST_WAND.get());
+                        output.accept(ModBlocks.MANA_FILL_WAND.get());
                         output.accept(ModBlocks.SPAWNER_ITEM.get());
                         output.accept(ModBlocks.TAVERN_CRYSTAL_ITEM.get());
                     })
