@@ -93,7 +93,8 @@ vérifie la CI.
   100, affiché en HUD via `ManaOverlay` — losange en bas à gauche de l'écran, le plus à droite
   du groupe vie/mana (`DiamondGauge`, couleurs plates), très provisoire. Testable en jeu avec
   l'item `mana_test_wand` (clic droit = -10 mana) ou `mana_fill_wand` (clic droit = remplit au
-  maximum). **Positionnement testé en jeu** (2026-08-23, échange avec la vie compris).
+  maximum). **Testé en jeu et confirmé** (2026-08-23) : positionnement (échange avec la vie
+  compris), les deux baguettes de test, et la persistance à la reconnexion.
 - ✅ Vie du joueur : maximum vanilla porté de 20 à 100 (`ModEvents.onPlayerJoin`), affichée en
   HUD via `HealthOverlay` — losange juste à gauche de celui du mana (vie à gauche, comme le jeu
   de référence). **Testé en jeu** (2026-08-23), y compris l'échange de position avec le mana.

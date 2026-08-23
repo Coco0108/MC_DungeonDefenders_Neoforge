@@ -26,23 +26,11 @@ Lancer le client de dev :
 ## HUD — groupe bas-gauche (mana, vie, expérience)
 
 Positionnement (losanges vie/mana, forme, barre d'expérience, cœurs/XP vanilla masqués, groupe
-haut-droit vague/progression/phase, score/personnage, emplacements de compétences) **testé en
-jeu et confirmé** le 2026-08-23 — reste à vérifier le comportement dynamique du mana/de la vie
+haut-droit vague/progression/phase, score/personnage, emplacements de compétences) **et
+comportement dynamique du mana** (baguettes de test, persistance) **testés en jeu et
+confirmés** le 2026-08-23 — reste à vérifier le comportement dynamique de la **vie**
 ci-dessous.
 
-- [ ] Prendre `mana_test_wand` dans l'onglet créatif Dungeon Defenders (icône bâton de
-      blaze, pas de texture dédiée). Clic droit : le losange mana perd 10 % de sa hauteur
-      **par le haut** (il se vide du haut vers le bas puisqu'il se remplit du bas vers le
-      haut — la pointe haute disparaît en premier), le texte passe à `90/100`, un message
-      système confirme `-10 mana (90/100)`.
-- [ ] Répéter jusqu'à `0/100` : le losange mana doit être entièrement vide (fond gris), et un
-      nouveau clic droit affiche le message « Pas assez de mana ! » sans repasser en négatif.
-- [ ] Prendre `mana_fill_wand` (icône poudre de glowstone) : clic droit à `0/100` remplit le
-      losange mana d'un coup (`100/100`), message « Mana rempli (100/100) ». Un second clic
-      droit affiche « Le mana est déjà au maximum ! » sans erreur. Nouveau, jamais vérifié
-      visuellement.
-- [ ] Quitter le monde et y revenir (ou `/reload` + relog) : le mana affiché doit être celui
-      d'avant la déconnexion, pas remis à 100 (l'attachment est censé persister).
 - [ ] Se prendre des dégâts (chute, mob, `/damage`) : le losange vie diminue par le haut, en
       cohérence avec les dégâts subis.
 - [ ] Se reconnecter (relog) après avoir perdu de la vie : la vie perdue doit être conservée,
