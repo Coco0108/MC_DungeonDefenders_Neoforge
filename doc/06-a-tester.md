@@ -8,35 +8,19 @@ mesure, et signale ici ce qui casse pour que ça reste une référence à jour.
 Le monde/point de spawn, le cristal de la taverne, l'aller-retour vers une map, le vote
 "prêt" et les dégâts du Cristal d'Eternia en combat, les spawners (gameplay, écran de config,
 aperçu de composition), le squelette archer, le Spike Blockade, le Harpoon Turret, le système
-de priorité IA, la victoire/défaite, la roue de sélection des tours, et le **positionnement**
-de tout le HUD (groupe bas-gauche vie/mana/expérience, vague/progression/phase, score/
-personnage, emplacements de compétences) ont été **testés en jeu le 2026-08-23** (bugs trouvés
+de priorité IA, la victoire/défaite, la roue de sélection des tours, tout le HUD (positionnement
++ comportement dynamique du mana et de la vie : baguettes de test, dégâts, persistance à la
+reconnexion, spawn d'un nouveau joueur) ont été **testés en jeu le 2026-08-23** (bugs trouvés
 au passage listés dans
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#corrections-trouvées-lors-des-tests-en-jeu-du-2026-08-23),
 tous corrigés) — leurs checklists ont été retirées d'ici, voir "Une fois testé" en bas de
-fichier. Il reste à vérifier le **comportement dynamique** du HUD mana/vie (baguettes de test,
-persistance) ci-dessous.
+fichier.
 
 Lancer le client de dev :
 
 ```bash
 ./gradlew runClient
 ```
-
-## HUD — groupe bas-gauche (mana, vie, expérience)
-
-Positionnement (losanges vie/mana, forme, barre d'expérience, cœurs/XP vanilla masqués, groupe
-haut-droit vague/progression/phase, score/personnage, emplacements de compétences) **et
-comportement dynamique du mana** (baguettes de test, persistance) **testés en jeu et
-confirmés** le 2026-08-23 — reste à vérifier le comportement dynamique de la **vie**
-ci-dessous.
-
-- [ ] Se prendre des dégâts (chute, mob, `/damage`) : le losange vie diminue par le haut, en
-      cohérence avec les dégâts subis.
-- [ ] Se reconnecter (relog) après avoir perdu de la vie : la vie perdue doit être conservée,
-      pas remise à 100/100 (seul un joueur qui était déjà à son maximum doit se retrouver à
-      100/100 après coup).
-- [ ] Un nouveau joueur (jamais connecté à ce monde) doit spawn à 100/100, pas à 20/20.
 
 ## Les cristaux de mana et le remboursement (`ManaCrystalEntity`, `ModEvents.onTowerBreak`)
 

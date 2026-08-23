@@ -97,7 +97,9 @@ vérifie la CI.
   compris), les deux baguettes de test, et la persistance à la reconnexion.
 - ✅ Vie du joueur : maximum vanilla porté de 20 à 100 (`ModEvents.onPlayerJoin`), affichée en
   HUD via `HealthOverlay` — losange juste à gauche de celui du mana (vie à gauche, comme le jeu
-  de référence). **Testé en jeu** (2026-08-23), y compris l'échange de position avec le mana.
+  de référence). **Testé en jeu et confirmé** (2026-08-23) : positionnement (échange avec le
+  mana compris), dégâts qui vident le losange, persistance de la vie perdue à la reconnexion,
+  et spawn à `100/100` (pas `20/20`) pour un tout premier join.
 - ✅ Expérience custom du joueur : data attachment `experience` (persistant, synchronisé),
   démarre à `0/100` (contrairement au mana/à la vie qui démarrent pleins), affichée en HUD
   via `ExperienceOverlay` — barre horizontale tout en bas, sous les losanges vie/mana. Sans
