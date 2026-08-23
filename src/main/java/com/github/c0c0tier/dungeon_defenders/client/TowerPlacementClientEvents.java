@@ -86,13 +86,12 @@ public class TowerPlacementClientEvents {
             return;
         }
 
-        if (TowerPlacementState.step() == TowerPlacementState.Step.AIMING) {
-            // Draine une éventuelle rotation en attente : elle n'a pas d'effet tant que la
-            // position n'est pas verrouillée, et ne doit pas s'appliquer en rafale une fois
-            // l'étape orientation atteinte.
-            ModKeyMappings.ROTATE_TOWER.consumeClick();
-            updateTargetFromRaycast(player, level);
-        } else if (ModKeyMappings.ROTATE_TOWER.consumeClick()) {
+        // Position et rotation évoluent en permanence, en parallèle : viser une nouvelle
+        // position et tourner l'hologramme (touche ROTATE_TOWER) peuvent se faire dans
+        // n'importe quel ordre, jusqu'au clic droit qui pose la tour avec les deux valeurs
+        // courantes — une seule étape, pas de position à verrouiller au préalable.
+        updateTargetFromRaycast(player, level);
+        if (ModKeyMappings.ROTATE_TOWER.consumeClick()) {
             TowerPlacementState.rotate();
         }
     }
@@ -132,14 +131,9 @@ public class TowerPlacementClientEvents {
         }
         event.setCanceled(true);
 
-        if (TowerPlacementState.step() == TowerPlacementState.Step.AIMING) {
-            if (TowerPlacementState.isTargetValid() && TowerPlacementState.targetPos() != null) {
-                TowerPlacementState.lockPosition();
-            }
-            return;
+        if (TowerPlacementState.isTargetValid() && TowerPlacementState.targetPos() != null) {
+            confirmPlacement();
         }
-
-        confirmPlacement();
     }
 
     private static void confirmPlacement() {
@@ -170,11 +164,7 @@ public class TowerPlacementClientEvents {
 
         TowerPlacementRenderState state = new TowerPlacementRenderState();
         state.pos = pos;
-        // En ORIENTING, la position est déjà verrouillée comme valide (voir
-        // onInteractionKeyTriggered) : toujours vert à cette étape.
-        state.valid = TowerPlacementState.step() == TowerPlacementState.Step.ORIENTING
-                || TowerPlacementState.isTargetValid();
-        state.step = TowerPlacementState.step();
+        state.valid = TowerPlacementState.isTargetValid();
         state.rotation = TowerPlacementState.rotation();
         state.range = tower.range();
         state.coneAngleDegrees = tower.coneAngleDegrees();
@@ -194,14 +184,12 @@ public class TowerPlacementClientEvents {
 
         poseStack.pushPose();
         poseStack.translate(state.pos.getX() - camPos.x, state.pos.getY() - camPos.y, state.pos.getZ() - camPos.z);
-        if (state.step == TowerPlacementState.Step.ORIENTING) {
-            // Symbolique pour l'instant : Spike Blockade est un cube symétrique, cette
-            // rotation n'a donc aucun effet visuel sur lui — prête pour une future tour
-            // asymétrique (voir doc/02-gameplay.md).
-            poseStack.translate(0.5D, 0.5D, 0.5D);
-            poseStack.mulPose(Axis.YP.rotationDegrees(facingYRot(state.rotation)));
-            poseStack.translate(-0.5D, -0.5D, -0.5D);
-        }
+        // Toujours appliquée, dès la visée (pas d'étape séparée où la rotation "n'aurait pas
+        // encore d'effet") : symbolique pour l'instant pour Spike Blockade, cube symétrique
+        // sans effet visuel, mais prête pour une future tour asymétrique (doc/02-gameplay.md).
+        poseStack.translate(0.5D, 0.5D, 0.5D);
+        poseStack.mulPose(Axis.YP.rotationDegrees(facingYRot(state.rotation)));
+        poseStack.translate(-0.5D, -0.5D, -0.5D);
         event.getSubmitNodeCollector().submitCustomGeometry(poseStack, RenderTypes.lines(),
                 (pose, buffer) -> renderBoxOutline(pose, buffer, Shapes.block(), color, LINE_WIDTH));
         poseStack.popPose();
@@ -212,10 +200,6 @@ public class TowerPlacementClientEvents {
                     state.pos.getX() - camPos.x + 0.5D,
                     state.pos.getY() - camPos.y,
                     state.pos.getZ() - camPos.z + 0.5D);
-            // Toujours appliquée (pas seulement en ORIENTING comme pour le contour du bloc,
-            // qui ne montre de toute façon jamais sa rotation visuellement pour un cube
-            // parfait) : le cône doit refléter state.rotation dès l'étape "visée" (NORTH par
-            // défaut), pas seulement une fois la position verrouillée.
             poseStack.mulPose(Axis.YP.rotationDegrees(facingYRot(state.rotation)));
             double coneAngle = state.coneAngleDegrees;
             event.getSubmitNodeCollector().submitCustomGeometry(poseStack, RenderTypes.lines(),

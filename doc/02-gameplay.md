@@ -747,22 +747,26 @@ Ouverte directement côté client par `TowerPlacementClientEvents` (sur `ClientT
 si la touche est consommée et qu'aucun écran n'est déjà ouvert) — comme `MapSelectionScreen`,
 pas de `Menu` ni d'aller-retour serveur nécessaire pour l'ouvrir.
 
-### Le mode pose, deux étapes — `client/TowerPlacementState.java`, `client/TowerPlacementClientEvents.java`
+### Le mode pose, une seule étape — `client/TowerPlacementState.java`, `client/TowerPlacementClientEvents.java`
 
 Sélectionner une tour dans la roue démarre `TowerPlacementState` (état transitoire, pas
-persistant) en étape **AIMING**, puis fait basculer en **ORIENTING** au premier clic droit
-valide :
+persistant). Position et rotation évoluent **en parallèle**, dans n'importe quel ordre, tant
+que le mode pose reste actif :
 
-- **AIMING** : chaque tick, un rayon est lancé depuis les yeux du joueur
-  (`level.clip(new ClipContext(...))`, portée 20 blocs, `ClipContext.Block.OUTLINE`) ; la
-  position juste après le bloc touché (`hit.getBlockPos().relative(hit.getDirection())`)
-  devient la cible, valide si `canBeReplaced()`. **Clic gauche** annule tout le mode pose.
-  **Clic droit** sur une cible valide verrouille la position et passe en ORIENTING (ignoré sur
-  une cible invalide).
-- **ORIENTING** : la position ne bouge plus. La touche `rotate_tower` fait pivoter la rotation
-  courante (`Direction`, pas de 90°, `getClockWise()`). **Clic droit** envoie
-  `PlaceTowerPayload` (tour + position + rotation) au serveur et quitte le mode pose. **Clic
-  gauche** annule tout (pas de retour à AIMING).
+- Chaque tick, un rayon est lancé depuis les yeux du joueur (`level.clip(new
+  ClipContext(...))`, portée 20 blocs, `ClipContext.Block.OUTLINE`) ; la position juste après
+  le bloc touché (`hit.getBlockPos().relative(hit.getDirection())`) devient la cible, valide si
+  `canBeReplaced()`.
+- La touche `rotate_tower` fait pivoter la rotation courante (`Direction`, pas de 90°,
+  `getClockWise()`) à tout moment, y compris en visant encore une position.
+- **Clic droit** sur une cible valide pose la tour immédiatement, avec la position et la
+  rotation courantes (`PlaceTowerPayload`, tour + position + rotation), et quitte le mode pose
+  — ignoré sur une cible invalide. **Clic gauche** annule tout le mode pose à tout moment.
+
+Une seule confirmation, pas deux : jusqu'au 2026-08-2x, le mode pose comptait une étape
+AIMING (position mobile) suivie d'une étape ORIENTING (position figée, seule la rotation
+changeait, un second clic droit pour confirmer) — simplifié en une seule étape à la demande du
+joueur, la rotation n'ayant pas besoin d'une étape dédiée pour un cycle à 4 valeurs.
 
 L'interception des clics passe par `InputEvent.InteractionKeyMappingTriggered`
 (`isAttack()`/`isUseItem()`, annulés le temps du mode pose pour ne pas déclencher l'action
@@ -771,9 +775,8 @@ clic droit (l'event se déclenche une fois par main pour "Use Item").
 
 **Spike Blockade** est un cube symétrique, sans propriété d'orientation dans son `BlockState` —
 tourner son hologramme n'a donc aucun effet visuel ni gameplay sur cette tour précise. C'est le
-**Harpoon Turret** qui exerce enfin cette étape pour de vrai (`HORIZONTAL_FACING` + cône de
-tir orienté, voir plus haut) — l'étape ORIENTING avait été construite génériquement par
-anticipation, avant qu'une tour concrète n'en ait besoin.
+**Harpoon Turret** qui exerce enfin la rotation pour de vrai (`HORIZONTAL_FACING` + cône de tir
+orienté, voir plus haut).
 
 ### L'hologramme et le cercle de portée — rendu
 
@@ -786,17 +789,14 @@ block entity à qui l'accrocher, contrairement aux autres renderers du mod) ;
 - **Contour filaire du bloc** (`Shapes.block()`, parcouru arête par arête comme le fait
   `ShapeRenderer.renderShape` vanilla en interne — réimplémenté ici car cette méthode attend un
   `PoseStack` complet, alors que `submitCustomGeometry` ne fournit qu'un `PoseStack.Pose`
-  différé) : **vert si la position visée est valide, rouge sinon** — toujours vert en
-  ORIENTING, puisque la position y est déjà verrouillée comme valide.
+  différé) : **vert si la position visée est valide, rouge sinon**, tourné selon `state.rotation`
+  en permanence (voir `facingYRot` plus bas).
 - **Zone de portée** (`renderRangeArea`, `RenderTypes.lines()`), uniquement si
   `TowerDefinition.range() > 0` — **cercle complet** si `coneAngleDegrees >= 360`
   (omnidirectionnel), sinon un **secteur/cône** : l'arc borné à `[-coneAngleDegrees/2,
   +coneAngleDegrees/2]` **plus** deux segments droits vers l'origine, pour lire visuellement un
-  cône et pas un arc flottant dans le vide. La rotation de la zone suit `state.rotation`
-  **en permanence** (pas seulement en ORIENTING comme pour le contour du bloc, qui ne montre de
-  toute façon jamais sa rotation visuellement pour un cube parfait) : le cône reflète déjà
-  l'orientation par défaut (`NORTH`) dès l'étape AIMING, et suit la touche de rotation une fois
-  en ORIENTING.
+  cône et pas un arc flottant dans le vide. La rotation de la zone suit `state.rotation` en
+  permanence elle aussi, dès l'orientation par défaut (`NORTH`).
 
   Convention du gabarit local : angle `-90°` (dans le repère `cos`/`sin` déjà utilisé par
   l'ancien cercle complet) correspond à la direction `NORTH`, c'est-à-dire au point local

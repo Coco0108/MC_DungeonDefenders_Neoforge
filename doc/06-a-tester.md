@@ -513,8 +513,8 @@ de goal porté par un monstre) — jamais vérifié visuellement, y compris le p
 détection et la première vraie propriété d'orientation (`HORIZONTAL_FACING`) du mod. Poser un
 Harpoon Turret via la roue (voir section dédiée plus bas) avant les tests suivants.
 
-- [ ] Poser un Harpoon Turret, orienté (via la rotation en étape "orientation" de la roue) dans
-      une direction connue (ex. NORD). Vérifier que la texture visible (face avant façon
+- [ ] Poser un Harpoon Turret, orienté (via la rotation de la roue, touche `G`) dans une
+      direction connue (ex. NORD). Vérifier que la texture visible (face avant façon
       furnace) pointe bien dans cette direction une fois le bloc réellement posé — sinon la
       convention `HORIZONTAL_FACING`/blockstate est inversée quelque part.
 - [ ] Faire spawn un zombie **dans le cône** (à moins de 12 blocs, dans un secteur de 45°
@@ -610,9 +610,12 @@ block entity — rien de tout ça n'a pu être vérifié visuellement pendant le
       le mode pose. Les deux gestes doivent être équivalents.
 - [ ] Ouvrir la roue puis appuyer sur `Échap` sans cliquer : l'écran se ferme, **aucun** mode
       pose ne démarre (pas d'hologramme qui apparaît ensuite en jeu).
-- [ ] Après avoir sélectionné une tour (mode pose, étape "visée") : un **contour filaire**
-      (hologramme) doit suivre le curseur/la visée du joueur en regardant le monde, collé sur
-      la position juste après le premier bloc visé (comme la pose d'un bloc normal).
+- [ ] Après avoir sélectionné une tour dans la roue : un **contour filaire** (hologramme) doit
+      suivre le curseur/la visée du joueur en regardant le monde, collé sur la position juste
+      après le premier bloc visé (comme la pose d'un bloc normal) — **et continuer à suivre le
+      regard en permanence**, il n'y a plus d'étape où la position se fige : une seule
+      confirmation (clic droit) pose directement la tour avec la position et la rotation
+      courantes (simplifié depuis un flux à deux étapes/deux clics, à la demande du joueur).
 - [ ] Viser un emplacement **libre** (air, herbe remplaçable...) : le contour doit être
       **vert**. Viser un bloc plein existant (mur, sol, une autre tour déjà posée...) : le
       contour affiché doit être sur la position **adjacente** à ce bloc, toujours en fonction
@@ -620,54 +623,40 @@ block entity — rien de tout ça n'a pu être vérifié visuellement pendant le
       (ex. coincé entre deux blocs) doit donner un contour **rouge**.
 - [ ] Regarder au loin (>20 blocs, hors de portée du rayon) ou vers le ciel/le vide sans rien
       viser : l'hologramme doit **disparaître** (pas de contour flottant sans cible).
-- [ ] **Clic gauche** pendant l'étape "visée" : annule tout le mode pose, l'hologramme
-      disparaît, rien n'est posé.
-- [ ] **Clic droit** sur une position **verte** : l'hologramme doit **arrêter de suivre le
-      regard** (position verrouillée) — bouger la caméra ne doit plus déplacer le contour.
+- [ ] **Clic gauche** : annule tout le mode pose à tout moment, l'hologramme disparaît, rien
+      n'est posé.
 - [ ] **Clic droit** sur une position **rouge** (viser un bloc invalide) : ne doit **rien**
-      faire (pas de verrouillage, reste en étape "visée").
-- [ ] Sélectionner **Spike Blockade** et verrouiller une position (étape "orientation") :
-      appuyer sur `T` (touche par défaut, "Faire pivoter la tour (pose)") plusieurs fois :
-      aucune erreur, mais **aucun changement visuel attendu** sur le contour (cube symétrique,
-      limite connue — voir 05-etat-et-problemes-connus.md) — vérifie surtout l'absence de
-      crash/d'exception.
-- [ ] Recommencer avec **Harpoon Turret** : dès l'étape "visée" (avant même de verrouiller), un
-      **cône jaune** (pas un cercle complet) doit apparaître autour de l'hologramme, orienté
-      par défaut vers le NORD. Une fois la position verrouillée, appuyer sur `G` (touche par
-      défaut de rotation — **pas `T`**, qui est le raccourci vanilla du chat et entrait en
-      conflit avec l'ancienne touche par défaut, empêchant toute rotation ; voir
-      05-etat-et-problemes-connus.md) plusieurs fois : le cône doit **pivoter par pas de 90°**
-      avec l'hologramme, dans le même sens que le contour du bloc.
+      faire, le mode pose reste actif (pas de pose, pas de fermeture).
+- [ ] Sélectionner **Spike Blockade**, appuyer sur `G` (touche par défaut de rotation)
+      plusieurs fois **en visant toujours une position** : aucune erreur, mais **aucun
+      changement visuel attendu** sur le contour (cube symétrique, limite connue — voir
+      05-etat-et-problemes-connus.md) — vérifie surtout l'absence de crash/d'exception.
+- [ ] Recommencer avec **Harpoon Turret** : dès la sélection, un **cône jaune** (pas un cercle
+      complet) doit apparaître autour de l'hologramme, orienté par défaut vers le NORD.
+      Appuyer sur `G` (**pas `T`**, raccourci vanilla du chat) **tout en continuant à bouger la
+      caméra pour viser d'autres positions** : le cône doit **pivoter par pas de 90°** avec
+      l'hologramme, dans le même sens que le contour du bloc, sans que viser une nouvelle
+      position ne réinitialise la rotation choisie — nouveau test important : position et
+      rotation doivent pouvoir changer indépendamment, dans n'importe quel ordre.
 - [ ] Avec Harpoon Turret, comparer visuellement le cône à la face avant du bloc une fois posé
       (texture directionnelle de la furnace, voir "Apparence" dans doc/02-gameplay.md) : le
       cône doit pointer **du même côté que la face avant**, à chaque rotation (Nord/Est/Sud/
-      Ouest) — **deux bugs successifs corrigés** sur ce point précis, à revérifier
-      particulièrement pour Est et Ouest (Nord/Sud avaient l'air correctes dès le 1er correctif,
-      par pure coïncidence de symétrie) :
-      1. `Direction.toYRot()` (convention pensée pour le yaw des entités) faisait pointer le
-         cône à l'opposé de la vraie direction de tir.
-      2. Remplacé par les valeurs `y` du blockstate posé (correctes pour Minecraft, mais pas
-         pour `Axis.YP.rotationDegrees(...)` utilisé ici — rotation main-droite standard,
-         inverse de la convention blockstate avec les axes de Minecraft) : Est et Ouest
-         restaient inversés, la tour réellement posée ne correspondait pas à ce que le cône
-         avait montré au moment de choisir la rotation. Remplacé par `facingYRot()`
-         (`NORTH=0°, EAST=270°, SOUTH=180°, WEST=90°`), vérifié par calcul cette fois plutôt
-         que par simple copie des valeurs du blockstate.
-- [ ] **Clic droit** une seconde fois (étape "orientation"), pour Spike Blockade **et** Harpoon
-      Turret séparément : doit **poser réellement** le bloc à la position verrouillée, fermer
-      le mode pose (hologramme disparaît), et débiter le mana (`-30 mana pour la tour (X/100)`
-      pour Spike Blockade, `-50 mana pour la tour (X/100)` pour Harpoon Turret, voir section HUD
-      mana) — test le plus important de cette section : vérifie que `PlaceTowerPayload`
-      déclenche bien `ModEvents.onTowerPlace` via le hook NeoForge réutilisé, pour les deux
-      catégories, sans double implémentation.
+      Ouest) — deux bugs de rotation déjà corrigés sur ce point précis (voir
+      `doc/02-gameplay.md`), à revérifier pour les 4 directions.
+- [ ] **Clic droit** sur une position **verte**, pour Spike Blockade **et** Harpoon Turret
+      séparément, à une rotation choisie autre que NORD : doit **poser réellement** le bloc à
+      cette position et cette rotation en un seul clic, fermer le mode pose (hologramme
+      disparaît), et débiter le mana (`-30 mana pour la tour (X/100)` pour Spike Blockade, `-50
+      mana pour la tour (X/100)` pour Harpoon Turret, voir section HUD mana) — test le plus
+      important de cette section : vérifie que `PlaceTowerPayload` déclenche bien
+      `ModEvents.onTowerPlace` via le hook NeoForge réutilisé, pour les deux catégories, sans
+      double implémentation.
 - [ ] Une fois un Harpoon Turret réellement posé : vérifier qu'il est bien **orienté** dans la
-      direction choisie pendant l'étape "orientation" (comparer au cône prévisualisé) — valide
-      que `ModNetworking.handlePlaceTower` applique correctement `HORIZONTAL_FACING`.
-- [ ] **Clic gauche** pendant l'étape "orientation" : annule tout (pas de pose, pas de
-      débit de mana), retour à zéro — pas de retour à l'étape "visée".
+      direction choisie juste avant le clic droit (comparer au cône prévisualisé) — valide que
+      `ModNetworking.handlePlaceTower` applique correctement `HORIZONTAL_FACING`.
 - [ ] Refaire tout le mode pose avec **moins de mana que le coût de la tour choisie** (30 pour
-      Spike Blockade, 50 pour Harpoon Turret) : le clic droit final doit **échouer** (message
-      "Pas assez de mana...", le bloc n'apparaît pas dans le monde).
+      Spike Blockade, 50 pour Harpoon Turret) : le clic droit doit **échouer** (message "Pas
+      assez de mana...", le bloc n'apparaît pas dans le monde).
 - [ ] Démarrer le mode pose **en phase Construction**, puis faire basculer la partie en Combat
       pendant que le mode pose est actif (ex. via le harnais de test du spawner, shift + clic
       droit) avant de confirmer : le clic droit final doit être **refusé** côté serveur (message
