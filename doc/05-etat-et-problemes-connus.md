@@ -90,40 +90,46 @@ vérifie la CI.
   combat). Détail dans
   [02-gameplay.md](02-gameplay.md#les-cristaux-de-mana--entitymanacrystalentityjava-initmanacrystaltypejava).
 - ✅ Mana du joueur : data attachment `mana` (persistant, synchronisé), maximum par défaut de
-  100, affiché en HUD via `ManaOverlay` — losange en bas à gauche de l'écran (`DiamondGauge`,
-  couleurs plates), très provisoire. Testable en jeu avec l'item `mana_test_wand` (clic droit
-  = -10 mana).
+  100, affiché en HUD via `ManaOverlay` — losange en bas à gauche de l'écran, le plus à droite
+  du groupe vie/mana (`DiamondGauge`, couleurs plates), très provisoire. Testable en jeu avec
+  l'item `mana_test_wand` (clic droit = -10 mana) ou `mana_fill_wand` (clic droit = remplit au
+  maximum). **Positionnement testé en jeu** (2026-08-23, échange avec la vie compris).
 - ✅ Vie du joueur : maximum vanilla porté de 20 à 100 (`ModEvents.onPlayerJoin`), affichée en
-  HUD via `HealthOverlay` — losange juste à droite de celui du mana, même style.
+  HUD via `HealthOverlay` — losange juste à gauche de celui du mana (vie à gauche, comme le jeu
+  de référence). **Testé en jeu** (2026-08-23), y compris l'échange de position avec le mana.
 - ✅ Expérience custom du joueur : data attachment `experience` (persistant, synchronisé),
   démarre à `0/100` (contrairement au mana/à la vie qui démarrent pleins), affichée en HUD
-  via `ExperienceOverlay` — barre horizontale tout en bas, sous les losanges mana/vie. Sans
+  via `ExperienceOverlay` — barre horizontale tout en bas, sous les losanges vie/mana. Sans
   rapport avec l'XP vanilla. Le groupe des trois est décrit dans
-  [02-gameplay.md](02-gameplay.md#le-groupe-bas-gauche--mana-vie-expérience).
+  [02-gameplay.md](02-gameplay.md#le-groupe-bas-gauche--mana-vie-expérience). **Positionnement
+  testé en jeu** (2026-08-23).
 - ✅ Vague en cours : data attachment `current_wave` sur la `Level` (persistant, synchronisé,
   démarre à 1), affichée en haut à droite (`Vague X/5`) via `WaveOverlay` — texte seul, pas de
-  jauge. Aucun déroulement de vagues n'existe encore.
+  jauge. Aucun déroulement de vagues n'existe encore. **Positionnement testé en jeu**
+  (2026-08-23).
 - ✅ Progression de la vague : `wave_enemies_killed`/`wave_enemies_total` (mêmes garanties que
   `current_wave`), affichée en grande barre centrée tout en haut de l'écran via
   `WaveEnemiesOverlay` (jauge orange, texte `Ennemis : X/Y` superposé au centre) — la zone la
-  plus visible du HUD, comme dans le jeu de référence. Démarre à `0/10`, rien ne fait encore
-  varier ni les tués ni le total.
+  plus visible du HUD, comme dans le jeu de référence. **Positionnement testé en jeu**
+  (2026-08-23).
 - ✅ Phase de la partie : data attachment `game_phase` sur la `Level` (ordinal de l'enum
   `GamePhase` : `BUILD`/`COMBAT`), démarre en `BUILD`, affichée juste sous la rangée
-  vague/ennemis via `PhaseOverlay` (`Phase : Construction`). Aucune transition n'existe
-  encore.
+  vague/ennemis via `PhaseOverlay` (`Phase : Construction`). **Positionnement testé en jeu**
+  (2026-08-23).
 - ✅ Score de la carte : data attachment `score` sur la `Level` (persistant, synchronisé,
   démarre à 0), affiché tout en bas centre de l'écran via `ScoreOverlay` (`Score : X`, texte
   seul). Censé correspondre à l'expérience gagnée sur la carte en cours, mais distinct de
   `experience` (qui elle persiste au-delà d'une carte) — rien ne l'alimente encore.
+  **Positionnement testé en jeu** (2026-08-23).
 - ✅ Nom et niveau du personnage : `character_name` (`String`, distinct du pseudo Minecraft
   mais initialisé avec, faute de mieux) et `level` (`Integer`, démarre à 1) — deux data
   attachments sur le joueur, persistants, synchronisés. Affichés juste au-dessus du score via
   `CharacterOverlay` (`Nom - niv X`). Rien ne fait encore varier ni l'un ni l'autre.
+  **Positionnement testé en jeu** (2026-08-23).
 - ✅ 4 emplacements de compétences (soin sur soi, sort 1, sort 2, réparation de tour) en bas à
   gauche via `AbilitySlotsOverlay`, juste à droite des losanges vie/mana, dans cet ordre —
   fond en rond (`CircleSlot`), purement visuel : pas de clic, pas de cooldown, pas d'icône.
-  Voir "Ce qui reste" ci-dessous.
+  Voir "Ce qui reste" ci-dessous. **Positionnement testé en jeu** (2026-08-23).
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
   voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 - ✅ Bloc `spawner` : premier vrai morceau de gameplay (pas juste du HUD). Fait apparaître des
