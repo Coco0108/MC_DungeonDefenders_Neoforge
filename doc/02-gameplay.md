@@ -479,10 +479,17 @@ différent — supprimé, pas juste renommé) : les deux idées ne se recoupent 
 garder les deux, et le joueur a choisi de repartir sur la vraie mécanique de blocage/PV du
 plan Excel plutôt que de garder l'ancien piège en parallèle.
 
-**Le blocage du passage est gratuit** : un bloc plein (propriété par défaut de n'importe quel
-`Block` Minecraft, rien à coder) bloque déjà la marche d'un mob. Toute la logique custom sert
-donc uniquement à donner des PV au blockade et à faire en sorte qu'un ennemi choisisse de
-l'attaquer plutôt que de rester bloqué bêtement devant.
+**Le blocage du passage est en grande partie gratuit** : un bloc plein (propriété par défaut de
+n'importe quel `Block` Minecraft, rien à coder) bloque déjà la marche d'un mob. Une seule
+correction a été nécessaire : la hitbox par défaut fait 1 bloc de haut, hauteur qu'un monstre
+peut sauter (~1,25 bloc) pour se retrouver debout dessus et continuer son chemin par-dessus la
+tour — testé en jeu le 2026-08-23 (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#corrections-trouvées-lors-des-tests-en-jeu-du-2026-08-23)).
+`getCollisionShape`/`getShape` sont donc surchargés pour renvoyer une boîte de 1,5 bloc de haut
+(`Shapes.box(0, 0, 0, 1, 1.5, 1)`, même principe que les murs/barrières vanilla), même style que
+la hitbox 1×3×1 déjà utilisée par `EterniaCrystalBlock`. Le reste de la logique custom sert à
+donner des PV au blockade et à faire en sorte qu'un ennemi choisisse de l'attaquer plutôt que de
+rester bloqué bêtement devant.
 
 ### La catégorie "Blockade" — `block/entity/AbstractBlockadeBlockEntity.java`
 
@@ -604,8 +611,10 @@ Premier membre de la catégorie "Turret" (nom repris du plan Excel — Squire) :
 Blockade, ce n'est pas un mur qu'on percute, c'est une **tour à distance** qui scanne et tire
 toute seule — construite pour tester l'aperçu de portée de la roue (jamais exercé jusque-là,
 aucune tour n'avait `range > 0`). Ne bloque pas spécialement le passage plus qu'un bloc plein
-normal (gratuit, comme Blockade), mais ce n'est pas son rôle : elle est pensée "posée en
-retrait" (voir la taxonomie du joueur), à l'inverse d'un mur pensé pour être au contact.
+normal, mais ce n'est pas son rôle : elle est pensée "posée en retrait" (voir la taxonomie du
+joueur), à l'inverse d'un mur pensé pour être au contact. Même hitbox custom de 1,5 bloc de
+haut que Spike Blockade (voir plus haut) : sans ça, un monstre pourrait sauter sur la tourelle
+et continuer son chemin par-dessus au lieu de la contourner ou de l'attaquer.
 
 ### La base commune à toutes les tours — `block/entity/AbstractTowerBlockEntity.java`
 

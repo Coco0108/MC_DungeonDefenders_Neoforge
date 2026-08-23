@@ -21,8 +21,11 @@ vérifie la CI.
   `mod_description` ajoutés à `replaceProperties` dans `build.gradle`).
 - ✅ Bloc `spike_blockade` ("Spike Blockade", premier vrai **tower** du mod — remplace l'ancien
   `spike_trap`, un piège de sol au mécanisme différent, supprimé) : mur avec ses propres PV
-  (30 par défaut), bloque le passage (gratuit, propriété par défaut d'un bloc plein), pique
-  tout `Monster` à son contact (2 PV/s, `AbstractBlockadeBlockEntity#serverTick`). Premier
+  (30 par défaut), bloque le passage, pique tout `Monster` à son contact (2 PV/s,
+  `AbstractBlockadeBlockEntity#serverTick`). Hitbox custom de 1,5 bloc de haut (`getShape`/
+  `getCollisionShape`, comme un mur/une barrière vanilla) plutôt que le cube plein par défaut —
+  un monstre ne peut pas sauter dessus (saut ~1,25 bloc) pour continuer son chemin par-dessus,
+  voir "Corrections trouvées lors des tests en jeu du 2026-08-23". Premier
   membre concret de la catégorie de code "Blockade" (voir "Système de tours" plus bas).
   `dealsContactDamage=true` lui donne la priorité IA "corps à corps" (20 — voir "Système de
   priorité IA" plus bas) : un ennemi de mêlée s'y attaque avant le cristal, tant qu'il n'est
@@ -47,7 +50,8 @@ vérifie la CI.
   maintenant qu'un second exemple concret la prouve. Modèle directionnel (texture furnace
   vanilla, `minecraft:block/orientable`) — premier bloc du mod à avoir une vraie propriété de
   `BlockState` (`HORIZONTAL_FACING`), et premier vrai consommateur de la rotation choisie dans
-  la roue (`ModNetworking.handlePlaceTower` l'appliquait déjà par anticipation). Détail dans
+  la roue (`ModNetworking.handlePlaceTower` l'appliquait déjà par anticipation). Même hitbox
+  custom de 1,5 bloc de haut que Spike Blockade (anti-escalade des monstres). Détail dans
   [02-gameplay.md](02-gameplay.md#le-harpoon-turret--blockharpoonturretblockjava). **Testé en
   jeu** (2026-08-23) : trois bugs trouvés et corrigés (voir "Corrections apportées") — le
   cooldown de tir ne se déclenchait jamais (overflow sur `long`), la flèche se figeait dans le
@@ -271,6 +275,7 @@ tours) — tous les points suivants ont été trouvés en jouant, pas en relisan
 | Le compteur `Ennemis : X/Y` ne se remettait pas à 0 en repassant en Construction | `PhaseTransitions.enterBuild()` oubliait de remettre `WAVE_ENEMIES_KILLED` à 0 |
 | `Ennemis : X/10` restait bloqué sur la valeur par défaut avant la première fin de vague | `WAVE_ENEMIES_TOTAL` ne se recalculait qu'aux transitions de phase — recalculé désormais aussi à la pose/casse/reconfiguration d'un spawner |
 | `StackOverflowError` au chargement/à la pose d'un spawner | le recalcul ci-dessus, appelé directement depuis `setLevel()`, récursait via `getBlockEntity` (appelé avant l'insertion du block entity dans le chunk) — différé via `serverLevel.getServer().execute(...)` |
+| Les monstres montaient sur les tours (Spike Blockade, Harpoon Turret) et continuaient leur chemin par-dessus | hitbox par défaut = cube plein de 1 bloc, sautable par n'importe quel monstre — `getCollisionShape`/`getShape` surchargés dans les deux blocs pour renvoyer une boîte de 1,5 bloc de haut (même principe que les murs/barrières vanilla) |
 
 ## Ce qui reste
 

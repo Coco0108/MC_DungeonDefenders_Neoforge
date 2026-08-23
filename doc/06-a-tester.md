@@ -72,6 +72,19 @@ vanilla) et la toute première fois que le mana remonte en jeu.
       bizarre, maintenant que la hotbar en dessous d'elle est vide (comportement attendu mais
       pas encore vérifié visuellement).
 
+## Hitbox anti-escalade des tours (Spike Blockade, Harpoon Turret)
+
+`getCollisionShape`/`getShape` passés de 1 à 1,5 bloc de haut sur les deux blocs, pour empêcher
+les monstres de sauter dessus — jamais vérifié visuellement.
+
+- [ ] Poser un Spike Blockade sur le chemin d'un monstre : il doit s'arrêter et attaquer le
+      blockade au lieu de sauter dessus pour continuer vers le cristal.
+- [ ] Même vérification avec un Harpoon Turret.
+- [ ] Le joueur lui-même ne doit plus pouvoir sauter sur une tour d'un simple saut (nécessite
+      un bloc adjacent ou un saut assisté pour y monter) — comportement attendu, pas un bug.
+- [ ] Vérifier que le contour de sélection (regarder la tour) correspond bien à la nouvelle
+      hauteur de 1,5 bloc, pas à l'ancien cube plein.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni
