@@ -888,8 +888,8 @@ ci-dessous :
 - un losange (`DiamondGauge`, voir plus bas), en bas à gauche de l'écran : fond gris foncé sur
   toute sa hauteur, recouvert par le bas d'un losange bleu dont la hauteur est proportionnelle
   à `currentMana / maxMana` — la jauge se remplit du bas vers le haut, comme avant, mais dans
-  une forme de losange plutôt qu'un rectangle. C'est le losange de **gauche** du groupe (vie à
-  droite) ;
+  une forme de losange plutôt qu'un rectangle. C'est le losange de **droite** du groupe (vie à
+  gauche, comme dans le jeu de référence) ;
 - au-dessus du losange, le texte `Mana: X/Y` (clé `dungeon_defenders.hud.mana`), centré
   horizontalement (`guiGraphics.centeredText`) sur son centre.
 
@@ -1034,10 +1034,11 @@ join, où le joueur vient de spawn à 20/20 avant que l'attribut ne soit modifi�
 ### L'affichage — `client/gui/HealthOverlay.java`
 
 Même structure que `ManaOverlay` (losange + texte `Health: X/Y`, clé
-`dungeon_defenders.hud.health`), en rouge, positionné juste à **droite** du losange mana
-(centré sur `HudLayout.MARGIN + DIAMOND_RADIUS * 3 + DIAMOND_GAP`), même taille. Lit
-directement `player.getHealth()` / `player.getMaxHealth()` à chaque frame — pas besoin
-d'attachment, ces valeurs sont déjà tenues à jour et synchronisées par le moteur.
+`dungeon_defenders.hud.health`), en rouge, positionné le plus à **gauche** du groupe (centré sur
+`HudLayout.MARGIN + DIAMOND_RADIUS`, comme dans le jeu de référence — vie à gauche, mana à
+droite), même taille. Lit directement `player.getHealth()` / `player.getMaxHealth()` à chaque
+frame — pas besoin d'attachment, ces valeurs sont déjà tenues à jour et synchronisées par le
+moteur.
 
 Les cœurs vanilla (`VanillaGuiLayers.PLAYER_HEALTH`) sont masqués dans
 `DungeonDefendersModClient.onRegisterGuiLayers` via `event.replaceLayer(..., HIDDEN)` :
@@ -1083,9 +1084,9 @@ l'attachment, elle s'affiche `0/100` en permanence tant qu'aucun mécanisme n'al
 coin bas-gauche de l'écran :
 
 ```
-   Mana        Vie
+   Vie         Mana
     ◆           ◆     <- losanges, remplissage bas → haut (pointe basse → pointe haute)
-   ▓█▓         ▓█▓        mana à gauche, vie à droite
+   ▓█▓         ▓█▓        vie à gauche, mana à droite (comme le jeu de référence)
   ▓███▓       ▓███▓
   ░░░░░       ▓▓▓▓▓
     ░           ▓
@@ -1592,12 +1593,12 @@ Affiche `Nom - niv X` (clé `dungeon_defenders.hud.character`), juste au-dessus 
 
 ## Les emplacements de compétences — `client/gui/AbilitySlotsOverlay.java`
 
-Quatre ronds en bas à **gauche** de l'écran, juste à droite des losanges mana/vie et
+Quatre ronds en bas à **gauche** de l'écran, juste à droite des losanges vie/mana et
 au-dessus de la barre d'expérience — dans le prolongement du groupe bas-gauche décrit plus
 haut, comme dans le jeu de référence, dans l'ordre gauche → droite :
 
 ```
-   Mana        Vie
+   Vie         Mana
     ◆           ◆     ( ) ( ) ( ) ( )
    ▓█▓         ▓█▓     soin sort1 sort2 répare
   ▓███▓       ▓███▓

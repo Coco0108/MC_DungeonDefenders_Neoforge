@@ -121,7 +121,7 @@ vérifie la CI.
   attachments sur le joueur, persistants, synchronisés. Affichés juste au-dessus du score via
   `CharacterOverlay` (`Nom - niv X`). Rien ne fait encore varier ni l'un ni l'autre.
 - ✅ 4 emplacements de compétences (soin sur soi, sort 1, sort 2, réparation de tour) en bas à
-  gauche via `AbilitySlotsOverlay`, juste à droite des losanges mana/vie, dans cet ordre —
+  gauche via `AbilitySlotsOverlay`, juste à droite des losanges vie/mana, dans cet ordre —
   fond en rond (`CircleSlot`), purement visuel : pas de clic, pas de cooldown, pas d'icône.
   Voir "Ce qui reste" ci-dessous.
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —

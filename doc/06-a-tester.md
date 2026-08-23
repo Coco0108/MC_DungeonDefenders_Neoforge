@@ -22,10 +22,10 @@ Lancer le client de dev :
 
 ## HUD — groupe bas-gauche (mana, vie, expérience)
 
-- [ ] En bas à gauche de l'écran : deux **losanges** côte à côte (mana en bleu à gauche, vie
-      en rouge à droite — pointes en haut/bas/gauche/droite, pas des rectangles), avec une
-      barre horizontale verte (expérience) tout en bas, sous les deux losanges. Rien ne doit
-      se chevaucher.
+- [ ] En bas à gauche de l'écran : deux **losanges** côte à côte (vie en rouge à gauche, mana
+      en bleu à droite — comme le jeu de référence ; pointes en haut/bas/gauche/droite, pas des
+      rectangles), avec une barre horizontale verte (expérience) tout en bas, sous les deux
+      losanges. Rien ne doit se chevaucher.
 - [ ] Les losanges sont bien des losanges reconnaissables (largeur qui augmente puis diminue
       du bas vers le haut), pas des rectangles ni des formes crénelées illisibles — c'est un
       rendu "pixel art" (empilement de bandes de 1px), un léger crénelage sur les bords
@@ -134,7 +134,7 @@ vanilla) et la toute première fois que le mana remonte en jeu.
 - [ ] S'approcher du cristal flottant : il doit se **magnétiser** vers le joueur (accélérer
       dans sa direction) à mesure qu'on s'approche, comme une orbe d'XP vanilla.
 - [ ] Marcher dessus : le cristal disparaît (son + petite animation de ramassage), le mana du
-      joueur augmente de **5** (HUD mana à gauche + message système), sans qu'aucun item
+      joueur augmente de **5** (HUD mana à droite + message système), sans qu'aucun item
       n'apparaisse dans l'inventaire/la hotbar — c'est le point le plus important de cette
       section : vérifie que `playerTouch` donne bien du mana et pas de l'XP vanilla.
 - [ ] Vérifier que le joueur ne gagne **aucune XP/niveau vanilla** en tuant un monstre du mod

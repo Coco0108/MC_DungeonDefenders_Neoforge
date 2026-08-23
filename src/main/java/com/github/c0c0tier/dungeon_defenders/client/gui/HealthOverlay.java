@@ -14,8 +14,9 @@ import net.neoforged.neoforge.client.gui.GuiLayer;
 // (getHealth/getMaxHealth), le maximum à 100 est fixé dans ModEvents (attribut MAX_HEALTH du
 // joueur).
 //
-// Losange de droite du groupe bas-gauche (mana | vie), juste à droite de ManaOverlay, même
-// hauteur, au-dessus de la barre d'expérience. Voir HudLayout pour les constantes partagées.
+// Losange de gauche du groupe bas-gauche (vie | mana, comme dans le jeu de référence), même
+// hauteur que ManaOverlay, au-dessus de la barre d'expérience. Voir HudLayout pour les
+// constantes partagées.
 public class HealthOverlay implements GuiLayer {
     private static final int FILLED_COLOR = 0xFFEF4444;
     private static final int EMPTY_COLOR = 0xFF2B2B2B;
@@ -32,7 +33,7 @@ public class HealthOverlay implements GuiLayer {
         int currentHealth = Math.round(player.getHealth());
         int maxHealth = Math.round(player.getMaxHealth());
 
-        int centerX = HudLayout.MARGIN + HudLayout.DIAMOND_RADIUS * 3 + HudLayout.DIAMOND_GAP;
+        int centerX = HudLayout.MARGIN + HudLayout.DIAMOND_RADIUS;
         int bottomY = ExperienceOverlay.barTop(guiGraphics) - HudLayout.ROW_GAP;
         double fillRatio = maxHealth <= 0 ? 0 : (double) currentHealth / maxHealth;
 

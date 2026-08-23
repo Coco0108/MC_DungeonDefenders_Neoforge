@@ -7,7 +7,7 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.client.gui.GuiLayer;
 
 // Quatre emplacements de compétences en bas à gauche de l'écran, juste à droite des losanges
-// mana/vie (voir HudLayout), au-dessus de la barre d'expérience — comme dans le jeu de
+// vie/mana (voir HudLayout), au-dessus de la barre d'expérience — comme dans le jeu de
 // référence : soin sur soi, sort 1 du héros, sort 2 du héros, réparation de tour, dans cet
 // ordre, de gauche à droite. Purement visuel pour l'instant : pas d'icône (viendront plus
 // tard, une par slot), pas de clic, pas de cooldown, pas de consommation de mana. Voir
@@ -22,7 +22,8 @@ public class AbilitySlotsOverlay implements GuiLayer {
 
     private static final int RADIUS = 14;
     private static final int GAP = 4;
-    // Espace entre le losange vie (HudLayout) et le premier slot.
+    // Espace entre le losange mana, le plus à droite du groupe (HudLayout), et le premier
+    // slot.
     private static final int GROUP_GAP = 10;
     private static final int FILL_COLOR = 0xFF2B2B2B;
     private static final int BORDER_COLOR = 0xFF000000;
@@ -40,8 +41,8 @@ public class AbilitySlotsOverlay implements GuiLayer {
         int bottomY = ExperienceOverlay.barTop(guiGraphics) - HudLayout.ROW_GAP;
         int centerY = bottomY - RADIUS;
 
-        int healthDiamondRight = HudLayout.MARGIN + HudLayout.DIAMOND_RADIUS * 4 + HudLayout.DIAMOND_GAP;
-        int firstCenterX = healthDiamondRight + GROUP_GAP + RADIUS;
+        int manaDiamondRight = HudLayout.MARGIN + HudLayout.DIAMOND_RADIUS * 4 + HudLayout.DIAMOND_GAP;
+        int firstCenterX = manaDiamondRight + GROUP_GAP + RADIUS;
 
         for (int i = 0; i < SLOT_NAMES.length; i++) {
             int centerX = firstCenterX + i * (RADIUS * 2 + GAP);
