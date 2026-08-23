@@ -637,10 +637,18 @@ block entity — rien de tout ça n'a pu être vérifié visuellement pendant le
 - [ ] Avec Harpoon Turret, comparer visuellement le cône à la face avant du bloc une fois posé
       (texture directionnelle de la furnace, voir "Apparence" dans doc/02-gameplay.md) : le
       cône doit pointer **du même côté que la face avant**, à chaque rotation (Nord/Est/Sud/
-      Ouest) — corrigé (le cône pointait auparavant à 180° de la vraie direction de tir, la
-      tour tirant à l'opposé de la range affichée ; `TowerPlacementClientEvents` utilisait
-      `Direction.toYRot()`, dont la convention ne correspond pas à celle du blockstate posé,
-      remplacé par une table dédiée `facingYRot`) — à reconfirmer en jeu pour les 4 directions.
+      Ouest) — **deux bugs successifs corrigés** sur ce point précis, à revérifier
+      particulièrement pour Est et Ouest (Nord/Sud avaient l'air correctes dès le 1er correctif,
+      par pure coïncidence de symétrie) :
+      1. `Direction.toYRot()` (convention pensée pour le yaw des entités) faisait pointer le
+         cône à l'opposé de la vraie direction de tir.
+      2. Remplacé par les valeurs `y` du blockstate posé (correctes pour Minecraft, mais pas
+         pour `Axis.YP.rotationDegrees(...)` utilisé ici — rotation main-droite standard,
+         inverse de la convention blockstate avec les axes de Minecraft) : Est et Ouest
+         restaient inversés, la tour réellement posée ne correspondait pas à ce que le cône
+         avait montré au moment de choisir la rotation. Remplacé par `facingYRot()`
+         (`NORTH=0°, EAST=270°, SOUTH=180°, WEST=90°`), vérifié par calcul cette fois plutôt
+         que par simple copie des valeurs du blockstate.
 - [ ] **Clic droit** une seconde fois (étape "orientation"), pour Spike Blockade **et** Harpoon
       Turret séparément : doit **poser réellement** le bloc à la position verrouillée, fermer
       le mode pose (hologramme disparaît), et débiter le mana (`-30 mana pour la tour (X/100)`

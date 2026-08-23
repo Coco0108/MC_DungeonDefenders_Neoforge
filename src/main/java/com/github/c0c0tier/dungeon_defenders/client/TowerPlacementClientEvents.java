@@ -236,18 +236,29 @@ public class TowerPlacementClientEvents {
         });
     }
 
-    // Rotation Y (degrés) à appliquer au gabarit du cône/contour pour qu'il pointe dans la
-    // direction donnée. Volontairement PAS Direction.toYRot() : cette méthode a une convention
-    // différente (SOUTH=0°, WEST=90°, NORTH=180°, EAST=270°, utilisée pour le yaw des entités),
-    // qui avait fait pointer le cône de prévisualisation à 180° de la vraie direction de tir
-    // (bug constaté en jeu). Cette table suit au contraire la convention du blockstate posé
-    // (voir harpoon_turret.json : facing=north → y:0, facing=east → y:90, etc.), pour que
-    // l'aperçu corresponde exactement à l'orientation réellement appliquée au bloc.
+    // Rotation Y (degrés) à appliquer via Axis.YP.rotationDegrees(...) au gabarit du
+    // cône/contour pour qu'il pointe dans la direction donnée.
+    //
+    // Volontairement PAS Direction.toYRot() : cette méthode a une convention différente
+    // (SOUTH=0°, WEST=90°, NORTH=180°, EAST=270°, utilisée pour le yaw des entités), qui avait
+    // fait pointer le cône à 180° de la vraie direction de tir (premier bug constaté en jeu).
+    //
+    // Et volontairement PAS non plus les valeurs `y` du blockstate posé telles quelles
+    // (facing=north→0°, east→90°, south→180°, west→270°, voir harpoon_turret.json) : ces
+    // valeurs sont correctes pour le système de blockstate de Minecraft (rotation "horaire vue
+    // du dessus"), mais PAS pour Axis.YP.rotationDegrees(...), qui applique la convention
+    // main-droite standard (JOML `Quaternionf.rotationY`) — l'inverse. Vérifié par le calcul :
+    // avec les axes de Minecraft (+X est, +Z sud), une rotation POSITIVE de Axis.YP envoie le
+    // nord (0,0,-1) vers l'OUEST, pas l'est. Utiliser les valeurs du blockstate telles quelles
+    // ici faisait donc apparaître le bloc réellement posé tourné à 180° de la direction visée
+    // (deuxième bug constaté en jeu, EST/OUEST inversés — NORD/SUD par symétrie n'étaient pas
+    // affectés, d'où un décalage de 180° pile sur les rotations testées). EST et OUEST sont
+    // donc inversés ici par rapport au blockstate.
     private static float facingYRot(Direction direction) {
         return switch (direction) {
-            case EAST -> 90.0F;
+            case EAST -> 270.0F;
             case SOUTH -> 180.0F;
-            case WEST -> 270.0F;
+            case WEST -> 90.0F;
             default -> 0.0F; // NORTH (et UP/DOWN, qui n'arrivent jamais ici)
         };
     }

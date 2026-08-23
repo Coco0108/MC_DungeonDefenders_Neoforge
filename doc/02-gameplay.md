@@ -689,12 +689,19 @@ se drope lui-même via `data/dungeon_defenders/loot_table/blocks/harpoon_turret.
   avec les dégâts de contact de Blockade, jamais phase-gatés non plus.
 - Pas de son/particules au tir, juste la flèche visuelle + dégâts directs.
 - Pas d'indicateur visuel de PV restants (même manque que Spike Blockade).
-- Bug corrigé en jeu (2026-08-21) : la tour tirait à l'opposé exact du cône affiché à la pose.
-  Cause : la rotation de l'hologramme (voir "L'hologramme et le cercle de portée" ci-dessous)
-  utilisait `Direction.toYRot()`, dont la convention (`SOUTH=0°, WEST=90°, NORTH=180°,
-  EAST=270°`) ne correspond pas à celle du blockstate réellement posé (`facing=north → y:0`,
-  comme `furnace.json`) — remplacé par `facingYRot()`, une table dédiée qui suit la convention
-  du blockstate.
+- Deux bugs de rotation successifs corrigés en jeu (2026-08-21), tous les deux dans l'aperçu
+  (le bloc réellement posé, lui, a toujours été correct — voir plus bas "L'hologramme et le
+  cercle de portée" pour le détail des deux causes) :
+  1. La rotation utilisait `Direction.toYRot()` (convention `SOUTH=0°/WEST=90°/NORTH=180°/
+     EAST=270°`, pensée pour le yaw des entités) — le cône pointait à l'opposé de la vraie
+     direction de tir.
+  2. Une fois remplacée par les valeurs `y` du blockstate (`NORTH=0°/EAST=90°/SOUTH=180°/
+     WEST=270°`, comme `furnace.json`), EST et OUEST restaient inversés : ces valeurs sont
+     correctes pour le système de blockstate de Minecraft, mais pas pour
+     `Axis.YP.rotationDegrees(...)` (rotation main-droite standard, l'inverse avec les axes de
+     Minecraft) utilisé pour dessiner l'aperçu — l'utilisateur choisissait une rotation en se
+     fiant au cône, et la tour réellement posée (correcte, mais différente de ce que montrait
+     le cône) semblait donc "tournée à l'envers" une fois confirmée.
 
 ## La roue de sélection des tours et la pose — `client/gui/screen/TowerWheelScreen.java`
 
@@ -792,14 +799,22 @@ block entity à qui l'accrocher, contrairement aux autres renderers du mod) ;
   en ORIENTING.
 
   Convention du gabarit local : angle `-90°` (dans le repère `cos`/`sin` déjà utilisé par
-  l'ancien cercle complet) correspond à la direction `NORTH`. La rotation appliquée vient de
-  `facingYRot(Direction)`, une table dédiée (`NORTH=0°, EAST=90°, SOUTH=180°, WEST=270°`) qui
-  suit la convention du blockstate réellement posé — **pas** `Direction.toYRot()` (convention
-  différente, `SOUTH=0°`/`WEST=90°`/`NORTH=180°`/`EAST=270°`, pensée pour le yaw des entités),
-  utilisée par erreur au départ et corrigée après un test en jeu qui a montré la tour tirer à
-  l'opposé exact du cône affiché (voir "Ce qui n'est PAS fait" ci-dessus et
-  `doc/05-etat-et-problemes-connus.md`). Jamais rien à dessiner pour Spike Blockade
-  (`range = 0.0`) ; le Harpoon Turret (`range=12.0`, `coneAngleDegrees=45.0`) est le premier à
+  l'ancien cercle complet) correspond à la direction `NORTH`, c'est-à-dire au point local
+  `(0,0,-radius)` — cohérent avec le vecteur normal vanilla de `Direction.NORTH` ((0,0,-1)).
+
+  La rotation appliquée vient de `facingYRot(Direction)`, une table dédiée avec
+  **`NORTH=0°, EAST=270°, SOUTH=180°, WEST=90°`** — ni `Direction.toYRot()` (convention encore
+  différente, pensée pour le yaw des entités), ni les valeurs `y` du blockstate posé prises
+  telles quelles (`facing=east → y:90` dans `harpoon_turret.json`, correctes pour le système de
+  blockstate de Minecraft mais pas pour la rotation appliquée ici). Deux bugs successifs
+  corrigés après des tests en jeu : d'abord `toYRot()` (la tour tirait à l'opposé exact du cône
+  affiché), puis les valeurs du blockstate telles quelles (EST/OUEST inversés spécifiquement,
+  NORD/SUD corrects par symétrie — vérifié par calcul : `Axis.YP.rotationDegrees(...)` applique
+  la rotation main-droite standard de JOML, qui avec les axes de Minecraft (+X est, +Z sud) va
+  dans le sens inverse de la convention "horaire vu du dessus" du blockstate). Voir "Ce qui
+  n'est PAS fait" ci-dessus et `doc/05-etat-et-problemes-connus.md`. Jamais rien à dessiner
+  pour Spike Blockade (`range = 0.0`) ; le Harpoon Turret (`range=12.0`,
+  `coneAngleDegrees=45.0`) est le premier à
   l'exercer réellement.
 
 ### Le paquet final — `network/PlaceTowerPayload.java`, `ModNetworking.handlePlaceTower`
