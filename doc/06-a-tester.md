@@ -246,7 +246,14 @@ puisqu'elle en dépend pour entrer en Combat autrement qu'avec le harnais de tes
       jour `Ennemis : 0/Y` immédiatement (recalcul déclenché par `SpawnerBlockEntity.setLevel`,
       plus besoin d'attendre une première Construction) — corrigé, affichait auparavant
       systématiquement l'ancienne valeur par défaut (`/10`) jusqu'à la première transition de
-      phase.
+      phase. **Attention, crash corrigé sur ce chemin précis** (`StackOverflowError`, planté en
+      jeu une première fois) : le premier appel direct à `recomputeWaveEnemiesTotal` depuis
+      `setLevel` provoquait une récursion infinie (`getBlockEntity` recréait le spawner en
+      cours d'enregistrement, qui rappelait `setLevel`...) — corrigé en différant l'appel via
+      `serverLevel.getServer().execute(...)`. À revérifier avec attention : poser un spawner,
+      s'éloigner puis revenir pour forcer un rechargement de chunk, poser plusieurs spawners
+      d'affilée rapidement — aucun crash ni `run/logs/latest.log` ne doit montrer de
+      `StackOverflowError`.
 - [ ] Poser un second spawner (composition différente) **avant** toute Construction : le total
       doit inclure la somme des deux immédiatement. Casser l'un des deux : le total redescend
       aussitôt (recalcul déclenché par `setRemoved`).
