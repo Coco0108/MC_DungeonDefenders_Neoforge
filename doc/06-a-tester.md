@@ -663,10 +663,33 @@ block entity — rien de tout ça n'a pu être vérifié visuellement pendant le
       bizarre, maintenant que la hotbar en dessous d'elle est vide (comportement attendu mais
       pas encore vérifié visuellement).
 
+## Le coffre de mana (`ManaChestBlock`, `ManaChestBlockEntity`)
+
+Nouveau meuble de map (comme le Cristal d'Eternia/le Spawner) : donne du mana au clic droit en
+survie, une fois par vague, configurable en créatif — jamais vérifié visuellement.
+
+- [ ] Prendre `mana_chest` dans l'onglet créatif, le poser en Construction.
+- [ ] **En créatif**, clic droit dessus : ouvre l'écran de configuration (un seul champ,
+      "Quantité de mana", pré-rempli à 25). Changer la valeur, valider, refermer et
+      recliquer : la nouvelle valeur doit être là (bien appliquée et resynchronisée), pas
+      revenue à 25.
+- [ ] **En survie**, clic droit en phase Construction : donne bien la quantité configurée de
+      mana (message + HUD), une seule fois — recliquer immédiatement doit afficher le message
+      "coffre vide" sans redonner de mana.
+- [ ] Passer en Combat puis revenir en Construction (nouvelle vague) : le coffre doit à nouveau
+      s'ouvrir une fois — vérifie que la comparaison à `CURRENT_WAVE` "recharge" bien le coffre
+      sans code dédié dans `PhaseTransitions`.
+- [ ] Clic droit en phase Combat : message "Construction uniquement", pas de mana donné.
+- [ ] Mana déjà à 100/100 : le coffre s'ouvre quand même (marqué comme utilisé pour la vague),
+      mais le mana ne dépasse pas 100.
+- [ ] Un son de coffre qui s'ouvre doit se faire entendre à l'ouverture réussie.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ManaChestBlock`,
+      `ManaChestBlockEntity`, `ManaChestConfigScreen`/`Menu`/`Payload`.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni
-      à l'usage des deux points ci-dessus.
+      à l'usage des points ci-dessus.
 - [ ] Les fonctionnalités précédentes (Cristal d'Eternia, Piège à Pics, IA zombie) n'ont pas
       régressé — rien dans ce qui précède ne les touche directement, mais à vérifier une fois
       qu'un test complet est possible.

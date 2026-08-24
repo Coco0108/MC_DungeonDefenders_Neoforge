@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders.network;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.MapInstance;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -60,6 +61,11 @@ public class ModNetworking {
                 PlaceTowerPayload.TYPE,
                 PlaceTowerPayload.STREAM_CODEC,
                 ModNetworking::handlePlaceTower
+        );
+        registrar.playToServer(
+                ManaChestConfigPayload.TYPE,
+                ManaChestConfigPayload.STREAM_CODEC,
+                ModNetworking::handleManaChestConfig
         );
     }
 
@@ -181,6 +187,27 @@ public class ModNetworking {
                     payload.waveEnd(),
                     entries
             );
+        });
+    }
+
+    private static void handleManaChestConfig(ManaChestConfigPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (level.isClientSide()) {
+                return;
+            }
+
+            BlockPos pos = payload.pos();
+            if (!(level.getBlockEntity(pos) instanceof ManaChestBlockEntity chest)) {
+                return;
+            }
+
+            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > MAX_DISTANCE_SQ) {
+                return;
+            }
+
+            chest.applyConfig(payload.manaAmount());
         });
     }
 }

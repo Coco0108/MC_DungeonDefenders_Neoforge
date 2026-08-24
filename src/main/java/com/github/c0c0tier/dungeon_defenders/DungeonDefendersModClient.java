@@ -12,6 +12,7 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.PhaseOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.screen.ManaChestConfigScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScreen;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 
@@ -105,6 +106,7 @@ public class DungeonDefendersModClient {
     @SubscribeEvent
     static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.SPAWNER_CONFIG.get(), SpawnerConfigScreen::new);
+        event.register(ModMenus.MANA_CHEST_CONFIG.get(), ManaChestConfigScreen::new);
     }
 
     @SubscribeEvent

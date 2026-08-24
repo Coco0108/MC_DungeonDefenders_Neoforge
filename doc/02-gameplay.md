@@ -888,6 +888,68 @@ clic droit du Cristal d'Eternia :
 
 Modèle provisoire : texture vanilla `minecraft:item/blaze_rod`, pas de modèle dédié.
 
+## Le coffre de mana — `block/ManaChestBlock.java`
+
+Premier item de la feuille "Idées" du plan Excel du joueur à être construit : un coffre qui
+donne du mana "entre les vagues", et distribuera aussi des armes plus tard (hors scope tant
+qu'il n'y a rien à distribuer, voir 05-etat-et-problemes-connus.md).
+
+**Meuble de map, pas un objet de joueur** : même statut que le Cristal d'Eternia ou le Spawner
+— posé par le créateur pendant la construction de la map, jamais par un joueur en jeu (pas
+d'item qui le pose via une interaction ni la roue).
+
+### Deux comportements selon le mode — `useWithoutItem`
+
+`ManaChestBlock.useWithoutItem` distingue par `player.isCreative()`, exactement comme
+`SpawnerBlock` distingue configuration et harnais de test par `isShiftKeyDown()` — même absence
+volontaire d'un vrai système de rôle "créateur de map" vs "joueur" dans ce mod, le mode créatif
+sert de proxy :
+
+- **Créatif** → ouvre `ManaChestConfigMenuProvider`/`ManaChestConfigMenu`/
+  `ManaChestConfigScreen`, un patron identique à `SpawnerConfigScreen` mais réduit à un seul
+  champ scalaire (`manaAmount`), sans les lignes dynamiques de composition. Au clic sur
+  "Valider", envoie `ManaChestConfigPayload` au serveur, appliqué par
+  `ManaChestBlockEntity#applyConfig` après revérification de portée (`ModNetworking`).
+- **Survie** → si `GAME_PHASE != BUILD`, message et rien ne se passe (coffre pensé pour la
+  préparation, pas le combat). Sinon, délègue à `ManaChestBlockEntity#tryOpen`.
+
+### L'état et l'ouverture — `block/entity/ManaChestBlockEntity.java`
+
+```java
+public boolean tryOpen(Player player, int currentWave) {
+    if (this.lastOpenedWave == currentWave) {
+        return false;
+    }
+    this.lastOpenedWave = currentWave;
+    ...
+    int newMana = Math.min(ModAttachments.MAX_MANA, player.getData(ModAttachments.MANA) + this.manaAmount);
+    player.setData(ModAttachments.MANA, newMana);
+    player.syncData(ModAttachments.MANA);
+    ...
+    return true;
+}
+```
+
+`lastOpenedWave` (0 = jamais ouvert) plutôt qu'un simple booléen "déjà ouvert" : comparé à
+`ModAttachments.CURRENT_WAVE`, déjà incrémenté à chaque entrée en Construction par
+`PhaseTransitions#enterBuild`. Le coffre se "recharge" donc tout seul à chaque nouvelle vague,
+sans registre de coffres actifs (contrairement à `ACTIVE_SPAWNERS`) ni la moindre modification
+de `PhaseTransitions` — un choix délibérément plus simple que le mécanisme du spawner, rendu
+possible parce qu'un coffre n'a besoin d'aucune action au changement de phase lui-même,
+seulement de savoir répondre "déjà ouvert cette vague ?" à la demande.
+
+`manaAmount` (25 par défaut) est **configurable par coffre**, pas une constante globale du mod
+— décidé avec le joueur : la bonne quantité dépend de la taille et de la difficulté de chaque
+map, pas d'une seule valeur qui conviendrait à toutes.
+
+### Apparence
+
+Modèle provisoire : texture vanilla `minecraft:block/barrel_top` (thème conteneur/stockage,
+volontairement distinct des autres placeholders du mod). Pas de PV, pas d'`AiAttackTarget` —
+un monstre ne peut ni l'attaquer ni le cibler, comme le Cristal de la Taverne.
+
+**Jamais testé en jeu** — voir [06-a-tester.md](06-a-tester.md).
+
 ## La vie du joueur
 
 Contrairement au mana, la vie n'est pas une ressource inventée pour le mod : c'est l'attribut

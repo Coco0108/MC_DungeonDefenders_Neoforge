@@ -7,6 +7,7 @@
   "dungeon_defenders.tower.harpoon_turret": "Harpoon Turret",
   "block.dungeon_defenders.spawner": "Spawner",
   "block.dungeon_defenders.tavern_crystal": "Tavern Crystal",
+  "block.dungeon_defenders.mana_chest": "Mana Chest",
   "item.dungeon_defenders.mana_test_wand": "Mana Test Wand",
   "key.dungeon_defenders.tower_wheel": "Open tower wheel",
   "key.dungeon_defenders.rotate_tower": "Rotate tower (placement)",
@@ -57,6 +58,13 @@
   "dungeon_defenders.map.test_map": "Test Map",
   "dungeon_defenders.tower_wheel.title": "Choose a tower",
   "dungeon_defenders.tower_wheel.mana_cost": "Cost: %s mana",
+
+  "dungeon_defenders.mana_chest.opened": "+%s mana from the chest (%s/%s)",
+  "dungeon_defenders.mana_chest.already_opened": "This chest is empty, come back next wave.",
+  "dungeon_defenders.mana_chest.build_phase_only": "The mana chest can only be opened during the Build phase!",
+  "dungeon_defenders.mana_chest.config_title": "Mana chest configuration",
+  "dungeon_defenders.mana_chest.config_amount": "Mana amount",
+  "dungeon_defenders.mana_chest.config_confirm": "Confirm",
 
   "dungeon_defenders.configuration.title": "Dungeon Defenders Configs",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml": "Dungeon Defenders Configs",

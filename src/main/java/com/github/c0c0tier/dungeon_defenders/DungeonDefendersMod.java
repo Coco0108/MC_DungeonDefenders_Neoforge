@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.HarpoonTurretBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpikeBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -53,6 +54,12 @@ public class DungeonDefendersMod {
                     ModBlocks.HARPOON_TURRET.get()
             ));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ManaChestBlockEntity>> MANA_CHEST_BE =
+            BLOCK_ENTITIES.register("mana_chest", () -> new BlockEntityType<>(
+                    ManaChestBlockEntity::new,
+                    ModBlocks.MANA_CHEST.get()
+            ));
+
     // 3. L'onglet Créatif
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> DUNGEON_DEFENDERS_TAB = CREATIVE_MODE_TABS.register("dungeon_defenders_tab",
             () -> CreativeModeTab.builder()
@@ -67,6 +74,7 @@ public class DungeonDefendersMod {
                         output.accept(ModBlocks.MANA_TEST_WAND.get());
                         output.accept(ModBlocks.SPAWNER_ITEM.get());
                         output.accept(ModBlocks.TAVERN_CRYSTAL_ITEM.get());
+                        output.accept(ModBlocks.MANA_CHEST_ITEM.get());
                     })
                     .build());
 

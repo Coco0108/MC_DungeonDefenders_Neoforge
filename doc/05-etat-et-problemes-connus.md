@@ -183,6 +183,17 @@ vérifie la CI.
   l'emplacement de map et téléporte tout le monde. Le cristal détruit **n'est pas replacé
   automatiquement** — voir "Ce qui reste" plus bas. Détail dans
   [02-gameplay.md](02-gameplay.md#victoire-et-défaite--phasetransitionsonvictoryondefeat).
+- ✅ Coffre de mana (`block/ManaChestBlock.java`, `ManaChestBlockEntity.java`, 2026-08-24,
+  feuille "Idées" du plan Excel du joueur) : meuble de map, comme le Cristal d'Eternia/le
+  Spawner — posé par le créateur, pas par un joueur en jeu. Donne une quantité de mana
+  configurable par map au clic droit en survie, une fois par vague (comparaison à
+  `CURRENT_WAVE`, "se recharge" tout seul à chaque nouvelle Construction sans registre ni
+  modification de `PhaseTransitions`), uniquement en phase Construction. Clic droit en créatif
+  ouvre un écran de configuration (même patron que `SpawnerConfigScreen`, un seul champ) —
+  configuration figée hors créatif, comme le spawner. Distribuera aussi des armes plus tard,
+  hors scope pour l'instant (voir "Ce qui reste"). Détail dans
+  [02-gameplay.md](02-gameplay.md#le-coffre-de-mana--blockmanachestblockjava). **Jamais testé
+  en jeu.**
 
 ## Corrections apportées
 
@@ -218,7 +229,17 @@ donc visible et cohérent, mais ressemble à un bloc de diamant. Il faut créer
 cristal, pas un cube plein, puisque la hitbox fait déjà 3 blocs de haut.
 
 Même situation pour `models/block/spike_blockade.json`, qui pointe sur
-`minecraft:block/dripstone_block` en attendant `textures/block/spike_blockade.png`.
+`minecraft:block/dripstone_block` en attendant `textures/block/spike_blockade.png`. Même
+situation encore pour `models/block/mana_chest.json`, qui pointe sur
+`minecraft:block/barrel_top`.
+
+### Le coffre de mana ne distribue pas encore d'armes
+
+Décidé avec le joueur : construit maintenant pour le mana uniquement (déjà utile tel quel),
+les armes suivront une fois qu'il y en aura à distribuer (feuille "Armes" du plan Excel,
+actuellement vide — rien à distribuer). `ManaChestBlockEntity` n'a pour l'instant qu'un seul
+champ configurable (`manaAmount`) ; ajouter des armes demandera probablement une vraie liste
+de loot façon `SpawnerBlockEntity.SpawnEntry`, pas juste un champ de plus.
 
 ### Le clic droit endommage encore le cristal
 
@@ -589,3 +610,7 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
     un vrai point de sortie posé dans chaque map (plutôt que la commande de harnais
     `/dd_leave`). Voir la section dédiée dans "Ce qui reste" ci-dessus — c'est aussi ce qui
     rendra `ACTIVE_SPAWNERS` pleinement fiable (indépendant de la position du joueur).
+16. ~~Coffre qui donne du mana entre les vagues~~ (feuille "Idées" du plan Excel) — fait
+    (2026-08-24) : `ManaChestBlock`/`ManaChestBlockEntity`, meuble de map configurable,
+    voir "Ce qui est implémenté". Reste : distribuer aussi des armes une fois qu'il y en aura
+    à distribuer (feuille "Armes" du plan, vide pour l'instant).

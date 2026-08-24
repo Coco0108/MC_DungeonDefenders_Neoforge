@@ -31,12 +31,15 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── TowerDefinition.java          # Catalogue des tours posables via la roue (voir client/gui/screen/TowerWheelScreen.java)
     │   ├── menu/
     │   │   ├── SpawnerConfigMenu.java        # AbstractContainerMenu sans slot, transmet juste le BlockPos
-    │   │   └── SpawnerConfigMenuProvider.java # MenuProvider ouvert par SpawnerBlock au clic droit
+    │   │   ├── SpawnerConfigMenuProvider.java # MenuProvider ouvert par SpawnerBlock au clic droit
+    │   │   ├── ManaChestConfigMenu.java      # AbstractContainerMenu sans slot, transmet juste le BlockPos
+    │   │   └── ManaChestConfigMenuProvider.java # MenuProvider ouvert par ManaChestBlock au clic droit (créatif)
     │   ├── network/
     │   │   ├── SpawnerConfigPayload.java     # Paquet C2S (BlockPos + config du spawner)
     │   │   ├── SetDifficultyPayload.java     # Paquet C2S (difficulté choisie dans MapSelectionScreen)
     │   │   ├── StartGamePayload.java         # Paquet C2S (déclenche MapInstance.startGame, pas de champ)
     │   │   ├── PlaceTowerPayload.java        # Paquet C2S (tour + position + rotation, confirmation finale de la roue)
+    │   │   ├── ManaChestConfigPayload.java   # Paquet C2S (BlockPos + quantité de mana du coffre)
     │   │   └── ModNetworking.java            # Enregistrement des paquets custom (RegisterPayloadHandlersEvent)
     │   ├── client/
     │   │   ├── ModKeyMappings.java           # Touches roue des tours + rotation (RegisterKeyMappingsEvent)
@@ -45,6 +48,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── TowerPlacementClientEvents.java # Ouverture roue, rayon de visée, rotation, confirmation, rendu hologramme/portée
     │   ├── client/gui/screen/
     │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
+    │   │   ├── ManaChestConfigScreen.java    # Écran de config du coffre de mana, un seul champ (client uniquement)
     │   │   ├── MapSelectionScreen.java       # Écran de choix de map + difficulté (client uniquement, pas de Menu)
     │   │   └── TowerWheelScreen.java         # Roue radiale de sélection des tours (client uniquement, pas de Menu)
     │   ├── client/gui/
@@ -71,6 +75,7 @@ MC_DungeonDefenders_Neoforge/
     │       ├── TowerBlockItem.java           # Item commun à toute tour (Blockade, Turret...) : useOn() ne pose plus rien (roue uniquement)
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
+    │       ├── ManaChestBlock.java           # Meuble de map : donne du mana au clic droit (survie, 1x/vague) ou config (créatif)
     │       └── entity/
     │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal)
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
@@ -83,17 +88,18 @@ MC_DungeonDefenders_Neoforge/
     │           ├── HarpoonTurretBlockEntity.java           # Sous-classe : fixe les stats du Harpoon Turret (voir 02-gameplay.md)
     │           ├── SpawnerBlockEntity.java                 # Algorithme de spawn pondéré (voir 02-gameplay.md)
     │           ├── SpawnerRenderState.java                 # Instantané pour le rendu (client)
-    │           └── SpawnerBlockEntityRenderer.java         # Aperçu de composition en phase Construction, à travers les murs (client)
+    │           ├── SpawnerBlockEntityRenderer.java         # Aperçu de composition en phase Construction, à travers les murs (client)
+    │           └── ManaChestBlockEntity.java               # PV: aucun ; manaAmount configurable, lastOpenedWave (1x/vague, recharge auto)
     ├── resources/
     │   ├── assets/dungeon_defenders/
     │   │   ├── lang/{en_us,fr_fr}.json                     # Traductions
-    │   │   ├── blockstates/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json   # Variante unique par bloc
+    │   │   ├── blockstates/{eternia_crystal,spike_blockade,spawner,tavern_crystal,mana_chest}.json   # Variante unique par bloc
     │   │   ├── blockstates/harpoon_turret.json             # 4 variantes facing=north/east/south/west (comme la furnace vanilla)
-    │   │   ├── models/block/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json  # Modèles (texture vanilla provisoire)
+    │   │   ├── models/block/{eternia_crystal,spike_blockade,spawner,tavern_crystal,mana_chest}.json  # Modèles (texture vanilla provisoire)
     │   │   ├── models/block/harpoon_turret.json             # parent minecraft:block/orientable, textures furnace (placeholder directionnel)
-    │   │   ├── items/{eternia_crystal,spike_blockade,spawner,tavern_crystal,harpoon_turret}.json # Modèles d'item
+    │   │   ├── items/{eternia_crystal,spike_blockade,spawner,tavern_crystal,harpoon_turret,mana_chest}.json # Modèles d'item
     │   │   └── textures/gui/maps/<id>.png                  # Aperçu de chaque GameMap (une image par map)
-    │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_blockade,spawner,tavern_crystal,harpoon_turret}.json
+    │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_blockade,spawner,tavern_crystal,harpoon_turret,mana_chest}.json
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
     │   ├── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
     │   └── META-INF/accesstransformer.cfg         # Access Transformers
@@ -173,22 +179,24 @@ Chargement FML
         └─ CREATIVE_MODE_TABS.register(bus)
 
 Événements du bus mod
-   ├─ RegisterEvent(BLOCK)             → eternia_crystal, spike_blockade, spawner, tavern_crystal
-   ├─ RegisterEvent(ITEM)              → eternia_crystal, spike_blockade, spawner, tavern_crystal (BlockItem)
+   ├─ RegisterEvent(BLOCK)             → eternia_crystal, spike_blockade, spawner, tavern_crystal, mana_chest
+   ├─ RegisterEvent(ITEM)              → eternia_crystal, spike_blockade, spawner, tavern_crystal, mana_chest (BlockItem)
    ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana, experience, current_wave,
    │                                      wave_enemies_total, wave_enemies_killed, game_phase,
    │                                      score, level, character_name, difficulty,
    │                                      combat_session, active_spawners, ready
-   ├─ RegisterEvent(MENU)              → spawner_config (MenuType)
-   ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal, spawner (BlockEntityType)
+   ├─ RegisterEvent(MENU)              → spawner_config, mana_chest_config (MenuType)
+   ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal, spawner, mana_chest (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
    ├─ RegisterPayloadHandlersEvent     → SpawnerConfigPayload, SetDifficultyPayload,
-   │                                      StartGamePayload (C2S, ModNetworking — commun, pas client-only)
+   │                                      StartGamePayload, ManaChestConfigPayload
+   │                                      (C2S, ModNetworking — commun, pas client-only)
    ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer, SpawnerBlockEntityRenderer
    ├─ RegisterGuiLayersEvent [client]  → ManaOverlay, HealthOverlay, ExperienceOverlay,
    │                                      WaveOverlay, WaveEnemiesOverlay, PhaseOverlay,
    │                                      ScoreOverlay, CharacterOverlay, AbilitySlotsOverlay
-   └─ RegisterMenuScreensEvent [client] → spawner_config -> SpawnerConfigScreen
+   └─ RegisterMenuScreensEvent [client] → spawner_config -> SpawnerConfigScreen,
+                                           mana_chest_config -> ManaChestConfigScreen
 
 Bus de jeu (NeoForge.EVENT_BUS)
    ├─ ModEvents.onMonsterSpawn(EntityJoinLevelEvent)
