@@ -428,15 +428,17 @@ Deuxième morceau à risque de cette session : premier texte du mod rendu "à tr
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `SpawnerBlockEntityRenderer`
       ou `SpawnerRenderState` (en particulier au chargement du monde ou à la casse du bloc).
 
-## Le Spike Blockade (`SpikeBlockadeBlock`, `AbstractBlockadeBlockEntity`, `AttackBlockadeGoal`)
+## Le Spike Blockade (`SpikeBlockadeBlock`, `AbstractBlockadeBlockEntity`, `AttackPriorityTargetGoal`)
 
 Premier membre concret de la catégorie de tours "Blockade" (voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#système-de-tours-catégorie-blockade-démarrée)) :
 remplace l'ancien `spike_trap` (piège de sol au `stepOn`) par un vrai bloc à PV, bloquant le
 passage, que les monstres doivent maintenant activement attaquer pour détruire — premier goal
 d'IA du mod qui cible un bloc plutôt qu'une entité, jamais vérifié visuellement. Le ciblage se
-fait via le tag `dungeon_defenders:blockades` (pas un bloc en dur) : ce test valide donc aussi
-que le tag fonctionne correctement, pas seulement le Spike Blockade en particulier.
+fait via `AiAttackTarget`/`getAiPriority()` (interface, pas un tag de bloc) : ce test valide
+donc aussi que ce mécanisme fonctionne correctement, pas seulement le Spike Blockade en
+particulier — voir la section dédiée "Système de priorité IA" plus bas pour les tests
+multi-cibles (Block vs Cristal vs Tourelle).
 
 - [ ] Prendre `spike_blockade` en créatif via `/give` (ex. `/give @s dungeon_defenders:spike_blockade`) —
       **il n'apparaît plus dans l'onglet créatif** du mod, c'est attendu. Clic droit avec en
@@ -452,14 +454,14 @@ que le tag fonctionne correctement, pas seulement le Spike Blockade en particuli
       Blockade posé entre lui et le Cristal d'Eternia, sur son chemin le plus direct : le
       zombie doit se diriger vers le **Spike Blockade en premier** (pas continuer tout droit
       vers le cristal en l'ignorant), s'arrêter à son contact, puis lui donner des coups (les
-      mêmes animations que taper une entité) — vérifie la priorité `AttackBlockadeGoal` (0)
-      devant `AttackEterniaCrystalGoal` (1).
+      mêmes animations que taper une entité) — vérifie que la priorité "Corps à corps" (20)
+      l'emporte bien sur "Cristal" (30) dans `AttackPriorityTargetGoal`.
 - [ ] Après quelques coups (`DAMAGE_PER_HIT=5` toutes les `TICKS_BETWEEN_HITS=20` ticks), le
       bloc doit finir par se **casser** (PV par défaut : 30, donc 6 coups) — pas de recul
       visuel de dégâts pour l'instant (pas d'indicateur de PV, comportement attendu).
 - [ ] Une fois le Spike Blockade détruit : le même zombie doit **reprendre son chemin vers le
-      cristal** normalement (bascule vers `AttackEterniaCrystalGoal`), sans rester bloqué à
-      l'ancien emplacement du bloc.
+      cristal** normalement (`AttackPriorityTargetGoal` ne trouve plus rien au palier "Corps à
+      corps", retombe sur "Cristal"), sans rester bloqué à l'ancien emplacement du bloc.
 - [ ] Se tenir soi-même (joueur) au contact du Spike Blockade : vérifier qu'il n'inflige
       **aucun dégât au joueur** — la détection de contact (`serverTick`,
       `getEntitiesOfClass(Monster.class, ...)`) ne cible que les `Monster`, pas les joueurs.
@@ -467,7 +469,7 @@ que le tag fonctionne correctement, pas seulement le Spike Blockade en particuli
       explicitement (le pousser dessus, ou le laisser s'arrêter dessus) : il doit prendre des
       **dégâts de contact périodiques** (`CONTACT_DAMAGE=2`, toutes les `CONTACT_DAMAGE_
       INTERVAL_TICKS=20`, soit 1 fois par seconde) — indépendamment des dégâts de
-      `AttackBlockadeGoal`, ce sont deux mécanismes séparés qui peuvent s'additionner.
+      `AttackPriorityTargetGoal`, ce sont deux mécanismes séparés qui peuvent s'additionner.
 - [ ] Faire spawn un squelette à distance avec un Spike Blockade sur le chemin : contrairement
       au zombie, le squelette **ne doit pas** se dérouter vers le bloc (il ne l'attaque pas au
       corps à corps) — il doit continuer à viser le cristal à distance comme avant, le Spike
@@ -481,7 +483,7 @@ que le tag fonctionne correctement, pas seulement le Spike Blockade en particuli
       doit s'attaquer à **celui qui bloque effectivement son chemin**, pas se figer ou choisir
       un bloc au hasard plus loin.
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `SpikeBlockadeBlock`,
-      `SpikeBlockadeBlockEntity`, ou `AttackBlockadeGoal`.
+      `SpikeBlockadeBlockEntity`, ou `AttackPriorityTargetGoal`.
 
 ## Le Harpoon Turret (`HarpoonTurretBlock`, `AbstractTurretBlockEntity`)
 
@@ -512,10 +514,11 @@ Harpoon Turret via la roue (voir section dédiée plus bas) avant les tests suiv
 - [ ] Chronométrer la cadence : deux tirs successifs sur une cible qui reste à portée doivent
       être espacés d'environ 1,5 s (30 ticks), pas plus vite.
 - [ ] Le Harpoon Turret **bloque le passage** comme n'importe quel bloc plein (gratuit, comme
-      Spike Blockade) — mais aucun monstre ne doit se dérouter pour l'attaquer au corps à corps
-      (pas dans le tag `dungeon_defenders:blockades`, pas de goal dédié, décidé avec le joueur) :
-      un zombie qui le percute doit rester bloqué dessus sans lui donner de coups, contrairement
-      à un Spike Blockade.
+      Spike Blockade). Avec un Spike Blockade **également** à portée (8 blocs) du même zombie :
+      le zombie doit préférer le Spike Blockade (priorité "Corps à corps", 20) et ignorer le
+      Harpoon Turret (priorité "Tourelle", 40) tant que le premier n'est pas détruit — voir la
+      section "Système de priorité IA" plus bas pour le test complet (turret ciblé en dernier
+      recours uniquement).
 - [ ] Casser le Harpoon Turret à la pioche : il se drope (comme Spike Blockade), pas de
       remboursement de mana. L'item récupéré ne doit **pas** se poser à la main (même
       comportement que Spike Blockade, voir section dédiée plus haut).
@@ -524,6 +527,38 @@ Harpoon Turret via la roue (voir section dédiée plus bas) avant les tests suiv
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `HarpoonTurretBlock`,
       `HarpoonTurretBlockEntity`, `AbstractTurretBlockEntity`, ou à la création de l'entité
       `Arrow` sans propriétaire.
+
+## Système de priorité IA (`AttackPriorityTargetGoal`, `AiAttackTarget`)
+
+Remplace les deux anciens goals de mêlée (`AttackBlockadeGoal`/`AttackEterniaCrystalGoal`,
+supprimés) par un seul goal à paliers — voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#système-de-priorité-ia-block--corps-à-corps--cristal--tourelle).
+Premier test possible du palier "Tourelle" (jusqu'ici totalement inatteignable), et première
+vérification que la recherche par palier (pas juste "le plus proche, tous types confondus")
+fonctionne vraiment. Nécessite de contrôler précisément ce qu'un zombie a à portée : préparer
+une petite zone dégagée où poser/retirer un Spike Blockade et un Harpoon Turret facilement.
+
+- [ ] Zombie sans rien à portée (ni Blockade à 8 blocs, ni Turret à 8 blocs), cristal à moins de
+      16 blocs : doit foncer sur le cristal, comme avant ce chantier (comportement de référence,
+      non régressé).
+- [ ] Zombie avec un Spike Blockade à portée (8 blocs) et le cristal également à portée (16
+      blocs) : doit préférer le Spike Blockade (palier 20 < 30) — déjà couvert dans la section
+      dédiée plus haut, revérifier ici dans le contexte du nouveau goal.
+- [ ] Zombie avec **uniquement** un Harpoon Turret à portée (8 blocs) — **ni** Spike Blockade
+      à portée, **ni** cristal à portée (au-delà de 16 blocs, ou hors du monde de test) : doit
+      pour la première fois **s'attaquer au turret** (le percuter, lui donner des coups comme à
+      un Spike Blockade) — nouveau comportement, jamais possible avant ce chantier. Le turret a
+      20 PV : compter ~4 coups (`DAMAGE_PER_HIT=5`) pour le détruire au corps à corps (en plus
+      de ce qu'il encaisse en se faisant tirer dessus par... rien, un zombie ne tire pas).
+- [ ] Zombie avec Spike Blockade **et** Harpoon Turret tous les deux à portée (8 blocs) : doit
+      ignorer le turret et s'attaquer au Spike Blockade en premier (20 < 40) — même une fois le
+      Spike Blockade détruit, doit ensuite préférer le cristal (30 < 40) s'il est à portée,
+      **pas** le turret.
+- [ ] Détruire tout ce qui est à portée d'un zombie (Blockade, puis rien d'autre que le
+      turret) : vérifie que le goal **change bien de cible** au fil du combat, palier par
+      palier, sans rester bloqué sur une cible qui n'existe plus.
+- [ ] Vérifier `run/logs/latest.log` sur toute cette section : aucune exception liée à
+      `AttackPriorityTargetGoal` ou `AiAttackTarget`.
 
 ## La roue de sélection des tours et la pose (`TowerWheelScreen`, `TowerPlacementClientEvents`)
 

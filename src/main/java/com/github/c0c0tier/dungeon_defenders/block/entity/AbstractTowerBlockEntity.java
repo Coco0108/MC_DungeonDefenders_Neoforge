@@ -19,7 +19,11 @@ import net.minecraft.world.level.storage.ValueOutput;
 // duplication avec AbstractBlockadeBlockEntity — pas devinée à l'avance, voir
 // doc/05-etat-et-problemes-connus.md. Chaque catégorie ajoute ensuite ce qui est spécifique à
 // sa façon d'agir (dégâts de contact pour Blockade, portée + cône + tir pour Turret).
-public abstract class AbstractTowerBlockEntity extends BlockEntity {
+//
+// implements AiAttackTarget : damage(int) est déjà ce qu'il faut, getAiPriority() reste
+// abstrait — chaque catégorie décide de sa propre priorité (voir AiAttackTarget pour le
+// détail des paliers).
+public abstract class AbstractTowerBlockEntity extends BlockEntity implements AiAttackTarget {
 
     private final int maxHealth;
     // Coût en mana à la pose, consommé par ModEvents.onTowerPlace (générique à toute la
@@ -48,7 +52,11 @@ public abstract class AbstractTowerBlockEntity extends BlockEntity {
         return this.manaCost;
     }
 
+    @Override
+    public abstract int getAiPriority();
+
     /** Retire {@code amount} PV à la tour. */
+    @Override
     public void damage(int amount) {
         setHealth(this.health - amount);
     }

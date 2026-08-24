@@ -27,8 +27,9 @@ import org.jspecify.annotations.Nullable;
 // distance). coneAngleDegrees >= 360 = omnidirectionnel, pas de filtre d'angle.
 //
 // PV/coût mana/persistance/sync viennent de AbstractTowerBlockEntity, commun à toutes les
-// catégories de tours. Pas de goal d'IA pour qu'un monstre attaque un turret pour l'instant
-// (décidé avec le joueur) : les PV existent, mais rien ne les vise encore.
+// catégories de tours. Priorité IA la plus basse (voir AiAttackTarget) : un monstre de mêlée
+// (entity/ai/AttackPriorityTargetGoal.java) ne s'attaque à un turret qu'en tout dernier
+// recours, rien de plus proche/prioritaire à portée.
 public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity {
 
     private static final float ARROW_VELOCITY = 3.0F;
@@ -49,6 +50,11 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
         this.coneAngleDegrees = coneAngleDegrees;
         this.damage = damage;
         this.attackIntervalTicks = attackIntervalTicks;
+    }
+
+    @Override
+    public int getAiPriority() {
+        return AiAttackTarget.PRIORITY_RANGED_TOWER;
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, AbstractTurretBlockEntity turret) {

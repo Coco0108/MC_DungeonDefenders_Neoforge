@@ -8,9 +8,11 @@ vérifie la CI.
 - ✅ Bloc `eternia_crystal` + son item, hitbox 1×3×1, très résistant.
 - ✅ Block entity avec PV persistants (100 par défaut) **et synchronisés vers le client**.
 - ✅ Destruction du bloc et message « Game Over » à 0 PV.
-- ✅ IA : tout `Monster` (zombie, squelette...) qui rejoint le monde converge sur le cristal
-  dans un rayon de 16 blocs et lui inflige 5 PV/s (`ModEvents.onMonsterSpawn`, généralisé
-  au-delà des zombies).
+- ✅ IA : tout `Monster` (zombie, squelette...) qui rejoint le monde reçoit un goal d'attaque
+  (`ModEvents.onMonsterSpawn`, généralisé au-delà des zombies) — les archers ne visent que le
+  cristal à distance, les autres passent désormais par le **système de priorité IA unifié**
+  (voir plus bas et "Système de priorité IA") : Block > Corps à corps > Cristal > Tourelle,
+  pas seulement le cristal.
 - ✅ Onglet créatif dédié.
 - ✅ Renderer de barre de vie 3D au-dessus du cristal (API `submit` de 26.1).
 - ✅ Modèle, blockstate, loot table, tags d'outil, traductions `en_us` et `fr_fr`.
@@ -21,10 +23,10 @@ vérifie la CI.
   `spike_trap`, un piège de sol au mécanisme différent, supprimé) : mur avec ses propres PV
   (30 par défaut), bloque le passage (gratuit, propriété par défaut d'un bloc plein), pique
   tout `Monster` à son contact (2 PV/s, `AbstractBlockadeBlockEntity#serverTick`). Premier
-  membre concret de la catégorie de code "Blockade" (voir "Système de tours" plus bas). Un
-  goal d'IA (`AttackBlockadeGoal`, priorité 0, avant le cristal en priorité 1) détourne les
-  ennemis de mêlée vers tout bloc du tag `dungeon_defenders:blockades` plutôt que le cristal,
-  tant qu'il n'est pas détruit — pas les archers, qui peuvent tirer par-dessus/à côté. Coûte
+  membre concret de la catégorie de code "Blockade" (voir "Système de tours" plus bas).
+  `dealsContactDamage=true` lui donne la priorité IA "corps à corps" (20 — voir "Système de
+  priorité IA" plus bas) : un ennemi de mêlée s'y attaque avant le cristal, tant qu'il n'est
+  pas détruit — pas les archers, qui peuvent tirer par-dessus/à côté. Coûte
   30 mana à la pose, placement refusé et item rendu si mana insuffisant. Modèle, blockstate,
   loot table, tag `mineable/pickaxe`, traductions `en_us`/`fr_fr`. Détail dans
   [02-gameplay.md](02-gameplay.md#le-spike-blockade--blockspikeblockadeblockjava).
@@ -35,8 +37,10 @@ vérifie la CI.
   trigonométrie, pas le cône lui-même), portée 12 blocs, 6 dégâts/tir toutes les 1,5 s. Flèche
   visuelle (constructeur `Arrow` sans propriétaire) + dégâts directs, même principe que le
   squelette archer sur le cristal. 20 PV, coût 50 mana — mêmes valeurs de test pas encore
-  équilibrées que Spike Blockade. A des PV comme une Blockade (décidé avec le joueur) mais
-  **aucun goal d'IA ne le cible encore**. A motivé l'extraction de
+  équilibrées que Spike Blockade. A des PV comme une Blockade (décidé avec le joueur), priorité
+  IA la plus basse (40, "Tourelle" — voir "Système de priorité IA" plus bas) : un monstre de
+  mêlée ne s'y attaque qu'en dernier recours, si rien de plus prioritaire n'est à portée — la
+  toute première fois qu'un turret est réellement ciblable. A motivé l'extraction de
   `block/entity/AbstractTowerBlockEntity.java` (PV/coût mana/persistance/sync, commun aux deux
   catégories désormais) — première vraie duplication entre catégories, généralisée seulement
   maintenant qu'un second exemple concret la prouve. Modèle directionnel (texture furnace
@@ -44,6 +48,14 @@ vérifie la CI.
   `BlockState` (`HORIZONTAL_FACING`), et premier vrai consommateur de la rotation choisie dans
   la roue (`ModNetworking.handlePlaceTower` l'appliquait déjà par anticipation). Détail dans
   [02-gameplay.md](02-gameplay.md#le-harpoon-turret--blockharpoonturretblockjava).
+- ✅ Système de priorité IA unifié (`block/entity/AiAttackTarget.java`,
+  `entity/ai/AttackPriorityTargetGoal.java`, voir "Système de priorité IA" plus bas) :
+  remplace les deux anciens goals séparés (`AttackBlockadeGoal`/`AttackEterniaCrystalGoal`,
+  supprimés, comme le tag `dungeon_defenders:blockades` et `init/ModBlockTags.java`) par un
+  seul goal qui choisit lui-même la meilleure cible parmi Block (10) / Corps à corps (20) /
+  Cristal (30) / Tourelle (40), palier par palier. Décidé avec le joueur : indices espacés
+  pour laisser de la place à une future provocation. Détail dans
+  [02-gameplay.md](02-gameplay.md#le-goal-de-mêlée-unifié--entityaiattackprioritytargetgoaljava-blockentityaiattacktargetjava).
 - ✅ Roue de sélection des tours (`TowerWheelScreen`, touche `R` par défaut) + mode pose en
   deux étapes (viser puis orienter, `TowerPlacementState`/`TowerPlacementClientEvents`) avec
   hologramme vert/rouge et zone de portée (cercle ou **cône**, premier vrai test avec le
@@ -274,9 +286,11 @@ il envisage au moins 5 catégories, chacune avec ses propres règles :
 2. **Tours à distance** — catégorie de code **"Turret"**, démarrée avec le **Harpoon Turret**
    (voir "Ce qui est implémenté" plus haut et
    [02-gameplay.md](02-gameplay.md#le-harpoon-turret--blockharpoonturretblockjava)) : scanne et
-   tire toute seule à chaque tick, dans un cône orienté (angle fixe, pas de goal d'IA porté par
-   un monstre — à l'inverse de Blockade). Ne bloque pas spécialement le passage plus qu'un bloc
-   plein normal, mais ce n'est pas son rôle (posée en retrait).
+   tire elle-même toute seule à chaque tick, dans un cône orienté (angle fixe) — ça, c'est
+   toujours la tour qui agit, pas un `Goal` porté par un monstre. Un monstre peut en revanche
+   désormais **l'attaquer** en dernier recours (voir "Système de priorité IA" plus bas). Ne
+   bloque pas spécialement le passage plus qu'un bloc plein normal, mais ce n'est pas son rôle
+   (posée en retrait).
 3. **Auras et pièges non attaquables** — pas de PV, pas destructibles par les ennemis ; juste
    une durée ou un taux d'utilisation limité (charges).
 4. **Pièges de sol** — un "sur-bloc" (pas un bloc plein) posé sur le sol, non attaquable —
@@ -297,28 +311,57 @@ deviner :
   `ModEvents.onTowerPlace`), persistance et sync client. `AbstractBlockadeBlockEntity` et
   `AbstractTurretBlockEntity` en héritent, et n'ajoutent que leur spécifique (dégâts de contact
   pour l'une, portée/cône/tir pour l'autre).
-- `entity/ai/AttackBlockadeGoal.java` cible **tout bloc du tag** `dungeon_defenders:blockades`
-  (`init/ModBlockTags.java`) plutôt que `spike_blockade` en dur — ajouter une future blockade au
-  tag JSON suffit pour qu'elle hérite du comportement d'attaque, sans toucher au goal. **Rien
-  d'équivalent pour Turret** : aucun goal d'IA ne cible un turret pour l'instant (décidé avec le
-  joueur pour le Harpoon Turret — PV présents mais inertes).
-- **Priorité confirmée avec le joueur (Blockade uniquement)** : une blockade à portée de
-  recherche (8 blocs) l'emporte toujours sur le cristal, même si elle n'est pas strictement sur
-  le trajet le plus direct du monstre (pas de vérification de chemin — un simple scan par
-  rayon). Cette règle reste la convention par défaut si une catégorie de tour attaquable par un
-  monstre apparaît un jour (Turret n'y est pas encore concerné, faute de goal).
-- `AttackBlockadeGoal` **n'étend toujours pas** `AbstractEterniaCrystalAttackGoal` (le cristal
-  cible un exemplaire unique sur la carte, une blockade est cherchée par tag/proximité — formes
-  trop différentes pour forcer une base commune).
 - **Les catégories 3 à 5 restent sans base de code pour l'instant** : chacune sera construite
   en autonomie d'abord (comme prévu à l'origine), sauf nouvelle décision explicite du joueur au
   moment de s'y attaquer — la généralisation systématique dès le départ n'est pas la règle,
   seulement le résultat d'une vraie duplication constatée (comme ici entre Blockade et Turret).
 
+### Système de priorité IA (Block / Corps à corps / Cristal / Tourelle)
+
+Discuté et tranché avec le joueur : au lieu d'une priorité figée en dur entre deux cibles
+(Blockade puis cristal, comme avant), un vrai système à **paliers**, commun à toute cible
+attaquable — y compris les tourelles, jusque-là totalement ignorées par l'IA :
+
+1. **Block** (mur pur, pas de dégâts actifs) — priorité 10, la plus haute.
+2. **Corps à corps** — priorité 20. **Pas une nouvelle catégorie de bloc** : c'est exactement
+   `dealsContactDamage=true`, déjà utilisé par Spike Blockade (dégâts périodiques dans un
+   petit rayon, sa propre cadence) — confirmé avec le joueur en comparant à des tours comme
+   Slice N Dice/Bouncer de son plan Excel, qui suivent le même principe.
+3. **Cristal d'Eternia** — priorité 30.
+4. **Tourelle** — priorité 40, la plus basse : un monstre de mêlée ne s'y attaque qu'en tout
+   dernier recours, si rien de plus prioritaire n'est à portée. Nouveau comportement, jamais
+   possible avant (les tourelles étaient ignorées).
+
+Indices **espacés** (10/20/30/40, pas 1/2/3/4), sur demande du joueur, pour laisser de la place
+à un futur mécanisme de provocation ou un nouveau type de tour sans décaler les valeurs
+existantes.
+
+**Architecture, décidée avec le joueur** : un seul `Goal` compare toutes les cibles à portée
+selon ce chiffre, plutôt que d'empiler une classe par palier (l'approche initiale, celle
+utilisée par les anciens `AttackBlockadeGoal`/`AttackEterniaCrystalGoal`, tous les deux
+**supprimés**) :
+
+- `block/entity/AiAttackTarget.java` (nouvelle interface) : contrat `getAiPriority()` +
+  `damage(int)`, implémenté par `AbstractTowerBlockEntity` (donc Blockade et Turret) **et**
+  indépendamment par `EterniaCrystalBlockEntity` (aucun lien de code avec les tours, mais le
+  même contrat).
+- `entity/ai/AttackPriorityTargetGoal.java` (nouveau, remplace les deux goals supprimés) :
+  réimplémente la recherche de `MoveToBlockGoal` en **une passe par palier** (10 puis 20 puis
+  30 puis 40) — le premier palier qui trouve une cible dans sa propre portée gagne, même si un
+  palier suivant a une cible plus proche. Plus besoin du tag `dungeon_defenders:blockades`
+  (supprimé avec `init/ModBlockTags.java`) : le filtre se fait directement sur l'interface,
+  générique à toute catégorie présente ou future.
+- `ModEvents.onMonsterSpawn` : les monstres non-archers reçoivent désormais un seul goal
+  (`AttackPriorityTargetGoal`) au lieu de deux. Les archers sont inchangés
+  (`RangedAttackEterniaCrystalGoal`, ignorent toujours Blockade/Turret).
+
+Détail complet dans
+[02-gameplay.md](02-gameplay.md#le-goal-de-mêlée-unifié--entityaiattackprioritytargetgoaljava-blockentityaiattacktargetjava).
+
 **Reste à faire** : équilibrage réel des coûts en mana (30/50, valeurs de test, pas
 réfléchies), remboursement de mana à la casse, indicateur visuel de PV restants (Blockade et
-Turret), goal d'IA pour attaquer un turret. Et bien sûr, les catégories 3 à 5 n'ont aucune
-implémentation.
+Turret), pas de "block" pur concret pour exercer le palier 10 (la logique le supporte, aucune
+tour ne l'utilise encore). Et bien sûr, les catégories 3 à 5 n'ont aucune implémentation.
 
 **Comment on pose les tours, décidé avec le joueur** : dans le vrai Dungeon Defenders, les
 tours ne se posent pas depuis l'inventaire (la liste dépend du héros choisi) — une **roue

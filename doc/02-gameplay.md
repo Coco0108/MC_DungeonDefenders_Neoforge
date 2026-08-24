@@ -310,9 +310,11 @@ Le dégradé **vert → jaune → rouge** vient de `red()` / `green()` (le bleu 
 
 ### La base commune — `entity/ai/AbstractEterniaCrystalAttackGoal.java`
 
-`AttackEterniaCrystalGoal` (corps à corps) et `RangedAttackEterniaCrystalGoal` (distance)
-partagent tout ce qui concerne le **ciblage et le déplacement** — identique dans les deux cas
-— via cette classe abstraite, qui étend `MoveToBlockGoal` :
+Un seul sous-classeur aujourd'hui : `RangedAttackEterniaCrystalGoal` (les archers, qui ignorent
+Blockade/Turret et ne visent que le cristal à distance). Les monstres de mêlée n'en ont plus
+besoin depuis `AttackPriorityTargetGoal` (voir plus bas), qui ne cible pas QUE le cristal.
+Cette classe abstraite, qui étend `MoveToBlockGoal`, porte le ciblage/déplacement vers le
+cristal spécifiquement :
 
 | Membre | Rôle |
 |---|---|
@@ -324,38 +326,82 @@ partagent tout ce qui concerne le **ciblage et le déplacement** — identique d
 | `onTargetLost()` | appelé chaque tick tant qu'il ne l'est pas ; no-op par défaut |
 
 `SEARCH_RANGE` (16 blocs) reste une constante interne à cette classe, pas exposée au
-constructeur — contrairement aux dégâts, rien ne justifie encore qu'elle varie d'un ennemi à
-l'autre. `acceptedDistance`, en revanche, est ce qui distingue fondamentalement le corps à
-corps (une valeur fixe, faible) de la distance (une portée, potentiellement variable d'un
-ennemi à l'autre) : chaque sous-classe la fixe à sa manière (voir plus bas).
+constructeur — rien ne justifie encore qu'elle varie d'un ennemi à distance à l'autre.
 
-> **Sous-classer `AbstractEterniaCrystalAttackGoal` directement** (plutôt que
-> `AttackEterniaCrystalGoal`/`RangedAttackEterniaCrystalGoal`) n'a d'intérêt que pour un
-> **nouveau style d'attaque** — une troisième famille, ni corps à corps ni tir à l'arc (une
-> attaque de zone, par exemple). Pour un ennemi qui attaque comme les deux familles
-> existantes mais avec d'autres chiffres, pas besoin de sous-classer quoi que ce soit : les
-> deux constructeurs `(mob, damagePerHit, ticksBetweenX, ...)` couvrent déjà ce cas (voir
-> ci-dessous).
+> **Sous-classer `AbstractEterniaCrystalAttackGoal` directement** n'a d'intérêt que pour un
+> **nouveau style d'attaque à distance sur le cristal spécifiquement** (une attaque de zone,
+> par exemple) — pour un ennemi à distance qui attaque comme `RangedAttackEterniaCrystalGoal`
+> mais avec d'autres chiffres, le constructeur `(mob, damagePerHit, ticksBetweenShots,
+> shootRange)` couvre déjà ce cas, pas besoin de sous-classer quoi que ce soit.
 
-### Le goal corps à corps — `entity/ai/AttackEterniaCrystalGoal.java`
+### Le goal de mêlée unifié — `entity/ai/AttackPriorityTargetGoal.java`, `block/entity/AiAttackTarget.java`
+
+Remplace ce qui était avant deux goals séparés (`AttackBlockadeGoal` + `AttackEterniaCrystalGoal`,
+supprimés) : **un seul** goal, qui choisit lui-même la meilleure cible parmi tout ce qui
+implémente l'interface `AiAttackTarget` — Blockade, Turret, Cristal, et toute future catégorie
+— selon un système de **paliers de priorité**, discuté et tranché avec le joueur.
+
+`AiAttackTarget` (interface, `block/entity/`) :
 
 ```java
-public AttackEterniaCrystalGoal(PathfinderMob mob)                              // 5 dégâts / 20 ticks (par défaut)
-public AttackEterniaCrystalGoal(PathfinderMob mob, int damagePerHit, int ticksBetweenHits)
+public interface AiAttackTarget {
+    int PRIORITY_BLOCK = 10;
+    int PRIORITY_MELEE_TOWER = 20;
+    int PRIORITY_CRYSTAL = 30;
+    int PRIORITY_RANGED_TOWER = 40;
+
+    int getAiPriority();
+    void damage(int amount);
+}
 ```
 
-`SPEED_MODIFIER` (`1.2D`) et `ACCEPTED_DISTANCE` (`2.1D`, tolérance suffisante pour un mob au
-sol contre une hitbox de 3 de haut) restent des constantes internes — c'est la cadence et les
-dégâts qui varient d'un ennemi de mêlée à l'autre, pas la distance d'engagement (toujours
-"collé au cristal" par définition du corps à corps).
+Indices **espacés** (10/20/30/40, pas 1/2/3/4) pour laisser de la place à un futur mécanisme
+de provocation ou un nouveau type de tour sans décaler les valeurs existantes. Implémentée par
+`AbstractTowerBlockEntity` (donc Blockade et Turret, `damage(int)` déjà présent, seul
+`getAiPriority()` reste abstrait par catégorie) et par `EterniaCrystalBlockEntity`
+indépendamment (pas de lien de code avec les tours, mais le même contrat) :
 
-Dans `onReachedTarget(crystal)`, une fois le cooldown écoulé : `crystal.damage(damagePerHit)`,
-animation de bras (`mob.swing`), puis attend `ticksBetweenHits`. Le cooldown est un champ du
-goal (remis à zéro dans `start()` et dans `onTargetLost()`), et non `mob.tickCount` : le
-rythme reste correct si le mob quitte puis revient vers le cristal.
+| Type | `getAiPriority()` |
+|---|---|
+| `AbstractBlockadeBlockEntity`, `dealsContactDamage=false` (pas de tour concrète encore) | `PRIORITY_BLOCK` (10) |
+| `AbstractBlockadeBlockEntity`, `dealsContactDamage=true` (Spike Blockade) | `PRIORITY_MELEE_TOWER` (20) |
+| `EterniaCrystalBlockEntity` | `PRIORITY_CRYSTAL` (30) |
+| `AbstractTurretBlockEntity` (Harpoon Turret) | `PRIORITY_RANGED_TOWER` (40) |
 
-Avec 100 PV par défaut et les valeurs par défaut (5 dégâts/s), un zombie seul détruit le
-cristal en 20 secondes.
+**Aucun nouveau champ pour "corps à corps"** : c'est exactement le booléen
+`dealsContactDamage` déjà utilisé pour les dégâts de contact — une Blockade qui fait mal au
+contact (comme Spike Blockade) EST le "corps à corps" du joueur (dégâts périodiques dans un
+petit rayon, sa propre cadence), une Blockade passive serait le "block" pur.
+
+`AttackPriorityTargetGoal` (`extends MoveToBlockGoal`) réimplémente `findNearestBlock()`
+(`protected` chez vanilla, donc overridable) : au lieu d'une seule recherche, **une passe par
+palier, dans l'ordre croissant** (10, 20, 30, 40) — le premier palier qui trouve une cible dans
+**sa propre portée** gagne, même si un palier suivant a une cible géométriquement plus proche.
+Chaque passe rejoue l'algorithme en spirale de `MoveToBlockGoal.findNearestBlock()` (recopié,
+vanilla ne l'expose pas comme méthode réutilisable), avec pour prédicat
+`getBlockEntity(pos) instanceof AiAttackTarget target && target.getAiPriority() == tier` — pas
+besoin d'un tag de bloc (l'ancien tag `dungeon_defenders:blockades` et `init/ModBlockTags.java`
+ont été supprimés) : le filtre porte sur l'interface, générique à toute catégorie présente ou
+future.
+
+Portées par palier (reprises telles quelles des deux anciens goals) : Block/Corps à
+corps/Tourelle → 8 blocs (comme l'ancien `AttackBlockadeGoal`) ; Cristal → 16 blocs (comme
+`AbstractEterniaCrystalAttackGoal`). `DAMAGE_PER_HIT=5`, `TICKS_BETWEEN_HITS=20` (mêmes
+valeurs que les deux anciens goals, qui les partageaient déjà) s'appliquent uniformément, quel
+que soit le palier de la cible touchée — à l'impact, `getBlockEntity(blockPos) instanceof
+AiAttackTarget target` puis `target.damage(...)`, un seul point de frappe pour toutes les
+catégories.
+
+`isValidTarget` (encore appelé par `canContinueToUse()` pour vérifier que la cible tenue reste
+valide) redevient simple : `getBlockEntity(pos) instanceof AiAttackTarget`, sans revérifier le
+palier — si la cible a changé de nature entre-temps, le prochain `canUse()` referait de toute
+façon une recherche complète par paliers.
+
+**Nouveau comportement concret, jamais possible avant** : un monstre de mêlée qui n'a **ni**
+Blockade **ni** cristal à portée (le cristal étant hors de son rayon de détection de 16 blocs)
+mais **a** un Harpoon Turret à portée de 8 blocs va enfin s'attaquer à la tourelle — dernier
+recours, mais un recours qui n'existait pas du tout jusqu'ici (les tourelles étaient purement
+ignorées par l'IA).
 
 ### Le goal à distance — `entity/ai/RangedAttackEterniaCrystalGoal.java`
 
@@ -384,27 +430,25 @@ une entité, une flèche vanilla ne saurait pas le "toucher" toute seule).
 ### L'attribution — `ModEvents.onMonsterSpawn`
 
 Écoute `EntityJoinLevelEvent` sur le bus de jeu. Pour chaque `Monster` rejoignant un monde
-côté serveur, un ou deux goals sont ajoutés au `goalSelector`, selon le type :
+côté serveur, **un seul** goal est ajouté au `goalSelector`, selon le type :
 
-- `AbstractSkeleton` (squelette, et tout futur sous-type) reçoit uniquement
-  `RangedAttackEterniaCrystalGoal`, **priorité 1**.
-- Tout le reste reçoit `AttackBlockadeGoal` en **priorité 0** (voir "Le Spike Blockade" plus
-  bas) **et** `AttackEterniaCrystalGoal` en priorité 1 — un numéro de priorité plus petit passe
-  avant dans le `GoalSelector` vanilla, donc un ennemi de mêlée préfère toujours s'occuper d'un
-  Spike Blockade à portée avant de continuer vers le cristal.
+- `AbstractSkeleton` (squelette, et tout futur sous-type) reçoit `RangedAttackEterniaCrystalGoal`
+  (priorité 1) — ignore Blockade/Turret, ne vise que le cristal à distance.
+- Tout le reste reçoit `AttackPriorityTargetGoal` (priorité 0) — choisit lui-même sa cible
+  parmi Block/Corps à corps/Cristal/Tourelle selon leur palier de priorité et leur portée
+  respective (voir "Le goal de mêlée unifié" plus haut).
 
-> `Monster` plutôt que `PathfinderMob` : les trois goals n'exigent techniquement qu'un
+> `Monster` plutôt que `PathfinderMob` : les deux goals n'exigent techniquement qu'un
 > `PathfinderMob`, mais cette classe couvre aussi les mobs passifs (animaux, villageois...).
 > `Monster` est la bonne frontière sémantique — tout ce qui est hostile, rien de passif.
 
 `EntityJoinLevelEvent` se déclenche aussi au rechargement d'un chunk et au changement de
-dimension. Le code vérifie donc d'abord qu'aucun des trois goals n'est déjà présent :
+dimension. Le code vérifie donc d'abord qu'aucun des deux goals n'est déjà présent :
 
 ```java
 monster.goalSelector.getAvailableGoals().stream()
-        .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal
-                || wrapped.getGoal() instanceof RangedAttackEterniaCrystalGoal
-                || wrapped.getGoal() instanceof AttackBlockadeGoal)
+        .anyMatch(wrapped -> wrapped.getGoal() instanceof RangedAttackEterniaCrystalGoal
+                || wrapped.getGoal() instanceof AttackPriorityTargetGoal)
 ```
 
 Sans ce test, un même monstre cumulerait plusieurs exemplaires du goal et attaquerait le
@@ -440,7 +484,7 @@ plan Excel plutôt que de garder l'ancien piège en parallèle.
 donc uniquement à donner des PV au blockade et à faire en sorte qu'un ennemi choisisse de
 l'attaquer plutôt que de rester bloqué bêtement devant.
 
-### La catégorie "Blockade" — `block/entity/AbstractBlockadeBlockEntity.java`, tag `dungeon_defenders:blockades`
+### La catégorie "Blockade" — `block/entity/AbstractBlockadeBlockEntity.java`
 
 Le Spike Blockade est le premier membre concret d'une **catégorie de code** commune à toutes
 les futures tours "mur à PV" (voir la taxonomie du joueur dans
@@ -473,6 +517,11 @@ actif — sinon la méthode ne fait rien.
 `MANA_COST=30`, `dealsContactDamage=true`, `CONTACT_DAMAGE=2.0F`,
 `CONTACT_DAMAGE_INTERVAL_TICKS=20` (1 s), `CONTACT_RANGE=1.0` — toute la logique vit dans la
 base ou la catégorie.
+
+`getAiPriority()` (voir "IA des ennemis" plus haut, `AiAttackTarget`) dérive de
+`dealsContactDamage` : `true` (Spike Blockade) → `PRIORITY_MELEE_TOWER` (20, le "corps à
+corps" du joueur) ; `false` (pas encore de tour concrète) → `PRIORITY_BLOCK` (10, priorité la
+plus haute). Aucun champ dédié, aucune duplication.
 
 ### Le coût en mana et la restriction de phase — `ModEvents.onTowerPlace`
 
@@ -513,49 +562,18 @@ aucune interaction avec le monde. Retirés de l'onglet créatif pour la même ra
 commune à toutes les catégories : une future tour utilise la même classe d'item, pas besoin de
 la réécrire.
 
-### Le goal — `entity/ai/AttackBlockadeGoal.java`
+### La priorité IA
 
 Un monstre ne s'attaque pas naturellement à un bloc plein dans Minecraft (il chercherait
 plutôt à le contourner) : il faut donc une IA dédiée pour qu'un ennemi de mêlée choisisse de
 détruire une blockade sur son chemin, plutôt que de rester bloqué devant indéfiniment ou de
-l'ignorer complètement.
-
-`isValidTarget` cible **n'importe quel bloc du tag `dungeon_defenders:blockades`**
-(`init/ModBlockTags.java`), pas spécifiquement `spike_blockade` en dur — ajouter une future
-blockade (Bouncer, Slice N Dice…) au tag JSON
-(`data/dungeon_defenders/tags/block/blockades.json`) suffit pour qu'elle hérite de ce
-comportement, sans toucher au goal. Idem côté dégâts : `tick()` interagit avec
-`AbstractBlockadeBlockEntity` (le type de base), pas avec `SpikeBlockadeBlockEntity`.
-
-| Paramètre | Valeur | Rôle |
-|---|---|---|
-| `SEARCH_RANGE` | `8` | plus court que la portée de détection du cristal (`16`) — ne détourne l'ennemi que si une blockade est vraiment proche, pas n'importe où sur la carte |
-| `SPEED_MODIFIER` / `ACCEPTED_DISTANCE` | `1.2D` / `2.1D` | identiques à `AttackEterniaCrystalGoal` |
-| `DAMAGE_PER_HIT` | `5` | dégâts infligés au blockade par coup — même valeur que le corps à corps sur le cristal |
-| `TICKS_BETWEEN_HITS` | `20` (1 s) | cadence des coups |
-
-**Priorité confirmée avec le joueur** : toute blockade **à portée de recherche** (8 blocs)
-l'emporte sur le cristal, même si elle n'est pas strictement sur le trajet le plus direct du
-monstre — pas de vérification de trajet/pathfinding, un simple scan par rayon suffit. Cette
-règle est actée comme convention par défaut pour les futures catégories de tours aussi (une
-blockade doit rester prioritaire sur le cristal **et** sur les autres types de tours une fois
-qu'ils existeront).
-
-Structure similaire à `AttackEterniaCrystalGoal` (`MoveToBlockGoal`, convergence + cooldown de
-coups), mais **n'étend pas** `AbstractEterniaCrystalAttackGoal` : cette base est pensée pour
-cibler le cristal (un seul exemplaire sur la carte), alors qu'une blockade est cherchée par
-proximité via un tag — forcer une base commune entre les deux reviendrait à deviner une forme
-partagée plutôt qu'à la constater sur un second exemple concret (voir le commentaire de classe
-d'`AbstractEterniaCrystalAttackGoal`, même principe qui a mené à sa création après coup plutôt
-qu'avant).
-
-Une fois la blockade détruite, `isValidTarget` ne trouve plus rien à cette position :
-`MoveToBlockGoal` termine le goal tout seul (comportement vanilla, rien à coder), et l'ennemi
-retombe sur `AttackEterniaCrystalGoal` (priorité 1) au prochain choix de goal.
-
-Pas de version à distance : un archer peut tirer par-dessus/à côté d'une blockade sans avoir
-besoin de la détruire, contrairement à un ennemi de mêlée qui doit littéralement passer au
-travers — voir "L'attribution" plus bas, seuls les non-`AbstractSkeleton` reçoivent ce goal.
+l'ignorer complètement. C'est désormais un mécanisme générique à toute catégorie de tour, pas
+spécifique à Blockade — voir "IA des ennemis" tout en haut de cette page, section "Le goal de
+mêlée unifié" (`entity/ai/AttackPriorityTargetGoal.java`, `block/entity/AiAttackTarget.java`)
+pour le détail complet (paliers de priorité, algorithme de recherche, etc.). Ce qui concerne
+Spike Blockade spécifiquement : `dealsContactDamage=true` lui donne la priorité "corps à
+corps" (20), juste après un éventuel "block" pur (10, pas encore de tour concrète) et avant le
+cristal (30) et les tourelles (40).
 
 ### Apparence
 
@@ -637,9 +655,11 @@ gravité sur la distance.
 `ATTACK_INTERVAL_TICKS=30` (1,5 s) — valeurs de test, pas encore équilibrées, comme pour Spike
 Blockade.
 
-**Décidé avec le joueur** : le turret a des PV comme une Blockade, mais **aucun `Goal` d'IA ne
-le cible pour l'instant** — préparé pour plus tard, pas branché (les PV existent, mais rien ne
-les vise).
+Le turret a des PV comme une Blockade, priorité IA la plus basse (`PRIORITY_RANGED_TOWER`, 40
+— voir "IA des ennemis" tout en haut de cette page) : un monstre de mêlée ne s'y attaque qu'en
+tout dernier recours, quand rien de plus prioritaire (Block, Corps à corps, Cristal) n'est à
+portée — nouveau comportement rendu possible par `AttackPriorityTargetGoal`, jamais possible
+avant lui (les tourelles étaient purement ignorées par l'IA).
 
 ### L'orientation — `HORIZONTAL_FACING`, premier vrai usage de la rotation de la roue
 
@@ -663,7 +683,6 @@ se drope lui-même via `data/dungeon_defenders/loot_table/blocks/harpoon_turret.
 
 **Ce qui n'est PAS fait**, volontairement :
 
-- Pas de goal d'IA pour qu'un monstre attaque un turret (PV présents mais inertes).
 - Pas de restriction de phase sur le tir lui-même (seule la **pose** est restreinte à la phase
   Construction, comme pour Blockade — même handler généralisé, voir plus haut). Un monstre
   égaré en phase Construction se ferait quand même tirer dessus ; comportement mineur, cohérent

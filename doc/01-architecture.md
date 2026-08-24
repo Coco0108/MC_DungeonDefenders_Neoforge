@@ -20,7 +20,6 @@ MC_DungeonDefenders_Neoforge/
     │   ├── Config.java                       # Spec de config (héritée du template, non branchée)
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
-    │   │   ├── ModBlockTags.java              # TagKey<Block> BLOCKADES, ciblé par AttackBlockadeGoal
     │   │   ├── ModAttachments.java           # DeferredRegister des data attachments (mana, vagues, phase...)
     │   │   ├── ModMenus.java                 # DeferredRegister des MenuType (GUI de config)
     │   │   ├── GamePhase.java                # Enum des phases de partie (BUILD, COMBAT)
@@ -62,10 +61,9 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── CharacterOverlay.java         # Couche HUD affichant "Nom - niv X", bas centre (client uniquement)
     │   │   └── AbilitySlotsOverlay.java      # 4 emplacements de compétences, bas gauche, à côté des losanges (client uniquement)
     │   ├── entity/ai/
-    │   │   ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal
-    │   │   ├── AttackEterniaCrystalGoal.java         # Goal : converger vers le cristal et le frapper (corps à corps)
-    │   │   ├── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal
-    │   │   └── AttackBlockadeGoal.java               # Goal (priorité 0) : détourne un ennemi de mêlée vers tout bloc du tag blockades
+    │   │   ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal (un seul sous-classeur : la version à distance)
+    │   │   ├── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal (archers, ignorent Blockade/Turret)
+    │   │   └── AttackPriorityTargetGoal.java         # Goal unique des monstres de mêlée : choisit Block > Corps à corps > Cristal > Tourelle selon AiAttackTarget
     │   └── block/
     │       ├── EterniaCrystalBlock.java      # Le bloc : hitbox, interaction, codec
     │       ├── SpikeBlockadeBlock.java       # Premier tower "Blockade" : mur à PV qui pique au contact
@@ -74,11 +72,12 @@ MC_DungeonDefenders_Neoforge/
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
     │       └── entity/
-    │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client
+    │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal)
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
     │           ├── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D (client)
-    │           ├── AbstractTowerBlockEntity.java           # Base commune à TOUTE catégorie de tour : PV, coût mana, persistance, sync (voir 02-gameplay.md)
-    │           ├── AbstractBlockadeBlockEntity.java        # Catégorie "Blockade" : dégâts de contact optionnels
+    │           ├── AiAttackTarget.java                     # Interface : contrat + paliers de priorité IA (Block/Corps à corps/Cristal/Tourelle)
+    │           ├── AbstractTowerBlockEntity.java           # Base commune à TOUTE catégorie de tour : PV, coût mana, persistance, sync, AiAttackTarget (voir 02-gameplay.md)
+    │           ├── AbstractBlockadeBlockEntity.java        # Catégorie "Blockade" : dégâts de contact optionnels, priorité selon dealsContactDamage
     │           ├── SpikeBlockadeBlockEntity.java           # Sous-classe : fixe les stats du Spike Blockade (voir 02-gameplay.md)
     │           ├── AbstractTurretBlockEntity.java          # Catégorie "Turret" : portée + cône + tir (scan/tir par tick, pas de Goal)
     │           ├── HarpoonTurretBlockEntity.java           # Sous-classe : fixe les stats du Harpoon Turret (voir 02-gameplay.md)
@@ -95,7 +94,6 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── items/{eternia_crystal,spike_blockade,spawner,tavern_crystal,harpoon_turret}.json # Modèles d'item
     │   │   └── textures/gui/maps/<id>.png                  # Aperçu de chaque GameMap (une image par map)
     │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_blockade,spawner,tavern_crystal,harpoon_turret}.json
-    │   ├── data/dungeon_defenders/tags/block/blockades.json # Blocs ciblés par AttackBlockadeGoal (spike_blockade pour l'instant)
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
     │   ├── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
     │   └── META-INF/accesstransformer.cfg         # Access Transformers
