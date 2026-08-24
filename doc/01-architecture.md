@@ -20,6 +20,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── Config.java                       # Spec de config (héritée du template, non branchée)
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
+    │   │   ├── ModBlockTags.java              # TagKey<Block> BLOCKADES, ciblé par AttackBlockadeGoal
     │   │   ├── ModAttachments.java           # DeferredRegister des data attachments (mana, vagues, phase...)
     │   │   ├── ModMenus.java                 # DeferredRegister des MenuType (GUI de config)
     │   │   ├── GamePhase.java                # Enum des phases de partie (BUILD, COMBAT)
@@ -55,27 +56,31 @@ MC_DungeonDefenders_Neoforge/
     │   ├── entity/ai/
     │   │   ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal
     │   │   ├── AttackEterniaCrystalGoal.java         # Goal : converger vers le cristal et le frapper (corps à corps)
-    │   │   └── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal
+    │   │   ├── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal
+    │   │   └── AttackBlockadeGoal.java               # Goal (priorité 0) : détourne un ennemi de mêlée vers tout bloc du tag blockades
     │   └── block/
     │       ├── EterniaCrystalBlock.java      # Le bloc : hitbox, interaction, codec
-    │       ├── SpikeTrapBlock.java           # Piège : dégâts au contact (stepOn) + cooldown
+    │       ├── SpikeBlockadeBlock.java       # Premier tower "Blockade" : mur à PV qui pique au contact
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
     │       └── entity/
     │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
     │           ├── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D (client)
+    │           ├── AbstractBlockadeBlockEntity.java        # Base commune catégorie "Blockade" : PV, coût mana, dégâts de contact optionnels (voir 02-gameplay.md)
+    │           ├── SpikeBlockadeBlockEntity.java           # Sous-classe : fixe les stats du Spike Blockade (voir 02-gameplay.md)
     │           ├── SpawnerBlockEntity.java                 # Algorithme de spawn pondéré (voir 02-gameplay.md)
     │           ├── SpawnerRenderState.java                 # Instantané pour le rendu (client)
     │           └── SpawnerBlockEntityRenderer.java         # Aperçu de composition en phase Construction, à travers les murs (client)
     ├── resources/
     │   ├── assets/dungeon_defenders/
     │   │   ├── lang/{en_us,fr_fr}.json                     # Traductions
-    │   │   ├── blockstates/{eternia_crystal,spike_trap,spawner,tavern_crystal}.json   # Variante unique par bloc
-    │   │   ├── models/block/{eternia_crystal,spike_trap,spawner,tavern_crystal}.json  # Modèles (texture vanilla provisoire)
-    │   │   ├── items/{eternia_crystal,spike_trap,spawner,tavern_crystal}.json         # Modèles d'item
+    │   │   ├── blockstates/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json   # Variante unique par bloc
+    │   │   ├── models/block/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json  # Modèles (texture vanilla provisoire)
+    │   │   ├── items/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json         # Modèles d'item
     │   │   └── textures/gui/maps/<id>.png                  # Aperçu de chaque GameMap (une image par map)
-    │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_trap,spawner,tavern_crystal}.json
+    │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json
+    │   ├── data/dungeon_defenders/tags/block/blockades.json # Blocs ciblés par AttackBlockadeGoal (spike_blockade pour l'instant)
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
     │   ├── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
     │   └── META-INF/accesstransformer.cfg         # Access Transformers
@@ -92,8 +97,8 @@ NeoForge autorise plusieurs classes `@Mod` pour le même `modId`, différenciée
 - Possède deux `DeferredRegister` :
   - `BLOCK_ENTITIES` (`Registries.BLOCK_ENTITY_TYPE`)
   - `CREATIVE_MODE_TABS` (`Registries.CREATIVE_MODE_TAB`)
-- Enregistre les `BlockEntityType` `eternia_crystal` et `spawner`, liés à
-  `ModBlocks.ETERNIA_CRYSTAL`/`ModBlocks.SPAWNER`.
+- Enregistre les `BlockEntityType` `eternia_crystal`, `spawner` et `spike_blockade`, liés à
+  `ModBlocks.ETERNIA_CRYSTAL`/`ModBlocks.SPAWNER`/`ModBlocks.SPIKE_BLOCKADE`.
 - Enregistre l'onglet créatif `dungeon_defenders_tab`, dont l'icône et le seul contenu
   sont l'item du cristal.
 - Le constructeur `DungeonDefendersMod(IEventBus modEventBus)` branche les cinq registres
@@ -155,8 +160,8 @@ Chargement FML
         └─ CREATIVE_MODE_TABS.register(bus)
 
 Événements du bus mod
-   ├─ RegisterEvent(BLOCK)             → eternia_crystal, spike_trap, spawner, tavern_crystal
-   ├─ RegisterEvent(ITEM)              → eternia_crystal, spike_trap, spawner, tavern_crystal (BlockItem)
+   ├─ RegisterEvent(BLOCK)             → eternia_crystal, spike_blockade, spawner, tavern_crystal
+   ├─ RegisterEvent(ITEM)              → eternia_crystal, spike_blockade, spawner, tavern_crystal (BlockItem)
    ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana, experience, current_wave,
    │                                      wave_enemies_total, wave_enemies_killed, game_phase,
    │                                      score, level, character_name, difficulty,

@@ -1,5 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders;
 
+import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractBlockadeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackBlockadeGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackEterniaCrystalGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
@@ -16,6 +18,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
 
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class ModEvents {
@@ -37,18 +40,51 @@ public class ModEvents {
         // fois le goal et attaquerait le cristal plusieurs fois par seconde.
         boolean alreadyAdded = monster.goalSelector.getAvailableGoals().stream()
                 .anyMatch(wrapped -> wrapped.getGoal() instanceof AttackEterniaCrystalGoal
-                        || wrapped.getGoal() instanceof RangedAttackEterniaCrystalGoal);
+                        || wrapped.getGoal() instanceof RangedAttackEterniaCrystalGoal
+                        || wrapped.getGoal() instanceof AttackBlockadeGoal);
         if (alreadyAdded) {
             return;
         }
 
         // Les squelettes (et tout futur AbstractSkeleton) attaquent à distance avec l'arc
-        // déjà équipé par défaut ; les autres, au corps à corps.
+        // déjà équipé par défaut ; les autres, au corps à corps. Seule la mêlée reçoit en plus
+        // AttackBlockadeGoal (priorité 0, avant le cristal en priorité 1) : un archer peut
+        // tirer par-dessus/à côté d'un Spike Blockade sans avoir besoin de le détruire.
         if (monster instanceof AbstractSkeleton) {
             monster.goalSelector.addGoal(1, new RangedAttackEterniaCrystalGoal(monster));
         } else {
+            monster.goalSelector.addGoal(0, new AttackBlockadeGoal(monster));
             monster.goalSelector.addGoal(1, new AttackEterniaCrystalGoal(monster));
         }
+    }
+
+    @SubscribeEvent
+    public static void onBlockadePlace(BlockEvent.EntityPlaceEvent event) {
+        if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Player player)) {
+            return;
+        }
+
+        if (!(event.getLevel().getBlockEntity(event.getPos()) instanceof AbstractBlockadeBlockEntity blockade)) {
+            return;
+        }
+
+        int manaCost = blockade.getManaCost();
+        int currentMana = player.getData(ModAttachments.MANA);
+
+        if (currentMana < manaCost) {
+            player.sendSystemMessage(Component.translatable(
+                    "dungeon_defenders.blockade.not_enough_mana", manaCost, currentMana));
+            // Annule le placement : NeoForge restaure le bloc précédent (via le BlockSnapshot)
+            // et rend l'item au joueur, comme si la pose n'avait jamais eu lieu.
+            event.setCanceled(true);
+            return;
+        }
+
+        int newMana = currentMana - manaCost;
+        player.setData(ModAttachments.MANA, newMana);
+        player.syncData(ModAttachments.MANA);
+        player.sendSystemMessage(Component.translatable(
+                "dungeon_defenders.blockade.mana_spent", manaCost, newMana, ModAttachments.MAX_MANA));
     }
 
     @SubscribeEvent

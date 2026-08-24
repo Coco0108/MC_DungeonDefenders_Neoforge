@@ -17,9 +17,18 @@ vérifie la CI.
 - ✅ CI GitHub Actions.
 - ✅ `neoforge.mods.toml` renseigné avec les vraies métadonnées (`mod_authors`,
   `mod_description` ajoutés à `replaceProperties` dans `build.gradle`).
-- ✅ Bloc `spike_trap` + son item : 2 PV de dégâts à tout `Monster` qui marche dessus
-  (`stepOn`), cooldown de 1 s par entité. Modèle, blockstate, loot table, tag `mineable/pickaxe`,
-  traductions `en_us`/`fr_fr`, onglet créatif.
+- ✅ Bloc `spike_blockade` ("Spike Blockade", premier vrai **tower** du mod — remplace l'ancien
+  `spike_trap`, un piège de sol au mécanisme différent, supprimé) : mur avec ses propres PV
+  (30 par défaut), bloque le passage (gratuit, propriété par défaut d'un bloc plein), pique
+  tout `Monster` à son contact (2 PV/s, `AbstractBlockadeBlockEntity#serverTick`). Premier
+  membre concret de la catégorie de code "Blockade" (voir "Système de tours" plus bas). Un
+  goal d'IA (`AttackBlockadeGoal`, priorité 0, avant le cristal en priorité 1) détourne les
+  ennemis de mêlée vers tout bloc du tag `dungeon_defenders:blockades` plutôt que le cristal,
+  tant qu'il n'est pas détruit — pas les archers, qui peuvent tirer par-dessus/à côté. Coûte
+  30 mana à la pose (`ModEvents.onBlockadePlace`, valeur de test pas encore équilibrée),
+  placement refusé et item rendu si mana insuffisant. Modèle, blockstate, loot table, tag
+  `mineable/pickaxe`, traductions `en_us`/`fr_fr`, onglet créatif. Détail dans
+  [02-gameplay.md](02-gameplay.md#le-spike-blockade--blockspikeblockadeblockjava).
 - ✅ Mana du joueur : data attachment `mana` (persistant, synchronisé), maximum par défaut de
   100, affiché en HUD via `ManaOverlay` — losange en bas à gauche de l'écran (`DiamondGauge`,
   couleurs plates), très provisoire. Testable en jeu avec l'item `mana_test_wand` (clic droit
@@ -169,8 +178,8 @@ donc visible et cohérent, mais ressemble à un bloc de diamant. Il faut créer
 `textures/block/eternia_crystal.png` et mettre à jour le modèle — idéalement un modèle de
 cristal, pas un cube plein, puisque la hitbox fait déjà 3 blocs de haut.
 
-Même situation pour `models/block/spike_trap.json`, qui pointe sur
-`minecraft:block/dripstone_block` en attendant `textures/block/spike_trap.png`.
+Même situation pour `models/block/spike_blockade.json`, qui pointe sur
+`minecraft:block/dripstone_block` en attendant `textures/block/spike_blockade.png`.
 
 ### Le clic droit endommage encore le cristal
 
@@ -223,6 +232,67 @@ jour où une interface de renommage est ajoutée.
 de coût en mana, pas de lien avec un vrai sort ou une vraie action de réparation (qui
 n'existent pas non plus côté gameplay). C'est un pur placeholder visuel, en attendant les
 images promises pour chaque slot et la logique derrière.
+
+### Système de tours (catégorie "Blockade" démarrée)
+
+Discuté avec le joueur : les tours ne seront pas toutes construites sur le même patron —
+il envisage au moins 5 catégories, chacune avec ses propres règles :
+
+1. **Blocks passifs** et **corps à corps** — désormais **unifiées en une seule catégorie de
+   code, "Blockade"** (décision explicite du joueur, voir plus bas) : bloquent le passage,
+   avec un booléen optionnel pour infliger des dégâts au contact. Un block passif n'est qu'une
+   Blockade avec ce booléen à `false`. **Spike Blockade en fait partie (booléen à `true`), et
+   c'est le seul membre concret pour l'instant** (voir "Ce qui est implémenté" plus haut et
+   [02-gameplay.md](02-gameplay.md#la-catégorie-blockade--blockentityabstractblockadeblockentityjava-tag-dungeon_defendersblockades)).
+2. **Tours à distance** — visent et tirent sur les ennemis à portée, ne bloquent probablement
+   pas le passage (posées en retrait).
+3. **Auras et pièges non attaquables** — pas de PV, pas destructibles par les ennemis ; juste
+   une durée ou un taux d'utilisation limité (charges).
+4. **Pièges de sol** — un "sur-bloc" (pas un bloc plein) posé sur le sol, non attaquable —
+   c'est en fait le mécanisme de l'ancien `SpikeTrapBlock` (dégâts via `stepOn`), retiré au
+   profit du vrai Spike Blockade (catégorie 1) mais qui pourrait revenir sous cette catégorie
+   plus tard, sous un autre nom du plan Excel (ex. une des trap de la Huntress).
+5. D'autres catégories, pas encore réfléchies par le joueur.
+
+**Architecture de code, décidée avec le joueur** : contrairement à la position initiale ("pas
+de base commune tant qu'il n'y a qu'un seul exemple concret"), le joueur a explicitement
+demandé d'établir dès maintenant une base de code pour la catégorie "Blockade", puisqu'il
+connaît déjà son comportement commun avant même d'écrire une deuxième blockade concrète :
+
+- `block/entity/AbstractBlockadeBlockEntity.java` porte les stats communes : PV (`maxHealth`),
+  coût en mana à la pose (`manaCost`, **désormais consommé** via `ModEvents.onBlockadePlace`,
+  voir plus bas), et un booléen `dealsContactDamage` (+ dégâts/intervalle/portée de contact si
+  actif). **Pas de stat "portée d'attaque"** sur cette base : une blockade n'attaque pas à
+  distance, seulement au contact.
+- **Le coût en mana à la pose est branché** (`ModEvents.onBlockadePlace`, écoute
+  `BlockEvent.EntityPlaceEvent`) : générique à toute la catégorie via
+  `getBlockEntity(pos) instanceof AbstractBlockadeBlockEntity`, pas seulement Spike Blockade.
+  Mana insuffisant → placement annulé, NeoForge restaure le bloc précédent et rend l'item
+  automatiquement. Valeur de test sur Spike Blockade : `MANA_COST = 30`, pas encore équilibrée.
+  Aucune exemption créative (même convention que `ManaTestWandItem`).
+- `entity/ai/AttackBlockadeGoal.java` cible désormais **tout bloc du tag**
+  `dungeon_defenders:blockades` (`init/ModBlockTags.java`,
+  `data/dungeon_defenders/tags/block/blockades.json`) plutôt que `spike_blockade` en dur —
+  ajouter une future blockade au tag JSON suffit pour qu'elle hérite du comportement
+  d'attaque, sans toucher au goal.
+- **Priorité confirmée avec le joueur** : une blockade à portée de recherche (8 blocs)
+  l'emporte toujours sur le cristal, même si elle n'est pas strictement sur le trajet le plus
+  direct du monstre (pas de vérification de chemin — un simple scan par rayon). Cette règle
+  vaut aussi comme convention par défaut pour les futures catégories de tours : une blockade
+  doit rester prioritaire sur le cristal **et** sur les autres types de tours, une fois qu'ils
+  existeront.
+- `AttackBlockadeGoal` **n'étend toujours pas** `AbstractEterniaCrystalAttackGoal` : cette
+  décision-là reste inchangée (le cristal cible un exemplaire unique sur la carte, une
+  blockade est cherchée par tag/proximité — formes trop différentes pour forcer une base
+  commune maintenant).
+- **Les autres catégories (2 à 5) restent sans base de code pour l'instant** : la
+  généralisation immédiate n'a été demandée que pour "Blockade" — chacune des autres sera
+  construite en autonomie d'abord (comme prévu à l'origine), sauf nouvelle décision explicite
+  du joueur au moment de s'y attaquer.
+
+**Reste à faire, même pour Spike Blockade** : équilibrage réel du coût en mana (30 est une
+valeur de test, pas réfléchie), remboursement de mana à la casse, indicateur visuel de PV
+restants. Et bien sûr, les catégories 2 à 5 n'ont aucune implémentation.
 
 ### La partie se termine, mais sans vraie conclusion visuelle
 
@@ -377,7 +447,7 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 
 ## Pistes prioritaires
 
-1. Créer les textures et vrais modèles du cristal et du piège à pics.
+1. Créer les textures et vrais modèles du cristal et du Spike Blockade.
 2. Renseigner le `README.md` avec les vraies métadonnées (le `neoforge.mods.toml` est fait).
 3. Externaliser les constantes de gameplay (`DEFAULT_HEALTH`, `DAMAGE_PER_HIT`,
    `SEARCH_RANGE`) dans `Config`, et enregistrer la spec.
