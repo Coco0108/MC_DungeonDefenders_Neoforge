@@ -13,7 +13,6 @@
   "key.dungeon_defenders.tower_wheel": "Open tower wheel",
   "key.dungeon_defenders.rotate_tower": "Rotate tower (placement)",
 
-  "dungeon_defenders.eternia_crystal.damaged": "Ouch! The crystal loses %s HP. Remaining: %s",
   "dungeon_defenders.eternia_crystal.destroyed": "The Eternia Crystal has been destroyed! Game Over!",
   "dungeon_defenders.eternia_crystal.ready_progress": "Ready: %s/%s",
   "dungeon_defenders.game.victory": "Victory! All waves cleared.",

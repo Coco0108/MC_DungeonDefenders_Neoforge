@@ -138,7 +138,13 @@ vérifie la CI.
   fond en rond (`CircleSlot`), purement visuel : pas de clic, pas de cooldown, pas d'icône.
   Voir "Ce qui reste" ci-dessous. **Positionnement testé en jeu** (2026-08-23).
 - ✅ HUD vanilla masqué (cœurs, faim, expérience, hotbar) au profit d'une interface custom —
-  voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
+  voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué). Décidé avec le joueur
+  (2026-08-24) : pas de mécanique de faim dans ce mod (`ModEvents.onPlayerTick` la maintient au
+  maximum à chaque tick serveur, quelle que soit l'activité du joueur) ; plus de hotbar non
+  plus, à terme un seul item par main plutôt que 9 emplacements — les touches 1-9 et la molette
+  ne changent donc plus le slot sélectionné (`DungeonDefendersModClient`, `ClientTickEvent.Pre`
+  vide les touches avant que Minecraft ne les lise, `InputEvent.MouseScrollingEvent` annulé).
+  **Jamais vu en jeu.**
 - ✅ Bloc `spawner` : premier vrai morceau de gameplay (pas juste du HUD). Fait apparaître des
   zombies et des squelettes pendant la phase de combat via l'algorithme de spawn pondéré du
   plan Excel du joueur (voir
@@ -184,7 +190,8 @@ vérifie la CI.
 - ✅ Aperçu de composition du spawner en phase Construction (`SpawnerBlockEntityRenderer`) :
   total d'ennemis à venir + détail par type affiché au-dessus du bloc, **visible à travers les
   murs** (`Font.DisplayMode.SEE_THROUGH`), comme dans le jeu de référence. Caché en phase
-  Combat, texte seul pour l'instant (pas d'icône par type). Détail dans
+  Combat ; l'œuf d'invocation vanilla de chaque ennemi s'affiche à côté du texte de sa ligne
+  (`ItemStackRenderState`, jamais vu en jeu — voir "Pistes prioritaires" plus bas). Détail dans
   [02-gameplay.md](02-gameplay.md#laperçu-de-composition-en-phase-construction--spawnerblockentityrendererjava).
   **Testé en jeu** (2026-08-23).
 - ✅ Une vague se déroule maintenant de bout en bout : le Combat se **déclenche** via un vote
@@ -199,7 +206,10 @@ vérifie la CI.
   **Testé en jeu** (2026-08-23) : vote "prêt", dégâts au cristal en combat (mêlée et
   squelette archer), et fin de vague/retour en Construction fonctionnent. Un bug trouvé et
   corrigé au passage : `WAVE_ENEMIES_KILLED` ne se remettait pas à 0 en repassant en
-  Construction (voir "Corrections apportées").
+  Construction (voir "Corrections apportées"). Le harnais de test qui infligeait 10 dégâts au
+  clic droit en Combat a été retiré (2026-08-24, décidé avec le joueur) : maintenant que les
+  monstres endommagent le cristal pour de vrai, il n'a plus lieu d'être — le clic droit ne
+  fait plus rien en Combat, `useWithoutItem` ne gère plus que le vote "prêt" en Construction.
 - ✅ Un ennemi ne peut plus spawn à l'intérieur d'un bloc plein (`SpawnerBlockEntity
   #findSafeSpawnPos`) : jusqu'à 8 positions aléatoires essayées dans le rayon de spawn,
   vérifiées traversables (pieds + tête), repli sur `pos.above()` sinon. Pas de vérification
@@ -289,12 +299,6 @@ cristal, pas un cube plein, puisque la hitbox fait déjà 3 blocs de haut.
 Même situation pour `models/block/spike_blockade.json`, qui pointe sur
 `minecraft:block/dripstone_block` en attendant `textures/block/spike_blockade.png`.
 
-### Le clic droit endommage encore le cristal
-
-`useWithoutItem` retire 10 PV : c'est le harnais de test qui a servi à développer la
-mécanique. Il est conservé volontairement (c'est le seul moyen simple de tester sans faire
-spawner un zombie), mais il n'a rien à faire dans une version jouable.
-
 ### Le mana n'a pas encore de vraie capacité/sort qui le consomme
 
 Le mana a désormais une vraie utilité (coût de pose des tours, voir "Ce qui est implémenté" et
@@ -329,13 +333,16 @@ l'XP vanilla).
 Détail complet dans
 [02-gameplay.md](02-gameplay.md#les-cristaux-de-mana--entitymanacrystalentityjava-initmanacrystaltypejava).
 
-### Faim et hotbar masqués sans remplacement
+### Hotbar masquée sans remplacement (la faim, elle, est définitivement abandonnée)
 
-`FOOD_LEVEL` et `HOTBAR` sont masqués (voir
-[02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué)) mais rien ne les remplace encore : le
-joueur ne voit plus sa faim, ni l'objet qu'il a en main/sa barre d'objets. Tant qu'un
-équivalent custom n'existe pas, c'est une vraie perte d'information en jeu, pas seulement
-esthétique — à garder en tête en testant (voir [06-a-tester.md](06-a-tester.md)).
+`FOOD_LEVEL` est masqué et n'a plus vocation à être remplacé : décidé avec le joueur, ce mod
+n'a pas de mécanique de faim du tout (`ModEvents.onPlayerTick` la maintient au maximum en
+permanence). `HOTBAR` reste masquée sans équivalent custom pour l'instant : le joueur ne voit
+plus l'objet qu'il a en main ni sa barre d'objets, et les touches 1-9/la molette ne
+sélectionnent plus rien (voir "Ce qui est implémenté" plus haut) — en attendant le futur
+système "un item par main" annoncé par le joueur (pas encore conçu ni implémenté), c'est une
+vraie perte d'information en jeu, pas seulement esthétique — à garder en tête en testant (voir
+[06-a-tester.md](06-a-tester.md)).
 
 ### L'expérience custom n'a pas de vraie utilité de gameplay
 
@@ -615,10 +622,33 @@ chevaucher.
 à l'autre à chaque coup encaissé. Une interpolation entre l'ancienne et la nouvelle valeur
 rendrait l'effet plus lisible.
 
-### Aucun gametest
+### Gametests : deux premiers, tous deux sur de la logique pure
 
-Le run `gameTestServer` est configuré dans `build.gradle` mais aucun gametest n'existe : il
-plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
+`./gradlew runGameTestServer` (voir [03-build-et-lancement.md](03-build-et-lancement.md))
+exécute maintenant deux tests (`gametest/DungeonDefendersGameTests.java`) — vérifiés
+réellement en lançant la commande, pas seulement compilés :
+
+- `eternia_crystal_damage` : le cristal démarre à `Config.DEFAULT_HEALTH` PV, encaisse
+  correctement les dégâts, et le bloc disparaît à 0 PV.
+- `phase_transitions` : `PhaseTransitions.enterCombat`/`enterBuild` mettent bien à jour
+  `GAME_PHASE`, et `enterBuild` remet `WAVE_ENEMIES_KILLED` à 0 (la régression corrigée le
+  2026-08-23).
+
+L'API de gametest vanilla a été entièrement refondue dans cette version (système de
+"fonctions" de test enregistrées dans un registre `BuiltInRegistries.TEST_FUNCTION` bootstrapé
+une seule fois au chargement du jeu, bien avant qu'un mod ait la main — pas de point
+d'accroche exploitable) : `ModGameTestInstance` (dans le même package) contourne ce problème
+en gardant sa propre table nom → fonction plutôt que de dépendre de ce registre, et s'enregistre
+directement en code via `RegisterGameTestsEvent#registerTest` (NeoForge), sans passer par du
+JSON de datapack. Structure de test partagée par les deux :
+`data/dungeon_defenders/structure/gametest/empty.nbt`, un gabarit 3×3×3 sans le moindre bloc
+(les deux tests posent/lisent leurs blocs eux-mêmes, pas besoin de décor).
+
+Volontairement limité à de la logique déterministe et synchrone (pas de mob, pas de minuteur,
+pas plusieurs ticks à attendre) : les scénarios les plus simples à rendre fiables. D'autres
+tests (dégâts de contact d'une Blockade, tir d'une Turret, spawn effectif d'un monstre...)
+demanderaient de gérer le temps qui passe et l'IA, plus sujets aux faux négatifs — pas
+tentés pour l'instant.
 
 ## Reliquats du template
 
@@ -650,8 +680,10 @@ métadonnées (renvoie vers `doc/`), `Config.java` a une vraie spec (`defaultHea
    `ManaOverlay`/`HealthOverlay`/`ExperienceOverlay` de vraies textures (sprites, cadre) une
    fois disponibles — la forme (losange) se rapproche déjà du jeu de référence, il manque la
    matière.
-6. Concevoir et implémenter les remplacements custom de la faim et de la hotbar (masquées
-   mais vides pour l'instant).
+6. ~~Faim~~ tranché (2026-08-24) : pas de mécanique de faim du tout, définitivement masquée.
+   Reste la hotbar : concevoir et implémenter le futur système "un item par main" annoncé par
+   le joueur, pour remplacer les 9 emplacements masqués (touches 1-9/molette déjà neutralisées,
+   voir "Ce qui est implémenté").
 7. Définir un vrai système d'expérience/score/niveaux : comment `EXPERIENCE`, `SCORE` et
    `LEVEL` se nourrissent l'un l'autre (aujourd'hui trois compteurs indépendants, tous
    bloqués à leur valeur par défaut, comme le mana avant `ManaTestWandItem`).

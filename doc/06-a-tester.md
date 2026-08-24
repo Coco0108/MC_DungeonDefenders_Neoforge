@@ -61,16 +61,29 @@ vanilla) et la toute première fois que le mana remonte en jeu.
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ManaCrystalEntity`,
       `ModEntities`, `ModEvents.onExperienceDrop` ou `onTowerBreak`.
 
-## HUD vanilla masqué
+## HUD vanilla masqué, faim et hotbar désactivées
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar
       (barre d'objets tout en bas) ont **disparu** de l'écran.
-- [ ] Aucune erreur au changement de slot sélectionné (touches 1-9 / molette) malgré la
-      hotbar invisible — elle doit continuer à fonctionner en arrière-plan (l'objet en main
-      change bien), seul l'affichage est masqué.
+- [ ] La faim ne baisse **jamais**, même en sprintant/sautant/minant en continu longtemps —
+      vérifie `ModEvents.onPlayerTick`, qui la repousse au maximum à chaque tick serveur.
+- [ ] Les touches 1-9 et la molette (hors inventaire/coffre) ne **changent plus rien** :
+      l'objet en main reste le même, comportement inverse du point précédent (avant ce
+      changement, la hotbar tournait encore en arrière-plan malgré l'affichage masqué) —
+      vérifie `DungeonDefendersModClient#onClientTickPre`/`onMouseScroll`.
+- [ ] Les touches 1-9/la molette fonctionnent normalement dans un écran (inventaire créatif,
+      coffre...) — la neutralisation ne doit s'appliquer qu'en jeu, hors écran.
 - [ ] La barre d'armure (si équipée) : vérifier si elle s'affiche seule, à une position
       bizarre, maintenant que la hotbar en dessous d'elle est vide (comportement attendu mais
       pas encore vérifié visuellement).
+
+## Clic droit sur le Cristal d'Eternia en Combat
+
+Le harnais de test qui infligeait 10 dégâts au clic droit en Combat a été retiré.
+
+- [ ] Clic droit sur le cristal pendant le Combat : ne fait plus rien (pas de message, pas de
+      dégâts) — seuls les monstres l'endommagent désormais.
+- [ ] Le vote "prêt" (clic droit en Construction) fonctionne toujours normalement.
 
 ## Hitbox anti-escalade des tours (Spike Blockade, Harpoon Turret)
 

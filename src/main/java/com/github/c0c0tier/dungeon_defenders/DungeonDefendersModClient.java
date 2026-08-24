@@ -16,6 +16,8 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScre
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.ExperienceOrbRenderer;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
@@ -23,7 +25,9 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
@@ -119,5 +123,24 @@ public class DungeonDefendersModClient {
     @SubscribeEvent
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         ModKeyMappings.register(event);
+    }
+
+    // Plus de hotbar (HUD masqué, HOTBAR ci-dessus, et à terme un seul item par main plutôt
+    // que 9 emplacements) : les touches 1-9 ne doivent plus rien faire. Vidées avant que
+    // Minecraft#tick() ne les lise lui-même (Pre se déclenche en tête de tick, avant
+    // handleKeybinds()) plutôt que d'essayer de défaire le changement de slot après coup.
+    @SubscribeEvent
+    static void onClientTickPre(ClientTickEvent.Pre event) {
+        for (KeyMapping hotbarKey : Minecraft.getInstance().options.keyHotbarSlots) {
+            while (hotbarKey.consumeClick()) {
+                // Volontairement vide : on absorbe le clic sans rien faire.
+            }
+        }
+    }
+
+    // Même raisonnement pour la molette : plus de hotbar à faire défiler.
+    @SubscribeEvent
+    static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
+        event.setCanceled(true);
     }
 }

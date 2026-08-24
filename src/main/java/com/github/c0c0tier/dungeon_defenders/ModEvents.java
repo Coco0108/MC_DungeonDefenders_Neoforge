@@ -23,6 +23,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class ModEvents {
@@ -34,6 +35,13 @@ public class ModEvents {
     // Part du coût de pose remboursée en mana quand le joueur casse lui-même sa tour à la
     // pioche (voir onTowerBreak) — valeur de test, pas encore équilibrée.
     private static final float TOWER_MANA_REFUND_RATIO = 0.5F;
+
+    // Décidé avec le joueur : pas de mécanique de faim dans ce mod, la barre est déjà masquée
+    // (DungeonDefendersModClient) mais rien n'empêchait encore la faim de baisser en arrière-
+    // plan (sprint, saut, minage...) — repoussée à son maximum à chaque tick serveur plutôt
+    // que d'essayer d'annuler chaque source d'exhaustion une par une.
+    private static final int FULL_FOOD_LEVEL = 20;
+    private static final float FULL_SATURATION = 20.0F;
 
     @SubscribeEvent
     public static void onMonsterSpawn(EntityJoinLevelEvent event) {
@@ -131,6 +139,17 @@ public class ModEvents {
         if (wasAtPreviousMax) {
             player.setHealth((float) maxHealthAttribute.getValue());
         }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide()) {
+            return;
+        }
+
+        player.getFoodData().setFoodLevel(FULL_FOOD_LEVEL);
+        player.getFoodData().setSaturation(FULL_SATURATION);
     }
 
     @SubscribeEvent
