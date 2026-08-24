@@ -1,25 +1,49 @@
+# Dungeon Defenders (NeoForge)
 
-Installation information
-=======
+Mod Minecraft inspiré de *Dungeon Defenders* : le joueur place un **Cristal d'Eternia** que
+les monstres tentent de détruire, en se défendant avec des tours (Spike Blockade, Harpoon
+Turret...) posées pendant une phase de construction avant chaque vague.
 
-This template repository can be directly cloned to get you started with a new
-mod. Simply create a new repository cloned from this one, by following the
-instructions provided by [GitHub](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template).
+| Info | Valeur |
+|---|---|
+| `mod_id` | `dungeon_defenders` |
+| Nom affiché | Dungeon Defenders |
+| Version du mod | `0.0.1` |
+| Minecraft | `26.1.2` |
+| NeoForge | `26.1.2.76` |
+| Java | 25 (toolchain Gradle) |
+| Package racine | `com.github.c0c0tier.dungeon_defenders` |
+| Auteur | C0C0TIER |
+| Licence | All Rights Reserved |
 
-Once you have your clone, simply open the repository in the IDE of your choice. The usual recommendation for an IDE is either IntelliJ IDEA or Eclipse.
+## Documentation
 
-If at any point you are missing libraries in your IDE, or you've run into problems you can
-run `gradlew --refresh-dependencies` to refresh the local cache. `gradlew clean` to reset everything 
-{this does not affect your code} and then start the process again.
+Toute la documentation du projet (architecture, gameplay, build, état d'avancement, backlog)
+vit dans [`doc/`](doc/README.md) — c'est le point d'entrée à lire en premier.
 
-Mapping Names:
-============
-By default, the MDK is configured to use the official mapping names from Mojang for methods and fields 
-in the Minecraft codebase. These names are covered by a specific license. All modders should be aware of this
-license. For the latest license text, refer to the mapping file itself, or the reference copy here:
+## Démarrage rapide
+
+```bash
+./gradlew build      # compile + vérifie
+./gradlew runClient  # lance un client de dev avec le mod chargé
+```
+
+Voir [doc/03-build-et-lancement.md](doc/03-build-et-lancement.md) pour le détail des
+commandes et configurations de run disponibles.
+
+## Mappings
+
+Ce projet utilise les mappings officiels Mojang pour les méthodes/champs de Minecraft, soumis
+à une licence spécifique — voir le texte de référence :
 https://github.com/NeoForged/NeoForm/blob/main/Mojang.md
 
-Additional Resources: 
-==========
-Community Documentation: https://docs.neoforged.net/  
-NeoForged Discord: https://discord.neoforged.net/
+## Ressources NeoForge
+
+- Documentation communautaire : https://docs.neoforged.net/
+- Discord NeoForged : https://discord.neoforged.net/
+
+---
+
+Ce dépôt est parti du MDK (Mod Development Kit) NeoForge ; les fichiers de gabarit encore
+présents sous leur licence MIT d'origine (voir [`TEMPLATE_LICENSE.txt`](TEMPLATE_LICENSE.txt))
+restent distincts de la licence du mod lui-même (« All Rights Reserved », ci-dessus).

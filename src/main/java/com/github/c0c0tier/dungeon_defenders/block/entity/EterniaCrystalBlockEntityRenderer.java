@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
+import com.github.c0c0tier.dungeon_defenders.Config;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -41,7 +42,7 @@ public class EterniaCrystalBlockEntityRenderer
     ) {
         BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress);
         state.healthPercent = Mth.clamp(
-                blockEntity.getCrystalHealth() / (float) EterniaCrystalBlockEntity.DEFAULT_HEALTH, 0.0F, 1.0F);
+                blockEntity.getCrystalHealth() / (float) Config.DEFAULT_HEALTH.get(), 0.0F, 1.0F);
     }
 
     @Override

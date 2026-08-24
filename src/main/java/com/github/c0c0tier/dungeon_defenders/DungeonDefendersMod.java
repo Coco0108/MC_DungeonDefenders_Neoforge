@@ -15,7 +15,9 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
@@ -72,7 +74,7 @@ public class DungeonDefendersMod {
                     })
                     .build());
 
-    public DungeonDefendersMod(IEventBus modEventBus) {
+    public DungeonDefendersMod(IEventBus modEventBus, ModContainer container) {
         // On enregistre tes deux fichiers de registres sur le bus
         ModBlocks.register(modEventBus);
         ModAttachments.register(modEventBus);
@@ -80,6 +82,8 @@ public class DungeonDefendersMod {
         ModEntities.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
+
+        container.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
         LOGGER.info("Le mod Dungeon Defenders est initialisé proprement !");
     }

@@ -17,7 +17,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── TavernSpawn.java                  # Point de spawn fixe + plateforme provisoire (monde vide)
     │   ├── MapInstance.java                  # "La map active" : emplacement partagé, placeholder, téléportation
     │   ├── ModCommands.java                  # /dd_leave (retour à la taverne, harnais de test)
-    │   ├── Config.java                       # Spec de config (héritée du template, non branchée)
+    │   ├── Config.java                       # Spec de config réelle (PV cristal, dégâts, portée), branchée
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
     │   │   ├── ModAttachments.java           # DeferredRegister des data attachments (mana, vagues, phase...)
@@ -99,8 +99,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── textures/gui/maps/<id>.png                  # Aperçu de chaque GameMap (une image par map)
     │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_blockade,spawner,tavern_crystal,harpoon_turret}.json
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
-    │   ├── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
-    │   └── META-INF/accesstransformer.cfg         # Access Transformers
+    │   └── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
     └── templates/META-INF/neoforge.mods.toml      # Métadonnées, expansées par Gradle
 ```
 
@@ -253,18 +252,10 @@ s'abonne donc au **bus de jeu**, celui des événements runtime (`EntityJoinLeve
 
 ## Access Transformers
 
-`src/main/resources/META-INF/accesstransformer.cfg` élargit la visibilité de trois méthodes
-de `Display` / `Display.TextDisplay` :
-
-```
-public net.minecraft.world.entity.Display$TextDisplay setText(...)
-public net.minecraft.world.entity.Display setBillboardConstraints(...)
-public net.minecraft.world.entity.Display setViewRange(F)V
-```
-
-Elles servaient à une première version de l'affichage des PV, basée sur une entité
-`TextDisplay`. Ce code a été retiré au profit d'un rendu custom (voir
-[02-gameplay.md](02-gameplay.md)) : **l'AT n'est plus utilisé par aucune classe du mod**. Il
-est conservé pour ne pas fermer la porte à cette approche, mais il peut être supprimé sans
-conséquence. NeoForge détecte automatiquement ce fichier, aucune déclaration Gradle n'est
-requise.
+Aucun pour l'instant. `src/main/resources/META-INF/accesstransformer.cfg` élargissait la
+visibilité de trois méthodes de `Display`/`Display.TextDisplay`, utilisées par une première
+version (retirée) de l'affichage des PV basée sur une entité `TextDisplay` — supprimé le
+2026-08-24, plus aucune classe du mod ne les utilisait (rendu custom depuis, voir
+[02-gameplay.md](02-gameplay.md)). Si un futur besoin d'AT se présente : NeoForge détecte
+automatiquement `src/main/resources/META-INF/accesstransformer.cfg`, aucune déclaration Gradle
+n'est requise (voir `build.gradle`, ligne commentée `accessTransformers = ...`).

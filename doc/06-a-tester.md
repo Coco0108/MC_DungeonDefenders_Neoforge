@@ -85,6 +85,36 @@ les monstres de sauter dessus — jamais vérifié visuellement.
 - [ ] Vérifier que le contour de sélection (regarder la tour) correspond bien à la nouvelle
       hauteur de 1,5 bloc, pas à l'ancien cube plein.
 
+## Icônes du spawner (`SpawnerBlockEntityRenderer`)
+
+Chaque ligne de détail de l'aperçu de composition affiche maintenant l'œuf d'invocation de
+l'ennemi à côté du texte (`ItemStackRenderState`/`ItemModelResolver`, réutilisé tel quel côté
+rendu) — première fois que ce mod dessine un item en 3D dans le monde en dehors d'une main de
+joueur, jamais vérifié visuellement. Taille/écart (`ICON_SIZE`/`ICON_GAP` dans
+`SpawnerBlockEntityRenderer`) sont une première estimation à l'aveugle, sans doute à retoucher.
+
+- [ ] En phase Construction, regarder un spawner configuré : chaque ligne de détail affiche
+      bien un œuf (zombie ou squelette selon l'entrée) à gauche du texte, ni minuscule ni
+      énorme, sans chevaucher le texte.
+- [ ] L'icône est correctement centrée verticalement sur sa ligne de texte.
+- [ ] Contrairement au texte (visible à travers les murs), l'icône est bloquée par les murs —
+      comportement attendu (limite connue, voir doc/05), à confirmer que ça ne rend pas
+      illisible (texte visible sans son icône à travers un mur).
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ItemModelResolver`/
+      `ItemStackRenderState` dans `SpawnerBlockEntityRenderer`.
+
+## Config (`Config.java`, `config/dungeon_defenders-common.toml`)
+
+Config réellement enregistrée pour la première fois ce mod (avant : spec d'exemple jamais
+branchée) — jamais vérifié visuellement.
+
+- [ ] Le fichier `config/dungeon_defenders-common.toml` apparaît après un premier lancement,
+      avec `defaultHealth`, `damagePerHit`, `searchRange` dedans (valeurs par défaut 100/5/16).
+- [ ] Modifier une valeur (ex. `defaultHealth=50`) puis relancer : le Cristal d'Eternia
+      démarre bien avec ce nouveau maximum (barre de vie pleine dès la pose).
+- [ ] L'écran de config du mod (menu Mods > Dungeon Defenders > Config) s'ouvre sans erreur et
+      affiche bien les 3 options (au lieu de l'ancien contenu d'exemple du template).
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

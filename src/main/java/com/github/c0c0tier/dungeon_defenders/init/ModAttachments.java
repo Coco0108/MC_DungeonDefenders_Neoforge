@@ -82,12 +82,20 @@ public class ModAttachments {
                     .build());
 
     // Phase de la partie (construction, combat...) : état de la Level, comme current_wave.
-    // Stockée comme l'ordinal de GamePhase (même approche que les autres compteurs, pas
-    // besoin d'un Codec dédié à l'enum pour l'instant). Démarre en phase de construction.
+    // En mémoire/réseau, reste l'ordinal de GamePhase (VAR_INT, comme les autres compteurs :
+    // pas besoin d'un Codec dédié à l'enum pour la sync, et tout le reste du mod compare
+    // toujours des ordinaux). Seule la PERSISTANCE (sauvegarde/chargement du monde) passe par
+    // le nom de la constante plutôt que son ordinal : contrairement à l'ordinal, il reste
+    // correct même si l'ordre des valeurs de GamePhase change un jour (insertion d'une phase
+    // avant COMBAT, par exemple) — sans ça une sauvegarde existante se retrouverait avec la
+    // mauvaise phase au chargement. Démarre en phase de construction.
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> GAME_PHASE = ATTACHMENT_TYPES.register(
             "game_phase",
             () -> AttachmentType.builder(() -> GamePhase.BUILD.ordinal())
-                    .serialize(Codec.INT.fieldOf("GamePhase"))
+                    .serialize(Codec.STRING.xmap(
+                            name -> GamePhase.valueOf(name).ordinal(),
+                            ordinal -> GamePhase.values()[ordinal].name()
+                    ).fieldOf("GamePhase"))
                     .sync(ByteBufCodecs.VAR_INT)
                     .build());
 

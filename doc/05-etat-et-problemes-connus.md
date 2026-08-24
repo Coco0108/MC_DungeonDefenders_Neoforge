@@ -624,18 +624,25 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 
 | Fichier | Reliquat |
 |---|---|
-| `README.md` | encore le README du MDK NeoForge, ne parle pas du mod |
-| `Config.java` | spec d'exemple (`logDirtBlock`, `magicNumber`…) jamais enregistrée via `registerConfig` |
-| `DungeonDefendersModClient` | enregistre un `IConfigScreenFactory` pour une config inexistante au runtime |
-| `TEMPLATE_LICENSE.txt` | licence du template, à ne pas confondre avec la licence du mod (`All Rights Reserved`) |
-| `accesstransformer.cfg` | élargit trois méthodes de `Display` que plus aucune classe n'utilise depuis le retrait du code `TextDisplay` |
+| `TEMPLATE_LICENSE.txt` | licence MIT du template lui-même (fichiers de gabarit NeoForge MDK), distincte de la licence du mod (`All Rights Reserved`) — conservée volontairement, c'est une vraie mention légale, pas du code mort |
+
+~~`README.md` encore celui du MDK~~, ~~`Config.java` spec d'exemple jamais enregistrée~~,
+~~`DungeonDefendersModClient` enregistrait un écran de config pour une config inexistante~~ et
+~~`accesstransformer.cfg` élargissait 3 méthodes de `Display` inutilisées depuis le retrait du
+code `TextDisplay`~~ — tous résolus le 2026-08-24 : `README.md` renseigné avec les vraies
+métadonnées (renvoie vers `doc/`), `Config.java` a une vraie spec (`defaultHealth`,
+`damagePerHit`, `searchRange`) enregistrée via `container.registerConfig` dans
+`DungeonDefendersMod` (l'écran de config du client affiche donc maintenant du contenu réel), et
+`accesstransformer.cfg` supprimé (confirmé inutilisé par recherche globale).
 
 ## Pistes prioritaires
 
 1. Créer les textures et vrais modèles du cristal et du Spike Blockade.
-2. Renseigner le `README.md` avec les vraies métadonnées (le `neoforge.mods.toml` est fait).
-3. Externaliser les constantes de gameplay (`DEFAULT_HEALTH`, `DAMAGE_PER_HIT`,
-   `SEARCH_RANGE`) dans `Config`, et enregistrer la spec.
+2. ~~Renseigner le `README.md` avec les vraies métadonnées~~ — fait (2026-08-24).
+3. ~~Externaliser les constantes de gameplay (`DEFAULT_HEALTH`, `DAMAGE_PER_HIT`,
+   `SEARCH_RANGE`) dans `Config`, et enregistrer la spec~~ — fait (2026-08-24). `DIFFICULTY`
+   (`GameDifficulty`) partage le même genre de constantes en dur ailleurs (`DifficultyScaling`)
+   si une prochaine passe veut continuer dans cette direction.
 4. Retirer le harnais de test du clic droit quand une autre source de dégâts existera.
 5. Donner une vraie utilité au mana côté **sorts/capacités du joueur** (la pose de tours et le
    ramassage de cristaux existent déjà), retirer `ManaTestWandItem`/`ManaFillWandItem`, puis
@@ -673,10 +680,15 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 13. ~~Donner un moyen de choisir la difficulté au lancement de la map~~ — fait :
     `MapSelectionScreen` (voir "Ce qui est implémenté" et
     [02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté)).
-14. Ajouter une icône par type de monstre dans l'aperçu de composition du spawner
-    (`SpawnerBlockEntityRenderer`, phase Construction) — texte seul pour l'instant. Piste
-    envisagée : réutiliser les textures vanilla des œufs d'invocation
-    (`zombie_spawn_egg`/`skeleton_spawn_egg`) pour ne pas dépendre d'assets custom.
+14. ~~Ajouter une icône par type de monstre dans l'aperçu de composition du spawner~~ — fait
+    (2026-08-24) : chaque ligne de détail affiche maintenant l'œuf d'invocation vanilla de
+    l'ennemi (`SpawnableEnemy#spawnEggItem`), rendu via `ItemStackRenderState`/
+    `ItemModelResolver` à côté du texte. **Jamais vu en jeu** (pas d'affichage possible dans cet
+    environnement de dev) : taille (`ICON_SIZE`) et décalage (`ICON_GAP`) sont une première
+    estimation à ajuster une fois testé — voir la checklist dédiée dans
+    [06-a-tester.md](06-a-tester.md). Limite connue : contrairement au texte (`SEE_THROUGH`),
+    l'icône est bloquée par les murs — pas d'équivalent "à travers les murs" pour le rendu
+    d'item trouvé dans l'API de rendu de cette version.
 15. Système de maps/structures : ~~monde vide + point de spawn fixe~~, ~~écran de choix de
     map/difficulté~~ et ~~mécanisme de chargement de map (placeholder)~~ faits (voir "Ce qui
     est implémenté"). Reste : la vraie structure de la taverne (remplacer la plateforme

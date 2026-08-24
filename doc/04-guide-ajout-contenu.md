@@ -408,16 +408,20 @@ cours, comme l'annulation d'une tension d'arc dans la version à distance).
 
 ## Ajouter une option de configuration
 
-[`Config.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/Config.java) contient
-la spec d'exemple du template. Pour l'utiliser réellement, il faut l'enregistrer dans le
-constructeur du mod — ce n'est **pas** fait aujourd'hui :
+[`Config.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/Config.java) est une
+vraie spec (plus l'exemple du template), enregistrée dans le constructeur du mod :
 
 ```java
-public DungeonDefendersMod(IEventBus modEventBus, ModContainer modContainer) {
+public DungeonDefendersMod(IEventBus modEventBus, ModContainer container) {
     ...
-    modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+    container.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 }
 ```
 
-Une bonne première option serait d'externaliser les constantes actuellement en dur
-(`DEFAULT_HEALTH = 100`, dégâts de `5`, portée de recherche `16`).
+Génère `config/dungeon_defenders-common.toml` au premier lancement. Trois valeurs y sont déjà
+externalisées : `defaultHealth` (PV du Cristal d'Eternia, 100 par défaut), `damagePerHit`
+(dégâts de mêlée d'`AttackPriorityTargetGoal`, 5 par défaut) et `searchRange` (portée de
+détection du cristal, mêlée et distance confondues, 16 par défaut). Pour en ajouter une :
+déclarer le champ dans `Config.java` (`BUILDER.comment(...).defineInRange(...)` ou
+`.define(...)` selon le type), puis lire sa valeur via `Config.MA_VALEUR.get()` là où c'était
+une constante en dur.
