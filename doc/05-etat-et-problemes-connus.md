@@ -80,6 +80,14 @@ vérifie la CI.
   [02-gameplay.md](02-gameplay.md#le-goal-de-mêlée-unifié--entityaiattackprioritytargetgoaljava-blockentityaiattacktargetjava).
   **Testé en jeu** (2026-08-23) via les tests des tours ci-dessus : les monstres priorisent
   bien les tours avant le cristal.
+- ✅ Barre de vie des monstres (`entity/MobHealthBarLayer.java`, 2026-08-24) : même principe et
+  mêmes conditions que la barre des tours (endommagé + à portée de 16 blocs), branchée sur
+  zombie et squelette via `EntityRenderersEvent.AddLayers`. La vie n'existant pas nativement
+  sur un `EntityRenderState` vanilla, `RegisterRenderStateModifiersEvent` (NeoForge) l'y ajoute
+  via `ContextKey` — voir le détail dans
+  [02-gameplay.md](02-gameplay.md#la-barre-de-vie-des-monstres--entitymobhealthbarlayerjava).
+  **Jamais vu en jeu**, y compris le mécanisme de base (impossible à vérifier sans client
+  graphique dans cet environnement de dev).
 - ✅ Roue de sélection des tours (`TowerWheelScreen`, touche `R` par défaut) + mode pose en une
   seule étape (`TowerPlacementState`/`TowerPlacementClientEvents` — position et rotation
   évoluent en parallèle, un seul clic droit pose la tour, simplifié depuis un flux à deux

@@ -64,6 +64,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── AbilitySlotsOverlay.java      # 4 emplacements de compétences, bas gauche, à côté des losanges (client uniquement)
     │   ├── entity/
     │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
+    │   │   ├── MobHealthBarLayer.java         # RenderLayer : barre de vie zombie/squelette, cachée à PV pleins/hors portée (client)
     │   │   └── ai/
     │   │       ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal (un seul sous-classeur : la version à distance)
     │   │       ├── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal (archers, ignorent Blockade/Turret)
@@ -197,6 +198,9 @@ Chargement FML
    ├─ RegisterPayloadHandlersEvent     → SpawnerConfigPayload, SetDifficultyPayload,
    │                                      StartGamePayload (C2S, ModNetworking — commun, pas client-only)
    ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer, SpawnerBlockEntityRenderer, TowerHealthBarRenderer (Blockade + Turret)
+   ├─ RegisterRenderStateModifiersEvent [client] → HEALTH/MAX_HEALTH/ENTITY_ID sur tout LivingEntityRenderState
+   │                                                (MobHealthBarLayer, lu par la couche ci-dessous)
+   ├─ AddLayers [client]               → MobHealthBarLayer sur ZombieRenderer + SkeletonRenderer
    ├─ RegisterGuiLayersEvent [client]  → ManaOverlay, HealthOverlay, ExperienceOverlay,
    │                                      WaveOverlay, WaveEnemiesOverlay, PhaseOverlay,
    │                                      ScoreOverlay, CharacterOverlay, AbilitySlotsOverlay

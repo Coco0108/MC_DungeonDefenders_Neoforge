@@ -14,13 +14,25 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScreen;
+import com.github.c0c0tier.dungeon_defenders.entity.MobHealthBarLayer;
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
+import com.google.common.reflect.TypeToken;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.monster.skeleton.SkeletonModel;
+import net.minecraft.client.model.monster.zombie.ZombieModel;
 import net.minecraft.client.renderer.entity.ExperienceOrbRenderer;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.client.renderer.entity.state.SkeletonRenderState;
+import net.minecraft.client.renderer.entity.state.ZombieRenderState;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.skeleton.Skeleton;
+import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -36,6 +48,7 @@ import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.GuiLayer;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
 
 // This class will not load on dedicated servers. Accessing client side code from here is safe.
 @Mod(value = DungeonDefendersMod.MODID, dist = Dist.CLIENT)
@@ -83,6 +96,37 @@ public class DungeonDefendersModClient {
                 ModEntities.MANA_CRYSTAL.get(),
                 ExperienceOrbRenderer::new
         );
+    }
+
+    // La vie n'existe pas nativement sur un EntityRenderState vanilla (voir
+    // doc/05-etat-et-problemes-connus.md) : ce modificateur l'y ajoute pour toute entité
+    // vivante (coût négligeable), lue ensuite par MobHealthBarLayer via ContextKey — la
+    // couche elle-même n'est branchée que sur zombie/squelette (voir onAddLayers ci-dessous),
+    // seuls monstres du mod pour l'instant.
+    @SubscribeEvent
+    static void onRegisterRenderStateModifiers(RegisterRenderStateModifiersEvent event) {
+        event.registerEntityModifier(
+                new TypeToken<LivingEntityRenderer<LivingEntity, LivingEntityRenderState, ?>>() {},
+                (entity, state) -> {
+                    state.setRenderData(MobHealthBarLayer.HEALTH, entity.getHealth());
+                    state.setRenderData(MobHealthBarLayer.MAX_HEALTH, entity.getMaxHealth());
+                    state.setRenderData(MobHealthBarLayer.ENTITY_ID, entity.getId());
+                });
+    }
+
+    @SubscribeEvent
+    static void onAddLayers(EntityRenderersEvent.AddLayers event) {
+        LivingEntityRenderer<Zombie, ZombieRenderState, ZombieModel<ZombieRenderState>> zombieRenderer =
+                event.getRenderer(EntityType.ZOMBIE);
+        if (zombieRenderer != null) {
+            zombieRenderer.addLayer(new MobHealthBarLayer<>(zombieRenderer));
+        }
+
+        LivingEntityRenderer<Skeleton, SkeletonRenderState, SkeletonModel<SkeletonRenderState>> skeletonRenderer =
+                event.getRenderer(EntityType.SKELETON);
+        if (skeletonRenderer != null) {
+            skeletonRenderer.addLayer(new MobHealthBarLayer<>(skeletonRenderer));
+        }
     }
 
     @SubscribeEvent
