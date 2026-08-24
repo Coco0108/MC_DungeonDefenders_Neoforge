@@ -241,6 +241,16 @@ actuellement vide — rien à distribuer). `ManaChestBlockEntity` n'a pour l'ins
 champ configurable (`manaAmount`) ; ajouter des armes demandera probablement une vraie liste
 de loot façon `SpawnerBlockEntity.SpawnEntry`, pas juste un champ de plus.
 
+### Le mana du coffre est donné directement, pas sous forme de cristal ramassable
+
+`ManaChestBlockEntity#tryOpen` fait directement `player.setData(ModAttachments.MANA, ...)` —
+contrairement au mana des monstres tués, qui tombe sous forme de `ManaCrystalEntity` ramassable
+au sol (voir `feature/mana-crystals`, PR #12). Décidé avec le joueur (2026-08-24) : à revoir
+une fois la PR #12 mergée dans `main` — `ManaChestBlock` pourrait alors faire tomber un ou
+plusieurs cristaux au lieu de donner le mana instantanément au clic, pour rester cohérent avec
+le reste du système de mana. Pas fait maintenant : `ManaChestBlock` a été développé sur une
+branche partie de `main`, qui ne contient pas encore `ManaCrystalEntity`.
+
 ### Le clic droit endommage encore le cristal
 
 `useWithoutItem` retire 10 PV : c'est le harnais de test qui a servi à développer la
