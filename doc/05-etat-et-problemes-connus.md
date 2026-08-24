@@ -187,12 +187,14 @@ vérifie la CI.
   feuille "Idées" du plan Excel du joueur) : meuble de map, comme le Cristal d'Eternia/le
   Spawner — posé par le créateur, pas par un joueur en jeu. Donne une quantité de mana
   configurable par map au clic droit en survie, une fois par vague (comparaison à
-  `CURRENT_WAVE`, "se recharge" tout seul à chaque nouvelle Construction sans registre ni
-  modification de `PhaseTransitions`), uniquement en phase Construction. Clic droit en créatif
-  ouvre un écran de configuration (même patron que `SpawnerConfigScreen`, un seul champ) —
-  configuration figée hors créatif, comme le spawner. Distribuera aussi des armes plus tard,
-  hors scope pour l'instant (voir "Ce qui reste"). Détail dans
-  [02-gameplay.md](02-gameplay.md#le-coffre-de-mana--blockmanachestblockjava). **Jamais testé
+  `CURRENT_WAVE`), uniquement en phase Construction. Comme dans le jeu de référence, le coffre
+  **disparaît** une fois ouvert (invisible et traversable, propriété de blockstate `OPENED`) et
+  **réapparaît** à la vague suivante (`ManaChestBlock#respawnAll`, appelé par
+  `PhaseTransitions#enterBuild`, via un registre `ACTIVE_MANA_CHESTS` — même principe
+  qu'`ACTIVE_SPAWNERS`). Clic droit en créatif ouvre un écran de configuration (même patron que
+  `SpawnerConfigScreen`, un seul champ) — configuration figée hors créatif, comme le spawner.
+  Distribuera aussi des armes plus tard, hors scope pour l'instant (voir "Ce qui reste"). Détail
+  dans [02-gameplay.md](02-gameplay.md#le-coffre-de-mana--blockmanachestblockjava). **Jamais testé
   en jeu.**
 
 ## Corrections apportées

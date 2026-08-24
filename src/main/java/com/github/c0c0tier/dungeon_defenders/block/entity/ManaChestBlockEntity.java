@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -8,9 +9,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -20,8 +23,10 @@ import net.minecraft.world.level.storage.ValueOutput;
 // Meuble de map (posé par le créateur, pas par un joueur en jeu — voir ManaChestBlock) qui
 // donne du mana au clic droit, une fois par vague : "se remplit" à chaque nouvelle
 // Construction plutôt qu'un vrai minuteur, en comparant lastOpenedWave à CURRENT_WAVE (déjà
-// incrémenté à chaque entrée en Construction par PhaseTransitions#enterBuild) — pas besoin
-// d'un registre de coffres actifs ni de toucher PhaseTransitions, contrairement au spawner.
+// incrémenté à chaque entrée en Construction par PhaseTransitions#enterBuild). Visuellement,
+// un coffre ouvert devient invisible/traversable (ManaChestBlock#OPENED) jusqu'à la vague
+// suivante — voir ManaChestBlock#respawnAll, qui a besoin d'ACTIVE_MANA_CHESTS pour savoir
+// quels coffres existent, même principe qu'ACTIVE_SPAWNERS pour les spawners.
 // Distribuera aussi des armes plus tard (feuille "Idées" du plan Excel du joueur) : hors
 // scope pour l'instant, voir doc/05-etat-et-problemes-connus.md.
 public class ManaChestBlockEntity extends BlockEntity {
@@ -38,6 +43,27 @@ public class ManaChestBlockEntity extends BlockEntity {
 
     public ManaChestBlockEntity(BlockPos pos, BlockState state) {
         super(DungeonDefendersMod.MANA_CHEST_BE.get(), pos, state);
+    }
+
+    // --- REGISTRE DES COFFRES ACTIFS ---
+    // Même principe que SpawnerBlockEntity#setLevel/#setRemoved et ACTIVE_SPAWNERS : permet à
+    // ManaChestBlock#respawnAll de savoir quels coffres existent sans parcourir tous les
+    // chunks chargés.
+
+    @Override
+    public void setLevel(Level level) {
+        super.setLevel(level);
+        if (level instanceof ServerLevel) {
+            level.getData(ModAttachments.ACTIVE_MANA_CHESTS).add(this.worldPosition);
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        if (this.level instanceof ServerLevel) {
+            this.level.getData(ModAttachments.ACTIVE_MANA_CHESTS).remove(this.worldPosition);
+        }
     }
 
     public int getManaAmount() {
@@ -73,6 +99,11 @@ public class ManaChestBlockEntity extends BlockEntity {
 
         if (this.level != null) {
             this.level.playSound(null, this.worldPosition, SoundEvents.CHEST_OPEN, SoundSource.BLOCKS);
+            // Devient invisible/traversable jusqu'à la prochaine Construction (voir
+            // ManaChestBlock#respawnAll) — le bloc entity, lui, n'est pas touché : même
+            // instance, même config, seule la propriété OPENED du blockstate change.
+            this.level.setBlock(
+                    this.worldPosition, this.getBlockState().setValue(ManaChestBlock.OPENED, true), Block.UPDATE_ALL);
         }
 
         return true;

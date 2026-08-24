@@ -674,11 +674,16 @@ survie, une fois par vague, configurable en créatif — jamais vérifié visuel
       recliquer : la nouvelle valeur doit être là (bien appliquée et resynchronisée), pas
       revenue à 25.
 - [ ] **En survie**, clic droit en phase Construction : donne bien la quantité configurée de
-      mana (message + HUD), une seule fois — recliquer immédiatement doit afficher le message
-      "coffre vide" sans redonner de mana.
-- [ ] Passer en Combat puis revenir en Construction (nouvelle vague) : le coffre doit à nouveau
-      s'ouvrir une fois — vérifie que la comparaison à `CURRENT_WAVE` "recharge" bien le coffre
-      sans code dédié dans `PhaseTransitions`.
+      mana (message + HUD), une seule fois.
+- [ ] **Après ouverture, le coffre doit disparaître** (invisible) et devenir traversable — le
+      point le plus important de cette section : vérifie `OPENED`/`getRenderShape`/`getShape`/
+      `getCollisionShape` dans `ManaChestBlock`. Essayer de re-cliquer à l'endroit où il était :
+      ne doit plus rien cibler (le clic doit traverser, pas afficher "coffre vide").
+- [ ] Passer en Combat puis revenir en Construction (nouvelle vague) : le coffre doit
+      **réapparaître** (visible, solide) et s'ouvrir à nouveau une fois — vérifie
+      `ManaChestBlock#respawnAll` appelé par `PhaseTransitions#enterBuild`.
+- [ ] Plusieurs coffres sur la même map : ouvrir l'un ne doit pas faire disparaître les autres,
+      et tous doivent réapparaître à la vague suivante (pas seulement le premier du registre).
 - [ ] Clic droit en phase Combat : message "Construction uniquement", pas de mana donné.
 - [ ] Mana déjà à 100/100 : le coffre s'ouvre quand même (marqué comme utilisé pour la vague),
       mais le mana ne dépasse pas 100.

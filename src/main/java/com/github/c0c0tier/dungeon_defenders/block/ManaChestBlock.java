@@ -9,12 +9,21 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
+
+import java.util.ArrayList;
 
 // "Coffre de mana" (feuille "Idées" du plan Excel du joueur — sert aussi à distribuer des
 // armes plus tard, hors scope pour l'instant, voir doc/05-etat-et-problemes-connus.md). Meuble
@@ -24,8 +33,20 @@ public class ManaChestBlock extends BaseEntityBlock {
 
     public static final MapCodec<ManaChestBlock> CODEC = simpleCodec(ManaChestBlock::new);
 
+    // true une fois ouvert pour la vague en cours : le coffre devient invisible et traversable
+    // (voir getRenderShape/getShape/getCollisionShape) plutôt que rester visible mais inerte —
+    // comme dans le jeu de référence, décidé avec le joueur. Redevient false (bloc plein,
+    // visible) à chaque nouvelle Construction, voir respawnAll ci-dessous.
+    public static final BooleanProperty OPENED = BooleanProperty.create("opened");
+
     public ManaChestBlock(Properties properties) {
         super(properties);
+        this.registerDefaultState(this.stateDefinition.any().setValue(OPENED, false));
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(OPENED);
     }
 
     @Override
@@ -40,7 +61,32 @@ public class ManaChestBlock extends BaseEntityBlock {
 
     @Override
     public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
+        return state.getValue(OPENED) ? RenderShape.INVISIBLE : RenderShape.MODEL;
+    }
+
+    @Override
+    protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return state.getValue(OPENED) ? Shapes.empty() : Shapes.block();
+    }
+
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return state.getValue(OPENED) ? Shapes.empty() : Shapes.block();
+    }
+
+    /**
+     * Remet tous les coffres ouverts de {@code level} à leur état "plein" (visible, solide) —
+     * appelé à chaque nouvelle Construction (voir PhaseTransitions#enterBuild). Copie
+     * défensive d'ACTIVE_MANA_CHESTS : le registre peut changer (dé/rechargement de chunk)
+     * pendant qu'on le parcourt, même raisonnement que PhaseTransitions#recomputeWaveEnemiesTotal.
+     */
+    public static void respawnAll(Level level) {
+        for (BlockPos pos : new ArrayList<>(level.getData(ModAttachments.ACTIVE_MANA_CHESTS))) {
+            BlockState state = level.getBlockState(pos);
+            if (state.getBlock() instanceof ManaChestBlock && state.getValue(OPENED)) {
+                level.setBlock(pos, state.setValue(OPENED, false), Block.UPDATE_ALL);
+            }
+        }
     }
 
     /**

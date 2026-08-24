@@ -155,6 +155,14 @@ public class ModAttachments {
             "active_spawners",
             () -> AttachmentType.<Set<BlockPos>>builder((Supplier<Set<BlockPos>>) HashSet::new).build());
 
+    // Même principe qu'ACTIVE_SPAWNERS, pour les coffres de mana : chaque ManaChestBlockEntity
+    // s'y ajoute/retire lui-même (voir ManaChestBlockEntity#setLevel/#setRemoved). Sert à
+    // "respawn" (redevenir visible/solide) tous les coffres ouverts à l'entrée en Construction
+    // (voir ManaChestBlock#respawnAll, appelé par PhaseTransitions#enterBuild).
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Set<BlockPos>>> ACTIVE_MANA_CHESTS = ATTACHMENT_TYPES.register(
+            "active_mana_chests",
+            () -> AttachmentType.<Set<BlockPos>>builder((Supplier<Set<BlockPos>>) HashSet::new).build());
+
     // "Prêt" : état du joueur (clic droit sur le Cristal d'Eternia en phase Construction, voir
     // EterniaCrystalBlock), pas de la Level, comme mana/experience. Faux par défaut, remis à
     // faux pour tout le monde dès que le Combat démarre (voir PhaseTransitions#enterCombat) —

@@ -932,15 +932,38 @@ public boolean tryOpen(Player player, int currentWave) {
 
 `lastOpenedWave` (0 = jamais ouvert) plutôt qu'un simple booléen "déjà ouvert" : comparé à
 `ModAttachments.CURRENT_WAVE`, déjà incrémenté à chaque entrée en Construction par
-`PhaseTransitions#enterBuild`. Le coffre se "recharge" donc tout seul à chaque nouvelle vague,
-sans registre de coffres actifs (contrairement à `ACTIVE_SPAWNERS`) ni la moindre modification
-de `PhaseTransitions` — un choix délibérément plus simple que le mécanisme du spawner, rendu
-possible parce qu'un coffre n'a besoin d'aucune action au changement de phase lui-même,
-seulement de savoir répondre "déjà ouvert cette vague ?" à la demande.
+`PhaseTransitions#enterBuild`. Le coffre "sait" donc tout seul s'il peut redonner du mana pour
+la vague en cours, sans qu'aucun code n'ait besoin de remettre ce champ à zéro explicitement.
 
 `manaAmount` (25 par défaut) est **configurable par coffre**, pas une constante globale du mod
 — décidé avec le joueur : la bonne quantité dépend de la taille et de la difficulté de chaque
 map, pas d'une seule valeur qui conviendrait à toutes.
+
+### Disparition et réapparition visuelles — `ManaChestBlock#OPENED`, `#respawnAll`
+
+Décidé avec le joueur (2026-08-24), comme dans le jeu de référence : un coffre ouvert ne reste
+pas visible mais inerte, il **disparaît** jusqu'à la vague suivante. `OPENED` est une vraie
+propriété de `BlockState` (`BooleanProperty`, comme `HORIZONTAL_FACING` sur le Harpoon Turret) :
+
+- `getRenderShape` renvoie `RenderShape.INVISIBLE` si `OPENED`, sinon `MODEL`.
+- `getShape`/`getCollisionShape` renvoient `Shapes.empty()` si `OPENED` — traversable, et
+  surtout **impossible à cibler au clic droit** (le rayon d'interaction du joueur se base sur
+  cette même forme) : un coffre déjà ouvert ne peut donc plus jamais être re-cliqué tant qu'il
+  n'a pas réapparu, sans avoir besoin d'une vérification explicite côté interaction.
+
+`ManaChestBlockEntity#tryOpen` bascule `OPENED` à `true` (`level.setBlock(pos,
+state.setValue(OPENED, true), ...)`) juste après avoir donné le mana — le bloc entity lui-même
+n'est ni recréé ni perturbé (même `Block` Java, seule une propriété change ; vanilla ne
+recrée un block entity que si le `Block` sous-jacent change, pas une simple propriété).
+
+Pour la **réapparition**, un registre `ModAttachments.ACTIVE_MANA_CHESTS`
+(`Set<BlockPos>`, même principe qu'`ACTIVE_SPAWNERS`) est nécessaire : `ManaChestBlockEntity`
+s'y ajoute/retire via `setLevel`/`setRemoved`, et `ManaChestBlock.respawnAll(level)` (appelé
+par `PhaseTransitions#enterBuild`, à chaque nouvelle Construction) parcourt ce registre et
+repasse `OPENED` à `false` pour tout coffre encore ouvert — contrairement à ce qui avait été
+envisagé au départ (voir 05-etat-et-problemes-connus.md), un simple champ sur le block entity
+ne suffisait pas : rien d'autre ne "réveille" un coffre qui n'est visité par personne, il faut
+bien un point d'entrée explicite au changement de phase pour le repasser visible/solide.
 
 ### Apparence
 

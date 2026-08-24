@@ -184,7 +184,7 @@ Chargement FML
    ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana, experience, current_wave,
    │                                      wave_enemies_total, wave_enemies_killed, game_phase,
    │                                      score, level, character_name, difficulty,
-   │                                      combat_session, active_spawners, ready
+   │                                      combat_session, active_spawners, active_mana_chests, ready
    ├─ RegisterEvent(MENU)              → spawner_config, mana_chest_config (MenuType)
    ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal, spawner, mana_chest (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
