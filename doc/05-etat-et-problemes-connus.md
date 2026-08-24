@@ -25,19 +25,36 @@ vérifie la CI.
   goal d'IA (`AttackBlockadeGoal`, priorité 0, avant le cristal en priorité 1) détourne les
   ennemis de mêlée vers tout bloc du tag `dungeon_defenders:blockades` plutôt que le cristal,
   tant qu'il n'est pas détruit — pas les archers, qui peuvent tirer par-dessus/à côté. Coûte
-  30 mana à la pose (`ModEvents.onBlockadePlace`, valeur de test pas encore équilibrée),
-  placement refusé et item rendu si mana insuffisant. Modèle, blockstate, loot table, tag
-  `mineable/pickaxe`, traductions `en_us`/`fr_fr`, onglet créatif. Détail dans
+  30 mana à la pose, placement refusé et item rendu si mana insuffisant. Modèle, blockstate,
+  loot table, tag `mineable/pickaxe`, traductions `en_us`/`fr_fr`. Détail dans
   [02-gameplay.md](02-gameplay.md#le-spike-blockade--blockspikeblockadeblockjava).
+- ✅ Bloc `harpoon_turret` ("Harpoon Turret") : premier membre de la catégorie "Turret" —
+  tour à distance qui scanne et tire toute seule à chaque tick (pas de `Goal` porté par un
+  monstre, contrairement à Blockade), dans un **cône** de 45° orienté selon
+  `HORIZONTAL_FACING` (angle fixe, la largeur à l'extrémité du cône augmente avec la portée par
+  trigonométrie, pas le cône lui-même), portée 12 blocs, 6 dégâts/tir toutes les 1,5 s. Flèche
+  visuelle (constructeur `Arrow` sans propriétaire) + dégâts directs, même principe que le
+  squelette archer sur le cristal. 20 PV, coût 50 mana — mêmes valeurs de test pas encore
+  équilibrées que Spike Blockade. A des PV comme une Blockade (décidé avec le joueur) mais
+  **aucun goal d'IA ne le cible encore**. A motivé l'extraction de
+  `block/entity/AbstractTowerBlockEntity.java` (PV/coût mana/persistance/sync, commun aux deux
+  catégories désormais) — première vraie duplication entre catégories, généralisée seulement
+  maintenant qu'un second exemple concret la prouve. Modèle directionnel (texture furnace
+  vanilla, `minecraft:block/orientable`) — premier bloc du mod à avoir une vraie propriété de
+  `BlockState` (`HORIZONTAL_FACING`), et premier vrai consommateur de la rotation choisie dans
+  la roue (`ModNetworking.handlePlaceTower` l'appliquait déjà par anticipation). Détail dans
+  [02-gameplay.md](02-gameplay.md#le-harpoon-turret--blockharpoonturretblockjava).
 - ✅ Roue de sélection des tours (`TowerWheelScreen`, touche `R` par défaut) + mode pose en
   deux étapes (viser puis orienter, `TowerPlacementState`/`TowerPlacementClientEvents`) avec
-  hologramme vert/rouge et cercle de portée (jamais affiché pour l'instant, aucune tour n'a de
-  portée > 0). **Unique façon de poser une tour** : le `BlockItem` classique ne pose plus rien
-  (`BlockadeBlockItem#useOn` renvoie systématiquement `PASS`, retiré de l'onglet créatif).
+  hologramme vert/rouge et zone de portée (cercle ou **cône**, premier vrai test avec le
+  Harpoon Turret — jamais vérifié visuellement, voir 06-a-tester.md). **Unique façon de poser
+  une tour**, toute catégorie confondue : le `BlockItem` classique ne pose plus rien
+  (`TowerBlockItem#useOn` renvoie systématiquement `PASS`, retiré de l'onglet créatif).
   Pas de filtrage par héros (système inexistant). Le paquet de confirmation
   (`PlaceTowerPayload`) réutilise le hook NeoForge `EventHooks.onBlockPlace` pour déclencher la
-  même vérification de mana (et désormais de **phase** — Construction uniquement) que
-  `ModEvents.onBlockadePlace` appliquait déjà. Détail dans
+  même vérification de mana et de **phase** (Construction uniquement) que
+  `ModEvents.onTowerPlace` (renommé depuis `onBlockadePlace`, généralisé aux deux catégories).
+  Détail dans
   [02-gameplay.md](02-gameplay.md#la-roue-de-sélection-des-tours-et-la-pose--clientguiscreentowerwheelscreenjava).
 - ✅ Mana du joueur : data attachment `mana` (persistant, synchronisé), maximum par défaut de
   100, affiché en HUD via `ManaOverlay` — losange en bas à gauche de l'écran (`DiamondGauge`,
@@ -243,19 +260,23 @@ de coût en mana, pas de lien avec un vrai sort ou une vraie action de réparati
 n'existent pas non plus côté gameplay). C'est un pur placeholder visuel, en attendant les
 images promises pour chaque slot et la logique derrière.
 
-### Système de tours (catégorie "Blockade" démarrée)
+### Système de tours (catégories "Blockade" et "Turret" démarrées)
 
 Discuté avec le joueur : les tours ne seront pas toutes construites sur le même patron —
 il envisage au moins 5 catégories, chacune avec ses propres règles :
 
-1. **Blocks passifs** et **corps à corps** — désormais **unifiées en une seule catégorie de
-   code, "Blockade"** (décision explicite du joueur, voir plus bas) : bloquent le passage,
-   avec un booléen optionnel pour infliger des dégâts au contact. Un block passif n'est qu'une
-   Blockade avec ce booléen à `false`. **Spike Blockade en fait partie (booléen à `true`), et
-   c'est le seul membre concret pour l'instant** (voir "Ce qui est implémenté" plus haut et
+1. **Blocks passifs** et **corps à corps** — **unifiées en une seule catégorie de code,
+   "Blockade"** (décision explicite du joueur) : bloquent le passage, avec un booléen optionnel
+   pour infliger des dégâts au contact. Un block passif n'est qu'une Blockade avec ce booléen à
+   `false`. **Spike Blockade en fait partie (booléen à `true`), et c'est le seul membre concret
+   pour l'instant** (voir "Ce qui est implémenté" plus haut et
    [02-gameplay.md](02-gameplay.md#la-catégorie-blockade--blockentityabstractblockadeblockentityjava-tag-dungeon_defendersblockades)).
-2. **Tours à distance** — visent et tirent sur les ennemis à portée, ne bloquent probablement
-   pas le passage (posées en retrait).
+2. **Tours à distance** — catégorie de code **"Turret"**, démarrée avec le **Harpoon Turret**
+   (voir "Ce qui est implémenté" plus haut et
+   [02-gameplay.md](02-gameplay.md#le-harpoon-turret--blockharpoonturretblockjava)) : scanne et
+   tire toute seule à chaque tick, dans un cône orienté (angle fixe, pas de goal d'IA porté par
+   un monstre — à l'inverse de Blockade). Ne bloque pas spécialement le passage plus qu'un bloc
+   plein normal, mais ce n'est pas son rôle (posée en retrait).
 3. **Auras et pièges non attaquables** — pas de PV, pas destructibles par les ennemis ; juste
    une durée ou un taux d'utilisation limité (charges).
 4. **Pièges de sol** — un "sur-bloc" (pas un bloc plein) posé sur le sol, non attaquable —
@@ -264,63 +285,61 @@ il envisage au moins 5 catégories, chacune avec ses propres règles :
    plus tard, sous un autre nom du plan Excel (ex. une des trap de la Huntress).
 5. D'autres catégories, pas encore réfléchies par le joueur.
 
-**Architecture de code, décidée avec le joueur** : contrairement à la position initiale ("pas
-de base commune tant qu'il n'y a qu'un seul exemple concret"), le joueur a explicitement
-demandé d'établir dès maintenant une base de code pour la catégorie "Blockade", puisqu'il
-connaît déjà son comportement commun avant même d'écrire une deuxième blockade concrète :
+**Architecture de code — base commune à toutes les catégories, pas juste Blockade** : le joueur
+avait explicitement demandé d'établir une base de code pour "Blockade" avant même un second
+exemple de cette catégorie précise. Avec le Harpoon Turret (catégorie sœur "Turret"), une
+**vraie duplication entre catégories** est apparue pour de bon (PV, coût mana, persistance,
+sync) — extraite maintenant, avec deux exemples concrets pour la constater plutôt que la
+deviner :
 
-- `block/entity/AbstractBlockadeBlockEntity.java` porte les stats communes : PV (`maxHealth`),
-  coût en mana à la pose (`manaCost`, **désormais consommé** via `ModEvents.onBlockadePlace`,
-  voir plus bas), et un booléen `dealsContactDamage` (+ dégâts/intervalle/portée de contact si
-  actif). **Pas de stat "portée d'attaque"** sur cette base : une blockade n'attaque pas à
-  distance, seulement au contact.
-- **Le coût en mana à la pose est branché** (`ModEvents.onBlockadePlace`, écoute
-  `BlockEvent.EntityPlaceEvent`) : générique à toute la catégorie via
-  `getBlockEntity(pos) instanceof AbstractBlockadeBlockEntity`, pas seulement Spike Blockade.
-  Mana insuffisant → placement annulé, NeoForge restaure le bloc précédent et rend l'item
-  automatiquement. Valeur de test sur Spike Blockade : `MANA_COST = 30`, pas encore équilibrée.
-  Aucune exemption créative (même convention que `ManaTestWandItem`).
-- `entity/ai/AttackBlockadeGoal.java` cible désormais **tout bloc du tag**
-  `dungeon_defenders:blockades` (`init/ModBlockTags.java`,
-  `data/dungeon_defenders/tags/block/blockades.json`) plutôt que `spike_blockade` en dur —
-  ajouter une future blockade au tag JSON suffit pour qu'elle hérite du comportement
-  d'attaque, sans toucher au goal.
-- **Priorité confirmée avec le joueur** : une blockade à portée de recherche (8 blocs)
-  l'emporte toujours sur le cristal, même si elle n'est pas strictement sur le trajet le plus
-  direct du monstre (pas de vérification de chemin — un simple scan par rayon). Cette règle
-  vaut aussi comme convention par défaut pour les futures catégories de tours : une blockade
-  doit rester prioritaire sur le cristal **et** sur les autres types de tours, une fois qu'ils
-  existeront.
-- `AttackBlockadeGoal` **n'étend toujours pas** `AbstractEterniaCrystalAttackGoal` : cette
-  décision-là reste inchangée (le cristal cible un exemplaire unique sur la carte, une
-  blockade est cherchée par tag/proximité — formes trop différentes pour forcer une base
-  commune maintenant).
-- **Les autres catégories (2 à 5) restent sans base de code pour l'instant** : la
-  généralisation immédiate n'a été demandée que pour "Blockade" — chacune des autres sera
-  construite en autonomie d'abord (comme prévu à l'origine), sauf nouvelle décision explicite
-  du joueur au moment de s'y attaquer.
+- `block/entity/AbstractTowerBlockEntity.java` (nouveau) porte ce qui est commun à **toute**
+  tour, Blockade ou Turret : PV (`maxHealth`), coût en mana à la pose (`manaCost`, consommé via
+  `ModEvents.onTowerPlace`), persistance et sync client. `AbstractBlockadeBlockEntity` et
+  `AbstractTurretBlockEntity` en héritent, et n'ajoutent que leur spécifique (dégâts de contact
+  pour l'une, portée/cône/tir pour l'autre).
+- `entity/ai/AttackBlockadeGoal.java` cible **tout bloc du tag** `dungeon_defenders:blockades`
+  (`init/ModBlockTags.java`) plutôt que `spike_blockade` en dur — ajouter une future blockade au
+  tag JSON suffit pour qu'elle hérite du comportement d'attaque, sans toucher au goal. **Rien
+  d'équivalent pour Turret** : aucun goal d'IA ne cible un turret pour l'instant (décidé avec le
+  joueur pour le Harpoon Turret — PV présents mais inertes).
+- **Priorité confirmée avec le joueur (Blockade uniquement)** : une blockade à portée de
+  recherche (8 blocs) l'emporte toujours sur le cristal, même si elle n'est pas strictement sur
+  le trajet le plus direct du monstre (pas de vérification de chemin — un simple scan par
+  rayon). Cette règle reste la convention par défaut si une catégorie de tour attaquable par un
+  monstre apparaît un jour (Turret n'y est pas encore concerné, faute de goal).
+- `AttackBlockadeGoal` **n'étend toujours pas** `AbstractEterniaCrystalAttackGoal` (le cristal
+  cible un exemplaire unique sur la carte, une blockade est cherchée par tag/proximité — formes
+  trop différentes pour forcer une base commune).
+- **Les catégories 3 à 5 restent sans base de code pour l'instant** : chacune sera construite
+  en autonomie d'abord (comme prévu à l'origine), sauf nouvelle décision explicite du joueur au
+  moment de s'y attaquer — la généralisation systématique dès le départ n'est pas la règle,
+  seulement le résultat d'une vraie duplication constatée (comme ici entre Blockade et Turret).
 
-**Reste à faire, même pour Spike Blockade** : équilibrage réel du coût en mana (30 est une
-valeur de test, pas réfléchie), remboursement de mana à la casse, indicateur visuel de PV
-restants. Et bien sûr, les catégories 2 à 5 n'ont aucune implémentation.
+**Reste à faire** : équilibrage réel des coûts en mana (30/50, valeurs de test, pas
+réfléchies), remboursement de mana à la casse, indicateur visuel de PV restants (Blockade et
+Turret), goal d'IA pour attaquer un turret. Et bien sûr, les catégories 3 à 5 n'ont aucune
+implémentation.
 
 **Comment on pose les tours, décidé avec le joueur** : dans le vrai Dungeon Defenders, les
 tours ne se posent pas depuis l'inventaire (la liste dépend du héros choisi) — une **roue
 radiale** a donc été construite (`TowerWheelScreen`, touche dédiée), avec un mode pose en deux
-étapes (viser puis orienter) affichant un hologramme (vert/rouge selon validité) et un cercle
-de portée générique (voir "Ce qui est implémenté" plus haut et
+étapes (viser puis orienter) affichant un hologramme (vert/rouge selon validité) et une zone de
+portée (cercle ou cône) générique (voir "Ce qui est implémenté" plus haut et
 [02-gameplay.md](02-gameplay.md#la-roue-de-sélection-des-tours-et-la-pose--clientguiscreentowerwheelscreenjava)
 pour le détail complet). **Pas de filtrage par héros** pour l'instant (ce système n'existe pas
 encore) — la roue liste toutes les tours, prête à être filtrée plus tard.
 
-Décidé également : **la roue est l'unique façon de poser une tour**. Le `BlockItem` classique
-a été neutralisé (`BlockadeBlockItem#useOn` ne fait plus rien, retiré de l'onglet créatif) —
-plus de pose alternative, ni depuis l'inventaire créatif ni depuis un item récupéré en jeu.
-Et **les tours ne se posent qu'en phase Construction** : `ModEvents.onBlockadePlace` refuse
-toute pose hors de cette phase (message dédié, restauration du bloc précédent, même mécanisme
-que pour un mana insuffisant) — vérifié une seconde fois côté client (la roue elle-même refuse
-de s'ouvrir en Combat) pour éviter de faire tout le mode pose avant un refus final, mais le
-serveur reste la seule autorité réelle.
+Décidé également : **la roue est l'unique façon de poser une tour**, toute catégorie confondue.
+Le `BlockItem` classique a été neutralisé (`TowerBlockItem#useOn` ne fait plus rien, retiré de
+l'onglet créatif) — plus de pose alternative, ni depuis l'inventaire créatif ni depuis un item
+récupéré en jeu. Et **les tours ne se posent qu'en phase Construction** :
+`ModEvents.onTowerPlace` (renommé depuis `onBlockadePlace`, généralisé à `AbstractTowerBlockEntity`
+— point critique : sans ce renommage, un Harpoon Turret aurait échappé à la vérification de
+mana/phase, "Turret" étant une catégorie sœur de "Blockade", pas descendante) refuse toute pose
+hors de cette phase (message dédié, restauration du bloc précédent, même mécanisme que pour un
+mana insuffisant) — vérifié une seconde fois côté client (la roue elle-même refuse de s'ouvrir
+en Combat) pour éviter de faire tout le mode pose avant un refus final, mais le serveur reste
+la seule autorité réelle.
 
 ### La partie se termine, mais sans vraie conclusion visuelle
 

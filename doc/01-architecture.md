@@ -69,15 +69,19 @@ MC_DungeonDefenders_Neoforge/
     │   └── block/
     │       ├── EterniaCrystalBlock.java      # Le bloc : hitbox, interaction, codec
     │       ├── SpikeBlockadeBlock.java       # Premier tower "Blockade" : mur à PV qui pique au contact
-    │       ├── BlockadeBlockItem.java        # Item de la catégorie "Blockade" : useOn() ne pose plus rien (roue uniquement)
+    │       ├── HarpoonTurretBlock.java       # Premier tower "Turret" : HORIZONTAL_FACING + tir en cône
+    │       ├── TowerBlockItem.java           # Item commun à toute tour (Blockade, Turret...) : useOn() ne pose plus rien (roue uniquement)
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
     │       └── entity/
     │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
     │           ├── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D (client)
-    │           ├── AbstractBlockadeBlockEntity.java        # Base commune catégorie "Blockade" : PV, coût mana, dégâts de contact optionnels (voir 02-gameplay.md)
+    │           ├── AbstractTowerBlockEntity.java           # Base commune à TOUTE catégorie de tour : PV, coût mana, persistance, sync (voir 02-gameplay.md)
+    │           ├── AbstractBlockadeBlockEntity.java        # Catégorie "Blockade" : dégâts de contact optionnels
     │           ├── SpikeBlockadeBlockEntity.java           # Sous-classe : fixe les stats du Spike Blockade (voir 02-gameplay.md)
+    │           ├── AbstractTurretBlockEntity.java          # Catégorie "Turret" : portée + cône + tir (scan/tir par tick, pas de Goal)
+    │           ├── HarpoonTurretBlockEntity.java           # Sous-classe : fixe les stats du Harpoon Turret (voir 02-gameplay.md)
     │           ├── SpawnerBlockEntity.java                 # Algorithme de spawn pondéré (voir 02-gameplay.md)
     │           ├── SpawnerRenderState.java                 # Instantané pour le rendu (client)
     │           └── SpawnerBlockEntityRenderer.java         # Aperçu de composition en phase Construction, à travers les murs (client)
@@ -85,10 +89,12 @@ MC_DungeonDefenders_Neoforge/
     │   ├── assets/dungeon_defenders/
     │   │   ├── lang/{en_us,fr_fr}.json                     # Traductions
     │   │   ├── blockstates/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json   # Variante unique par bloc
+    │   │   ├── blockstates/harpoon_turret.json             # 4 variantes facing=north/east/south/west (comme la furnace vanilla)
     │   │   ├── models/block/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json  # Modèles (texture vanilla provisoire)
-    │   │   ├── items/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json         # Modèles d'item
+    │   │   ├── models/block/harpoon_turret.json             # parent minecraft:block/orientable, textures furnace (placeholder directionnel)
+    │   │   ├── items/{eternia_crystal,spike_blockade,spawner,tavern_crystal,harpoon_turret}.json # Modèles d'item
     │   │   └── textures/gui/maps/<id>.png                  # Aperçu de chaque GameMap (une image par map)
-    │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json
+    │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_blockade,spawner,tavern_crystal,harpoon_turret}.json
     │   ├── data/dungeon_defenders/tags/block/blockades.json # Blocs ciblés par AttackBlockadeGoal (spike_blockade pour l'instant)
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
     │   ├── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"

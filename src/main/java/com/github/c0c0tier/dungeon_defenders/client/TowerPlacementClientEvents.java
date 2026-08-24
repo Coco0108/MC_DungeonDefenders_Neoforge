@@ -70,7 +70,7 @@ public class TowerPlacementClientEvents {
                     && minecraft.level.getData(ModAttachments.GAME_PHASE) == GamePhase.BUILD.ordinal()) {
                 minecraft.setScreen(new TowerWheelScreen());
             } else if (minecraft.player != null) {
-                minecraft.player.sendSystemMessage(Component.translatable("dungeon_defenders.blockade.build_phase_only"));
+                minecraft.player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.build_phase_only"));
             }
         }
 
@@ -176,6 +176,7 @@ public class TowerPlacementClientEvents {
         state.step = TowerPlacementState.step();
         state.rotation = TowerPlacementState.rotation();
         state.range = tower.range();
+        state.coneAngleDegrees = tower.coneAngleDegrees();
         event.getRenderState().setRenderData(RENDER_KEY, state);
     }
 
@@ -210,8 +211,14 @@ public class TowerPlacementClientEvents {
                     state.pos.getX() - camPos.x + 0.5D,
                     state.pos.getY() - camPos.y,
                     state.pos.getZ() - camPos.z + 0.5D);
+            // Toujours appliquée (pas seulement en ORIENTING comme pour le contour du bloc,
+            // qui ne montre de toute façon jamais sa rotation visuellement pour un cube
+            // parfait) : le cône doit refléter state.rotation dès l'étape "visée" (NORTH par
+            // défaut), pas seulement une fois la position verrouillée.
+            poseStack.mulPose(Axis.YP.rotationDegrees(state.rotation.toYRot()));
+            double coneAngle = state.coneAngleDegrees;
             event.getSubmitNodeCollector().submitCustomGeometry(poseStack, RenderTypes.lines(),
-                    (pose, buffer) -> renderRangeCircle(pose, buffer, state.range, COLOR_RANGE, LINE_WIDTH));
+                    (pose, buffer) -> renderRangeArea(pose, buffer, state.range, coneAngle, COLOR_RANGE, LINE_WIDTH));
             poseStack.popPose();
         }
     }
@@ -228,20 +235,47 @@ public class TowerPlacementClientEvents {
         });
     }
 
-    // Jamais déclenché tant qu'aucune tour à portée n'existe (TowerDefinition.range() == 0
-    // partout aujourd'hui) — prêt pour la prochaine tour à distance.
-    private static void renderRangeCircle(
-            PoseStack.Pose pose, VertexConsumer buffer, double radius, int color, float width) {
+    // Cercle complet si coneAngleDegrees >= 360 (omnidirectionnel, ex. Spike Blockade si un
+    // jour range() > 0), sinon un secteur/cône borné : l'arc PLUS deux segments droits vers
+    // l'origine, pour lire visuellement un cône et pas un arc flottant dans le vide.
+    //
+    // Convention du gabarit local (avant rotation par l'appelant) : angle -90° = (0,0,-radius),
+    // soit la direction NORTH — cohérent avec Direction.NORTH.toYRot() == 0 (rotation identité)
+    // déjà utilisé pour le contour du bloc. Non vérifié visuellement pour EAST/SOUTH/WEST (seul
+    // NORTH est à l'abri d'une éventuelle inversion de sens de rotation) — voir
+    // doc/06-a-tester.md, à confirmer avec une vraie texture directionnelle (Harpoon Turret).
+    private static void renderRangeArea(
+            PoseStack.Pose pose, VertexConsumer buffer, double radius, double coneAngleDegrees, int color, float width) {
         Vector3f normal = new Vector3f(0.0F, 1.0F, 0.0F);
-        for (int i = 0; i < CIRCLE_SEGMENTS; i++) {
-            double angle1 = 2.0D * Math.PI * i / CIRCLE_SEGMENTS;
-            double angle2 = 2.0D * Math.PI * (i + 1) / CIRCLE_SEGMENTS;
-            float x1 = (float) (Math.cos(angle1) * radius);
-            float z1 = (float) (Math.sin(angle1) * radius);
-            float x2 = (float) (Math.cos(angle2) * radius);
-            float z2 = (float) (Math.sin(angle2) * radius);
-            buffer.addVertex(pose, x1, 0.0F, z1).setColor(color).setNormal(pose, normal).setLineWidth(width);
-            buffer.addVertex(pose, x2, 0.0F, z2).setColor(color).setNormal(pose, normal).setLineWidth(width);
+        boolean omnidirectional = coneAngleDegrees >= 360.0D;
+        double centerDeg = -90.0D;
+        double startDeg = omnidirectional ? 0.0D : centerDeg - coneAngleDegrees / 2.0D;
+        double endDeg = omnidirectional ? 360.0D : centerDeg + coneAngleDegrees / 2.0D;
+        int segments = omnidirectional
+                ? CIRCLE_SEGMENTS
+                : Math.max(1, (int) Math.round(CIRCLE_SEGMENTS * (coneAngleDegrees / 360.0D)));
+
+        float prevX = (float) (Math.cos(Math.toRadians(startDeg)) * radius);
+        float prevZ = (float) (Math.sin(Math.toRadians(startDeg)) * radius);
+
+        if (!omnidirectional) {
+            buffer.addVertex(pose, 0.0F, 0.0F, 0.0F).setColor(color).setNormal(pose, normal).setLineWidth(width);
+            buffer.addVertex(pose, prevX, 0.0F, prevZ).setColor(color).setNormal(pose, normal).setLineWidth(width);
+        }
+
+        for (int i = 1; i <= segments; i++) {
+            double deg = startDeg + (endDeg - startDeg) * i / segments;
+            float x = (float) (Math.cos(Math.toRadians(deg)) * radius);
+            float z = (float) (Math.sin(Math.toRadians(deg)) * radius);
+            buffer.addVertex(pose, prevX, 0.0F, prevZ).setColor(color).setNormal(pose, normal).setLineWidth(width);
+            buffer.addVertex(pose, x, 0.0F, z).setColor(color).setNormal(pose, normal).setLineWidth(width);
+            prevX = x;
+            prevZ = z;
+        }
+
+        if (!omnidirectional) {
+            buffer.addVertex(pose, prevX, 0.0F, prevZ).setColor(color).setNormal(pose, normal).setLineWidth(width);
+            buffer.addVertex(pose, 0.0F, 0.0F, 0.0F).setColor(color).setNormal(pose, normal).setLineWidth(width);
         }
     }
 }

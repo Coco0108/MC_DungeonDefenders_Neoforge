@@ -448,22 +448,22 @@ les futures tours "mur à PV" (voir la taxonomie du joueur dans
 fusionne ce que la première version de la taxonomie séparait en "block passif" et "corps à
 corps" — un blockade passif n'est qu'un blockade avec les dégâts de contact désactivés.
 
-`AbstractBlockadeBlockEntity` porte les stats communes à toute la catégorie, fixées par chaque
-sous-classe via son constructeur :
+`AbstractBlockadeBlockEntity` étend `AbstractTowerBlockEntity` (voir "Le Harpoon Turret" plus
+bas pour le détail de cette base commune, extraite quand une deuxième catégorie concrète —
+"Turret" — a fait apparaître une vraie duplication de PV/mana/persistance) et n'ajoute que ce
+qui est spécifique au contact :
 
 | Paramètre | Rôle |
 |---|---|
-| `maxHealth` | PV du blockade (`getHealth()`/`damage(int)` détruit le bloc à 0 — `false` en dernier paramètre de `destroyBlock` pour empêcher le drop, comme le cristal) |
-| `manaCost` | coût en mana à la pose, consommé au joueur qui pose le bloc (voir "Le coût en mana à la pose" plus bas) |
 | `dealsContactDamage` | booléen : ce blockade pique-t-il au contact, ou est-il purement passif ? |
 | `contactDamage` / `contactDamageIntervalTicks` / `contactRange` | ignorés si `dealsContactDamage=false` ; sinon, dégâts et cadence des dégâts de contact |
 
-Pas de stat "portée" sur cette base : une blockade n'a pas de portée d'attaque, seulement une
-zone de contact — cohérent avec le fait qu'elle bloque physiquement le passage plutôt que de
-tirer dessus.
+Pas de stat "portée" sur cette catégorie : une blockade n'a pas de portée d'attaque, seulement
+une zone de contact — cohérent avec le fait qu'elle bloque physiquement le passage plutôt que
+de tirer dessus.
 
-`serverTick(...)` (défini une fois sur la base, réutilisé tel quel par chaque sous-classe via
-`createTickerHelper(type, MON_TYPE.get(), AbstractBlockadeBlockEntity::serverTick)`) scanne
+`serverTick(...)` (défini une fois sur la catégorie, réutilisé tel quel par chaque sous-classe
+via `createTickerHelper(type, MON_TYPE.get(), AbstractBlockadeBlockEntity::serverTick)`) scanne
 `serverLevel.getEntitiesOfClass(Monster.class, contactArea)` à chaque tick et applique les
 dégâts de contact aux monstres dont le cooldown (`WeakHashMap<Monster, Long>` — évite de
 retenir des entités mortes/déchargées) est écoulé, **uniquement si** `dealsContactDamage` est
@@ -472,50 +472,46 @@ actif — sinon la méthode ne fait rien.
 `SpikeBlockadeBlockEntity` n'est donc plus qu'une déclaration de stats : `MAX_HEALTH=30`,
 `MANA_COST=30`, `dealsContactDamage=true`, `CONTACT_DAMAGE=2.0F`,
 `CONTACT_DAMAGE_INTERVAL_TICKS=20` (1 s), `CONTACT_RANGE=1.0` — toute la logique vit dans la
-base.
+base ou la catégorie.
 
-### Le coût en mana à la pose — `ModEvents.onBlockadePlace`
+### Le coût en mana et la restriction de phase — `ModEvents.onTowerPlace`
 
-Contrairement au reste de la catégorie (état + dégâts de contact), la dépense de mana à la
-pose ne vit pas dans `AbstractBlockadeBlockEntity` : elle écoute `BlockEvent.EntityPlaceEvent`
+**Générique à toute catégorie de tour**, pas seulement Blockade (renommé depuis
+`onBlockadePlace` en même temps que le Harpoon Turret a introduit une deuxième catégorie —
+voir plus bas pourquoi le filtre devait changer). Écoute `BlockEvent.EntityPlaceEvent`
 (NeoForge, bus de jeu, annulable), qui se déclenche pour **tout** bloc placé par une entité,
-pas seulement les blockades — d'où le filtre `getBlockEntity(pos) instanceof
-AbstractBlockadeBlockEntity` en tout début de handler, générique à toute la catégorie sans
+pas seulement les tours — d'où le filtre `getBlockEntity(pos) instanceof
+AbstractTowerBlockEntity` en tout début de handler, générique à toutes les catégories sans
 avoir besoin d'un tag séparé (le block entity venant d'être créé au moment où l'événement se
 déclenche).
 
-Logique : si `player.getData(ModAttachments.MANA) < blockade.getManaCost()`, l'événement est
-annulé (`event.setCanceled(true)`) — NeoForge restaure alors le `BlockSnapshot` précédent
-**et** rend l'item au joueur automatiquement (le bloc n'est jamais réellement resté posé), pas
-besoin de le faire à la main. Sinon, le mana est débité et resynchronisé
-(`setData`/`syncData`, même paire que `ManaTestWandItem`) et un message confirme la dépense.
+Logique : d'abord la phase — `level.getData(ModAttachments.GAME_PHASE) ==
+GamePhase.BUILD.ordinal()`, sinon placement annulé et message dédié
+(`dungeon_defenders.tower.build_phase_only`), vérifié **avant** le mana pour ne pas laisser
+croire à un problème de mana alors que c'est la phase qui bloque. Puis le mana : si
+`player.getData(ModAttachments.MANA) < tower.getManaCost()`, l'événement est annulé
+(`event.setCanceled(true)`) — NeoForge restaure alors le `BlockSnapshot` précédent **et** rend
+l'item au joueur automatiquement (le bloc n'est jamais réellement resté posé), pas besoin de le
+faire à la main. Sinon, le mana est débité et resynchronisé (`setData`/`syncData`, même paire
+que `ManaTestWandItem`) et un message confirme la dépense.
 
-Valeur de test actuelle : `SpikeBlockadeBlockEntity.MANA_COST = 30`, choisie par le joueur pour
-vérifier que le mécanisme fonctionne (pas encore une valeur d'équilibrage réfléchie). Aucune
-exemption pour le mode créatif — un joueur en créatif sans mana suffisant se voit aussi refuser
-la pose, comme en survie (même convention que `ManaTestWandItem`, qui ne distingue pas non
-plus les modes de jeu).
+Un seul chemin de pose existe aujourd'hui (la roue, voir plus bas), mais ce handler s'applique
+à **n'importe quel** déclencheur de `BlockEvent.EntityPlaceEvent`, rien à refaire si un second
+apparaît. Doublé côté client (`TowerPlacementClientEvents`) : la roue elle-même refuse de
+s'ouvrir hors phase Construction, pour éviter de faire tout le mode pose avant un refus final —
+le serveur reste la seule autorité réelle. Aucune exemption pour le mode créatif (même
+convention que `ManaTestWandItem`).
 
-**Restriction de phase, ajoutée dans le même handler** : avant même de vérifier le mana,
-`onBlockadePlace` vérifie `level.getData(ModAttachments.GAME_PHASE) == GamePhase.BUILD.ordinal()`
-— sinon, placement annulé (même mécanisme de restauration que pour un mana insuffisant) et
-message dédié (`dungeon_defenders.blockade.build_phase_only`), pour ne pas laisser croire à un
-problème de mana alors que c'est la phase qui bloque. Cette vérification étant dans
-`ModEvents.onBlockadePlace` (déclenché via `BlockEvent.EntityPlaceEvent`), elle s'applique à
-**toute** pose d'une blockade, quel que soit le chemin emprunté pour y arriver — actuellement
-un seul chemin existe (la roue, voir plus bas), mais rien à refaire si un second apparaît un
-jour. Doublée côté client (`TowerPlacementClientEvents`) : la roue elle-même refuse de s'ouvrir
-hors phase Construction, pour éviter de faire tout le mode pose avant un refus final.
-
-### L'item ne pose plus rien — `block/BlockadeBlockItem.java`
+### L'item ne pose plus rien — `block/TowerBlockItem.java`
 
 Décidé avec le joueur : la roue est **l'unique façon de poser une tour**, plus d'item posable à
-la main. `SPIKE_BLOCKADE_ITEM` (existe toujours pour un éventuel drop à la casse) n'est plus un
-`BlockItem` classique mais un `BlockadeBlockItem`, dont `useOn(...)` retourne systématiquement
+la main, pour n'importe quelle catégorie. `SPIKE_BLOCKADE_ITEM`/`HARPOON_TURRET_ITEM`
+(existent toujours pour un éventuel drop à la casse) ne sont plus des `BlockItem` classiques
+mais des `TowerBlockItem`, dont `useOn(...)` retourne systématiquement
 `InteractionResult.PASS` — clic droit avec en main : rien ne se passe, comme si l'item n'avait
-aucune interaction avec le monde. Retiré de l'onglet créatif pour la même raison (plus aucun
-intérêt à le sortir directement). Base commune à toute la catégorie "Blockade" : une future
-blockade utilisera la même classe d'item, pas besoin de la réécrire.
+aucune interaction avec le monde. Retirés de l'onglet créatif pour la même raison. Classe
+commune à toutes les catégories : une future tour utilise la même classe d'item, pas besoin de
+la réécrire.
 
 ### Le goal — `entity/ai/AttackBlockadeGoal.java`
 
@@ -572,33 +568,129 @@ niveau d'outil) et se drope lui-même via
 **Ce qui n'est PAS fait**, volontairement — voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) :
 
-- Coût en mana à la pose branché (30, valeur de test — voir "Le coût en mana à la pose"
-  plus haut), mais **pas encore équilibré** : choisi arbitrairement pour vérifier que le
-  mécanisme fonctionne, pas après réflexion sur l'économie de mana globale.
+- Coût en mana à la pose branché (30, valeur de test — voir "Le coût en mana et la restriction
+  de phase" plus haut), mais **pas encore équilibré** : choisi arbitrairement pour vérifier que
+  le mécanisme fonctionne, pas après réflexion sur l'économie de mana globale.
 - Pas de remboursement de mana en le cassant.
 - Pas d'indicateur visuel de PV restants (barre de vie, changement de texture...) — seul
   `getHealth()` existe côté code, rien ne l'affiche encore.
-- Un seul membre concret de la catégorie "Blockade" pour l'instant (Spike Blockade) : la base
-  `AbstractBlockadeBlockEntity` existe déjà (voir plus haut), mais pas encore de tower à
-  distance, d'aura/piège non attaquable, ni de piège de sol (les autres catégories envisagées
-  par le joueur, voir 05-etat-et-problemes-connus.md) — chacune aura probablement besoin de sa
-  propre base, une fois qu'un second exemple concret de chaque existera.
+- Un seul membre concret de la catégorie "Blockade" pour l'instant (Spike Blockade). Une
+  deuxième catégorie existe désormais ("Turret", voir plus bas), mais pas encore d'aura/piège
+  non attaquable ni de piège de sol (les autres catégories envisagées par le joueur, voir
+  05-etat-et-problemes-connus.md) — chacune aura probablement besoin de sa propre base, une
+  fois qu'un second exemple concret de chaque existera.
+
+## Le Harpoon Turret — `block/HarpoonTurretBlock.java`
+
+Premier membre de la catégorie "Turret" (nom repris du plan Excel — Squire) : contrairement à
+Blockade, ce n'est pas un mur qu'on percute, c'est une **tour à distance** qui scanne et tire
+toute seule — construite pour tester l'aperçu de portée de la roue (jamais exercé jusque-là,
+aucune tour n'avait `range > 0`). Ne bloque pas spécialement le passage plus qu'un bloc plein
+normal (gratuit, comme Blockade), mais ce n'est pas son rôle : elle est pensée "posée en
+retrait" (voir la taxonomie du joueur), à l'inverse d'un mur pensé pour être au contact.
+
+### La base commune à toutes les tours — `block/entity/AbstractTowerBlockEntity.java`
+
+**Refactor motivé par ce chantier** : avant le Harpoon Turret, `AbstractBlockadeBlockEntity`
+portait directement PV/coût mana/persistance/sync — dupliquer tout ça pour une deuxième
+catégorie aurait été la première vraie duplication concrète entre catégories (pas juste entre
+deux tours de la même catégorie, où on ne généralise toujours pas tant qu'un second exemple ne
+l'a pas prouvé). `AbstractTowerBlockEntity` absorbe donc ce qui est commun à **toute** tour,
+Blockade ou Turret : `maxHealth`, `manaCost`, `getHealth()`/`getMaxHealth()`/`getManaCost()`,
+`damage(int)`/`setHealth(int)` (détruit le bloc à 0, sans drop), persistance
+(`saveAdditional`/`loadAdditional`) et sync client (`getUpdatePacket`/`getUpdateTag`).
+`AbstractBlockadeBlockEntity` et `AbstractTurretBlockEntity` en héritent chacune, et n'ajoutent
+que ce qui leur est propre — comportement des deux catégories inchangé, juste moins de code
+dupliqué.
+
+### La catégorie "Turret" — `block/entity/AbstractTurretBlockEntity.java`
+
+Contrairement à Blockade (un `Goal` porté par le monstre l'attaque), c'est la tour
+**elle-même** qui agit à chaque tick — même principe que `SpawnerBlockEntity`, qui scanne/agit
+tout seul sans dépendre d'une IA externe. Stats propres à la catégorie :
+
+| Paramètre | Rôle |
+|---|---|
+| `range` | distance de détection, en blocs |
+| `coneAngleDegrees` | largeur du cône de tir autour de `HORIZONTAL_FACING` ; `>= 360` = omnidirectionnel (pas de filtre d'angle) |
+| `damage` / `attackIntervalTicks` | dégâts par tir et cadence |
+
+**Le cône** : angle **fixe** à l'origine (la tour), pas un angle qui s'élargit avec la
+distance — la largeur du cône à son extrémité augmente avec `range` par pure trigonométrie
+(arc = rayon × angle), le sommet du cône reste toujours la position de la tour.
+
+`serverTick(...)` : si le cooldown (`attackIntervalTicks`) n'est pas écoulé, ne fait rien.
+Sinon, lit `HORIZONTAL_FACING` sur le `BlockState` courant (voir plus bas), scanne
+`getEntitiesOfClass(Monster.class, AABB(pos).inflate(range))`, filtre par distance horizontale
+réelle puis, si `coneAngleDegrees < 360`, par angle (produit scalaire entre le vecteur de
+`facing` et le vecteur horizontal vers la cible, `acos` du cosinus donne l'angle en degrés,
+rejeté si `> coneAngleDegrees / 2`). Cible retenue = la plus proche valide ; si trouvée, tire :
+dégâts appliqués **directement** (`monster.hurt(...)`, même principe que
+`RangedAttackEterniaCrystalGoal` sur le cristal — pas de détection de collision) et une flèche
+purement visuelle spawnée via le constructeur `Arrow` **sans propriétaire** (`Arrow(Level,
+double, double, double, ItemStack, ItemStack)` — pas de `LivingEntity`, c'est un bloc qui tire),
+avec le même léger arc vers le haut que `RangedAttackEterniaCrystalGoal` pour compenser la
+gravité sur la distance.
+
+`HarpoonTurretBlockEntity` n'est qu'une déclaration de stats : `MAX_HEALTH=20`,
+`MANA_COST=50`, `RANGE=12.0`, `CONE_ANGLE_DEGREES=45.0`, `DAMAGE=6.0F`,
+`ATTACK_INTERVAL_TICKS=30` (1,5 s) — valeurs de test, pas encore équilibrées, comme pour Spike
+Blockade.
+
+**Décidé avec le joueur** : le turret a des PV comme une Blockade, mais **aucun `Goal` d'IA ne
+le cible pour l'instant** — préparé pour plus tard, pas branché (les PV existent, mais rien ne
+les vise).
+
+### L'orientation — `HORIZONTAL_FACING`, premier vrai usage de la rotation de la roue
+
+Contrairement à `SpikeBlockadeBlock`, `HarpoonTurretBlock` déclare une vraie propriété de
+`BlockState` (`BlockStateProperties.HORIZONTAL_FACING`, via `registerDefaultState` et
+`createBlockStateDefinition`). **Aucun changement nécessaire côté réseau** :
+`ModNetworking.handlePlaceTower` appliquait déjà la rotation choisie dans la roue
+(`state.hasValue(HORIZONTAL_FACING) → state.setValue(...)`) depuis sa construction, en
+anticipation — jamais exercé jusqu'ici puisque Spike Blockade n'a pas cette propriété. Le
+Harpoon Turret en est le premier vrai consommateur.
+
+### Apparence
+
+Modèle `minecraft:block/orientable` (parent vanilla utilisé par la furnace) avec les textures
+`furnace_top`/`furnace_side`/`furnace_front` — placeholder qui a l'avantage d'être
+**directionnel** (contrairement au `cube_all` de Spike Blockade), utile pour vérifier
+visuellement que la rotation choisie dans la roue correspond bien à la façon dont le bloc est
+réellement orienté une fois posé. Blockstate à 4 variantes (`facing=north/east/south/west`,
+`y: 0/90/180/270`), même structure que `minecraft:blockstates/furnace.json`. Miné à la pioche,
+se drope lui-même via `data/dungeon_defenders/loot_table/blocks/harpoon_turret.json`.
+
+**Ce qui n'est PAS fait**, volontairement :
+
+- Pas de goal d'IA pour qu'un monstre attaque un turret (PV présents mais inertes).
+- Pas de restriction de phase sur le tir lui-même (seule la **pose** est restreinte à la phase
+  Construction, comme pour Blockade — même handler généralisé, voir plus haut). Un monstre
+  égaré en phase Construction se ferait quand même tirer dessus ; comportement mineur, cohérent
+  avec les dégâts de contact de Blockade, jamais phase-gatés non plus.
+- Pas de son/particules au tir, juste la flèche visuelle + dégâts directs.
+- Pas d'indicateur visuel de PV restants (même manque que Spike Blockade).
+- La convention de rotation de l'hologramme (voir "L'hologramme et le cercle de portée"
+  ci-dessous) n'a été vérifiée visuellement que pour `NORTH` (rotation identité, à l'abri de
+  toute inversion de sens) — **pas** pour `EAST`/`SOUTH`/`WEST`, jamais lancé en jeu.
 
 ## La roue de sélection des tours et la pose — `client/gui/screen/TowerWheelScreen.java`
 
-Deuxième façon de poser une tour, en plus du `BlockItem` classique (onglet créatif, gardé tel
-quel pour la pose rapide en test — voir plus bas) : une **roue radiale**, pensée pour le futur
-système de héros (chaque héros n'aura accès qu'à ses propres tours — pas encore implémenté,
-donc la roue liste aujourd'hui **toutes** les tours existantes, une seule : Spike Blockade).
-Toute la logique tourne côté client jusqu'à l'ultime confirmation ; seul le paquet final touche
-le serveur.
+**Unique façon de poser une tour** (voir "L'item ne pose plus rien" plus haut) : une **roue
+radiale**, pensée pour le futur système de héros (chaque héros n'aura accès qu'à ses propres
+tours — pas encore implémenté, donc la roue liste aujourd'hui **toutes** les tours existantes :
+Spike Blockade et Harpoon Turret). Toute la logique tourne côté client jusqu'à l'ultime
+confirmation ; seul le paquet final touche le serveur.
 
 ### Le catalogue — `init/TowerDefinition.java`
 
 Enum commune client/serveur, un membre par tour posable via la roue (id, nom traduit, `Block`
-+ `Item` d'icône, portée). **Ne duplique pas le coût en mana** : `SPIKE_BLOCKADE.manaCost()`
-réexpose directement `SpikeBlockadeBlockEntity.MANA_COST`, seule source d'autorité (déjà lue
-par `ModEvents.onBlockadePlace`).
++ `Item` d'icône, portée, `coneAngleDegrees`). **Ne duplique pas le coût en mana** :
+`manaCost()` réexpose directement la constante du block entity concerné
+(`SpikeBlockadeBlockEntity.MANA_COST`, `HarpoonTurretBlockEntity.MANA_COST`), seule source
+d'autorité (déjà lue par `ModEvents.onTowerPlace`). `SPIKE_BLOCKADE` a `range=0.0` (pas de
+portée, `coneAngleDegrees` sans effet) ; `HARPOON_TURRET` a `range=12.0`,
+`coneAngleDegrees=45.0` — premier membre du catalogue à exercer réellement l'aperçu de portée.
 
 ### Les touches — `client/ModKeyMappings.java`
 
@@ -644,10 +736,11 @@ L'interception des clics passe par `InputEvent.InteractionKeyMappingTriggered`
 vanilla en dessous) — un garde sur `InteractionHand.MAIN_HAND` évite de traiter deux fois le
 clic droit (l'event se déclenche une fois par main pour "Use Item").
 
-**Limite assumée** : Spike Blockade est un cube symétrique, sans propriété d'orientation dans
-son `BlockState` — tourner son hologramme n'a donc aucun effet visuel ni gameplay sur cette
-tour précise. L'étape ORIENTING est quand même construite génériquement, prête pour une future
-tour asymétrique.
+**Spike Blockade** est un cube symétrique, sans propriété d'orientation dans son `BlockState` —
+tourner son hologramme n'a donc aucun effet visuel ni gameplay sur cette tour précise. C'est le
+**Harpoon Turret** qui exerce enfin cette étape pour de vrai (`HORIZONTAL_FACING` + cône de
+tir orienté, voir plus haut) — l'étape ORIENTING avait été construite génériquement par
+anticipation, avant qu'une tour concrète n'en ait besoin.
 
 ### L'hologramme et le cercle de portée — rendu
 
@@ -662,9 +755,24 @@ block entity à qui l'accrocher, contrairement aux autres renderers du mod) ;
   `PoseStack` complet, alors que `submitCustomGeometry` ne fournit qu'un `PoseStack.Pose`
   différé) : **vert si la position visée est valide, rouge sinon** — toujours vert en
   ORIENTING, puisque la position y est déjà verrouillée comme valide.
-- **Cercle de portée** (anneau de segments `cos`/`sin`, `RenderTypes.lines()`), uniquement si
-  `TowerDefinition.range() > 0` — **jamais déclenché pour l'instant** (Spike Blockade a
-  `range = 0.0`), mais prêt pour la prochaine tour à distance.
+- **Zone de portée** (`renderRangeArea`, `RenderTypes.lines()`), uniquement si
+  `TowerDefinition.range() > 0` — **cercle complet** si `coneAngleDegrees >= 360`
+  (omnidirectionnel), sinon un **secteur/cône** : l'arc borné à `[-coneAngleDegrees/2,
+  +coneAngleDegrees/2]` **plus** deux segments droits vers l'origine, pour lire visuellement un
+  cône et pas un arc flottant dans le vide. La rotation de la zone suit `state.rotation`
+  **en permanence** (pas seulement en ORIENTING comme pour le contour du bloc, qui ne montre de
+  toute façon jamais sa rotation visuellement pour un cube parfait) : le cône reflète déjà
+  l'orientation par défaut (`NORTH`) dès l'étape AIMING, et suit la touche de rotation une fois
+  en ORIENTING.
+
+  Convention du gabarit local : angle `-90°` (dans le repère `cos`/`sin` déjà utilisé par
+  l'ancien cercle complet) correspond à la direction `NORTH`, cohérente avec
+  `Direction.NORTH.toYRot() == 0` (rotation identité) — déduite par construction, donc fiable
+  pour `NORTH`. **Non vérifiée visuellement pour `EAST`/`SOUTH`/`WEST`** (dépend du sens de
+  rotation réel de `Axis.YP.rotationDegrees`, jamais confirmé faute de lancer le client) — à
+  contrôler en priorité au premier test du Harpoon Turret, voir `doc/06-a-tester.md`.
+  Jamais rien à dessiner pour Spike Blockade (`range = 0.0`) ; le Harpoon Turret
+  (`range=12.0`, `coneAngleDegrees=45.0`) est le premier à l'exercer réellement.
 
 ### Le paquet final — `network/PlaceTowerPayload.java`, `ModNetworking.handlePlaceTower`
 
@@ -677,16 +785,18 @@ confirmer une position invalide).
 
 Le point important : **la vérification et le débit de mana ne sont PAS réimplémentés ici**.
 Le handler pose le bloc (`level.setBlock(...)`, avec la rotation appliquée seulement si le
-bloc a `BlockStateProperties.HORIZONTAL_FACING`), puis appelle directement
-`EventHooks.onBlockPlace(player, snapshot, direction)` — **le même hook NeoForge qu'utilise en
-interne la pose par `BlockItem` classique** pour déclencher `BlockEvent.EntityPlaceEvent`
-(désormais théorique pour `BlockadeBlockItem`, dont `useOn` ne place plus rien lui-même — voir
-"L'item ne pose plus rien" plus haut — mais le hook reste le même point d'entrée). Résultat :
-`ModEvents.onBlockadePlace` s'exécute pour la pose via la roue exactement comme il le ferait
-pour n'importe quel autre déclencheur de `BlockEvent.EntityPlaceEvent`, sans aucune
-duplication — y compris la restriction de phase (Construction uniquement). Si annulé (mana
-insuffisant ou mauvaise phase), le `BlockSnapshot` capturé avant la pose est restauré
-(`before.restore(...)`) — le bloc disparaît comme s'il n'avait jamais été posé.
+bloc a `BlockStateProperties.HORIZONTAL_FACING` — vrai pour le Harpoon Turret, sans effet pour
+Spike Blockade), puis appelle directement `EventHooks.onBlockPlace(player, snapshot,
+direction)` — **le même hook NeoForge qu'utilise en interne la pose par `BlockItem` classique**
+pour déclencher `BlockEvent.EntityPlaceEvent` (désormais théorique pour `TowerBlockItem`, dont
+`useOn` ne place plus rien lui-même — voir "L'item ne pose plus rien" plus haut — mais le hook
+reste le même point d'entrée). Résultat : `ModEvents.onTowerPlace` s'exécute pour la pose via
+la roue exactement comme il le ferait pour n'importe quel autre déclencheur de
+`BlockEvent.EntityPlaceEvent`, sans aucune duplication — y compris la restriction de phase
+(Construction uniquement), pour Blockade **et** Turret puisque le filtre du handler porte sur
+`AbstractTowerBlockEntity` (voir "Le coût en mana et la restriction de phase" plus haut). Si
+annulé (mana insuffisant ou mauvaise phase), le `BlockSnapshot` capturé avant la pose est
+restauré (`before.restore(...)`) — le bloc disparaît comme s'il n'avait jamais été posé.
 
 **Ce qui n'est PAS fait**, volontairement :
 
