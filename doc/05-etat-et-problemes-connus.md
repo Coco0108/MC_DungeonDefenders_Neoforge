@@ -29,6 +29,16 @@ vérifie la CI.
   placement refusé et item rendu si mana insuffisant. Modèle, blockstate, loot table, tag
   `mineable/pickaxe`, traductions `en_us`/`fr_fr`, onglet créatif. Détail dans
   [02-gameplay.md](02-gameplay.md#le-spike-blockade--blockspikeblockadeblockjava).
+- ✅ Roue de sélection des tours (`TowerWheelScreen`, touche `R` par défaut) + mode pose en
+  deux étapes (viser puis orienter, `TowerPlacementState`/`TowerPlacementClientEvents`) avec
+  hologramme vert/rouge et cercle de portée (jamais affiché pour l'instant, aucune tour n'a de
+  portée > 0). **Unique façon de poser une tour** : le `BlockItem` classique ne pose plus rien
+  (`BlockadeBlockItem#useOn` renvoie systématiquement `PASS`, retiré de l'onglet créatif).
+  Pas de filtrage par héros (système inexistant). Le paquet de confirmation
+  (`PlaceTowerPayload`) réutilise le hook NeoForge `EventHooks.onBlockPlace` pour déclencher la
+  même vérification de mana (et désormais de **phase** — Construction uniquement) que
+  `ModEvents.onBlockadePlace` appliquait déjà. Détail dans
+  [02-gameplay.md](02-gameplay.md#la-roue-de-sélection-des-tours-et-la-pose--clientguiscreentowerwheelscreenjava).
 - ✅ Mana du joueur : data attachment `mana` (persistant, synchronisé), maximum par défaut de
   100, affiché en HUD via `ManaOverlay` — losange en bas à gauche de l'écran (`DiamondGauge`,
   couleurs plates), très provisoire. Testable en jeu avec l'item `mana_test_wand` (clic droit
@@ -293,6 +303,24 @@ connaît déjà son comportement commun avant même d'écrire une deuxième bloc
 **Reste à faire, même pour Spike Blockade** : équilibrage réel du coût en mana (30 est une
 valeur de test, pas réfléchie), remboursement de mana à la casse, indicateur visuel de PV
 restants. Et bien sûr, les catégories 2 à 5 n'ont aucune implémentation.
+
+**Comment on pose les tours, décidé avec le joueur** : dans le vrai Dungeon Defenders, les
+tours ne se posent pas depuis l'inventaire (la liste dépend du héros choisi) — une **roue
+radiale** a donc été construite (`TowerWheelScreen`, touche dédiée), avec un mode pose en deux
+étapes (viser puis orienter) affichant un hologramme (vert/rouge selon validité) et un cercle
+de portée générique (voir "Ce qui est implémenté" plus haut et
+[02-gameplay.md](02-gameplay.md#la-roue-de-sélection-des-tours-et-la-pose--clientguiscreentowerwheelscreenjava)
+pour le détail complet). **Pas de filtrage par héros** pour l'instant (ce système n'existe pas
+encore) — la roue liste toutes les tours, prête à être filtrée plus tard.
+
+Décidé également : **la roue est l'unique façon de poser une tour**. Le `BlockItem` classique
+a été neutralisé (`BlockadeBlockItem#useOn` ne fait plus rien, retiré de l'onglet créatif) —
+plus de pose alternative, ni depuis l'inventaire créatif ni depuis un item récupéré en jeu.
+Et **les tours ne se posent qu'en phase Construction** : `ModEvents.onBlockadePlace` refuse
+toute pose hors de cette phase (message dédié, restauration du bloc précédent, même mécanisme
+que pour un mana insuffisant) — vérifié une seconde fois côté client (la roue elle-même refuse
+de s'ouvrir en Combat) pour éviter de faire tout le mode pose avant un refus final, mais le
+serveur reste la seule autorité réelle.
 
 ### La partie se termine, mais sans vraie conclusion visuelle
 

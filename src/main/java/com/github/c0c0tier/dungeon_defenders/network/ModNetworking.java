@@ -6,12 +6,19 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
+import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.util.BlockSnapshot;
+import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -49,6 +56,63 @@ public class ModNetworking {
                 StartGamePayload.STREAM_CODEC,
                 ModNetworking::handleStartGame
         );
+        registrar.playToServer(
+                PlaceTowerPayload.TYPE,
+                PlaceTowerPayload.STREAM_CODEC,
+                ModNetworking::handlePlaceTower
+        );
+    }
+
+    private static void handlePlaceTower(PlaceTowerPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (!(level instanceof ServerLevel serverLevel)) {
+                return;
+            }
+
+            // Ordinaux envoyés par un client : à valider avant indexation, jamais faire
+            // confiance à une valeur reçue par le réseau pour indexer un tableau.
+            TowerDefinition[] towers = TowerDefinition.values();
+            if (payload.towerOrdinal() < 0 || payload.towerOrdinal() >= towers.length) {
+                return;
+            }
+            Direction[] directions = Direction.values();
+            if (payload.directionOrdinal() < 0 || payload.directionOrdinal() >= directions.length) {
+                return;
+            }
+
+            BlockPos pos = payload.pos();
+            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > MAX_DISTANCE_SQ) {
+                return;
+            }
+
+            if (!serverLevel.getBlockState(pos).canBeReplaced()) {
+                return;
+            }
+
+            TowerDefinition tower = towers[payload.towerOrdinal()];
+            Direction direction = directions[payload.directionOrdinal()];
+
+            BlockState state = tower.block().defaultBlockState();
+            // La rotation n'a d'effet que si le bloc a une propriété d'orientation - Spike
+            // Blockade (cube symétrique) n'en a pas encore, donc elle est simplement ignorée
+            // pour cette tour, sans erreur (voir doc/02-gameplay.md).
+            if (state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
+                state = state.setValue(BlockStateProperties.HORIZONTAL_FACING, direction);
+            }
+
+            BlockSnapshot before = BlockSnapshot.create(serverLevel.dimension(), serverLevel, pos);
+            serverLevel.setBlock(pos, state, Block.UPDATE_ALL);
+
+            // Réutilise le même hook NeoForge que la pose par BlockItem (voir CommonHooks côté
+            // vanilla) : déclenche BlockEvent.EntityPlaceEvent, donc ModEvents.onBlockadePlace
+            // s'applique sans aucune duplication de la vérification/du débit de mana.
+            boolean cancelled = EventHooks.onBlockPlace(player, before, Direction.UP);
+            if (cancelled) {
+                before.restore(Block.UPDATE_ALL);
+            }
+        });
     }
 
     private static void handleStartGame(StartGamePayload payload, IPayloadContext context) {

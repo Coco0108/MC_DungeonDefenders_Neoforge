@@ -496,6 +496,27 @@ exemption pour le mode créatif — un joueur en créatif sans mana suffisant se
 la pose, comme en survie (même convention que `ManaTestWandItem`, qui ne distingue pas non
 plus les modes de jeu).
 
+**Restriction de phase, ajoutée dans le même handler** : avant même de vérifier le mana,
+`onBlockadePlace` vérifie `level.getData(ModAttachments.GAME_PHASE) == GamePhase.BUILD.ordinal()`
+— sinon, placement annulé (même mécanisme de restauration que pour un mana insuffisant) et
+message dédié (`dungeon_defenders.blockade.build_phase_only`), pour ne pas laisser croire à un
+problème de mana alors que c'est la phase qui bloque. Cette vérification étant dans
+`ModEvents.onBlockadePlace` (déclenché via `BlockEvent.EntityPlaceEvent`), elle s'applique à
+**toute** pose d'une blockade, quel que soit le chemin emprunté pour y arriver — actuellement
+un seul chemin existe (la roue, voir plus bas), mais rien à refaire si un second apparaît un
+jour. Doublée côté client (`TowerPlacementClientEvents`) : la roue elle-même refuse de s'ouvrir
+hors phase Construction, pour éviter de faire tout le mode pose avant un refus final.
+
+### L'item ne pose plus rien — `block/BlockadeBlockItem.java`
+
+Décidé avec le joueur : la roue est **l'unique façon de poser une tour**, plus d'item posable à
+la main. `SPIKE_BLOCKADE_ITEM` (existe toujours pour un éventuel drop à la casse) n'est plus un
+`BlockItem` classique mais un `BlockadeBlockItem`, dont `useOn(...)` retourne systématiquement
+`InteractionResult.PASS` — clic droit avec en main : rien ne se passe, comme si l'item n'avait
+aucune interaction avec le monde. Retiré de l'onglet créatif pour la même raison (plus aucun
+intérêt à le sortir directement). Base commune à toute la catégorie "Blockade" : une future
+blockade utilisera la même classe d'item, pas besoin de la réécrire.
+
 ### Le goal — `entity/ai/AttackBlockadeGoal.java`
 
 Un monstre ne s'attaque pas naturellement à un bloc plein dans Minecraft (il chercherait
@@ -562,6 +583,115 @@ niveau d'outil) et se drope lui-même via
   distance, d'aura/piège non attaquable, ni de piège de sol (les autres catégories envisagées
   par le joueur, voir 05-etat-et-problemes-connus.md) — chacune aura probablement besoin de sa
   propre base, une fois qu'un second exemple concret de chaque existera.
+
+## La roue de sélection des tours et la pose — `client/gui/screen/TowerWheelScreen.java`
+
+Deuxième façon de poser une tour, en plus du `BlockItem` classique (onglet créatif, gardé tel
+quel pour la pose rapide en test — voir plus bas) : une **roue radiale**, pensée pour le futur
+système de héros (chaque héros n'aura accès qu'à ses propres tours — pas encore implémenté,
+donc la roue liste aujourd'hui **toutes** les tours existantes, une seule : Spike Blockade).
+Toute la logique tourne côté client jusqu'à l'ultime confirmation ; seul le paquet final touche
+le serveur.
+
+### Le catalogue — `init/TowerDefinition.java`
+
+Enum commune client/serveur, un membre par tour posable via la roue (id, nom traduit, `Block`
++ `Item` d'icône, portée). **Ne duplique pas le coût en mana** : `SPIKE_BLOCKADE.manaCost()`
+réexpose directement `SpikeBlockadeBlockEntity.MANA_COST`, seule source d'autorité (déjà lue
+par `ModEvents.onBlockadePlace`).
+
+### Les touches — `client/ModKeyMappings.java`
+
+Deux `KeyMapping` (catégorie vanilla `GAMEPLAY`) : `tower_wheel` (ouvre la roue, `R` par
+défaut) et `rotate_tower` (fait pivoter l'hologramme pendant l'étape orientation, `T` par
+défaut).
+
+### La roue — `TowerWheelScreen`
+
+Un secteur par `TowerDefinition`, disposé en cercle (icône = l'item existant de la tour, pas de
+nouvel art) autour du centre de l'écran. Le secteur survolé est déterminé par l'angle entre le
+centre de l'écran et la souris (`Math.atan2`), avec une zone morte de 20px au centre pour
+éviter qu'un simple tremblement de souris sélectionne un secteur au hasard.
+
+Deux façons de confirmer : **cliquer directement** sur un secteur (`mouseClicked`), ou
+**maintenir la touche `tower_wheel` en visant**, puis **la relâcher** (`keyReleased`, via
+`KeyMapping#matches(KeyEvent)`) — les deux passent par le même calcul de secteur survolé.
+`Échap` (comportement par défaut de `Screen`) ferme la roue sans rien sélectionner.
+
+Ouverte directement côté client par `TowerPlacementClientEvents` (sur `ClientTickEvent.Post`,
+si la touche est consommée et qu'aucun écran n'est déjà ouvert) — comme `MapSelectionScreen`,
+pas de `Menu` ni d'aller-retour serveur nécessaire pour l'ouvrir.
+
+### Le mode pose, deux étapes — `client/TowerPlacementState.java`, `client/TowerPlacementClientEvents.java`
+
+Sélectionner une tour dans la roue démarre `TowerPlacementState` (état transitoire, pas
+persistant) en étape **AIMING**, puis fait basculer en **ORIENTING** au premier clic droit
+valide :
+
+- **AIMING** : chaque tick, un rayon est lancé depuis les yeux du joueur
+  (`level.clip(new ClipContext(...))`, portée 20 blocs, `ClipContext.Block.OUTLINE`) ; la
+  position juste après le bloc touché (`hit.getBlockPos().relative(hit.getDirection())`)
+  devient la cible, valide si `canBeReplaced()`. **Clic gauche** annule tout le mode pose.
+  **Clic droit** sur une cible valide verrouille la position et passe en ORIENTING (ignoré sur
+  une cible invalide).
+- **ORIENTING** : la position ne bouge plus. La touche `rotate_tower` fait pivoter la rotation
+  courante (`Direction`, pas de 90°, `getClockWise()`). **Clic droit** envoie
+  `PlaceTowerPayload` (tour + position + rotation) au serveur et quitte le mode pose. **Clic
+  gauche** annule tout (pas de retour à AIMING).
+
+L'interception des clics passe par `InputEvent.InteractionKeyMappingTriggered`
+(`isAttack()`/`isUseItem()`, annulés le temps du mode pose pour ne pas déclencher l'action
+vanilla en dessous) — un garde sur `InteractionHand.MAIN_HAND` évite de traiter deux fois le
+clic droit (l'event se déclenche une fois par main pour "Use Item").
+
+**Limite assumée** : Spike Blockade est un cube symétrique, sans propriété d'orientation dans
+son `BlockState` — tourner son hologramme n'a donc aucun effet visuel ni gameplay sur cette
+tour précise. L'étape ORIENTING est quand même construite génériquement, prête pour une future
+tour asymétrique.
+
+### L'hologramme et le cercle de portée — rendu
+
+Rendu via le pipeline "submit node" de cette version (pas le rendu immédiat classique) :
+`ExtractLevelRenderStateEvent` copie l'état courant de `TowerPlacementState` dans un
+`TowerPlacementRenderState`, posé sur le `LevelRenderState` global via un `ContextKey` (pas de
+block entity à qui l'accrocher, contrairement aux autres renderers du mod) ;
+`SubmitCustomGeometryEvent` le relit et soumet la géométrie :
+
+- **Contour filaire du bloc** (`Shapes.block()`, parcouru arête par arête comme le fait
+  `ShapeRenderer.renderShape` vanilla en interne — réimplémenté ici car cette méthode attend un
+  `PoseStack` complet, alors que `submitCustomGeometry` ne fournit qu'un `PoseStack.Pose`
+  différé) : **vert si la position visée est valide, rouge sinon** — toujours vert en
+  ORIENTING, puisque la position y est déjà verrouillée comme valide.
+- **Cercle de portée** (anneau de segments `cos`/`sin`, `RenderTypes.lines()`), uniquement si
+  `TowerDefinition.range() > 0` — **jamais déclenché pour l'instant** (Spike Blockade a
+  `range = 0.0`), mais prêt pour la prochaine tour à distance.
+
+### Le paquet final — `network/PlaceTowerPayload.java`, `ModNetworking.handlePlaceTower`
+
+`PlaceTowerPayload(towerOrdinal, pos, directionOrdinal)` — deux ordinaux envoyés par le client,
+**jamais indexés sans validation de bornes** côté serveur (même garde-fou que
+`SetDifficultyPayload`/`SpawnerConfigPayload`), plus une vérification de distance (même
+`MAX_DISTANCE_SQ` que la config du spawner) et de remplaçabilité de la position (le serveur
+reste la seule source de vérité, même si le client n'aurait normalement jamais dû laisser
+confirmer une position invalide).
+
+Le point important : **la vérification et le débit de mana ne sont PAS réimplémentés ici**.
+Le handler pose le bloc (`level.setBlock(...)`, avec la rotation appliquée seulement si le
+bloc a `BlockStateProperties.HORIZONTAL_FACING`), puis appelle directement
+`EventHooks.onBlockPlace(player, snapshot, direction)` — **le même hook NeoForge qu'utilise en
+interne la pose par `BlockItem` classique** pour déclencher `BlockEvent.EntityPlaceEvent`
+(désormais théorique pour `BlockadeBlockItem`, dont `useOn` ne place plus rien lui-même — voir
+"L'item ne pose plus rien" plus haut — mais le hook reste le même point d'entrée). Résultat :
+`ModEvents.onBlockadePlace` s'exécute pour la pose via la roue exactement comme il le ferait
+pour n'importe quel autre déclencheur de `BlockEvent.EntityPlaceEvent`, sans aucune
+duplication — y compris la restriction de phase (Construction uniquement). Si annulé (mana
+insuffisant ou mauvaise phase), le `BlockSnapshot` capturé avant la pose est restauré
+(`before.restore(...)`) — le bloc disparaît comme s'il n'avait jamais été posé.
+
+**Ce qui n'est PAS fait**, volontairement :
+
+- Pas de filtrage par héros — la roue liste toutes les tours, en attendant ce système.
+- Pas de remplissage translucide de l'hologramme, juste le contour filaire.
 
 ## Le mana du joueur
 

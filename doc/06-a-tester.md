@@ -438,22 +438,16 @@ d'IA du mod qui cible un bloc plutôt qu'une entité, jamais vérifié visuellem
 fait via le tag `dungeon_defenders:blockades` (pas un bloc en dur) : ce test valide donc aussi
 que le tag fonctionne correctement, pas seulement le Spike Blockade en particulier.
 
-- [ ] Prendre `spike_blockade` dans l'onglet créatif Dungeon Defenders (texture provisoire :
-      bloc de dripstone). Avec **30 mana ou plus** (défaut : 100/100), le poser : doit
-      **réussir**, et un message confirme `-30 mana pour la blockade (70/100)` (ou équivalent
-      selon le mana restant). Doit **bloquer le passage** comme n'importe quel bloc plein (pas
-      de hitbox custom, collision vanilla normale) — nouveau comportement à vérifier en
-      priorité dans cette section (`ModEvents.onBlockadePlace`), jamais testé en jeu.
-- [ ] Descendre son mana sous 30 (`mana_test_wand`, 3 clics droits suffisent), puis essayer de
-      poser un Spike Blockade : le placement doit être **refusé**, un message affiche "Pas
-      assez de mana pour poser cette blockade ! (30 requis, X disponible)", **et l'item doit
-      être rendu** au joueur (ne pas disparaître de l'inventaire/de la main malgré la tentative
-      de pose) — le bloc ne doit **pas** apparaître dans le monde.
-- [ ] Reposer un Spike Blockade avec assez de mana juste après un refus : doit fonctionner
-      normalement (le refus précédent n'a pas laissé le joueur dans un état bloqué).
-- [ ] En mode créatif, avec moins de 30 mana : le placement doit **quand même être refusé**
-      (pas d'exemption créative pour l'instant, comportement volontaire — voir
-      05-etat-et-problemes-connus.md).
+- [ ] Prendre `spike_blockade` en créatif via `/give` (ex. `/give @s dungeon_defenders:spike_blockade`) —
+      **il n'apparaît plus dans l'onglet créatif** du mod, c'est attendu. Clic droit avec en
+      main, viser un bloc : **rien ne doit se passer** (pas de pose, pas d'interaction) — vérifie
+      que `BlockadeBlockItem#useOn` ne fait plus rien, la roue étant l'unique façon de poser
+      (voir section dédiée plus bas pour les tests de pose/mana/mana insuffisant/phase, qui ne
+      passent maintenant que par la roue).
+- [ ] Poser un Spike Blockade via la roue (voir section dédiée plus bas) pour les tests
+      suivants, qui portent sur son comportement une fois posé — pas sur la façon dont il a été
+      posé. Doit **bloquer le passage** comme n'importe quel bloc plein (pas de hitbox custom,
+      collision vanilla normale).
 - [ ] Faire spawn un zombie à proximité (spawner ou `/summon minecraft:zombie`) avec un Spike
       Blockade posé entre lui et le Cristal d'Eternia, sur son chemin le plus direct : le
       zombie doit se diriger vers le **Spike Blockade en premier** (pas continuer tout droit
@@ -480,12 +474,85 @@ que le tag fonctionne correctement, pas seulement le Spike Blockade en particuli
       Blockade ne bloque pas ses flèches.
 - [ ] Casser le Spike Blockade soi-même à la pioche (hors combat) : il se drope (comme
       l'ancien `spike_trap`), pas de remboursement de mana pour l'instant (manques
-      connus, voir 05-etat-et-problemes-connus.md).
+      connus, voir 05-etat-et-problemes-connus.md). Récupérer l'item droppé et essayer de le
+      reposer à la main : **doit échouer** comme l'item obtenu par `/give` plus haut — même
+      classe `BlockadeBlockItem`, aucune exception pour un item légitimement récupéré en jeu.
 - [ ] Poser plusieurs Spike Blockade côte à côte formant un mur : un zombie coincé derrière
       doit s'attaquer à **celui qui bloque effectivement son chemin**, pas se figer ou choisir
       un bloc au hasard plus loin.
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `SpikeBlockadeBlock`,
       `SpikeBlockadeBlockEntity`, ou `AttackBlockadeGoal`.
+
+## La roue de sélection des tours et la pose (`TowerWheelScreen`, `TowerPlacementClientEvents`)
+
+Premier menu radial du mod, premier hologramme de pose, et première utilisation du pipeline de
+rendu "submit node" (`ExtractLevelRenderStateEvent`/`SubmitCustomGeometryEvent`) en dehors d'un
+block entity — rien de tout ça n'a pu être vérifié visuellement pendant le développement.
+
+- [ ] **En phase Combat** (basculer via le spawner, voir section dédiée), appuyer sur `R` :
+      la roue **ne doit pas s'ouvrir**, un message "Les tours ne peuvent être posées qu'en
+      phase de Construction !" doit apparaître — vérifie le refus côté client
+      (`TowerPlacementClientEvents`), avant même d'atteindre le serveur.
+- [ ] **En phase Construction**, appuyer sur `R` (touche par défaut, configurable dans
+      Options > Touches > Gameplay, libellé "Ouvrir la roue des tours") : un écran radial
+      s'ouvre, sans crash ni écran noir. Avec une seule tour existante (Spike Blockade), un
+      seul secteur/icône doit apparaître.
+- [ ] Bouger la souris tout autour du centre de l'écran, en restant proche du centre (moins de
+      ~20px) : **aucun** secteur ne doit être en surbrillance (zone morte).
+- [ ] Éloigner la souris du centre (au-delà de la zone morte), dans n'importe quelle direction :
+      le secteur (unique pour l'instant) doit passer en surbrillance, et son nom + son coût en
+      mana ("Coût : 30 mana") doivent s'afficher sous la roue.
+- [ ] **Cliquer directement** sur l'icône en surbrillance : l'écran se ferme, aucune erreur
+      dans les logs — doit démarrer le mode pose (voir plus bas).
+- [ ] Rouvrir la roue, **maintenir `R`**, viser le secteur (surbrillance visible), puis
+      **relâcher `R`** (sans cliquer) : doit avoir le même effet que le clic direct — démarre
+      le mode pose. Les deux gestes doivent être équivalents.
+- [ ] Ouvrir la roue puis appuyer sur `Échap` sans cliquer : l'écran se ferme, **aucun** mode
+      pose ne démarre (pas d'hologramme qui apparaît ensuite en jeu).
+- [ ] Après avoir sélectionné une tour (mode pose, étape "visée") : un **contour filaire**
+      (hologramme) doit suivre le curseur/la visée du joueur en regardant le monde, collé sur
+      la position juste après le premier bloc visé (comme la pose d'un bloc normal).
+- [ ] Viser un emplacement **libre** (air, herbe remplaçable...) : le contour doit être
+      **vert**. Viser un bloc plein existant (mur, sol, une autre tour déjà posée...) : le
+      contour affiché doit être sur la position **adjacente** à ce bloc, toujours en fonction
+      de sa propre validité — et viser un endroit où la position candidate est déjà occupée
+      (ex. coincé entre deux blocs) doit donner un contour **rouge**.
+- [ ] Regarder au loin (>20 blocs, hors de portée du rayon) ou vers le ciel/le vide sans rien
+      viser : l'hologramme doit **disparaître** (pas de contour flottant sans cible).
+- [ ] **Clic gauche** pendant l'étape "visée" : annule tout le mode pose, l'hologramme
+      disparaît, rien n'est posé.
+- [ ] **Clic droit** sur une position **verte** : l'hologramme doit **arrêter de suivre le
+      regard** (position verrouillée) — bouger la caméra ne doit plus déplacer le contour.
+- [ ] **Clic droit** sur une position **rouge** (viser un bloc invalide) : ne doit **rien**
+      faire (pas de verrouillage, reste en étape "visée").
+- [ ] Une fois la position verrouillée (étape "orientation") : appuyer sur `T` (touche par
+      défaut, "Faire pivoter la tour (pose)") plusieurs fois : aucune erreur, mais **aucun
+      changement visuel attendu** sur Spike Blockade (cube symétrique, limite connue — voir
+      05-etat-et-problemes-connus.md) — vérifie surtout l'absence de crash/d'exception.
+- [ ] **Clic droit** une seconde fois (étape "orientation") : doit **poser réellement** le bloc
+      à la position verrouillée, fermer le mode pose (hologramme disparaît), et débiter le mana
+      (message `-30 mana pour la blockade (X/100)`, voir section HUD mana) — test le plus
+      important de cette section : vérifie que `PlaceTowerPayload` déclenche bien
+      `ModEvents.onBlockadePlace` via le hook NeoForge réutilisé, sans double implémentation.
+- [ ] **Clic gauche** pendant l'étape "orientation" : annule tout (pas de pose, pas de
+      débit de mana), retour à zéro — pas de retour à l'étape "visée".
+- [ ] Refaire tout le mode pose avec **moins de 30 mana disponible** : le clic droit final doit
+      **échouer** (message "Pas assez de mana...", le bloc n'apparaît pas dans le monde).
+- [ ] Démarrer le mode pose **en phase Construction**, puis faire basculer la partie en Combat
+      pendant que le mode pose est actif (ex. via le harnais de test du spawner, shift + clic
+      droit) avant de confirmer : le clic droit final doit être **refusé** côté serveur (message
+      de phase, pas de pose) même si le client a laissé aller jusque-là — vérifie que le
+      serveur reste la seule autorité réelle, pas seulement le refus client à l'ouverture de la
+      roue.
+- [ ] Poser une tour via la roue à un endroit, puis ouvrir la roue une seconde fois et essayer
+      de poser une autre tour **au même endroit exact** : doit apparaître **rouge** (position
+      occupée par la tour tout juste posée), pas vert.
+- [ ] Redimensionner la fenêtre pendant que la roue est ouverte : les secteurs doivent rester
+      centrés sur le nouveau centre de l'écran, pas figés à une position absolue.
+- [ ] Vérifier `run/logs/latest.log` après une session de test complète : aucune exception liée
+      à `TowerWheelScreen`, `TowerPlacementClientEvents`, `TowerPlacementState`,
+      `PlaceTowerPayload`, `BlockadeBlockItem`, ou au rendu
+      (`ExtractLevelRenderStateEvent`/`SubmitCustomGeometryEvent`).
 
 ## HUD vanilla masqué
 
