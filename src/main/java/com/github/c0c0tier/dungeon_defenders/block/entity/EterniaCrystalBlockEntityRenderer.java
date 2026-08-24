@@ -9,9 +9,14 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
+import net.minecraft.util.Util;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Dessine une barre de vie en billboard au-dessus du Cristal d'Eternia.
@@ -23,6 +28,19 @@ public class EterniaCrystalBlockEntityRenderer
     private static final float BAR_Y = 3.2F;
     private static final float BAR_WIDTH = 2.0F;
     private static final float BAR_HEIGHT = 0.2F;
+
+    // Durée de l'animation d'un palier de PV à l'autre, même principe que le lerp du temps
+    // réel des barres de boss vanilla (LerpingBossEvent, 100 ms) — un peu plus lent ici, cette
+    // barre n'a pas besoin d'être lue aussi vite qu'un boss en plein combat.
+    private static final long LERP_MILLISECONDS = 300L;
+
+    // extractRenderState reçoit un EterniaCrystalRenderState flambant neuf à CHAQUE frame
+    // (voir BlockEntityRenderDispatcher#tryExtractRenderState) : impossible d'y stocker quoi
+    // que ce soit d'une frame à l'autre. L'animation vit donc ici, sur le renderer lui-même
+    // (une seule instance, réutilisée pour tous les cristaux), indexée par position — en
+    // pratique une seule entrée à la fois (une seule map active), jamais nettoyée mais bornée
+    // par le nombre de positions de cristal distinctes vues dans la session, négligeable.
+    private final Map<BlockPos, HealthLerp> lerpByPosition = new HashMap<>();
 
     public EterniaCrystalBlockEntityRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -41,8 +59,39 @@ public class EterniaCrystalBlockEntityRenderer
             ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress
     ) {
         BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress);
-        state.healthPercent = Mth.clamp(
+
+        float target = Mth.clamp(
                 blockEntity.getCrystalHealth() / (float) Config.DEFAULT_HEALTH.get(), 0.0F, 1.0F);
+        HealthLerp lerp = this.lerpByPosition.computeIfAbsent(blockEntity.getBlockPos(), pos -> new HealthLerp(target));
+
+        if (target != lerp.to) {
+            // Repart de la valeur actuellement affichée (pas de l'ancienne cible) : un coup
+            // qui arrive pendant que la barre bouge encore ne doit pas la faire sauter en
+            // arrière avant de repartir, juste rediriger l'animation en cours.
+            lerp.from = lerp.currentPercent();
+            lerp.to = target;
+            lerp.startTimeMs = Util.getMillis();
+        }
+
+        state.healthPercent = lerp.currentPercent();
+    }
+
+    /** Anime le passage de {@link #from} à {@link #to} sur {@link #LERP_MILLISECONDS}, en temps réel. */
+    private static final class HealthLerp {
+        float from;
+        float to;
+        long startTimeMs = Util.getMillis();
+
+        HealthLerp(float initial) {
+            this.from = initial;
+            this.to = initial;
+        }
+
+        float currentPercent() {
+            long elapsed = Util.getMillis() - this.startTimeMs;
+            float lerpAmount = Mth.clamp(elapsed / (float) LERP_MILLISECONDS, 0.0F, 1.0F);
+            return Mth.lerp(lerpAmount, this.from, this.to);
+        }
     }
 
     @Override

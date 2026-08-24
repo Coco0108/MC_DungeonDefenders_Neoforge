@@ -14,7 +14,11 @@ vérifie la CI.
   (voir plus bas et "Système de priorité IA") : Block > Corps à corps > Cristal > Tourelle,
   pas seulement le cristal.
 - ✅ Onglet créatif dédié.
-- ✅ Renderer de barre de vie 3D au-dessus du cristal (API `submit` de 26.1).
+- ✅ Renderer de barre de vie 3D au-dessus du cristal (API `submit` de 26.1). Animée entre
+  deux paliers de PV (2026-08-24, `EterniaCrystalBlockEntityRenderer.HealthLerp`, 300 ms, même
+  principe que `LerpingBossEvent` vanilla — temps réel, pas `partialTicks`, puisque
+  `extractRenderState` reçoit un état neuf à chaque frame et ne peut rien retenir lui-même
+  d'une frame à l'autre). **Jamais vu en jeu.**
 - ✅ Modèle, blockstate, loot table, tags d'outil, traductions `en_us` et `fr_fr`.
 - ✅ CI GitHub Actions.
 - ✅ `neoforge.mods.toml` renseigné avec les vraies métadonnées (`mod_authors`,
@@ -615,12 +619,6 @@ métallique, pas d'icône. Ils sont aussi positionnés en `registerAboveAll` à 
 fixes (bas gauche, via les constantes de `HudLayout`), sans tenir compte de
 `Gui.leftHeight`/`rightHeight` comme le fait le HUD vanilla pour empiler les barres sans se
 chevaucher.
-
-### Le rendu n'est pas interpolé
-
-`extractRenderState` reçoit `partialTicks` mais ne s'en sert pas : la barre saute d'un palier
-à l'autre à chaque coup encaissé. Une interpolation entre l'ancienne et la nouvelle valeur
-rendrait l'effet plus lisible.
 
 ### Gametests : deux premiers, tous deux sur de la logique pure
 

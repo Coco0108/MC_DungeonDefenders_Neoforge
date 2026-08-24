@@ -116,6 +116,18 @@ joueur, jamais vérifié visuellement. Taille/écart (`ICON_SIZE`/`ICON_GAP` dan
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ItemModelResolver`/
       `ItemStackRenderState` dans `SpawnerBlockEntityRenderer`.
 
+## Barre de vie du cristal animée (`EterniaCrystalBlockEntityRenderer`)
+
+Avant : la barre sautait instantanément d'un palier de PV à l'autre. Maintenant : glisse vers
+la nouvelle valeur en 300 ms (comme les barres de boss vanilla) — jamais vu en jeu.
+
+- [ ] Endommager le cristal (monstre ou spawner) : la barre glisse visiblement vers la
+      nouvelle valeur au lieu de sauter d'un coup.
+- [ ] Enchaîner deux coups rapprochés (avant la fin de l'animation du premier) : la barre se
+      redirige en douceur vers la nouvelle cible, sans à-coup ni saut en arrière.
+- [ ] Rejoindre/quitter la zone du cristal (le sortir puis le rentrer dans le champ de la
+      caméra) : pas d'erreur, pas de comportement bizarre au premier affichage.
+
 ## Config (`Config.java`, `config/dungeon_defenders-common.toml`)
 
 Config réellement enregistrée pour la première fois ce mod (avant : spec d'exemple jamais
