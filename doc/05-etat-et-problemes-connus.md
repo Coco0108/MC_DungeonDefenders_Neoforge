@@ -61,6 +61,15 @@ vérifie la CI.
   cooldown de tir ne se déclenchait jamais (overflow sur `long`), la flèche se figeait dans le
   bloc de la tourelle elle-même, et la rotation à la pose était incorrecte (voir la roue
   ci-dessous).
+- ✅ Barre de vie des tours (`block/entity/TowerHealthBarRenderer.java`, 2026-08-24) :
+  générique sur `AbstractTowerBlockEntity`, couvre Spike Blockade et Harpoon Turret (et toute
+  future catégorie) avec un seul renderer. Cachée à PV pleins et au-delà de 16 blocs de la
+  caméra — décidé avec le joueur, pour rester lisible avec potentiellement des dizaines de
+  tours posées (contrairement au cristal, toujours affiché, il n'y en a jamais qu'un). Même
+  animation 300 ms que le cristal (`HealthLerp`, extraite en classe partagée avec
+  `HealthBarRendering` à cette occasion). Détail dans
+  [02-gameplay.md](02-gameplay.md#la-barre-de-vie-des-tours--blockentitytowerhealthbarrendererjava).
+  **Jamais vu en jeu.**
 - ✅ Système de priorité IA unifié (`block/entity/AiAttackTarget.java`,
   `entity/ai/AttackPriorityTargetGoal.java`, voir "Système de priorité IA" plus bas) :
   remplace les deux anciens goals séparés (`AttackBlockadeGoal`/`AttackEterniaCrystalGoal`,

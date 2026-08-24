@@ -128,6 +128,18 @@ la nouvelle valeur en 300 ms (comme les barres de boss vanilla) — jamais vu en
 - [ ] Rejoindre/quitter la zone du cristal (le sortir puis le rentrer dans le champ de la
       caméra) : pas d'erreur, pas de comportement bizarre au premier affichage.
 
+## Barre de vie des tours (`TowerHealthBarRenderer`)
+
+Générique à toute catégorie de tour (Spike Blockade, Harpoon Turret), cachée à PV pleins et
+au-delà de 16 blocs de la caméra — jamais vue en jeu.
+
+- [ ] Une tour à PV pleins n'affiche **aucune** barre.
+- [ ] Endommager une tour (monstre) : une barre apparaît au-dessus, glisse vers la nouvelle
+      valeur (comme le cristal), et disparaît si on s'éloigne à plus de 16 blocs environ.
+- [ ] Plusieurs tours endommagées en même temps : chacune affiche sa propre barre
+      indépendamment (pas de confusion entre tours proches l'une de l'autre).
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `TowerHealthBarRenderer`.
+
 ## Config (`Config.java`, `config/dungeon_defenders-common.toml`)
 
 Config réellement enregistrée pour la première fois ce mod (avant : spec d'exemple jamais

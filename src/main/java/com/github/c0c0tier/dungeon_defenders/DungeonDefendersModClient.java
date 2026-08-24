@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntityRenderer;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntityRenderer;
+import com.github.c0c0tier.dungeon_defenders.block.entity.TowerHealthBarRenderer;
 import com.github.c0c0tier.dungeon_defenders.client.ModKeyMappings;
 import com.github.c0c0tier.dungeon_defenders.client.gui.AbilitySlotsOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.CharacterOverlay;
@@ -63,6 +64,17 @@ public class DungeonDefendersModClient {
         event.registerBlockEntityRenderer(
                 DungeonDefendersMod.SPAWNER_BE.get(),
                 SpawnerBlockEntityRenderer::new
+        );
+        // TowerHealthBarRenderer est générique sur AbstractTowerBlockEntity : un seul renderer
+        // pour toute catégorie de tour, enregistré une fois par BlockEntityType concret (voir
+        // TowerHealthBarRenderer, doc/05-etat-et-problemes-connus.md).
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.SPIKE_BLOCKADE_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.HARPOON_TURRET_BE.get(),
+                TowerHealthBarRenderer::new
         );
         // Réutilise tel quel le renderer vanilla de l'orbe d'XP (pas final, paramétré sur
         // ExperienceOrb) : le cristal de mana aura donc l'air d'une orbe d'XP verte/jaune, pas

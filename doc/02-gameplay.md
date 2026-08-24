@@ -274,21 +274,46 @@ Depuis 26.1, un `BlockEntityRenderer` ne voit plus le block entity au moment du 
 cycle est en trois temps :
 
 1. **`createRenderState()`** → un `EterniaCrystalRenderState` (sous-classe de
-   `BlockEntityRenderState` portant un simple `float healthPercent`).
+   `BlockEntityRenderState` portant un simple `float healthPercent`) — **neuf à chaque frame**
+   (voir `BlockEntityRenderDispatcher#tryExtractRenderState`), donc incapable de retenir quoi
+   que ce soit d'une frame à l'autre tout seul (voir l'animation ci-dessous).
 2. **`extractRenderState(...)`** — appelé côté extraction, avec accès au block entity :
-   remplit `healthPercent = clamp(getCrystalHealth() / DEFAULT_HEALTH, 0, 1)`.
+   calcule la cible `clamp(getCrystalHealth() / DEFAULT_HEALTH, 0, 1)`, la passe à un
+   `HealthLerp` (voir plus bas) et remplit `healthPercent` avec sa valeur **animée**, pas la
+   cible brute.
 3. **`submit(state, poseStack, collector, camera)`** — ne voit que l'état :
    - translation à `(0.5, 3.2, 0.5)`, au-dessus de la hitbox de 3 blocs ;
    - billboard via `poseStack.mulPose(camera.orientation)`. Après cette rotation `+X` va vers
      la droite et **`+Y` vers le bas** (même convention que les name tags vanilla), d'où le
      `scale(1, -1, 1)` qui rétablit des coordonnées naturelles ;
-   - `collector.submitCustomGeometry(poseStack, RenderTypes.debugQuads(), ...)` — la
-     géométrie est *soumise*, plus dessinée immédiatement ; le lambda reçoit un
-     `PoseStack.Pose` et un `VertexConsumer` au moment du rendu réel.
+   - délègue le dessin à `HealthBarRendering.render(...)` (voir plus bas).
 
-Deux quads sont émis via `addSegment`, **juxtaposés et jamais superposés** : la jauge
-colorée occupe la portion pleine (`healthPercent`), le gris (`0.3, 0.3, 0.3`) le reste. Un
-segment de largeur nulle n'est pas émis du tout.
+### L'animation entre deux paliers de PV — `HealthLerp.java`
+
+Avant (jusqu'au 2026-08-24) : la barre sautait instantanément d'un palier à l'autre à chaque
+coup. `HealthLerp` anime la transition sur 300 ms, **en temps réel** (`Util.getMillis()`), pas
+sur `partialTicks` — même principe que `LerpingBossEvent` vanilla (barres de boss, 100 ms),
+mais `partialTicks` ne convient pas ici : il interpole entre deux valeurs connues à la frontière
+d'un tick, alors qu'un `EterniaCrystalRenderState` neuf à chaque frame ne peut stocker ni
+l'ancienne valeur ni un point de départ d'animation lui-même. L'objet `HealthLerp` vit donc sur
+le **renderer** (une seule instance, réutilisée pour tous les cristaux), dans une
+`Map<BlockPos, HealthLerp>` — une entrée par position de cristal vue dans la session, jamais
+nettoyée mais négligeable (en pratique une seule à la fois, une seule map active).
+`setTarget(...)` repart de la valeur **actuellement affichée** (pas de l'ancienne cible) : un
+coup qui arrive pendant que la barre bouge encore redirige l'animation en cours au lieu de la
+faire sauter en arrière avant de repartir. Réutilisée telle quelle par `TowerHealthBarRenderer`
+(voir plus bas, "La barre de vie des tours") — généralisée dès ce deuxième exemple concret.
+
+### Le dessin du quad — `HealthBarRendering.java`
+
+`collector.submitCustomGeometry(poseStack, RenderTypes.debugQuads(), ...)` — la géométrie est
+*soumise*, plus dessinée immédiatement ; le lambda reçoit un `PoseStack.Pose` et un
+`VertexConsumer` au moment du rendu réel. Deux quads sont émis via `addSegment`, **juxtaposés
+et jamais superposés** : la jauge colorée occupe la portion pleine (`healthPercent`), le gris
+(`0.3, 0.3, 0.3`) le reste. Un segment de largeur nulle n'est pas émis du tout. Extraite dans sa
+propre classe (statique, sans état) pour la même raison que `HealthLerp` : réutilisée telle
+quelle par `TowerHealthBarRenderer`, seules la taille du quad et la portée de la caméra
+diffèrent entre les deux usages.
 
 > C'est volontaire. `debugQuads` est déclaré avec `sortOnUpload()`, un tri de transparence
 > par distance à la caméra. Avec un fond pleine largeur recouvert par la jauge, les deux
@@ -596,9 +621,10 @@ niveau d'outil) et se drope lui-même via
 - Coût en mana à la pose branché (30, valeur de test — voir "Le coût en mana et la restriction
   de phase" plus haut), mais **pas encore équilibré** : choisi arbitrairement pour vérifier que
   le mécanisme fonctionne, pas après réflexion sur l'économie de mana globale.
-- Pas de remboursement de mana en le cassant.
-- Pas d'indicateur visuel de PV restants (barre de vie, changement de texture...) — seul
-  `getHealth()` existe côté code, rien ne l'affiche encore.
+- ~~Pas de remboursement de mana en le cassant~~ — fait, voir `ModEvents.onTowerBreak`
+  ("Ce qui est implémenté" dans 05-etat-et-problemes-connus.md).
+- ~~Pas d'indicateur visuel de PV restants~~ — fait (2026-08-24) : `TowerHealthBarRenderer`,
+  générique à toute catégorie de tour, voir plus bas "La barre de vie des tours".
 - Un seul membre concret de la catégorie "Blockade" pour l'instant (Spike Blockade). Une
   deuxième catégorie existe désormais ("Turret", voir plus bas), mais pas encore d'aura/piège
   non attaquable ni de piège de sol (les autres catégories envisagées par le joueur, voir
@@ -697,7 +723,8 @@ se drope lui-même via `data/dungeon_defenders/loot_table/blocks/harpoon_turret.
   égaré en phase Construction se ferait quand même tirer dessus ; comportement mineur, cohérent
   avec les dégâts de contact de Blockade, jamais phase-gatés non plus.
 - Pas de son/particules au tir, juste la flèche visuelle + dégâts directs.
-- Pas d'indicateur visuel de PV restants (même manque que Spike Blockade).
+- ~~Pas d'indicateur visuel de PV restants~~ — fait (2026-08-24), voir "La barre de vie des
+  tours" plus bas (même renderer générique que Spike Blockade).
 - Deux bugs de rotation successifs corrigés en jeu (2026-08-21), tous les deux dans l'aperçu
   (le bloc réellement posé, lui, a toujours été correct — voir plus bas "L'hologramme et le
   cercle de portée" pour le détail des deux causes) :
@@ -711,6 +738,41 @@ se drope lui-même via `data/dungeon_defenders/loot_table/blocks/harpoon_turret.
      Minecraft) utilisé pour dessiner l'aperçu — l'utilisateur choisissait une rotation en se
      fiant au cône, et la tour réellement posée (correcte, mais différente de ce que montrait
      le cône) semblait donc "tournée à l'envers" une fois confirmée.
+
+## La barre de vie des tours — `block/entity/TowerHealthBarRenderer.java`
+
+Un seul renderer, générique sur `AbstractTowerBlockEntity` (`<T extends AbstractTowerBlockEntity>
+implements BlockEntityRenderer<T, TowerHealthBarRenderState>`), couvre toute catégorie de tour
+existante ou future — enregistré une fois par `BlockEntityType` concret dans
+`DungeonDefendersModClient#onRegisterRenderers` (une ligne `event.registerBlockEntityRenderer(...)`
+par tour, mais toujours `TowerHealthBarRenderer::new`).
+
+**Conditions d'affichage**, décidées avec le joueur (2026-08-24) : contrairement à la barre du
+Cristal d'Eternia (toujours affichée — il n'y en a jamais qu'un), une base peut compter des
+dizaines de tours posées. Une barre visible sur toutes en permanence deviendrait illisible, donc
+`extractRenderState` la cache tant que :
+
+- la tour n'est **pas endommagée** (`getHealth() >= getMaxHealth()`) ;
+- ou la caméra est à plus de 16 blocs (`MAX_DISTANCE_SQ`, même principe que l'aperçu du
+  spawner, voir plus bas).
+
+Seules les tours réellement endommagées et à portée de vue affichent donc leur barre.
+
+**Rendu et animation** : même mécanisme que le cristal, extrait dans deux classes partagées
+pour éviter la duplication après ce deuxième exemple concret :
+
+- `HealthLerp` — anime le passage d'un ratio de PV à l'autre sur 300 ms, en **temps réel**
+  (`Util.getMillis()`), pas sur `partialTicks` : un `BlockEntityRenderState` est recréé à
+  chaque frame (`BlockEntityRenderDispatcher#tryExtractRenderState`), impossible d'y retenir
+  quoi que ce soit d'une frame à l'autre — l'animation vit donc sur le renderer lui-même, dans
+  une `Map<BlockPos, HealthLerp>` (une entrée par position de tour/cristal vue dans la session).
+  Un nouveau coup pendant que la barre bouge encore redirige l'animation en cours plutôt que de
+  la faire sauter en arrière.
+- `HealthBarRendering` — dessine le quad (dégradé vert → jaune → rouge + segment gris restant),
+  appelée par les deux renderers une fois le `poseStack` positionné/orienté en billboard.
+
+`TowerHealthBarRenderState` ne porte que `visible` et `healthPercent` — la condition
+d'affichage elle-même est calculée dans `extractRenderState`, pas dans `submit`.
 
 ## La roue de sélection des tours et la pose — `client/gui/screen/TowerWheelScreen.java`
 
