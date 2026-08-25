@@ -1115,10 +1115,60 @@ type.spawn(level, spawnPos, EntitySpawnReason.SPAWNER);
 terrain irrégulier autour du spawner). `findSafeSpawnPos` essaie jusqu'à 8 positions
 aléatoires, en ne retenant que celles où la position **et** celle juste au-dessus (place pour
 les pieds et la tête) sont toutes les deux traversables (`BlockState#getCollisionShape(...)
-.isEmpty()`) ; si aucune des 8 ne convient, replie sur `pos.above()` — la position par défaut
-utilisée avant l'ajout du rayon, censée toujours être libre. Pas de vérification qu'il y a un
-sol en dessous (un ennemi qui spawn au-dessus d'un trou tombe simplement, ce n'est pas un bug)
-— seul l'enlisement dans un bloc plein est évité.
+.isEmpty()`) ; si aucune des 8 ne convient, replie sur `pos` (**pas** `pos.above()`, voir plus
+bas). Pas de vérification qu'il y a un sol en dessous (un ennemi qui spawn au-dessus d'un trou
+tombe simplement, ce n'est pas un bug) — seul l'enlisement dans un bloc plein est évité.
+
+> **Le repli a changé de `pos.above()` à `pos`** le jour où le spawner est devenu un marqueur
+> sans collision (voir plus bas, "Jamais un obstacle physique"). Avant, le bloc du spawner
+> lui-même servait de sol sous les pieds d'un monstre spawné juste au-dessus ; ce n'est plus
+> possible puisqu'il n'a plus jamais de collision. `pos` lui-même est censé reposer sur le vrai
+> sol construit par le créateur de la map (le spawner n'est qu'un marqueur au niveau du sol,
+> pas une plateforme) — sans ce changement, tout spawn par défaut (rayon 0, le cas le plus
+> courant) aurait fait tomber le monstre indéfiniment dans le vide (voir "Le monde et le point
+> de spawn" : ce mod tourne dans une dimension entièrement vide, rien pour rattraper une chute).
+
+### Jamais un obstacle physique — `getShape`/`getCollisionShape`/`getRenderShape`
+
+Décidé avec le joueur (2026-08-25) : dans le jeu de référence, un point de spawn est une zone/
+un marqueur, pas un objet physique. Le spawner ne bloque donc plus jamais le passage d'un
+monstre ni du joueur, en Construction comme en Combat — avant, c'était un bloc plein classique,
+qui pouvait gêner un monstre essayant de se frayer un chemin près de son propre point de spawn.
+
+- **`getCollisionShape`** renvoie toujours `Shapes.empty()` — la forme lue pour la résolution
+  physique des déplacements. Traversable pour tout le monde, tout le temps.
+- **`getRenderShape`** renvoie toujours `RenderShape.INVISIBLE` — jamais rendu, pour personne.
+  Une limite assumée : cette méthode ne reçoit que le `BlockState`, pas de niveau ni de joueur,
+  donc impossible de la faire dépendre de qui regarde (contrairement à `getShape` ci-dessous).
+  Le repérage en jeu reste possible via l'aperçu de composition (texte à travers les murs en
+  Construction, voir plus bas) et, en créatif, via le contour de visée.
+- **`getShape`** (forme de ciblage/sélection, **différente** de `getCollisionShape`) renvoie un
+  cube plein **seulement si l'entité qui regarde est un joueur en mode créatif**, sinon vide :
+
+  ```java
+  protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+      if (context instanceof EntityCollisionContext entityContext
+              && entityContext.getEntity() instanceof Player player
+              && player.isCreative()) {
+          return Shapes.block();
+      }
+      return Shapes.empty();
+  }
+  ```
+
+  Vérifié dans le code source de cette version (`ClipContext.Block.OUTLINE` → `getShape`,
+  utilisé aussi bien pour le rayon de visée du joueur — donc pour savoir quel bloc `useWithoutItem`
+  reçoit au clic droit — que pour le contour noir de sélection) : **`getCollisionShape` n'a
+  aucun rôle dans le ciblage**, seul `getShape` compte. Résultat : un joueur en survie ne peut
+  plus jamais viser/cliquer un spawner (son clic traverse, comme s'il n'était pas là), tandis
+  qu'un créatif peut toujours le voir en contour et cliquer dessus pour le configurer — sans
+  vérification supplémentaire dans `useWithoutItem` (voir plus bas), le ciblage filtre déjà tout.
+  `EntityCollisionContext`/`CollisionContext.empty()` (utilisé par des vérifications sans
+  entité précise, génération de terrain, pathfinding...) laisse `getEntity()` à `null` : traité
+  comme "pas un joueur créatif", repli sûr sur `Shapes.empty()`.
+
+**Conséquence sur la position de spawn** : `findSafeSpawnPos` (voir plus haut) ne peut plus
+compter sur le bloc du spawner comme sol — corrigé au même moment, voir la remarque plus haut.
 
 ### L'état — `block/entity/SpawnerBlockEntity.java`
 

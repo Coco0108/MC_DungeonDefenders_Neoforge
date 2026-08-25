@@ -113,7 +113,16 @@ vérifie la CI.
   est mis à l'échelle par `DifficultyScaling` (difficulté × vague). Configurable par spawner
   (intervalle, rayon de spawn, plage de vagues, nombre de base par type). Shift + clic droit =
   harnais de test qui bascule `BUILD`/`COMBAT`. Incrémente aussi
-  `ModAttachments.WAVE_ENEMIES_KILLED` via un nouveau handler `LivingDeathEvent`.
+  `ModAttachments.WAVE_ENEMIES_KILLED` via un nouveau handler `LivingDeathEvent`. Décidé avec
+  le joueur (2026-08-25) : n'est plus jamais un obstacle physique — `getCollisionShape` toujours
+  vide (traversable par tout le monde, toute phase), `getRenderShape` toujours `INVISIBLE`,
+  `getShape` (ciblage/clic droit) plein uniquement pour un joueur créatif. A nécessité de
+  corriger `findSafeSpawnPos` : le repli par défaut spawnait au-dessus du bloc du spawner
+  (`pos.above()`), en comptant sur sa solidité comme sol — plus valable une fois le spawner
+  intangible, corrigé pour spawn à `pos` directement (le vrai sol de la map, sous le
+  marqueur). Détail dans
+  [02-gameplay.md](02-gameplay.md#jamais-un-obstacle-physique--getshapegetcollisionshapegetrendershape).
+  **Jamais testé en jeu** dans ce nouvel état.
 - ✅ Squelette ajouté comme deuxième ennemi (réutilise `EntityType.SKELETON` vanilla, comme le
   zombie) : cible le cristal comme n'importe quel `Monster`, et sort du spawner.
 - ✅ Comportement d'archer pour le squelette (`entity/ai/RangedAttackEterniaCrystalGoal.java`,

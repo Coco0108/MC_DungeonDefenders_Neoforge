@@ -233,15 +233,38 @@ puisqu'elle en dépend pour entrer en Combat autrement qu'avec le harnais de tes
 
 ## Le Spawner (premier vrai gameplay, pas juste du HUD)
 
+**Nouveau (2026-08-25), à vérifier en priorité avant tout le reste de cette section** : le
+spawner n'est plus jamais un obstacle physique ni visible, sauf pour un joueur en créatif.
+Jamais vérifié visuellement.
+
+- [ ] **En créatif**, le spawner reste **invisible** (pas de modèle de bloc affiché), mais en
+      visant précisément l'endroit où il est posé, un **contour de sélection** doit apparaître
+      (comme n'importe quel bloc ciblé) — c'est ce contour qui permet de le retrouver/cliquer.
+- [ ] **En créatif**, marcher à travers l'endroit où il est posé : **aucune collision**, on
+      traverse comme si rien n'était là.
+- [ ] **En survie**, viser précisément l'endroit où il est posé : **aucun contour**
+      n'apparaît, le clic droit ne fait strictement rien (ni message, ni interaction) — le bloc
+      doit être **totalement introuvable** en survie, contrairement à avant où un message
+      "créatif uniquement" s'affichait encore.
+- [ ] Faire spawn un monstre par-dessus/à côté d'un spawner (créatif ou survie) : le monstre ne
+      doit **jamais rester coincé/bloqué** par le bloc du spawner en essayant de se déplacer.
+- [ ] Poser un spawner **sans configurer de rayon** (0 par défaut), passer en Combat : les
+      monstres doivent apparaître normalement, **debout sur le vrai sol de la map**, pas en
+      train de tomber dans le vide — c'est le point le plus important de cette section
+      (`findSafeSpawnPos` spawn maintenant à `pos` directement, plus au-dessus du bloc du
+      spawner, qui n'est plus solide). Si des monstres disparaissent ou tombent indéfiniment
+      juste après leur apparition, c'est ce changement qui est en cause.
+- [ ] Aucune erreur/exception dans les logs liée à `SpawnerBlock`/`findSafeSpawnPos` au premier
+      spawn d'un monstre.
+
 - [ ] Prendre `spawner` dans l'onglet créatif Dungeon Defenders (texture : cage de spawner
       vanilla), le poser.
-- [ ] **Shift + clic droit** dessus : un message système confirme le changement de phase
-      (`Phase changée : Combat` / `Phase changée : Construction`), et le texte `Phase : ...`
-      en haut à droite du HUD change en conséquence — raccourci de test qui contourne le vote
-      "prêt" ci-dessus (utile seul, sans avoir à se re-cliquer soi-même dessus).
+- [ ] **Shift + clic droit** dessus (en créatif, seul mode où le bloc est atteignable, voir
+      ci-dessus) : un message système confirme le changement de phase (`Phase changée :
+      Combat` / `Phase changée : Construction`), et le texte `Phase : ...` en haut à droite du
+      HUD change en conséquence — raccourci de test qui contourne le vote "prêt" ci-dessus.
 - [ ] **Clic droit sans shift, en créatif** : ouvre l'écran de configuration (voir section
-      dédiée ci-dessous). **En survie**, le même clic droit sans shift doit plutôt afficher le
-      message "Les spawners ne sont configurables qu'en mode créatif" et ne rien ouvrir.
+      dédiée ci-dessous).
 - [ ] **Avant même de passer en Combat une première fois** : `Ennemis : X/10` peut encore
       afficher l'ancienne valeur par défaut (`/10`) — normal, le total ne se calcule qu'à
       l'entrée en Construction, qui n'a encore jamais eu lieu explicitement au tout premier
@@ -286,8 +309,8 @@ puisqu'elle en dépend pour entrer en Combat autrement qu'avec le harnais de tes
 - [ ] Poser un spawner **collé contre un mur/dans un renfoncement irrégulier**, mettre un
       **rayon de spawn de 3-4** (via l'écran de config), passer en Combat : aucun ennemi ne
       doit apparaître **à moitié ou totalement enlisé dans un bloc** — ils doivent tous
-      apparaître dans un espace libre, quitte à être repliés sur juste au-dessus du bloc
-      spawner si le rayon ne trouve rien de valide (`findSafeSpawnPos`).
+      apparaître dans un espace libre, quitte à être repliés sur la position du spawner
+      lui-même si le rayon ne trouve rien de valide (`findSafeSpawnPos`).
 - [ ] Casser le spawner à la pioche : il se drope (comme spike_trap), et l'accumulateur
       redémarre à 0 si on le repose (comportement attendu, pas de sauvegarde de position
       liée au bloc en tant que tel).
