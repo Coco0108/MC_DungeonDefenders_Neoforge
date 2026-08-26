@@ -286,6 +286,33 @@ vérifie la CI.
   Distribuera aussi des armes plus tard, hors scope pour l'instant (voir "Ce qui reste"). Détail
   dans [02-gameplay.md](02-gameplay.md#le-coffre-de-mana--blockmanachestblockjava). **Jamais testé
   en jeu.**
+- ✅ Suppression de tour (`client/TowerRemovalState.java`,
+  `client/TowerRemovalClientEvents.java`, `network/RemoveTowerPayload.java`) : décidé avec le
+  joueur (2026-08-26) sur le modèle du jeu de référence — touche dédiée (`remove_tower_mode`,
+  `X` par défaut) pour entrer/sortir d'un mode suppression, puis clic gauche sur une tour visée
+  pour la détruire instantanément et récupérer 50% de son coût en mana
+  (`TOWER_MANA_REFUND_RATIO`, valeur de test comme les coûts de pose). Reste actif après une
+  suppression pour en enchaîner plusieurs. Symétrique à la roue de pose côté serveur (phase
+  Construction uniquement, revalidation complète, aucune confiance dans le client). Détail dans
+  [02-gameplay.md](02-gameplay.md#la-suppression-de-tour--clienttowerremovalstatejava-clienttowerremovalclienteventsjava-networkremovetowerpayloadjava).
+  **Jamais testé en jeu.**
+- ✅ Casser un bloc est désactivé pour tout joueur non créatif (`ModEvents.onBlockBreakAttempt`,
+  `BreakBlockEvent`) : décidé avec le joueur (2026-08-26), suite directe du point précédent —
+  plutôt que de traiter les tours au cas par cas, plus aucun bloc ne se casse en survie, quel
+  qu'il soit (terrain, taverne, tours...). Effet de bord voulu : le minage des tours à la
+  pioche (qui laissait un item désormais inerte, voir plus haut) est réglé sans rien coder de
+  spécifique aux tours — la touche dédiée devient de fait la seule façon de les retirer. Détail
+  dans
+  [02-gameplay.md](02-gameplay.md#casser-un-bloc-est-désormais-désactivé--modeventsonblockbreakattempt).
+  **Jamais testé en jeu.**
+- ⚠️ **Fusion locale de test (2026-08-26)** : `feature/mana-crystals` avait sa propre logique de
+  remboursement au clic-pioche (`ModEvents.onTowerBreak`, même `TOWER_MANA_REFUND_RATIO`),
+  écrite avant que `feature/tower-removal` n'introduise la touche dédiée. Les deux ensemble
+  auraient été exploitables (`onTowerBreak` ne vérifiait pas `event.isCanceled()` avant de
+  créditer le mana, donc combinable avec `onBlockBreakAttempt` pour du mana gratuit sans
+  vraiment casser la tour) — `onTowerBreak` a été retiré dans cette branche de test. **À régler
+  pour de vrai** avant/au moment de merger l'une des deux PR dans `main` : celle qui merge en
+  second devra retirer ce handler (ou les réconcilier autrement).
 
 ## Corrections apportées
 
@@ -705,6 +732,20 @@ pas plusieurs ticks à attendre) : les scénarios les plus simples à rendre fia
 tests (dégâts de contact d'une Blockade, tir d'une Turret, spawn effectif d'un monstre...)
 demanderaient de gérer le temps qui passe et l'IA, plus sujets aux faux négatifs — pas
 tentés pour l'instant.
+
+### Les loot tables de tours sont devenues du code mort... en survie seulement
+
+Réglé indirectement par "Casser un bloc est désormais désactivé" (voir "Ce qui est implémenté"
+plus haut) : `BreakBlockEvent` étant annulé avant que le bloc ne soit retiré, un joueur non
+créatif ne peut plus jamais faire tomber `data/dungeon_defenders/loot_table/blocks/
+spike_blockade.json`/`harpoon_turret.json` en cassant une tour. **Un joueur créatif le peut
+toujours** — vérifié dans les sources décompilées
+(`ServerPlayerGameMode#destroyBlock`/`destroyAndAck`) : même la casse instantanée créative
+passe par `BreakBlockEvent` (`CommonHooks.fireBlockBreak`), donc par le même handler, qui
+laisse simplement passer sans l'annuler quand `player.isCreative()` est vrai — la loot table
+reste donc atteignable en créatif exactement comme avant. Sans conséquence (un item créatif
+n'a pas d'importance), pas supprimé pour l'instant, juste un reliquat qui pourrait être nettoyé
+plus tard.
 
 ## Reliquats du template
 

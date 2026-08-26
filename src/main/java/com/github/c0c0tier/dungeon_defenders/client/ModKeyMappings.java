@@ -8,9 +8,10 @@ import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import org.lwjgl.glfw.GLFW;
 
 // Touches custom pour la roue de sélection des tours (voir TowerPlacementClientEvents,
-// TowerWheelScreen). Catégorie dédiée (pas KeyMapping.Category.GAMEPLAY) : regroupées sous leur
-// propre en-tête "Dungeon Defenders" dans Options > Contrôles > Touches, plus simples à
-// retrouver que noyées parmi les dizaines de touches vanilla de la catégorie Gameplay.
+// TowerWheelScreen) et le mode suppression de tour (voir TowerRemovalClientEvents). Catégorie
+// dédiée (pas KeyMapping.Category.GAMEPLAY) : regroupées sous leur propre en-tête "Dungeon
+// Defenders" dans Options > Contrôles > Touches, plus simples à retrouver que noyées parmi les
+// dizaines de touches vanilla de la catégorie Gameplay.
 public class ModKeyMappings {
 
     public static final KeyMapping.Category CATEGORY =
@@ -34,9 +35,19 @@ public class ModKeyMappings {
             GLFW.GLFW_KEY_G,
             CATEGORY);
 
+    // Bascule (pas maintenue) : entre/sort du mode suppression de tour — voir
+    // TowerRemovalClientEvents. Un appui ré-active ; le prochain clic gauche sur une tour visée
+    // l'envoie au serveur pour destruction + remboursement de mana.
+    public static final KeyMapping REMOVE_TOWER_MODE = new KeyMapping(
+            "key.dungeon_defenders.remove_tower_mode",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_X,
+            CATEGORY);
+
     public static void register(RegisterKeyMappingsEvent event) {
         event.registerCategory(CATEGORY);
         event.register(TOWER_WHEEL);
         event.register(ROTATE_TOWER);
+        event.register(REMOVE_TOWER_MODE);
     }
 }

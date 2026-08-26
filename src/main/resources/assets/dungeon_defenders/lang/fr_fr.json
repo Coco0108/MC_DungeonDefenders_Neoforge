@@ -13,6 +13,7 @@
   "key.category.dungeon_defenders.keys": "Dungeon Defenders",
   "key.dungeon_defenders.tower_wheel": "Ouvrir la roue des tours",
   "key.dungeon_defenders.rotate_tower": "Faire pivoter la tour (pose)",
+  "key.dungeon_defenders.remove_tower_mode": "Basculer le mode suppression de tour",
 
   "dungeon_defenders.eternia_crystal.destroyed": "Le cristal a été détruit !! Game Over !",
   "dungeon_defenders.eternia_crystal.ready_progress": "Prêt : %s/%s",
@@ -23,6 +24,9 @@
   "dungeon_defenders.tower.not_enough_mana": "Pas assez de mana pour poser cette tour ! (%s requis, %s disponible)",
   "dungeon_defenders.tower.mana_spent": "-%s mana pour la tour (%s/%s)",
   "dungeon_defenders.tower.mana_refunded": "+%s mana remboursé (%s/%s)",
+  "dungeon_defenders.block.break_disabled": "Impossible de casser des blocs dans ce monde.",
+  "dungeon_defenders.tower.removal_mode_on": "Mode suppression de tour : ACTIVÉ. Clic gauche sur une tour pour la retirer.",
+  "dungeon_defenders.tower.removal_mode_off": "Mode suppression de tour : DÉSACTIVÉ.",
 
   "dungeon_defenders.hud.mana": "Mana : %s/%s",
   "dungeon_defenders.hud.health": "Vie : %s/%s",

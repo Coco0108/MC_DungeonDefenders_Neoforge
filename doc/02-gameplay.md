@@ -966,6 +966,99 @@ restauré (`before.restore(...)`) — le bloc disparaît comme s'il n'avait jama
 - Pas de filtrage par héros — la roue liste toutes les tours, en attendant ce système.
 - Pas de remplissage translucide de l'hologramme, juste le contour filaire.
 
+## La suppression de tour — `client/TowerRemovalState.java`, `client/TowerRemovalClientEvents.java`, `network/RemoveTowerPayload.java`
+
+Décidé avec le joueur (2026-08-26), sur le modèle du jeu de référence plutôt que sur le minage
+vanilla à la pioche : une **touche dédiée** (`remove_tower_mode`, `X` par défaut,
+`client/ModKeyMappings.java`) fait entrer/sortir du **mode suppression** ; pendant ce mode, un
+**clic gauche** sur une tour visée la détruit instantanément et rembourse une partie de son coût
+en mana. Symétrique à la roue de pose (une seule vraie façon de poser, une seule vraie façon de
+retirer), mais l'ancien chemin pioche existe toujours en parallèle — voir "Ce qui n'est PAS
+fait" plus bas.
+
+### L'état et la bascule — `TowerRemovalState`
+
+État transitoire client (pas persistant, pas synchronisé), même esprit que
+`TowerPlacementState` mais plus simple : juste `active`/`targetPos`/`targetValid`, pas
+d'étapes. Contrairement au mode pose (qui se termine après une seule confirmation), **reste
+actif après une suppression** pour pouvoir en enchaîner plusieurs sans rappuyer sur la touche à
+chaque fois — comme dans le jeu de référence. Ne se désactive que sur un nouvel appui sur la
+touche, ou automatiquement si la phase quitte Construction, si l'écran ou le niveau/joueur
+deviennent indisponibles.
+
+`TowerRemovalClientEvents.onClientTick` refuse de basculer le mode si la roue de pose
+(`TowerPlacementState.isActive()`) est déjà active ou qu'un écran est ouvert — les deux modes ne
+se chevauchent jamais.
+
+### Le ciblage — raycast `OUTLINE`, comme la pose
+
+Même mécanisme que `TowerPlacementClientEvents.updateTargetFromRaycast` : rayon de 20 blocs
+depuis les yeux du joueur, `ClipContext.Block.OUTLINE`. Une position est une cible valide si
+`level.getBlockEntity(pos) instanceof AbstractTowerBlockEntity` — générique à toute catégorie de
+tour (Blockade et Turret), aucun cas particulier par type. Rendu d'un contour filaire orange
+(`renderBoxOutline`, même technique que le contour vert/rouge de la pose, submit-node pipeline)
+autour de la tour visée quand elle est valide — orange choisi délibérément pour ne pas laisser
+croire aux deux modes une sémantique commune avec le vert/rouge de validité de pose.
+
+### Le clic et le paquet — `RemoveTowerPayload`, `ModNetworking.handleRemoveTower`
+
+`InputEvent.InteractionKeyMappingTriggered` : pendant le mode, **tout clic gauche est annulé**
+(`event.isAttack()`), pour ne jamais casser un bloc ou frapper un monstre par accident en visant
+une tour — que la cible soit valide ou non. Si elle est valide, `RemoveTowerPayload(pos)` part
+vers le serveur.
+
+Le serveur revalide tout, comme n'importe quel autre paquet du mod : phase Construction
+uniquement (même message `tower.build_phase_only` que la pose, symétrique), distance
+(`MAX_DISTANCE_SQ`, même constante que la config du spawner), et présence réelle d'une
+`AbstractTowerBlockEntity` à la position reçue — le client n'est jamais l'autorité, même s'il a
+déjà refusé une cible invalide de son côté.
+
+Remboursement : `Math.round(tower.getManaCost() * TOWER_MANA_REFUND_RATIO)`, avec
+`TOWER_MANA_REFUND_RATIO = 0.5F` — valeur de test, pas encore équilibrée, comme les coûts de
+pose eux-mêmes (`TowerDefinition`). Plafonné à `MAX_MANA` comme tout gain de mana. La
+destruction passe par `serverLevel.destroyBlock(pos, false)` — **pas de drop d'item**, même
+convention qu'une tour détruite au combat (`AbstractTowerBlockEntity#setHealth`, `dropBlock =
+false`) : la touche dédiée est voulue comme l'unique façon "propre" de retirer une tour.
+
+### Ce qui n'est PAS fait, volontairement
+
+- Pas de confirmation ("es-tu sûr ?") avant suppression — un clic suffit, comme la pose.
+- Pas de retour visuel pendant que le mode est actif hors du contour orange sur la cible.
+
+**Le minage à la pioche est réglé par ailleurs** : voir "Casser un bloc est désormais
+désactivé" juste en dessous — la touche dédiée n'est plus seulement l'unique façon "propre" de
+retirer une tour, c'est désormais **la seule façon tout court**, plus aucun bloc ne se casse à
+la pioche en survie, tour ou pas.
+
+## Casser un bloc est désormais désactivé — `ModEvents.onBlockBreakAttempt`
+
+Décidé avec le joueur (2026-08-26), directement en réaction au clutter d'item inerte laissé par
+le minage des tours (voir plus haut) : plutôt que de traiter chaque bloc au cas par cas
+(rendre les tours incassables, puis le spawner, puis le Cristal d'Eternia...), un seul handler
+générique **annule toute tentative de casse de bloc pour un joueur non créatif**, quel que soit
+le bloc visé — terrain, structure de la taverne, tours, tout. Ce n'est pas ce genre de jeu : pas
+de minage, pas de récolte de ressources.
+
+`BreakBlockEvent` (`net.neoforged.neoforge.event.level.block.BreakBlockEvent` — **pas**
+`BlockEvent.BreakEvent`, qui n'existe plus dans cette version de NeoForge, renommé/déplacé) se
+déclenche **indépendamment côté client ET côté serveur** (précisé dans sa javadoc). Le handler
+annule sans condition de camp — pour stopper net à la fois la prédiction client (le bloc
+n'affiche jamais de cassure qui se corrige ensuite) et la casse réelle côté serveur — mais
+n'envoie le message système ("Impossible de casser des blocs dans ce monde.") que côté serveur
+(`!event.getLevel().isClientSide()`), pour ne pas l'afficher deux fois (une fois localement,
+une fois via le paquet réseau).
+
+Réservé aux joueurs non créatifs (`player.isCreative()`), même principe que partout ailleurs
+dans le mod : le créatif reste le seul mode où une map se construit/modifie.
+
+**Effet de bord voulu** : comme le handler est générique à tout bloc, il rend aussi le minage
+des tours à la pioche impossible sans rien coder de spécifique aux tours — le chemin
+"suppression avec remboursement" (voir plus haut) devient de fait la seule façon de retirer une
+tour, sans avoir eu besoin de toucher à `strength()`/`getDestroyProgress()` par bloc.
+- Aucun retour visuel pendant que le mode est actif hors du contour orange sur la cible (pas de
+  changement de curseur, pas d'indicateur HUD permanent) — seul le message système à
+  l'activation/désactivation l'indique.
+
 ## Le mana du joueur
 
 Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore) **et** la

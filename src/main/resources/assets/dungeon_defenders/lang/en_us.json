@@ -13,6 +13,7 @@
   "key.category.dungeon_defenders.keys": "Dungeon Defenders",
   "key.dungeon_defenders.tower_wheel": "Open tower wheel",
   "key.dungeon_defenders.rotate_tower": "Rotate tower (placement)",
+  "key.dungeon_defenders.remove_tower_mode": "Toggle tower removal mode",
 
   "dungeon_defenders.eternia_crystal.destroyed": "The Eternia Crystal has been destroyed! Game Over!",
   "dungeon_defenders.eternia_crystal.ready_progress": "Ready: %s/%s",
@@ -23,6 +24,9 @@
   "dungeon_defenders.tower.not_enough_mana": "Not enough mana to place this tower! (%s required, %s available)",
   "dungeon_defenders.tower.mana_spent": "-%s mana for the tower (%s/%s)",
   "dungeon_defenders.tower.mana_refunded": "+%s mana refunded (%s/%s)",
+  "dungeon_defenders.block.break_disabled": "You can't break blocks in this world.",
+  "dungeon_defenders.tower.removal_mode_on": "Tower removal mode: ON. Left-click a tower to remove it.",
+  "dungeon_defenders.tower.removal_mode_off": "Tower removal mode: OFF.",
 
   "dungeon_defenders.hud.mana": "Mana: %s/%s",
   "dungeon_defenders.hud.health": "Health: %s/%s",

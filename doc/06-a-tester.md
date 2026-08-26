@@ -22,7 +22,7 @@ Lancer le client de dev :
 ./gradlew runClient
 ```
 
-## Les cristaux de mana et le remboursement (`ManaCrystalEntity`, `ModEvents.onTowerBreak`)
+## Les cristaux de mana (`ManaCrystalEntity`)
 
 Premier `Entity` custom du mod (jusqu'ici, uniquement des `Block`/`BlockEntity`) — jamais
 vérifié visuellement, y compris le tout premier ramassage "hors inventaire" (comme l'XP
@@ -49,17 +49,14 @@ vanilla) et la toute première fois que le mana remonte en jeu.
       en un seul (comportement hérité d'`ExperienceOrb`, `count` cumulé) — ramasser ce cristal
       fusionné doit donner le mana correspondant au nombre de monstres tués (5 × count), pas
       juste 5.
-- [ ] Poser une tour (30 ou 50 mana selon laquelle), puis la **casser soi-même à la pioche**
-      (hors combat) : le mana doit remonter de **50% du coût** (15 pour Spike Blockade, 25 pour
-      Harpoon Turret), avec un message dédié — vérifie `ModEvents.onTowerBreak`.
-- [ ] Poser une tour, puis la laisser être **détruite par un monstre en combat** (0 PV) : le
-      mana **ne doit PAS** être remboursé cette fois — vérifie que `BreakBlockEvent` ne se
-      déclenche bien que pour une casse volontaire du joueur, pas pour
-      `AbstractTowerBlockEntity.setHealth()` à 0.
-- [ ] Casser un bloc qui n'est **pas** une tour (terrain quelconque) : aucun message de
-      remboursement, aucune exception.
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ManaCrystalEntity`,
-      `ModEntities`, `ModEvents.onExperienceDrop` ou `onTowerBreak`.
+      `ModEntities`, ou `ModEvents.onExperienceDrop`.
+
+> Le remboursement de mana à la casse d'une tour se teste désormais via la **touche dédiée de
+> suppression**, pas la pioche — voir la section "La suppression de tour" plus bas.
+> `ModEvents.onTowerBreak` (l'ancien remboursement au clic-pioche de cette branche) a été
+> retiré dans cette fusion locale de test : il serait devenu exploitable une fois combiné à
+> "Casser un bloc est désactivé" (voir 05-etat-et-problemes-connus.md).
 
 ## HUD vanilla masqué, faim et hotbar désactivées
 
@@ -225,6 +222,73 @@ Jamais vérifié visuellement dans ce nouvel état.
       juste après leur apparition, c'est ce changement qui est en cause.
 - [ ] Aucune erreur/exception dans les logs liée à `SpawnerBlock`/`findSafeSpawnPos` au premier
       spawn d'un monstre.
+
+## La suppression de tour (`TowerRemovalState`, `TowerRemovalClientEvents`, `RemoveTowerPayload`)
+
+Jamais testé en jeu. Premier usage d'une touche "bascule" (pas maintenue) dans le mod, et
+premier test du remboursement de mana à la casse d'une tour.
+
+- [ ] Poser une tour (Spike Blockade ou Harpoon Turret) via la roue, en phase Construction.
+      Appuyer sur `X` (touche par défaut, "Basculer le mode suppression de tour") : un message
+      système "Mode suppression de tour : ACTIVÉ..." doit apparaître.
+- [ ] Viser la tour posée pendant que le mode est actif : un **contour orange** doit apparaître
+      autour d'elle (distinct du vert/rouge de la roue de pose). Viser autre chose (sol, mur,
+      Cristal d'Eternia, un monstre...) : **aucun** contour ne doit apparaître.
+- [ ] Clic gauche en visant la tour (contour orange visible) : la tour doit **disparaître
+      instantanément**, sans jeter d'item au sol, et un message "+X mana remboursé (Y/100)"
+      doit s'afficher (X = la moitié du coût de pose arrondi : 15 pour Spike Blockade coût 30,
+      25 pour Harpoon Turret coût 50) — vérifier aussi que le HUD mana (losange bas-gauche)
+      reflète bien le nouveau total.
+- [ ] Clic gauche en visant autre chose qu'une tour pendant le mode actif (sol, mur, un
+      monstre à proximité) : **rien** ne doit se passer (pas de dégât au monstre, pas de bloc
+      cassé) — le clic gauche doit être totalement neutralisé pendant ce mode, cible valide ou
+      non.
+- [ ] Poser deux tours proches, activer le mode, supprimer la première (clic gauche) : le mode
+      doit **rester actif** ensuite (pas besoin de rappuyer sur `X`) — viser et cliquer la
+      seconde tour doit la supprimer aussi, à la suite.
+- [ ] Rappuyer sur `X` pendant que le mode est actif : message "Mode suppression de tour :
+      DÉSACTIVÉ.", le contour orange disparaît même en visant une tour, et le clic gauche
+      redevient normal (peut à nouveau frapper un monstre — casser un bloc reste impossible
+      hors créatif, voir la section dédiée plus bas).
+- [ ] Activer le mode en phase Construction, puis faire basculer en Combat (harnais de test du
+      spawner) pendant que le mode est actif : doit se désactiver **automatiquement**, avec le
+      message "Les tours ne peuvent être posées qu'en phase de Construction !" (message
+      réutilisé, un peu trompeur ici puisqu'il ne parle que de pose — à surveiller si ça prête
+      à confusion en jeu).
+- [ ] Essayer d'ouvrir la roue de pose (`R`) pendant que le mode suppression est actif : ne doit
+      **rien** faire (les deux modes ne doivent jamais être actifs en même temps) — et
+      inversement, essayer d'activer le mode suppression (`X`) pendant que le mode pose est
+      actif (hologramme affiché) ne doit rien faire non plus.
+- [ ] Essayer de casser une tour à la **pioche**, en survie, hors du mode suppression : ne doit
+      **plus rien** faire (voir la section dédiée juste en dessous, "Casser un bloc est
+      désactivé") — la touche dédiée est désormais la seule vraie façon de les retirer.
+- [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
+      `TowerRemovalState`, `TowerRemovalClientEvents`, `RemoveTowerPayload`, ou
+      `ModNetworking.handleRemoveTower`.
+
+## Casser un bloc est désactivé (`ModEvents.onBlockBreakAttempt`)
+
+Jamais testé en jeu. Changement global, à vérifier sur plusieurs types de blocs différents, pas
+seulement les tours.
+
+- [ ] En **survie**, essayer de casser un bloc de terrain quelconque (sol/mur de la taverne ou
+      d'une map) à la main ou avec un outil : le bloc ne doit **jamais se casser**, un message
+      "Impossible de casser des blocs dans ce monde." doit apparaître (une seule fois par
+      tentative, pas en double).
+- [ ] Comparer visuellement les **fissures de minage** (cracks) pendant que la touche est
+      maintenue : elles peuvent apparaître le temps de l'appui (comportement vanilla normal),
+      mais le bloc ne doit **jamais** finir par disparaître, quel que soit le temps maintenu.
+- [ ] Refaire le test sur une **tour posée** (Spike Blockade/Harpoon Turret), le **Cristal
+      d'Eternia**, un **coffre de mana**, et le **spawner** (si ciblable, voir sa propre
+      section) : aucun de ces blocs ne doit se casser en survie non plus — le handler est
+      générique, pas de cas particulier attendu par type de bloc.
+- [ ] Repasser en **créatif** : casser un bloc quelconque (terrain, tour...) doit fonctionner
+      **normalement**, comme avant ce changement (instantané, sans item — comportement vanilla
+      standard du créatif) — le créatif ne doit jamais être affecté par cette restriction.
+- [ ] Vérifier qu'aucun message en double n'apparaît dans le chat pour une seule tentative de
+      casse ratée (le message ne doit venir que du serveur, pas aussi du client).
+- [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
+      `ModEvents.onBlockBreakAttempt` ou `BreakBlockEvent`.
 
 ## Général
 

@@ -32,10 +32,6 @@ public class ModEvents {
     // via player.getMaxHealth(), pas besoin de la partager ailleurs.
     private static final double PLAYER_MAX_HEALTH = 100.0D;
 
-    // Part du coût de pose remboursée en mana quand le joueur casse lui-même sa tour à la
-    // pioche (voir onTowerBreak) — valeur de test, pas encore équilibrée.
-    private static final float TOWER_MANA_REFUND_RATIO = 0.5F;
-
     // Décidé avec le joueur : pas de mécanique de faim dans ce mod, la barre est déjà masquée
     // (DungeonDefendersModClient) mais rien n'empêchait encore la faim de baisser en arrière-
     // plan (sprint, saut, minage...) — repoussée à son maximum à chaque tick serveur plutôt
@@ -118,6 +114,31 @@ public class ModEvents {
         player.syncData(ModAttachments.MANA);
         player.sendSystemMessage(Component.translatable(
                 "dungeon_defenders.tower.mana_spent", manaCost, newMana, ModAttachments.MAX_MANA));
+    }
+
+    // Décidé avec le joueur (2026-08-26) : aucun bloc ne se casse en jeu, point - pas de
+    // minage, pas de récolte, ce n'est pas ce genre de jeu. Générique à tout bloc (pas
+    // seulement les tours), donc aucun cas particulier ailleurs dans le mod n'est nécessaire.
+    // Réservé aux joueurs non créatifs : le créatif reste le seul moyen de construire/modifier
+    // une map, même principe que partout ailleurs dans le mod (spawner, coffre de mana...).
+    //
+    // BreakBlockEvent (pas BlockEvent.BreakEvent, qui n'existe plus dans cette version) se
+    // déclenche indépendamment côté client ET côté serveur (voir sa javadoc) : annulé sans
+    // condition de camp pour stopper net la prédiction client autant que la casse réelle
+    // côté serveur. Le message n'est envoyé que côté serveur (isClientSide() == false) pour
+    // ne pas l'afficher en double (une fois localement côté client, une fois via le paquet
+    // serveur).
+    @SubscribeEvent
+    public static void onBlockBreakAttempt(BreakBlockEvent event) {
+        Player player = event.getPlayer();
+        if (player.isCreative()) {
+            return;
+        }
+
+        event.setCanceled(true);
+        if (!event.getLevel().isClientSide()) {
+            player.sendSystemMessage(Component.translatable("dungeon_defenders.block.break_disabled"));
+        }
     }
 
     @SubscribeEvent
@@ -208,31 +229,15 @@ public class ModEvents {
         }
     }
 
-    // BreakBlockEvent (pas BlockEvent.BreakEvent, qui n'existe plus dans cette version) ne
-    // fire que pour une casse initiée par un joueur (a toujours un Player) — jamais pour
-    // Level#destroyBlock déclenché par AbstractTowerBlockEntity.setHealth() à 0 PV en combat.
-    // Le remboursement ne s'applique donc jamais à une tour détruite au combat, seulement à
-    // une casse volontaire à la pioche.
-    @SubscribeEvent
-    public static void onTowerBreak(BreakBlockEvent event) {
-        if (event.getLevel().isClientSide()) {
-            return;
-        }
-
-        if (!(event.getLevel().getBlockEntity(event.getPos()) instanceof AbstractTowerBlockEntity tower)) {
-            return;
-        }
-
-        int refund = Math.round(tower.getManaCost() * TOWER_MANA_REFUND_RATIO);
-        if (refund <= 0) {
-            return;
-        }
-
-        Player player = event.getPlayer();
-        int newMana = Math.min(ModAttachments.MAX_MANA, player.getData(ModAttachments.MANA) + refund);
-        player.setData(ModAttachments.MANA, newMana);
-        player.syncData(ModAttachments.MANA);
-        player.sendSystemMessage(Component.translatable(
-                "dungeon_defenders.tower.mana_refunded", refund, newMana, ModAttachments.MAX_MANA));
-    }
+    // SUPPRIMÉ en fusionnant feature/mana-crystals et feature/tower-removal (intégration
+    // locale de test, 2026-08-26) : ce handler existait sur feature/mana-crystals pour
+    // rembourser du mana au clic-pioche, avant que feature/tower-removal n'introduise la
+    // touche dédiée (voir ModNetworking.handleRemoveTower, même TOWER_MANA_REFUND_RATIO) comme
+    // unique vraie façon de retirer une tour, ET onBlockBreakAttempt ci-dessus qui annule déjà
+    // toute casse de bloc en survie. Les deux mécanismes ensemble auraient été exploitables :
+    // onTowerBreak ne vérifiait pas event.isCanceled() avant de créditer le remboursement, donc
+    // un joueur non créatif aurait pu obtenir du mana gratuit en "cassant" une tour dont la
+    // casse était en fait annulée par onBlockBreakAttempt, sans jamais la détruire pour de vrai.
+    // À régler pour de vrai quand ces deux PR seront réconciliées (celle qui merge en second
+    // devra retirer ce handler du même coup) — voir la conversation avec le joueur.
 }
