@@ -193,6 +193,10 @@ vérifie la CI.
   **Pas concrètement testable avant qu'une vraie structure `.nbt` de map n'existe** — voir
   "Système de maps/structures" plus bas et
   [02-gameplay.md](02-gameplay.md#le-bloc-de-spawn-joueur--bloc-player_spawn-mapinstancefindandconsumespawnmarker).
+  **Corrigé le 2026-08-26** : la texture de l'item était cassée en main/inventaire (aucun
+  `models/item/player_spawn.json`, seulement le modèle de bloc) — probablement le même souci
+  sur d'autres blocs du mod, jamais vérifié pour eux, voir
+  [02-gameplay.md](02-gameplay.md#texture-cassée-en-main--modelsitemplayer_spawnjson).
 
 ## Corrections apportées
 
