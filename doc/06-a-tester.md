@@ -673,20 +673,25 @@ survie, une fois par vague, configurable en créatif — jamais vérifié visuel
       "Quantité de mana", pré-rempli à 25). Changer la valeur, valider, refermer et
       recliquer : la nouvelle valeur doit être là (bien appliquée et resynchronisée), pas
       revenue à 25.
-- [ ] **En survie**, clic droit en phase Construction : donne bien la quantité configurée de
-      mana (message + HUD), une seule fois.
+- [ ] **En survie**, clic droit : donne bien la quantité configurée de mana (message + HUD),
+      une seule fois — dans **n'importe quelle phase** (2026-08-26 : la restriction
+      "Construction uniquement" a été retirée, tester Construction **et** Combat).
 - [ ] **Après ouverture, le coffre doit disparaître** (invisible) et devenir traversable — le
       point le plus important de cette section : vérifie `OPENED`/`getRenderShape`/`getShape`/
       `getCollisionShape` dans `ManaChestBlock`. Essayer de re-cliquer à l'endroit où il était :
       ne doit plus rien cibler (le clic doit traverser, pas afficher "coffre vide").
-- [ ] Passer en Combat puis revenir en Construction (nouvelle vague) : le coffre doit
-      **réapparaître** (visible, solide) et s'ouvrir à nouveau une fois — vérifie
-      `ManaChestBlock#respawnAll` appelé par `PhaseTransitions#enterBuild`.
+- [ ] **Priorité (signalé cassé le 2026-08-26, cause non trouvée en relisant le code)** : passer
+      en Combat puis revenir en Construction (nouvelle vague) : le coffre doit **réapparaître**
+      (visible, solide) et s'ouvrir à nouveau une fois — vérifie `ManaChestBlock#respawnAll`
+      appelé par `PhaseTransitions#enterBuild`. Si ça casse encore, tester séparément : via le
+      harnais de test du spawner (shift + clic droit, changement de phase manuel) **et** via la
+      fin de vague automatique (tuer tous les monstres) — noter lequel des deux (ou les deux)
+      ne fait pas réapparaître le coffre, ça aiderait à resserrer le diagnostic.
 - [ ] Plusieurs coffres sur la même map : ouvrir l'un ne doit pas faire disparaître les autres,
       et tous doivent réapparaître à la vague suivante (pas seulement le premier du registre).
-- [ ] Clic droit en phase Combat : message "Construction uniquement", pas de mana donné.
 - [ ] Mana déjà à 100/100 : le coffre s'ouvre quand même (marqué comme utilisé pour la vague),
-      mais le mana ne dépasse pas 100.
+      mais le mana ne dépasse pas 100 — l'excédent est pour l'instant simplement perdu (pas de
+      drop au sol, voir 05-etat-et-problemes-connus.md, en attente de PR #12).
 - [ ] Un son de coffre qui s'ouvre doit se faire entendre à l'ouverture réussie.
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ManaChestBlock`,
       `ManaChestBlockEntity`, `ManaChestConfigScreen`/`Menu`/`Payload`.

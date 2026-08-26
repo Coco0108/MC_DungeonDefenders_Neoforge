@@ -1,7 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.block;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
-import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.menu.ManaChestConfigMenuProvider;
 import com.mojang.serialization.MapCodec;
@@ -92,9 +91,10 @@ public class ManaChestBlock extends BaseEntityBlock {
     /**
      * Créatif : ouvre l'écran de configuration (quantité de mana) — même logique que
      * SpawnerBlock, la config est censée être figée une fois la map construite, pas modifiable
-     * en survie. Survie : tente de donner le mana au joueur, une fois par vague pendant la
-     * Construction (voir ManaChestBlockEntity#tryOpen) — pas en Combat, où les joueurs sont
-     * censés se battre plutôt qu'ouvrir des coffres.
+     * en survie. Survie : tente de donner le mana au joueur, une fois par vague (voir
+     * ManaChestBlockEntity#tryOpen) — décidé avec le joueur (2026-08-26) : ouvrable **quelle
+     * que soit la phase**, plus seulement en Construction, un joueur peut vouloir aller
+     * chercher du mana en pleine Combat.
      */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
@@ -105,11 +105,6 @@ public class ManaChestBlock extends BaseEntityBlock {
         if (player.isCreative()) {
             player.openMenu(new ManaChestConfigMenuProvider(pos));
             return InteractionResult.CONSUME;
-        }
-
-        if (level.getData(ModAttachments.GAME_PHASE) != GamePhase.BUILD.ordinal()) {
-            player.sendSystemMessage(Component.translatable("dungeon_defenders.mana_chest.build_phase_only"));
-            return InteractionResult.SUCCESS;
         }
 
         if (!(level.getBlockEntity(pos) instanceof ManaChestBlockEntity chest)) {

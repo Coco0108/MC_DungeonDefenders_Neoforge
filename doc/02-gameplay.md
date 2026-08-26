@@ -910,8 +910,10 @@ sert de proxy :
   champ scalaire (`manaAmount`), sans les lignes dynamiques de composition. Au clic sur
   "Valider", envoie `ManaChestConfigPayload` au serveur, appliqué par
   `ManaChestBlockEntity#applyConfig` après revérification de portée (`ModNetworking`).
-- **Survie** → si `GAME_PHASE != BUILD`, message et rien ne se passe (coffre pensé pour la
-  préparation, pas le combat). Sinon, délègue à `ManaChestBlockEntity#tryOpen`.
+- **Survie** → délègue directement à `ManaChestBlockEntity#tryOpen`. Décidé avec le joueur
+  (2026-08-26) : plus de restriction de phase (auparavant `GAME_PHASE != BUILD` refusait
+  l'ouverture avec un message) — un joueur peut vouloir aller chercher du mana en pleine
+  Combat, le coffre s'ouvre désormais **quelle que soit la phase**.
 
 ### L'état et l'ouverture — `block/entity/ManaChestBlockEntity.java`
 
@@ -964,6 +966,17 @@ repasse `OPENED` à `false` pour tout coffre encore ouvert — contrairement à 
 envisagé au départ (voir 05-etat-et-problemes-connus.md), un simple champ sur le block entity
 ne suffisait pas : rien d'autre ne "réveille" un coffre qui n'est visité par personne, il faut
 bien un point d'entrée explicite au changement de phase pour le repasser visible/solide.
+
+> **Signalé en jeu (2026-08-26) : les coffres ne réapparaîtraient pas au retour en
+> Construction.** Relu en détail sans trouver de bug : `respawnAll` est bien appelé par les
+> deux points d'entrée en Construction (`enterBuild` — retour manuel via le harnais du
+> spawner, et automatique via `ModEvents.onMonsterDeath` à la fin d'une vague —, et
+> `resetGameState` — victoire/défaite), le registre `ACTIVE_MANA_CHESTS` suit exactement le
+> même patron qu'`ACTIVE_SPAWNERS` (confirmé fonctionnel en jeu), et `level.setBlock(pos,
+> state.setValue(OPENED, false), Block.UPDATE_ALL)` est le mécanisme vanilla standard pour
+> faire réagir le rendu client à un changement de propriété de blockstate. Pas corrigé faute
+> d'avoir trouvé la cause réelle — à retester avec un scénario précis (harnais de test vs
+> vague automatique, un seul coffre vs plusieurs) pour resserrer le diagnostic.
 
 ### Apparence
 
