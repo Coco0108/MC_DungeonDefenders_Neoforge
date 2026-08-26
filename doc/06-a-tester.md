@@ -140,25 +140,25 @@ au-delà de 16 blocs de la caméra — jamais vue en jeu.
       indépendamment (pas de confusion entre tours proches l'une de l'autre).
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `TowerHealthBarRenderer`.
 
-## Barre de vie des monstres (`MobHealthBarLayer`)
+## Barre de vie des monstres (`MobHealthBarRenderer`)
 
-Même principe que la barre des tours (endommagé + à portée de 16 blocs), mais premier usage
-d'une `RenderLayer` d'entité vivante dans ce mod — mécanisme entièrement différent du rendu de
-bloc (`RegisterRenderStateModifiersEvent`/`ContextKey` pour faire transiter la vie jusqu'au
-render state, `EntityRenderersEvent.AddLayers` pour brancher la couche). Jamais vu en jeu, y
-compris le fonctionnement de base (pas seulement l'esthétique).
+Même principe que la barre des tours (endommagé + à portée de 16 blocs). **Corrigée le
+2026-08-26** : la première version (un `RenderLayer` branché via `EntityRenderersEvent.
+AddLayers`) soumettait bien la géométrie, mais dans le mauvais repère de pose (celui, local, du
+modèle de l'entité) — invisible en pratique, sans aucune exception dans les logs. Remplacée par
+un handler sur `RenderLivingEvent.Post` (bus de jeu), le même repère que le nametag vanilla —
+voir [02-gameplay.md](02-gameplay.md#la-barre-de-vie-des-monstres--entitymobhealthbarrendererjava)
+pour le détail. Le mécanisme de transit de la vie (`RegisterRenderStateModifiersEvent`/
+`ContextKey`) n'a pas changé, il n'a jamais été le problème.
 
 - [ ] Un zombie/squelette à PV pleins n'affiche **aucune** barre.
 - [ ] Endommager un zombie/squelette (sans le tuer) : une barre apparaît au-dessus de sa tête,
       le suit quand il bouge, glisse vers la nouvelle valeur, disparaît à plus de 16 blocs.
 - [ ] Plusieurs monstres endommagés proches les uns des autres : chacun garde sa propre barre
       (pas de confusion/écrasement entre eux).
-- [ ] Aucun crash/erreur au chargement du mod ni à l'apparition d'un premier monstre (c'est le
-      point le plus important de cette section : si `RegisterRenderStateModifiersEvent`/
-      `EntityRenderersEvent.AddLayers` sont mal branchés, ça devrait planter ou logguer une
-      erreur dès qu'un zombie/squelette apparaît, pas juste rester invisible).
-- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `MobHealthBarLayer`,
-      `RegisterRenderStateModifiersEvent` ou `EntityRenderersEvent.AddLayers`.
+- [ ] Aucun crash/erreur au chargement du mod ni à l'apparition d'un premier monstre.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `MobHealthBarRenderer`,
+      `RegisterRenderStateModifiersEvent` ou `RenderLivingEvent`.
 
 ## Config (`Config.java`, `config/dungeon_defenders-common.toml`)
 

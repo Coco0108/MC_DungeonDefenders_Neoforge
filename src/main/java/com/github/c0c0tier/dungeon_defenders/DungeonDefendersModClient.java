@@ -14,25 +14,19 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScreen;
-import com.github.c0c0tier.dungeon_defenders.entity.MobHealthBarLayer;
+import com.github.c0c0tier.dungeon_defenders.entity.MobHealthBarRenderer;
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.google.common.reflect.TypeToken;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.model.monster.skeleton.SkeletonModel;
-import net.minecraft.client.model.monster.zombie.ZombieModel;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.entity.ExperienceOrbRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
-import net.minecraft.client.renderer.entity.state.SkeletonRenderState;
-import net.minecraft.client.renderer.entity.state.ZombieRenderState;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.skeleton.Skeleton;
-import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -100,33 +94,18 @@ public class DungeonDefendersModClient {
 
     // La vie n'existe pas nativement sur un EntityRenderState vanilla (voir
     // doc/05-etat-et-problemes-connus.md) : ce modificateur l'y ajoute pour toute entité
-    // vivante (coût négligeable), lue ensuite par MobHealthBarLayer via ContextKey — la
-    // couche elle-même n'est branchée que sur zombie/squelette (voir onAddLayers ci-dessous),
-    // seuls monstres du mod pour l'instant.
+    // vivante (coût négligeable), lue ensuite par MobHealthBarRenderer (RenderLivingEvent.Post,
+    // pas un RenderLayer — voir cette classe pour le pourquoi) via ContextKey, limité là-bas au
+    // zombie/squelette, seuls monstres du mod pour l'instant.
     @SubscribeEvent
     static void onRegisterRenderStateModifiers(RegisterRenderStateModifiersEvent event) {
         event.registerEntityModifier(
                 new TypeToken<LivingEntityRenderer<LivingEntity, LivingEntityRenderState, ?>>() {},
                 (entity, state) -> {
-                    state.setRenderData(MobHealthBarLayer.HEALTH, entity.getHealth());
-                    state.setRenderData(MobHealthBarLayer.MAX_HEALTH, entity.getMaxHealth());
-                    state.setRenderData(MobHealthBarLayer.ENTITY_ID, entity.getId());
+                    state.setRenderData(MobHealthBarRenderer.HEALTH, entity.getHealth());
+                    state.setRenderData(MobHealthBarRenderer.MAX_HEALTH, entity.getMaxHealth());
+                    state.setRenderData(MobHealthBarRenderer.ENTITY_ID, entity.getId());
                 });
-    }
-
-    @SubscribeEvent
-    static void onAddLayers(EntityRenderersEvent.AddLayers event) {
-        LivingEntityRenderer<Zombie, ZombieRenderState, ZombieModel<ZombieRenderState>> zombieRenderer =
-                event.getRenderer(EntityType.ZOMBIE);
-        if (zombieRenderer != null) {
-            zombieRenderer.addLayer(new MobHealthBarLayer<>(zombieRenderer));
-        }
-
-        LivingEntityRenderer<Skeleton, SkeletonRenderState, SkeletonModel<SkeletonRenderState>> skeletonRenderer =
-                event.getRenderer(EntityType.SKELETON);
-        if (skeletonRenderer != null) {
-            skeletonRenderer.addLayer(new MobHealthBarLayer<>(skeletonRenderer));
-        }
     }
 
     @SubscribeEvent
@@ -164,11 +143,23 @@ public class DungeonDefendersModClient {
         // les laisser déborder.
         event.replaceLayer(VanillaGuiLayers.PLAYER_HEALTH, HIDDEN);
 
+        // La barre d'armure n'a pas d'équivalent custom pour l'instant, mais masquée quand
+        // même pour rester cohérent avec le reste du HUD vanilla retiré ci-dessous.
+        event.replaceLayer(VanillaGuiLayers.ARMOR_LEVEL, HIDDEN);
+
         // HUD vanilla masqué au profit d'une interface custom (à construire) : faim,
         // expérience et barre d'inventaire. Voir doc/05-etat-et-problemes-connus.md.
         event.replaceLayer(VanillaGuiLayers.FOOD_LEVEL, HIDDEN);
-        event.replaceLayer(VanillaGuiLayers.EXPERIENCE_LEVEL, HIDDEN);
         event.replaceLayer(VanillaGuiLayers.HOTBAR, HIDDEN);
+
+        // EXPERIENCE_LEVEL ne masque que le numéro de niveau : la barre d'XP elle-même (le
+        // rectangle vert) est rendue séparément par le "contextual info bar" de cette version
+        // (Gui#nextContextualInfoState, ExperienceBarRenderer) — sans ces deux couches en plus,
+        // la barre revient dès que le jeu décide d'afficher l'info contextuelle "expérience"
+        // (essentiellement tout le temps en survie, hors monture/locator actifs).
+        event.replaceLayer(VanillaGuiLayers.EXPERIENCE_LEVEL, HIDDEN);
+        event.replaceLayer(VanillaGuiLayers.CONTEXTUAL_INFO_BAR, HIDDEN);
+        event.replaceLayer(VanillaGuiLayers.CONTEXTUAL_INFO_BAR_BACKGROUND, HIDDEN);
     }
 
     @SubscribeEvent
@@ -182,11 +173,16 @@ public class DungeonDefendersModClient {
     }
 
     // Plus de hotbar (HUD masqué, HOTBAR ci-dessus, et à terme un seul item par main plutôt
-    // que 9 emplacements) : les touches 1-9 ne doivent plus rien faire. Vidées avant que
-    // Minecraft#tick() ne les lise lui-même (Pre se déclenche en tête de tick, avant
-    // handleKeybinds()) plutôt que d'essayer de défaire le changement de slot après coup.
+    // que 9 emplacements) : les touches 1-9 ne doivent plus rien faire — mais uniquement en
+    // survie (décidé avec le joueur, 2026-08-26) : un créatif construit des maps et a besoin
+    // de sa hotbar/molette normales pour changer d'item. Vidées avant que Minecraft#tick() ne
+    // les lise lui-même (Pre se déclenche en tête de tick, avant handleKeybinds()) plutôt que
+    // d'essayer de défaire le changement de slot après coup.
     @SubscribeEvent
     static void onClientTickPre(ClientTickEvent.Pre event) {
+        if (!isSurvivalPlayer()) {
+            return;
+        }
         for (KeyMapping hotbarKey : Minecraft.getInstance().options.keyHotbarSlots) {
             while (hotbarKey.consumeClick()) {
                 // Volontairement vide : on absorbe le clic sans rien faire.
@@ -194,9 +190,16 @@ public class DungeonDefendersModClient {
         }
     }
 
-    // Même raisonnement pour la molette : plus de hotbar à faire défiler.
+    // Même raisonnement pour la molette : plus de hotbar à faire défiler, en survie seulement.
     @SubscribeEvent
     static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
-        event.setCanceled(true);
+        if (isSurvivalPlayer()) {
+            event.setCanceled(true);
+        }
+    }
+
+    private static boolean isSurvivalPlayer() {
+        LocalPlayer player = Minecraft.getInstance().player;
+        return player != null && !player.isCreative();
     }
 }

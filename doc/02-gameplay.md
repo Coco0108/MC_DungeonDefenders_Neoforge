@@ -479,54 +479,61 @@ monster.goalSelector.getAvailableGoals().stream()
 Sans ce test, un même monstre cumulerait plusieurs exemplaires du goal et attaquerait le
 cristal plusieurs fois par seconde.
 
-## La barre de vie des monstres — `entity/MobHealthBarLayer.java`
+## La barre de vie des monstres — `entity/MobHealthBarRenderer.java`
 
 Même mécanisme et mêmes conditions d'affichage que "La barre de vie des tours" (endommagé + à
 moins de 16 blocs, animation 300 ms via `HealthLerp`, dessin via `HealthBarRendering`,
 2026-08-24) — mais le rendu d'entité vivante fonctionne différemment de celui d'un block
 entity, donc une intégration à part plutôt qu'un simple troisième appelant des mêmes classes.
 
-**Le problème** : `EntityRenderState`/`LivingEntityRenderState` (vanilla) ne portent **aucun**
-champ de vie — vérifié dans le code source, contrairement à ce qu'on pourrait attendre par
-analogie avec `getCrystalHealth()`/`getHealth()` des block entities de ce mod. Une
-`RenderLayer` (le mécanisme vanilla pour ajouter du rendu par-dessus un mob, ex. le collier du
-loup, la lueur d'enchantement) ne reçoit que ce render state **déjà extrait**, jamais le
-`LivingEntity` vivant — même séparation extraction/rendu que `BlockEntityRenderer`, mais côté
-vanilla cette fois, donc rien à surcharger soi-même pour y glisser une donnée en plus.
+**Le problème (vie absente du render state)** : `EntityRenderState`/`LivingEntityRenderState`
+(vanilla) ne portent **aucun** champ de vie — vérifié dans le code source, contrairement à ce
+qu'on pourrait attendre par analogie avec `getCrystalHealth()`/`getHealth()` des block entities
+de ce mod. **`RegisterRenderStateModifiersEvent`** (NeoForge, bus mod,
+`onRegisterRenderStateModifiers` dans `DungeonDefendersModClient`) permet d'exécuter du code
+juste après l'extraction vanilla d'un render state, pour y ajouter des données — enregistré sur
+`LivingEntityRenderer<LivingEntity, LivingEntityRenderState, ?>` (capturé via un
+`com.google.common.reflect.TypeToken` anonyme — un simple `Class<...>` ne suffit pas ici, le
+compilateur ne peut pas vérifier les bornes génériques à partir d'un type brut), donc appliqué
+à **toute** entité vivante, coût négligeable (deux `float` + un `int` copiés) même si le rendu
+lui-même ne filtre que deux types de mob (voir plus bas). Stockage via `ContextKey<T>`
+(`net.minecraft.util.context`, vanilla) : `MobHealthBarRenderer.HEALTH`/`MAX_HEALTH`/
+`ENTITY_ID`, écrites par le modificateur (`state.setRenderData(HEALTH, entity.getHealth())`) et
+relues côté rendu (`state.getRenderData(HEALTH)`) — le stockage vit sur `BaseRenderState`
+(`net.neoforged.neoforge.client.renderstate`), une extension NeoForge que `EntityRenderState`
+hérite déjà. **Cette moitié n'a jamais été le bug** (voir plus bas).
 
-**La solution, en trois pièces** :
+**Le vrai bug (trouvé le 2026-08-26, en testant en jeu) — mauvais repère de pose** : la
+première version dessinait via un `RenderLayer<S, M>` (mécanisme vanilla pour ajouter du rendu
+par-dessus un mob, ex. le collier du loup), branché via `EntityRenderersEvent.AddLayers`. Un
+`RenderLayer#submit(...)` s'exécute **à l'intérieur** du repère local du modèle : dans
+`LivingEntityRenderer#submit`, la boucle `for (RenderLayer<S,M> layer : this.layers)` a lieu
+**entre** un `poseStack.pushPose()` qui applique `scale(-1,-1,1)` (convention de modèle
+vanilla) + une rotation selon `state.bodyRot`, et le `poseStack.popPose()` qui referme ce
+repère. Essayer d'y superposer sa propre rotation caméra pour un billboard (comme le fait
+`HealthBarRendering`/`TowerHealthBarRenderer` dans un repère monde normal) compose deux
+transformations incompatibles : la géométrie est bien soumise, mais mal placée/orientée —
+invisible en pratique, pas un crash, donc rien dans les logs pour orienter le diagnostic.
 
-1. **`RegisterRenderStateModifiersEvent`** (NeoForge, bus mod, `onRegisterRenderStateModifiers`
-   dans `DungeonDefendersModClient`) — permet d'exécuter du code juste après l'extraction
-   vanilla d'un render state, pour y ajouter des données. Enregistré sur
-   `LivingEntityRenderer<LivingEntity, LivingEntityRenderState, ?>` (capturé via un
-   `com.google.common.reflect.TypeToken` anonyme — un simple `Class<...>` ne suffit pas ici, le
-   compilateur ne peut pas vérifier les bornes génériques à partir d'un type brut), donc
-   appliqué à **toute** entité vivante, coût négligeable (deux `float` + un `int` copiés) même
-   si la couche elle-même n'est branchée que sur deux types de mob (voir plus bas).
-2. **`ContextKey<T>`** (`net.minecraft.util.context`, vanilla) — les clés génériques
-   `MobHealthBarLayer.HEALTH`/`MAX_HEALTH`/`ENTITY_ID`, à la fois écrites par le modificateur
-   ci-dessus (`state.setRenderData(HEALTH, entity.getHealth())`) et relues dans `submit()`
-   (`state.getRenderData(HEALTH)`) — le stockage lui-même vit sur `BaseRenderState`
-   (`net.neoforged.neoforge.client.renderstate`), une extension NeoForge que
-   `EntityRenderState` hérite déjà.
-3. **`MobHealthBarLayer<S extends LivingEntityRenderState, M extends EntityModel<? super S>>
-   extends RenderLayer<S, M>`** — la couche elle-même, branchée uniquement sur zombie et
-   squelette via `EntityRenderersEvent.AddLayers` (`onAddLayers`, un
-   `event.getRenderer(EntityType.ZOMBIE)`/`.addLayer(...)` par type, comme
-   `TowerHealthBarRenderer` un par `BlockEntityType`). `submit(...)` lit les trois `ContextKey`,
-   sort tôt si vide/PV pleins/trop loin (`state.distanceToCameraSq`, un champ vanilla), sinon
-   anime via `HealthLerp` (indexé par `ENTITY_ID` plutôt que `BlockPos` — un monstre bouge) et
-   dessine via `HealthBarRendering`.
+**Le nametag vanilla évite exactement ce piège** : `EntityRenderer#submitNameDisplay` est
+appelé depuis `EntityRenderer#submit` (la classe de base), lui-même invoqué par
+`LivingEntityRenderer#submit` via `super.submit(...)`, **après** le `popPose()` qui referme le
+repère du modèle — donc dans le même repère caméra-relatif "brut" qu'un `BlockEntityRenderer`.
 
-> `RenderLayer#submit(...)` ne reçoit **pas** de `CameraRenderState` (contrairement à
-> `BlockEntityRenderer`/`EntityRenderer#submit`) : billboard obtenu en lisant la caméra en
-> direct, `Minecraft.getInstance().gameRenderer.getMainCamera().rotation()` — un état global du
-> frame, pas une donnée par entité, donc ça ne contourne pas la séparation extraction/rendu de
-> la même façon que toucherait le `LivingEntity` lui-même.
+**La solution retenue** : abandonner `RenderLayer` au profit de
+`net.neoforged.neoforge.client.event.RenderLivingEvent.Post` (bus de jeu, pas bus mod), qui se
+déclenche juste après ce `super.submit(...)` — même repère que le nametag, donc valide pour un
+billboard caméra-face comme `HealthBarRendering`. Pas de filtre générique par type d'entité sur
+cet event (contrairement à `RegisterRenderStateModifiersEvent`) : `onRenderLiving` reçoit
+**toute** `LivingEntity` rendue et filtre lui-même sur `state.entityType` (zombie/squelette
+uniquement, seuls monstres du mod pour l'instant — pas de liste partagée avec
+`SpawnableEnemy`). Sort tôt si vide/PV pleins/trop loin (`state.distanceToCameraSq`, un champ
+vanilla), sinon anime via `HealthLerp` (indexé par `ENTITY_ID` plutôt que `BlockPos` — un
+monstre bouge, `LERP_BY_ENTITY_ID` static plutôt que porté par une instance de couche
+puisqu'il n'y a plus de couche) et dessine via `HealthBarRendering`, exactement comme avant.
 
-**Jamais vu en jeu**, y compris le fonctionnement de base des trois pièces ci-dessus
-(l'environnement de dev n'a pas d'affichage) — voir [06-a-tester.md](06-a-tester.md).
+**Corrigé le 2026-08-26 suite à un test en jeu, mais le correctif lui-même reste à confirmer en
+jeu** — voir [06-a-tester.md](06-a-tester.md).
 
 ## Onglet créatif
 
