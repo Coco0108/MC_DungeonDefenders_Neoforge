@@ -111,12 +111,18 @@ public class SpawnerBlockEntity extends BlockEntity {
      * Choisit une position de spawn dans le rayon configuré, en évitant l'intérieur d'un bloc
      * plein (mur, terrain irrégulier...) : essaie plusieurs offsets aléatoires en vérifiant
      * que la position et celle juste au-dessus (place pour les pieds et la tête) sont toutes
-     * les deux traversables, puis replie sur pos.above() si aucune n'a marché — cette position
-     * par défaut (juste au-dessus du bloc) est censée toujours être libre, c'est celle utilisée
-     * avant l'ajout du rayon de spawn.
+     * les deux traversables, puis replie sur {@code pos} si aucune n'a marché.
+     *
+     * <p>Le repli est {@code pos} (la cellule du spawner lui-même), pas {@code pos.above()} :
+     * depuis que le bloc spawner n'a plus jamais de collision (voir SpawnerBlock, décidé avec
+     * le joueur le 2026-08-25 — plus un obstacle physique, comme dans le jeu de référence), il
+     * ne peut plus servir de "sol" sous les pieds d'un monstre spawné juste au-dessus de lui.
+     * {@code pos} lui-même, en revanche, est censé reposer sur le vrai sol construit par le
+     * créateur de la map (le spawner n'est qu'un marqueur posé au niveau du sol, pas une
+     * plateforme) — {@code pos.below()} porte donc le monstre, pas le bloc du spawner.
      */
     private static BlockPos findSafeSpawnPos(ServerLevel level, BlockPos pos, int spawnRadius) {
-        BlockPos fallback = pos.above();
+        BlockPos fallback = pos;
         if (spawnRadius <= 0) {
             return fallback;
         }

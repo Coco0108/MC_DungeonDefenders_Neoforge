@@ -180,7 +180,15 @@ vérifie la CI.
   `recomputeWaveEnemiesTotal` appelée depuis `setLevel`), et `WAVE_ENEMIES_TOTAL` qui restait
   bloqué à sa valeur par défaut (`10`) tant qu'aucune vague n'avait encore été nettoyée — se
   recalcule maintenant dès qu'un spawner apparaît/disparaît/est reconfiguré, pas seulement aux
-  transitions de phase.
+  transitions de phase. Décidé avec le joueur (2026-08-25) : n'est plus jamais un obstacle
+  physique — `getCollisionShape` toujours vide (traversable par tout le monde, toute phase),
+  `getRenderShape` toujours `INVISIBLE`, `getShape` (ciblage/clic droit) plein uniquement pour
+  un joueur créatif. A nécessité de corriger `findSafeSpawnPos` : le repli par défaut spawnait
+  au-dessus du bloc du spawner (`pos.above()`), en comptant sur sa solidité comme sol — plus
+  valable une fois le spawner intangible, corrigé pour spawn à `pos` directement (le vrai sol
+  de la map, sous le marqueur). Détail dans
+  [02-gameplay.md](02-gameplay.md#jamais-un-obstacle-physique--getshapegetcollisionshapegetrendershape).
+  **Jamais testé en jeu** dans ce nouvel état d'intangibilité.
 - ✅ Squelette ajouté comme deuxième ennemi (réutilise `EntityType.SKELETON` vanilla, comme le
   zombie) : cible le cristal comme n'importe quel `Monster`, et sort du spawner.
 - ✅ Comportement d'archer pour le squelette (`entity/ai/RangedAttackEterniaCrystalGoal.java`,

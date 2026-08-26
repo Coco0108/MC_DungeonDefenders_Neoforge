@@ -200,6 +200,32 @@ survie, une fois par vague, configurable en créatif — jamais vérifié visuel
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ManaChestBlock`,
       `ManaChestBlockEntity`, `ManaChestConfigScreen`/`Menu`/`Payload`.
 
+## Le spawner n'est plus jamais un obstacle physique (`SpawnerBlock`)
+
+Nouveau (2026-08-25), par-dessus le gameplay du spawner déjà testé et confirmé le 2026-08-23 —
+voir [02-gameplay.md](02-gameplay.md#jamais-un-obstacle-physique--getshapegetcollisionshapegetrendershape).
+Jamais vérifié visuellement dans ce nouvel état.
+
+- [ ] **En créatif**, le spawner reste **invisible** (pas de modèle de bloc affiché), mais en
+      visant précisément l'endroit où il est posé, un **contour de sélection** doit apparaître
+      (comme n'importe quel bloc ciblé) — c'est ce contour qui permet de le retrouver/cliquer.
+- [ ] **En créatif**, marcher à travers l'endroit où il est posé : **aucune collision**, on
+      traverse comme si rien n'était là.
+- [ ] **En survie**, viser précisément l'endroit où il est posé : **aucun contour**
+      n'apparaît, le clic droit ne fait strictement rien (ni message, ni interaction) — le bloc
+      doit être **totalement introuvable** en survie, contrairement à avant où un message
+      "créatif uniquement" s'affichait encore.
+- [ ] Faire spawn un monstre par-dessus/à côté d'un spawner (créatif ou survie) : le monstre ne
+      doit **jamais rester coincé/bloqué** par le bloc du spawner en essayant de se déplacer.
+- [ ] Poser un spawner **sans configurer de rayon** (0 par défaut), passer en Combat : les
+      monstres doivent apparaître normalement, **debout sur le vrai sol de la map**, pas en
+      train de tomber dans le vide — c'est le point le plus important de cette section
+      (`findSafeSpawnPos` spawn maintenant à `pos` directement, plus au-dessus du bloc du
+      spawner, qui n'est plus solide). Si des monstres disparaissent ou tombent indéfiniment
+      juste après leur apparition, c'est ce changement qui est en cause.
+- [ ] Aucune erreur/exception dans les logs liée à `SpawnerBlock`/`findSafeSpawnPos` au premier
+      spawn d'un monstre.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni
