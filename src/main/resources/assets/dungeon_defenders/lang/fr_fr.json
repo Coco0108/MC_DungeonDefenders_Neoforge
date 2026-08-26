@@ -10,6 +10,7 @@
   "item.dungeon_defenders.mana_test_wand": "Baguette de test (mana)",
   "key.dungeon_defenders.tower_wheel": "Ouvrir la roue des tours",
   "key.dungeon_defenders.rotate_tower": "Faire pivoter la tour (pose)",
+  "key.dungeon_defenders.remove_tower_mode": "Basculer le mode suppression de tour",
 
   "dungeon_defenders.eternia_crystal.damaged": "Aïe ! Le cristal perd %s PV. PV restants : %s",
   "dungeon_defenders.eternia_crystal.destroyed": "Le cristal a été détruit !! Game Over !",
@@ -20,6 +21,9 @@
   "dungeon_defenders.tower.build_phase_only": "Les tours ne peuvent être posées qu'en phase de Construction !",
   "dungeon_defenders.tower.not_enough_mana": "Pas assez de mana pour poser cette tour ! (%s requis, %s disponible)",
   "dungeon_defenders.tower.mana_spent": "-%s mana pour la tour (%s/%s)",
+  "dungeon_defenders.tower.mana_refunded": "+%s mana remboursé (%s/%s)",
+  "dungeon_defenders.tower.removal_mode_on": "Mode suppression de tour : ACTIVÉ. Clic gauche sur une tour pour la retirer.",
+  "dungeon_defenders.tower.removal_mode_off": "Mode suppression de tour : DÉSACTIVÉ.",
 
   "dungeon_defenders.hud.mana": "Mana : %s/%s",
   "dungeon_defenders.hud.health": "Vie : %s/%s",

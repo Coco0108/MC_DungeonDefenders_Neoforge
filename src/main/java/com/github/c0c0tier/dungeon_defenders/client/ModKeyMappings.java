@@ -6,8 +6,8 @@ import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import org.lwjgl.glfw.GLFW;
 
 // Touches custom pour la roue de sélection des tours (voir TowerPlacementClientEvents,
-// TowerWheelScreen). Catégorie vanilla GAMEPLAY : pas besoin d'une catégorie dédiée pour deux
-// touches.
+// TowerWheelScreen) et le mode suppression de tour (voir TowerRemovalClientEvents). Catégorie
+// vanilla GAMEPLAY : pas besoin d'une catégorie dédiée pour trois touches.
 public class ModKeyMappings {
 
     // Maintenue : ouvre la roue ; relâchée pendant que la roue est ouverte : confirme le
@@ -25,8 +25,18 @@ public class ModKeyMappings {
             GLFW.GLFW_KEY_T,
             KeyMapping.Category.GAMEPLAY);
 
+    // Bascule (pas maintenue) : entre/sort du mode suppression de tour — voir
+    // TowerRemovalClientEvents. Un appui ré-active ; le prochain clic gauche sur une tour visée
+    // l'envoie au serveur pour destruction + remboursement de mana.
+    public static final KeyMapping REMOVE_TOWER_MODE = new KeyMapping(
+            "key.dungeon_defenders.remove_tower_mode",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_X,
+            KeyMapping.Category.GAMEPLAY);
+
     public static void register(RegisterKeyMappingsEvent event) {
         event.register(TOWER_WHEEL);
         event.register(ROTATE_TOWER);
+        event.register(REMOVE_TOWER_MODE);
     }
 }

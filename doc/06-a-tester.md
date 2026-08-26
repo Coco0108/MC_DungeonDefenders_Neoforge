@@ -652,6 +652,49 @@ block entity — rien de tout ça n'a pu être vérifié visuellement pendant le
       `PlaceTowerPayload`, `TowerBlockItem`, ou au rendu
       (`ExtractLevelRenderStateEvent`/`SubmitCustomGeometryEvent`).
 
+## La suppression de tour (`TowerRemovalState`, `TowerRemovalClientEvents`, `RemoveTowerPayload`)
+
+Jamais testé en jeu. Premier usage d'une touche "bascule" (pas maintenue) dans le mod, et
+premier test du remboursement de mana.
+
+- [ ] Poser une tour (Spike Blockade ou Harpoon Turret) via la roue, en phase Construction.
+      Appuyer sur `X` (touche par défaut, "Basculer le mode suppression de tour") : un message
+      système "Mode suppression de tour : ACTIVÉ..." doit apparaître.
+- [ ] Viser la tour posée pendant que le mode est actif : un **contour orange** doit apparaître
+      autour d'elle (distinct du vert/rouge de la roue de pose). Viser autre chose (sol, mur,
+      Cristal d'Eternia, un monstre...) : **aucun** contour ne doit apparaître.
+- [ ] Clic gauche en visant la tour (contour orange visible) : la tour doit **disparaître
+      instantanément**, sans jeter d'item au sol, et un message "+X mana remboursé (Y/100)"
+      doit s'afficher (X = la moitié du coût de pose arrondi : 15 pour Spike Blockade coût 30,
+      25 pour Harpoon Turret coût 50) — vérifier aussi que le HUD mana (losange bas-gauche)
+      reflète bien le nouveau total.
+- [ ] Clic gauche en visant autre chose qu'une tour pendant le mode actif (sol, mur, un
+      monstre à proximité) : **rien** ne doit se passer (pas de dégât au monstre, pas de bloc
+      cassé) — le clic gauche doit être totalement neutralisé pendant ce mode, cible valide ou
+      non.
+- [ ] Poser deux tours proches, activer le mode, supprimer la première (clic gauche) : le mode
+      doit **rester actif** ensuite (pas besoin de rappuyer sur `X`) — viser et cliquer la
+      seconde tour doit la supprimer aussi, à la suite.
+- [ ] Rappuyer sur `X` pendant que le mode est actif : message "Mode suppression de tour :
+      DÉSACTIVÉ.", le contour orange disparaît même en visant une tour, et le clic gauche
+      redevient normal (peut à nouveau frapper/casser).
+- [ ] Activer le mode en phase Construction, puis faire basculer en Combat (harnais de test du
+      spawner) pendant que le mode est actif : doit se désactiver **automatiquement**, avec le
+      message "Les tours ne peuvent être posées qu'en phase de Construction !" (message
+      réutilisé, un peu trompeur ici puisqu'il ne parle que de pose — à surveiller si ça prête
+      à confusion en jeu).
+- [ ] Essayer d'ouvrir la roue de pose (`R`) pendant que le mode suppression est actif : ne doit
+      **rien** faire (les deux modes ne doivent jamais être actifs en même temps) — et
+      inversement, essayer d'activer le mode suppression (`X`) pendant que le mode pose est
+      actif (hologramme affiché) ne doit rien faire non plus.
+- [ ] Casser une tour à la **pioche** (comportement inchangé, toujours possible en parallèle du
+      nouveau mode) : doit toujours fonctionner comme avant (drop d'un item), mais **sans
+      aucun remboursement de mana** — confirme que les deux chemins de suppression restent bien
+      indépendants (limite connue, voir 05-etat-et-problemes-connus.md).
+- [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
+      `TowerRemovalState`, `TowerRemovalClientEvents`, `RemoveTowerPayload`, ou
+      `ModNetworking.handleRemoveTower`.
+
 ## HUD vanilla masqué
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

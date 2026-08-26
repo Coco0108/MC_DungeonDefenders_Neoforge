@@ -183,6 +183,18 @@ vérifie la CI.
   l'emplacement de map et téléporte tout le monde. Le cristal détruit **n'est pas replacé
   automatiquement** — voir "Ce qui reste" plus bas. Détail dans
   [02-gameplay.md](02-gameplay.md#victoire-et-défaite--phasetransitionsonvictoryondefeat).
+- ✅ Suppression de tour (`client/TowerRemovalState.java`,
+  `client/TowerRemovalClientEvents.java`, `network/RemoveTowerPayload.java`) : décidé avec le
+  joueur (2026-08-26) sur le modèle du jeu de référence — touche dédiée (`remove_tower_mode`,
+  `X` par défaut) pour entrer/sortir d'un mode suppression, puis clic gauche sur une tour visée
+  pour la détruire instantanément et récupérer 50% de son coût en mana
+  (`TOWER_MANA_REFUND_RATIO`, valeur de test comme les coûts de pose). Reste actif après une
+  suppression pour en enchaîner plusieurs. Symétrique à la roue de pose côté serveur (phase
+  Construction uniquement, revalidation complète, aucune confiance dans le client) mais **ne
+  remplace pas** le minage à la pioche existant (toujours possible en parallèle, item obtenu
+  désormais totalement inerte — voir "Ce qui reste" plus bas). Détail dans
+  [02-gameplay.md](02-gameplay.md#la-suppression-de-tour--clienttowerremovalstatejava-clienttowerremovalclienteventsjava-networkremovetowerpayloadjava).
+  **Jamais testé en jeu.**
 
 ## Corrections apportées
 
@@ -524,6 +536,21 @@ rendrait l'effet plus lisible.
 
 Le run `gameTestServer` est configuré dans `build.gradle` mais aucun gametest n'existe : il
 plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
+
+### Le minage à la pioche d'une tour donne toujours un item inerte
+
+Depuis la nouvelle touche dédiée de suppression (voir "Ce qui est implémenté" plus haut et
+[02-gameplay.md](02-gameplay.md#la-suppression-de-tour--clienttowerremovalstatejava-clienttowerremovalclienteventsjava-networkremovetowerpayloadjava)),
+il existe deux façons de faire disparaître une tour posée : la touche dédiée (avec
+remboursement de mana, aucun item), et le minage vanilla à la pioche resté intact
+(`mineable/pickaxe`, sans remboursement, avec un item en retour). Ce deuxième chemin donne un
+item (`spike_blockade`, `harpoon_turret`...) qui ne sert plus à rien depuis que
+`TowerBlockItem#useOn` ne pose plus rien — un item mort dans l'inventaire, pas un vrai problème
+d'équilibrage (rien à dupliquer, l'item est inerte), mais pas cohérent avec l'idée qu'"une seule
+vraie façon" existe pour poser *et* retirer une tour. Pas corrigé : rendre les tours vraiment
+incassables à la pioche demande de vérifier d'abord comment la casse instantanée en créatif se
+comporte pour un bloc `strength(-1)` (façon bedrock) dans cette version précise de Minecraft —
+pas vérifié contre les sources décompilées, donc pas deviné.
 
 ## Reliquats du template
 
