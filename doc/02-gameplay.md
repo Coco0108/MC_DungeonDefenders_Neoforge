@@ -1393,6 +1393,10 @@ Deux nouvelles transitions, sur le même principe que `enterCombat`/`enterBuild`
   du bloc à 0 PV (à la suite du message `eternia_crystal.destroyed` déjà existant). Diffuse
   `dungeon_defenders.game.defeat` (rouge, gras), puis remet la partie à zéro.
 
+Décidé avec le joueur (2026-08-26), repris du plan Excel : les deux envoient maintenant aussi
+`GameOverPayload(victory)` à chaque joueur (`sendGameOverScreen`), qui ouvre `GameOverScreen`
+côté client (voir plus bas) — en plus des messages système existants, pas à leur place.
+
 Les deux passent par le même `resetGameState(level)` privé : `CURRENT_WAVE` → 1, phase →
 `BUILD`, `WAVE_ENEMIES_KILLED` → 0, et `WAVE_ENEMIES_TOTAL` recalculé (réutilise
 `recomputeWaveEnemiesTotal`, la même méthode privée qu'`enterBuild`) — pour que la partie soit
@@ -1415,17 +1419,49 @@ une commande déjà existante, exactement comme si le joueur l'avait tapée lui-
   la main. Remettre "le cristal" en jeu après une défaite fait partie de la future remise à
   neuf d'une map (structure reposée, tours retirées, PV du cristal restaurés), pas de ce
   morceau-ci.
-- Pas d'écran dédié "Victoire"/"Game Over" — juste deux messages système (le résultat, puis le
-  lien de retour). L'idée d'un écran avec choix "rejouer/retour à la taverne" existe (vue dans
-  le plan Excel du joueur) ; pour l'instant, revenir à la taverne permet déjà de "rejouer" en
-  rouvrant `MapSelectionScreen`, donc un vrai écran dédié reste un raffinement visuel, pas un
-  vrai manque fonctionnel.
-- Rien ne distingue encore une partie "terminée" (victoire/défaite) d'une simple pause entre
-  deux vagues : les deux ramènent en phase `BUILD`, vague 1. Un joueur qui n'a pas vu le
-  message peut ne pas remarquer que la partie a recommencé à zéro.
+- `GameOverScreen` (voir plus bas) atténue le problème de confusion "partie terminée vs.
+  simple pause entre deux vagues" (un écran plein est bien plus visible qu'un message système),
+  mais ne le résout pas totalement : `Échap` le ferme sans rien faire, et rien n'empêche de
+  continuer à jouer sur la vague 1 fraîchement réinitialisée sans avoir cliqué un bouton.
 - `/dd_leave` reste une commande de harnais, pas un vrai point de sortie posé dans chaque
   map — un joueur pourrait aussi la taper à tout moment, pas seulement après une victoire/
   défaite (pas grave en soi, mais pas le vrai flux prévu à terme).
+
+### L'écran de fin de partie — `client/gui/screen/GameOverScreen.java`, `network/GameOverPayload.java`
+
+Décidé avec le joueur (2026-08-26), repris du plan Excel : *"GUI avec rejouer ou taverne"*.
+Ouvert automatiquement sur chaque client par `GameOverPayload(victory)`, envoyé depuis
+`PhaseTransitions.onVictory/onDefeat` juste après les messages système existants (les deux
+coexistent, le message n'a pas été retiré).
+
+**Premier paquet clientbound du mod** — tous les autres (`PlaceTowerPayload`,
+`SpawnerConfigPayload`...) vont du client vers le serveur. Enregistré en deux temps, comme
+recommandé par la javadoc de `RegisterClientPayloadHandlersEvent` :
+
+- `ModNetworking.onRegisterPayloadHandlers` enregistre seulement le `TYPE`/`STREAM_CODEC` via
+  `registrar.playToClient(type, codec)` **sans handler** — cette classe est chargée des deux
+  côtés (pas de `Dist.CLIENT`), un serveur dédié doit donc pouvoir décoder ce paquet en théorie,
+  mais ne l'exécute jamais lui-même.
+- `DungeonDefendersModClient.onRegisterClientPayloadHandlers` (nouveau, classe client-only)
+  enregistre le vrai handler, qui appelle `Minecraft.getInstance().setScreen(new
+  GameOverScreen(payload.victory()))` sur le thread principal (`context.enqueueWork(...)`).
+  Séparer les deux évite de charger une classe cliente (`Minecraft`, `Screen`...) sur un
+  serveur dédié en enregistrant juste le handler dans la mauvaise classe.
+
+`PhaseTransitions.sendGameOverScreen(player, victory)` envoie le paquet via
+`serverPlayer.connection.send(new GameOverPayload(victory).toVanillaClientbound())` — le
+symétrique exact de `.toVanillaServerbound()`, déjà utilisé partout ailleurs côté client.
+
+`GameOverScreen` (simple `Screen`, pas de `Menu`) affiche le titre en vert/rouge
+(`dungeon_defenders.game.victory`/`defeat`, réutilisées) et deux boutons :
+
+- **"Rejouer"** envoie `StartGamePayload` — **exactement** le même paquet que le bouton "Jouer"
+  de `MapSelectionScreen` : `MapInstance.startGame` nettoie la zone, la repose, et retéléporte.
+  Pas de distinction "rejouer la même map" vs "choisir une nouvelle map" pour l'instant, une
+  seule map placeholder existe de toute façon (voir 05-etat-et-problemes-connus.md).
+- **"Retour à la taverne"** appelle `connection.sendCommand(MapInstance.RETURN_COMMAND)` —
+  même commande de harnais que le lien cliquable historique dans le chat, juste déclenchée
+  depuis un bouton plutôt qu'un clic sur du texte.
 
 ### Apparence
 

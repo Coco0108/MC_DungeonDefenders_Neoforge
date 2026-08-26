@@ -183,6 +183,19 @@ vérifie la CI.
   l'emplacement de map et téléporte tout le monde. Le cristal détruit **n'est pas replacé
   automatiquement** — voir "Ce qui reste" plus bas. Détail dans
   [02-gameplay.md](02-gameplay.md#victoire-et-défaite--phasetransitionsonvictoryondefeat).
+- ✅ Écran de fin de partie (`client/gui/screen/GameOverScreen.java`,
+  `network/GameOverPayload.java`) : décidé avec le joueur (2026-08-26), repris du plan Excel
+  ("GUI avec rejouer ou taverne") — s'ouvre automatiquement sur chaque client à la victoire/
+  défaite (en plus des messages système existants, pas à leur place), titre vert/rouge + deux
+  boutons. "Rejouer" envoie `StartGamePayload`, exactement comme le bouton "Jouer" de
+  `MapSelectionScreen` (même limite : ne restaure pas le Cristal d'Eternia s'il a été détruit,
+  puisque `buildPlaceholderArena()` n'en pose de toute façon jamais un — voir "Ce qui reste"
+  plus bas). "Retour à la taverne" exécute la commande de harnais `/dd_leave`, même effet que
+  le lien cliquable déjà existant dans le chat. Premier paquet **clientbound** du mod (tous
+  les autres vont du client vers le serveur) — handler enregistré côté client uniquement
+  (`DungeonDefendersModClient`), pas dans `ModNetworking` (chargée des deux côtés), pour ne
+  jamais charger de classe cliente sur un serveur dédié. **Jamais testé en jeu.** Détail dans
+  [02-gameplay.md](02-gameplay.md#lécran-de-fin-de-partie--clientguiscreengameoverscreenjava-networkgameoverpayloadjava).
 
 ## Corrections apportées
 
@@ -384,23 +397,22 @@ mana insuffisant) — vérifié une seconde fois côté client (la roue elle-mê
 en Combat) pour éviter de faire tout le mode pose avant un refus final, mais le serveur reste
 la seule autorité réelle.
 
-### La partie se termine, mais sans vraie conclusion visuelle
+### La partie se termine, mais sans conclusion visuelle complète
 
 Victoire et défaite existent maintenant (voir "Ce qui est implémenté" plus haut et
-[02-gameplay.md](02-gameplay.md#victoire-et-défaite--phasetransitionsonvictoryondefeat)), mais
-de façon minimale :
+[02-gameplay.md](02-gameplay.md#victoire-et-défaite--phasetransitionsonvictoryondefeat)), et
+depuis `GameOverScreen` (voir "Ce qui est implémenté" plus haut), plus seulement via un message
+système — mais il reste des trous :
 
-- Un simple message système annonce la victoire/défaite — pas d'écran dédié. L'idée d'un
-  écran avec choix "rejouer/retour à la taverne" existe (vue dans le plan Excel du joueur),
-  mais dépend du système de maps/structures (savoir concrètement où "rejouer" et "la taverne"
-  mènent), pas encore construit.
 - Le Cristal d'Eternia détruit à la défaite **n'est pas replacé automatiquement** —
   `resetGameState` remet les compteurs à zéro, mais le bloc reste absent tant que personne
   n'en repose un à la main. Ça fait partie de la future remise à neuf d'une map (structure
-  reposée, tours retirées, PV du cristal restaurés), pas de ce morceau.
-- Rien ne distingue une partie "terminée" d'une simple pause entre deux vagues : les deux
-  ramènent en phase `BUILD`, vague 1 — un joueur qui manque le message système ne verra pas
-  forcément que la partie a recommencé à zéro.
+  reposée, tours retirées, PV du cristal restaurés), pas de ce morceau. Cliquer "Rejouer" sur
+  `GameOverScreen` ne le corrige pas non plus — voir la note dans sa propre entrée.
+- `Échap` ferme `GameOverScreen` sans rien faire, et rien n'empêche de continuer à jouer sur la
+  vague 1 fraîchement réinitialisée sans avoir cliqué un bouton — le nouvel écran atténue la
+  confusion "partie terminée vs. pause entre deux vagues" (bien plus visible qu'un message
+  système), sans l'éliminer complètement.
 
 Le registre `ModAttachments.ACTIVE_SPAWNERS` ne reflète que les spawners **actuellement
 chargés** — fiable en test (le joueur est toujours à proximité), mais deviendra pleinement
@@ -557,8 +569,9 @@ plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
    et maintenant victoire (dernière vague nettoyée) / défaite (cristal détruit) — voir "Ce qui
    est implémenté" et
    [02-gameplay.md](02-gameplay.md#le-déroulement-dune-vague--initphasetransitionsjava-modeventsonmonsterdeath).
-   Reste ouvert : un vrai écran de fin de partie (juste un message système pour l'instant), et
-   remettre en jeu le cristal détruit automatiquement — voir la section dédiée plus haut.
+   ~~Un vrai écran de fin de partie~~ — fait aussi : `GameOverScreen` (voir "Ce qui est
+   implémenté"). Reste ouvert : remettre en jeu le cristal détruit automatiquement — voir la
+   section dédiée plus haut.
 9. Donner un moyen de choisir/changer `ModAttachments.CHARACTER_NAME` (commande, écran de
    création de personnage...) — sans ça, il reste égal au pseudo Minecraft en permanence.
 10. Une fois les images des 4 compétences fournies : les afficher dans `AbilitySlotsOverlay`

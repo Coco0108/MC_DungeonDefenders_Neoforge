@@ -326,6 +326,35 @@ puisqu'elle en dépend pour entrer en Combat autrement qu'avec le harnais de tes
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `PhaseTransitions.onVictory`,
       `onDefeat`, ou `resetGameState`.
 
+## L'écran de fin de partie (`GameOverScreen`, `GameOverPayload`)
+
+Jamais testé en jeu. Premier paquet **clientbound** du mod — à surveiller particulièrement
+(risque de `NoClassDefFoundError` côté serveur dédié si le handler avait été enregistré au
+mauvais endroit, voir doc/02-gameplay.md).
+
+- [ ] À la **victoire** (voir section précédente) : en plus du message système, un écran plein
+      doit s'ouvrir automatiquement, titre **"Victoire ! Toutes les vagues sont nettoyées."**
+      en **vert**, avec deux boutons **"Rejouer"** et **"Retour à la taverne"**.
+- [ ] À la **défaite** : même écran, titre **"Défaite ! Le Cristal d'Eternia est tombé."** en
+      **rouge**.
+- [ ] Avec **plusieurs joueurs** présents : l'écran doit s'ouvrir pour **tous**, pas seulement
+      celui qui a déclenché la victoire/défaite (ex. celui qui a tué le dernier monstre, ou
+      celui dont l'attaque a détruit le cristal).
+- [ ] Cliquer **"Rejouer"** : l'écran se ferme, et le comportement doit être identique à un
+      clic sur "Jouer" dans la taverne (zone nettoyée et reposée, téléportation) — vérifier
+      aussi que si le Cristal d'Eternia avait été détruit (cas défaite), il **reste absent**
+      après "Rejouer" (limite connue, voir 05-etat-et-problemes-connus.md — pas un bug si
+      c'est le cas, un bug seulement si autre chose casse).
+- [ ] Cliquer **"Retour à la taverne"** : l'écran se ferme, effet identique à taper `/dd_leave`
+      soi-même (retour à la taverne, zone de map nettoyée).
+- [ ] Ouvrir l'écran puis appuyer sur `Échap` sans cliquer aucun bouton : l'écran doit se
+      fermer sans rien envoyer au serveur (pas de téléportation, pas de nettoyage de zone).
+- [ ] Vérifier `run/logs/latest.log`, **côté serveur en particulier** (si testé avec un serveur
+      dédié) : aucune exception liée à `GameOverPayload`, `ModNetworking`, ou un
+      `NoClassDefFoundError`/`ClassNotFoundException` mentionnant `Minecraft`/`Screen` —
+      signerait que le handler client a fini par se charger côté serveur malgré la séparation
+      voulue.
+
 ## Le squelette archer (`RangedAttackEterniaCrystalGoal`)
 
 Premier ennemi à distance du mod, et première flèche jamais lancée par le mod — à vérifier

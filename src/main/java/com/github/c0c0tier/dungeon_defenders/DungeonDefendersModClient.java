@@ -12,9 +12,12 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.PhaseOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.screen.GameOverScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScreen;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
+import com.github.c0c0tier.dungeon_defenders.network.GameOverPayload;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -29,6 +32,7 @@ import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.GuiLayer;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 
 // This class will not load on dedicated servers. Accessing client side code from here is safe.
 @Mod(value = DungeonDefendersMod.MODID, dist = Dist.CLIENT)
@@ -110,5 +114,15 @@ public class DungeonDefendersModClient {
     @SubscribeEvent
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         ModKeyMappings.register(event);
+    }
+
+    // Handler du seul paquet clientbound du mod (voir ModNetworking, qui n'enregistre que le
+    // TYPE/STREAM_CODEC de GameOverPayload, sans handler) : ouvre GameOverScreen sur le thread
+    // principal. Vit ici (classe client-only) plutôt que dans ModNetworking pour ne jamais
+    // charger Minecraft/Screen sur un serveur dédié.
+    @SubscribeEvent
+    static void onRegisterClientPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
+        event.register(GameOverPayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> Minecraft.getInstance().setScreen(new GameOverScreen(payload.victory()))));
     }
 }
