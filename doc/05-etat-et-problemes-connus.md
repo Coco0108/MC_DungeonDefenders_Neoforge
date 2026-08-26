@@ -190,10 +190,17 @@ vérifie la CI.
   pour la détruire instantanément et récupérer 50% de son coût en mana
   (`TOWER_MANA_REFUND_RATIO`, valeur de test comme les coûts de pose). Reste actif après une
   suppression pour en enchaîner plusieurs. Symétrique à la roue de pose côté serveur (phase
-  Construction uniquement, revalidation complète, aucune confiance dans le client) mais **ne
-  remplace pas** le minage à la pioche existant (toujours possible en parallèle, item obtenu
-  désormais totalement inerte — voir "Ce qui reste" plus bas). Détail dans
+  Construction uniquement, revalidation complète, aucune confiance dans le client). Détail dans
   [02-gameplay.md](02-gameplay.md#la-suppression-de-tour--clienttowerremovalstatejava-clienttowerremovalclienteventsjava-networkremovetowerpayloadjava).
+  **Jamais testé en jeu.**
+- ✅ Casser un bloc est désactivé pour tout joueur non créatif (`ModEvents.onBlockBreakAttempt`,
+  `BreakBlockEvent`) : décidé avec le joueur (2026-08-26), suite directe du point précédent —
+  plutôt que de traiter les tours au cas par cas, plus aucun bloc ne se casse en survie, quel
+  qu'il soit (terrain, taverne, tours...). Effet de bord voulu : le minage des tours à la
+  pioche (qui laissait un item désormais inerte, voir plus haut) est réglé sans rien coder de
+  spécifique aux tours — la touche dédiée devient de fait la seule façon de les retirer. Détail
+  dans
+  [02-gameplay.md](02-gameplay.md#casser-un-bloc-est-désormais-désactivé--modeventsonblockbreakattempt).
   **Jamais testé en jeu.**
 
 ## Corrections apportées
@@ -537,20 +544,19 @@ rendrait l'effet plus lisible.
 Le run `gameTestServer` est configuré dans `build.gradle` mais aucun gametest n'existe : il
 plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
 
-### Le minage à la pioche d'une tour donne toujours un item inerte
+### Les loot tables de tours sont devenues du code mort... en survie seulement
 
-Depuis la nouvelle touche dédiée de suppression (voir "Ce qui est implémenté" plus haut et
-[02-gameplay.md](02-gameplay.md#la-suppression-de-tour--clienttowerremovalstatejava-clienttowerremovalclienteventsjava-networkremovetowerpayloadjava)),
-il existe deux façons de faire disparaître une tour posée : la touche dédiée (avec
-remboursement de mana, aucun item), et le minage vanilla à la pioche resté intact
-(`mineable/pickaxe`, sans remboursement, avec un item en retour). Ce deuxième chemin donne un
-item (`spike_blockade`, `harpoon_turret`...) qui ne sert plus à rien depuis que
-`TowerBlockItem#useOn` ne pose plus rien — un item mort dans l'inventaire, pas un vrai problème
-d'équilibrage (rien à dupliquer, l'item est inerte), mais pas cohérent avec l'idée qu'"une seule
-vraie façon" existe pour poser *et* retirer une tour. Pas corrigé : rendre les tours vraiment
-incassables à la pioche demande de vérifier d'abord comment la casse instantanée en créatif se
-comporte pour un bloc `strength(-1)` (façon bedrock) dans cette version précise de Minecraft —
-pas vérifié contre les sources décompilées, donc pas deviné.
+Réglé indirectement par "Casser un bloc est désormais désactivé" (voir "Ce qui est implémenté"
+plus haut) : `BreakBlockEvent` étant annulé avant que le bloc ne soit retiré, un joueur non
+créatif ne peut plus jamais faire tomber `data/dungeon_defenders/loot_table/blocks/
+spike_blockade.json`/`harpoon_turret.json` en cassant une tour. **Un joueur créatif le peut
+toujours** — vérifié dans les sources décompilées
+(`ServerPlayerGameMode#destroyBlock`/`destroyAndAck`) : même la casse instantanée créative
+passe par `BreakBlockEvent` (`CommonHooks.fireBlockBreak`), donc par le même handler, qui
+laisse simplement passer sans l'annuler quand `player.isCreative()` est vrai — la loot table
+reste donc atteignable en créatif exactement comme avant. Sans conséquence (un item créatif
+n'a pas d'importance), pas supprimé pour l'instant, juste un reliquat qui pourrait être nettoyé
+plus tard.
 
 ## Reliquats du template
 

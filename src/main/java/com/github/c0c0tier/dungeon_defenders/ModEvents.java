@@ -18,6 +18,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class ModEvents {
@@ -101,6 +102,31 @@ public class ModEvents {
         player.syncData(ModAttachments.MANA);
         player.sendSystemMessage(Component.translatable(
                 "dungeon_defenders.tower.mana_spent", manaCost, newMana, ModAttachments.MAX_MANA));
+    }
+
+    // Décidé avec le joueur (2026-08-26) : aucun bloc ne se casse en jeu, point - pas de
+    // minage, pas de récolte, ce n'est pas ce genre de jeu. Générique à tout bloc (pas
+    // seulement les tours), donc aucun cas particulier ailleurs dans le mod n'est nécessaire.
+    // Réservé aux joueurs non créatifs : le créatif reste le seul moyen de construire/modifier
+    // une map, même principe que partout ailleurs dans le mod (spawner, coffre de mana...).
+    //
+    // BreakBlockEvent (pas BlockEvent.BreakEvent, qui n'existe plus dans cette version) se
+    // déclenche indépendamment côté client ET côté serveur (voir sa javadoc) : annulé sans
+    // condition de camp pour stopper net la prédiction client autant que la casse réelle
+    // côté serveur. Le message n'est envoyé que côté serveur (isClientSide() == false) pour
+    // ne pas l'afficher en double (une fois localement côté client, une fois via le paquet
+    // serveur).
+    @SubscribeEvent
+    public static void onBlockBreakAttempt(BreakBlockEvent event) {
+        Player player = event.getPlayer();
+        if (player.isCreative()) {
+            return;
+        }
+
+        event.setCanceled(true);
+        if (!event.getLevel().isClientSide()) {
+            player.sendSystemMessage(Component.translatable("dungeon_defenders.block.break_disabled"));
+        }
     }
 
     @SubscribeEvent

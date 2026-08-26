@@ -22,6 +22,7 @@
   "dungeon_defenders.tower.not_enough_mana": "Pas assez de mana pour poser cette tour ! (%s requis, %s disponible)",
   "dungeon_defenders.tower.mana_spent": "-%s mana pour la tour (%s/%s)",
   "dungeon_defenders.tower.mana_refunded": "+%s mana remboursé (%s/%s)",
+  "dungeon_defenders.block.break_disabled": "Impossible de casser des blocs dans ce monde.",
   "dungeon_defenders.tower.removal_mode_on": "Mode suppression de tour : ACTIVÉ. Clic gauche sur une tour pour la retirer.",
   "dungeon_defenders.tower.removal_mode_off": "Mode suppression de tour : DÉSACTIVÉ.",
 

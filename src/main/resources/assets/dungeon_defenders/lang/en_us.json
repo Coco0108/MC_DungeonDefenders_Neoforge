@@ -22,6 +22,7 @@
   "dungeon_defenders.tower.not_enough_mana": "Not enough mana to place this tower! (%s required, %s available)",
   "dungeon_defenders.tower.mana_spent": "-%s mana for the tower (%s/%s)",
   "dungeon_defenders.tower.mana_refunded": "+%s mana refunded (%s/%s)",
+  "dungeon_defenders.block.break_disabled": "You can't break blocks in this world.",
   "dungeon_defenders.tower.removal_mode_on": "Tower removal mode: ON. Left-click a tower to remove it.",
   "dungeon_defenders.tower.removal_mode_off": "Tower removal mode: OFF.",
 

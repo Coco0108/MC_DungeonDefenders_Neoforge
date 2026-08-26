@@ -878,15 +878,39 @@ false`) : la touche dédiée est voulue comme l'unique façon "propre" de retire
 
 ### Ce qui n'est PAS fait, volontairement
 
-- **Le minage à la pioche fonctionne toujours en parallèle** (`mineable/pickaxe`, loot table
-  existante) et n'a pas été désactivé : casser une tour à la pioche continue de faire tomber un
-  item (`spike_blockade`, `harpoon_turret`...) qui ne sert plus à rien depuis que
-  `TowerBlockItem#useOn` ne pose plus rien (voir plus haut) — clutter d'inventaire, pas un vrai
-  risque d'équilibrage (l'item est inerte). Rendre les tours vraiment incassables à la pioche
-  demanderait de vérifier le comportement exact de la casse instantanée en créatif dans cette
-  version (bedrock-like `strength(-1)` vs override de `getDestroyProgress`) — pas fait faute
-  d'avoir vérifié contre les sources décompilées, laissé en l'état plutôt que deviné.
 - Pas de confirmation ("es-tu sûr ?") avant suppression — un clic suffit, comme la pose.
+- Pas de retour visuel pendant que le mode est actif hors du contour orange sur la cible.
+
+**Le minage à la pioche est réglé par ailleurs** : voir "Casser un bloc est désormais
+désactivé" juste en dessous — la touche dédiée n'est plus seulement l'unique façon "propre" de
+retirer une tour, c'est désormais **la seule façon tout court**, plus aucun bloc ne se casse à
+la pioche en survie, tour ou pas.
+
+## Casser un bloc est désormais désactivé — `ModEvents.onBlockBreakAttempt`
+
+Décidé avec le joueur (2026-08-26), directement en réaction au clutter d'item inerte laissé par
+le minage des tours (voir plus haut) : plutôt que de traiter chaque bloc au cas par cas
+(rendre les tours incassables, puis le spawner, puis le Cristal d'Eternia...), un seul handler
+générique **annule toute tentative de casse de bloc pour un joueur non créatif**, quel que soit
+le bloc visé — terrain, structure de la taverne, tours, tout. Ce n'est pas ce genre de jeu : pas
+de minage, pas de récolte de ressources.
+
+`BreakBlockEvent` (`net.neoforged.neoforge.event.level.block.BreakBlockEvent` — **pas**
+`BlockEvent.BreakEvent`, qui n'existe plus dans cette version de NeoForge, renommé/déplacé) se
+déclenche **indépendamment côté client ET côté serveur** (précisé dans sa javadoc). Le handler
+annule sans condition de camp — pour stopper net à la fois la prédiction client (le bloc
+n'affiche jamais de cassure qui se corrige ensuite) et la casse réelle côté serveur — mais
+n'envoie le message système ("Impossible de casser des blocs dans ce monde.") que côté serveur
+(`!event.getLevel().isClientSide()`), pour ne pas l'afficher deux fois (une fois localement,
+une fois via le paquet réseau).
+
+Réservé aux joueurs non créatifs (`player.isCreative()`), même principe que partout ailleurs
+dans le mod : le créatif reste le seul mode où une map se construit/modifie.
+
+**Effet de bord voulu** : comme le handler est générique à tout bloc, il rend aussi le minage
+des tours à la pioche impossible sans rien coder de spécifique aux tours — le chemin
+"suppression avec remboursement" (voir plus haut) devient de fait la seule façon de retirer une
+tour, sans avoir eu besoin de toucher à `strength()`/`getDestroyProgress()` par bloc.
 - Aucun retour visuel pendant que le mode est actif hors du contour orange sur la cible (pas de
   changement de curseur, pas d'indicateur HUD permanent) — seul le message système à
   l'activation/désactivation l'indique.
