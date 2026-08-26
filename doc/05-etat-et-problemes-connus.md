@@ -186,15 +186,19 @@ vérifie la CI.
 - ✅ Écran de fin de partie (`client/gui/screen/GameOverScreen.java`,
   `network/GameOverPayload.java`) : décidé avec le joueur (2026-08-26), repris du plan Excel
   ("GUI avec rejouer ou taverne") — s'ouvre automatiquement sur chaque client à la victoire/
-  défaite (en plus des messages système existants, pas à leur place), titre vert/rouge + deux
-  boutons. "Rejouer" envoie `StartGamePayload`, exactement comme le bouton "Jouer" de
-  `MapSelectionScreen` (même limite : ne restaure pas le Cristal d'Eternia s'il a été détruit,
-  puisque `buildPlaceholderArena()` n'en pose de toute façon jamais un — voir "Ce qui reste"
-  plus bas). "Retour à la taverne" exécute la commande de harnais `/dd_leave`, même effet que
-  le lien cliquable déjà existant dans le chat. Premier paquet **clientbound** du mod (tous
-  les autres vont du client vers le serveur) — handler enregistré côté client uniquement
-  (`DungeonDefendersModClient`), pas dans `ModNetworking` (chargée des deux côtés), pour ne
-  jamais charger de classe cliente sur un serveur dédié. **Jamais testé en jeu.** Détail dans
+  défaite, titre vert/rouge + deux boutons. "Rejouer" envoie `StartGamePayload`, exactement
+  comme le bouton "Jouer" de `MapSelectionScreen` (même limite : ne restaure pas le Cristal
+  d'Eternia s'il a été détruit, puisque `buildPlaceholderArena()` n'en pose de toute façon
+  jamais un — voir "Ce qui reste" plus bas). "Retour à la taverne" exécute la commande de
+  harnais `/dd_leave`. Premier paquet **clientbound** du mod (tous les autres vont du client
+  vers le serveur) — handler enregistré côté client uniquement (`DungeonDefendersModClient`),
+  pas dans `ModNetworking` (chargée des deux côtés), pour ne jamais charger de classe cliente
+  sur un serveur dédié. **Deux corrections le 2026-08-26**, suite à un premier test en jeu :
+  le titre ne s'affichait pas du tout (couleurs écrites sans octet alpha explicite —
+  `GuiGraphicsExtractor#text` ignore silencieusement tout texte à alpha 0, contrairement à
+  l'ancien `GuiGraphics.drawString` qui le forçait à `0xFF` par défaut) ; et les messages
+  système de victoire/défaite + le lien "Retour à la taverne" du chat ont été retirés
+  (`PhaseTransitions.onVictory/onDefeat`), devenus redondants avec cet écran. Détail dans
   [02-gameplay.md](02-gameplay.md#lécran-de-fin-de-partie--clientguiscreengameoverscreenjava-networkgameoverpayloadjava).
 
 ## Corrections apportées
@@ -536,6 +540,15 @@ rendrait l'effet plus lisible.
 
 Le run `gameTestServer` est configuré dans `build.gradle` mais aucun gametest n'existe : il
 plantera au lancement. La CI ne l'exécute pas (`./gradlew build` seulement).
+
+### `MapSelectionScreen` a probablement le même bug de titre invisible que `GameOverScreen` avait
+
+Trouvé en corrigeant `GameOverScreen` (2026-08-26, voir "Ce qui est implémenté" plus haut) :
+`MapSelectionScreen.TEXT_COLOR = 0xFFFFFF` est écrit sans octet alpha explicite, donc
+`0x00FFFFFF` en pratique — probablement invisible pour la même raison
+(`GuiGraphicsExtractor#text` ignore tout texte à alpha 0). Pas vérifié ni corrigé ici (fichier
+déjà mergé dans `main`, hors scope de cette branche/PR) — à confirmer en jeu et corriger
+séparément si c'est bien le cas.
 
 ## Reliquats du template
 

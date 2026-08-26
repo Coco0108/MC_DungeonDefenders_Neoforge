@@ -16,7 +16,6 @@
   "dungeon_defenders.eternia_crystal.ready_progress": "Prêt : %s/%s",
   "dungeon_defenders.game.victory": "Victoire ! Toutes les vagues sont nettoyées.",
   "dungeon_defenders.game.defeat": "Défaite ! Le Cristal d'Eternia est tombé.",
-  "dungeon_defenders.game.return_to_tavern": "[Retour à la taverne]",
   "dungeon_defenders.game_over.replay": "Rejouer",
   "dungeon_defenders.game_over.return_to_tavern": "Retour à la taverne",
   "dungeon_defenders.tower.build_phase_only": "Les tours ne peuvent être posées qu'en phase de Construction !",

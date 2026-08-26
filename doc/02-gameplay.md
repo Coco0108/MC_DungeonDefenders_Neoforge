@@ -1387,29 +1387,25 @@ Deux nouvelles transitions, sur le même principe que `enterCombat`/`enterBuild`
 (centralisées dans `PhaseTransitions`, pas dupliquées à chaque appelant) :
 
 - **`onVictory(level)`** — appelée par `ModEvents.onMonsterDeath` quand la dernière vague
-  vient d'être nettoyée. Diffuse `dungeon_defenders.game.victory` (vert, gras) à tous les
-  joueurs, puis remet la partie à zéro.
+  vient d'être nettoyée. Remet la partie à zéro, puis ouvre `GameOverScreen` (victoire) pour
+  chaque joueur.
 - **`onDefeat(level)`** — appelée par `EterniaCrystalBlockEntity` juste après la destruction
-  du bloc à 0 PV (à la suite du message `eternia_crystal.destroyed` déjà existant). Diffuse
-  `dungeon_defenders.game.defeat` (rouge, gras), puis remet la partie à zéro.
+  du bloc à 0 PV (à la suite du message `eternia_crystal.destroyed` déjà existant). Même chose,
+  version défaite.
 
-Décidé avec le joueur (2026-08-26), repris du plan Excel : les deux envoient maintenant aussi
-`GameOverPayload(victory)` à chaque joueur (`sendGameOverScreen`), qui ouvre `GameOverScreen`
-côté client (voir plus bas) — en plus des messages système existants, pas à leur place.
+**Changé le 2026-08-26** (retour du joueur) : les deux **n'envoient plus** de message système
+ni de lien "Retour à la taverne" dans le chat — devenus redondants une fois `GameOverScreen`
+en place (voir plus bas), qui a ses propres boutons "Rejouer"/"Retour à la taverne". `onVictory`
+et `onDefeat` ne font donc plus que `resetGameState(level)` puis `sendGameOverScreen(player,
+victory)` pour chaque joueur — `ChatFormatting`/`ClickEvent`/`Component`, plus utilisés dans ce
+fichier, retirés ; `dungeon_defenders.game.return_to_tavern` (l'ancien lien) retiré des deux
+fichiers de langue, devenu une clé morte.
 
 Les deux passent par le même `resetGameState(level)` privé : `CURRENT_WAVE` → 1, phase →
 `BUILD`, `WAVE_ENEMIES_KILLED` → 0, et `WAVE_ENEMIES_TOTAL` recalculé (réutilise
 `recomputeWaveEnemiesTotal`, la même méthode privée qu'`enterBuild`) — pour que la partie soit
 immédiatement prête à relancer une vague 1 propre, sans qu'un spawner continue à faire
 apparaître des ennemis sur une partie déjà gagnée ou perdue.
-
-**Le lien "Retour à la taverne"** : les deux méthodes diffusent aussi, juste après le message
-de victoire/défaite, un second message — un simple `Component.translatable(...)` stylé
-(`ChatFormatting.AQUA`, souligné) avec un `ClickEvent.RunCommand("/dd_leave")` accroché via
-`Style#withClickEvent(...)`. Cliquer dessus revient à taper la commande `/dd_leave`
-(`ModCommands`), qui appelle `MapInstance.returnToTavern(level)` — nettoie l'emplacement de
-map et téléporte tout le monde. Pas de nouveau paquet réseau : le clic déclenche directement
-une commande déjà existante, exactement comme si le joueur l'avait tapée lui-même.
 
 **Ce qui n'est PAS fait ici**, volontairement — voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) :
@@ -1425,14 +1421,16 @@ une commande déjà existante, exactement comme si le joueur l'avait tapée lui-
   continuer à jouer sur la vague 1 fraîchement réinitialisée sans avoir cliqué un bouton.
 - `/dd_leave` reste une commande de harnais, pas un vrai point de sortie posé dans chaque
   map — un joueur pourrait aussi la taper à tout moment, pas seulement après une victoire/
-  défaite (pas grave en soi, mais pas le vrai flux prévu à terme).
+  défaite (pas grave en soi, mais pas le vrai flux prévu à terme). `GameOverScreen` s'en sert
+  toujours pour son bouton "Retour à la taverne" (`connection.sendCommand(...)`), juste sans
+  passer par le chat.
 
 ### L'écran de fin de partie — `client/gui/screen/GameOverScreen.java`, `network/GameOverPayload.java`
 
 Décidé avec le joueur (2026-08-26), repris du plan Excel : *"GUI avec rejouer ou taverne"*.
 Ouvert automatiquement sur chaque client par `GameOverPayload(victory)`, envoyé depuis
-`PhaseTransitions.onVictory/onDefeat` juste après les messages système existants (les deux
-coexistent, le message n'a pas été retiré).
+`PhaseTransitions.onVictory/onDefeat` — seule source de retour visuel à la fin d'une partie
+désormais, les messages système ont été retirés (voir "Victoire et défaite" plus haut).
 
 **Premier paquet clientbound du mod** — tous les autres (`PlaceTowerPayload`,
 `SpawnerConfigPayload`...) vont du client vers le serveur. Enregistré en deux temps, comme
@@ -1460,8 +1458,22 @@ symétrique exact de `.toVanillaServerbound()`, déjà utilisé partout ailleurs
   Pas de distinction "rejouer la même map" vs "choisir une nouvelle map" pour l'instant, une
   seule map placeholder existe de toute façon (voir 05-etat-et-problemes-connus.md).
 - **"Retour à la taverne"** appelle `connection.sendCommand(MapInstance.RETURN_COMMAND)` —
-  même commande de harnais que le lien cliquable historique dans le chat, juste déclenchée
-  depuis un bouton plutôt qu'un clic sur du texte.
+  même commande de harnais qu'utilisait l'ancien lien cliquable du chat (retiré, voir "Victoire
+  et défaite" plus haut), juste déclenchée depuis un bouton.
+
+> **Bug trouvé en testant en jeu (2026-08-26) : le titre ne s'affichait jamais, seuls les
+> boutons apparaissaient.** Cause : `TITLE_COLOR_VICTORY`/`TITLE_COLOR_DEFEAT` étaient écrites
+> comme des littéraux à 6 chiffres (`0x55FF55`/`0xFF5555`), donc avec un octet alpha implicite
+> à `0x00` — entièrement transparent. Vérifié dans les sources décompilées :
+> `GuiGraphicsExtractor#text(Font, FormattedCharSequence, int, int, int, boolean)` ignore
+> silencieusement l'ajout au render state si `ARGB.alpha(color) == 0`, sans la moindre erreur.
+> Contrairement à l'ancien `GuiGraphics.drawString` (versions antérieures de Minecraft), cette
+> version du pipeline de rendu **ne force plus** l'alpha à `0xFF` par défaut pour une couleur
+> écrite sans son octet de poids fort — un piège classique pour tout code qui recopie l'ancienne
+> convention. Corrigé en écrivant les deux constantes avec leur alpha explicite
+> (`0xFF55FF55`/`0xFFFF5555`). **`MapSelectionScreen.TEXT_COLOR = 0xFFFFFF` a très probablement
+> le même défaut** (même convention "RGB nu") — jamais vérifié/signalé, hors scope de cette
+> branche/PR (fichier déjà mergé dans `main`), à corriger séparément.
 
 ### Apparence
 
