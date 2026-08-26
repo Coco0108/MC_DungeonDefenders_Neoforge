@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.init;
 
 import com.github.c0c0tier.dungeon_defenders.MapInstance;
+import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -46,7 +47,9 @@ public final class PhaseTransitions {
     /**
      * Passe en Construction : fait avancer la vague (plafonnée à MAX_WAVE — pas de condition
      * de victoire pour l'instant, voir 05-etat-et-problemes-connus.md), remet le compteur de
-     * tués à zéro, et recalcule le total de la nouvelle vague à partir des spawners actifs.
+     * tués à zéro, recalcule le total de la nouvelle vague à partir des spawners actifs, et
+     * "respawn" (redevient visible/solide) tous les coffres de mana ouverts pendant la vague
+     * précédente.
      */
     public static void enterBuild(Level level) {
         int nextWave = Math.min(level.getData(ModAttachments.CURRENT_WAVE) + 1, ModAttachments.MAX_WAVE);
@@ -60,6 +63,7 @@ public final class PhaseTransitions {
         level.syncData(ModAttachments.WAVE_ENEMIES_KILLED);
 
         recomputeWaveEnemiesTotal(level);
+        ManaChestBlock.respawnAll(level);
     }
 
     /**
@@ -115,6 +119,7 @@ public final class PhaseTransitions {
         level.syncData(ModAttachments.WAVE_ENEMIES_KILLED);
 
         recomputeWaveEnemiesTotal(level);
+        ManaChestBlock.respawnAll(level);
     }
 
     /**

@@ -1114,6 +1114,91 @@ place.
 
 Modèle provisoire : texture vanilla `minecraft:item/blaze_rod`, pas de modèle dédié.
 
+## Le coffre de mana — `block/ManaChestBlock.java`
+
+Premier item de la feuille "Idées" du plan Excel du joueur à être construit : un coffre qui
+donne du mana "entre les vagues", et distribuera aussi des armes plus tard (hors scope tant
+qu'il n'y a rien à distribuer, voir 05-etat-et-problemes-connus.md).
+
+**Meuble de map, pas un objet de joueur** : même statut que le Cristal d'Eternia ou le Spawner
+— posé par le créateur pendant la construction de la map, jamais par un joueur en jeu (pas
+d'item qui le pose via une interaction ni la roue).
+
+### Deux comportements selon le mode — `useWithoutItem`
+
+`ManaChestBlock.useWithoutItem` distingue par `player.isCreative()`, exactement comme
+`SpawnerBlock` distingue configuration et harnais de test par `isShiftKeyDown()` — même absence
+volontaire d'un vrai système de rôle "créateur de map" vs "joueur" dans ce mod, le mode créatif
+sert de proxy :
+
+- **Créatif** → ouvre `ManaChestConfigMenuProvider`/`ManaChestConfigMenu`/
+  `ManaChestConfigScreen`, un patron identique à `SpawnerConfigScreen` mais réduit à un seul
+  champ scalaire (`manaAmount`), sans les lignes dynamiques de composition. Au clic sur
+  "Valider", envoie `ManaChestConfigPayload` au serveur, appliqué par
+  `ManaChestBlockEntity#applyConfig` après revérification de portée (`ModNetworking`).
+- **Survie** → si `GAME_PHASE != BUILD`, message et rien ne se passe (coffre pensé pour la
+  préparation, pas le combat). Sinon, délègue à `ManaChestBlockEntity#tryOpen`.
+
+### L'état et l'ouverture — `block/entity/ManaChestBlockEntity.java`
+
+```java
+public boolean tryOpen(Player player, int currentWave) {
+    if (this.lastOpenedWave == currentWave) {
+        return false;
+    }
+    this.lastOpenedWave = currentWave;
+    ...
+    int newMana = Math.min(ModAttachments.MAX_MANA, player.getData(ModAttachments.MANA) + this.manaAmount);
+    player.setData(ModAttachments.MANA, newMana);
+    player.syncData(ModAttachments.MANA);
+    ...
+    return true;
+}
+```
+
+`lastOpenedWave` (0 = jamais ouvert) plutôt qu'un simple booléen "déjà ouvert" : comparé à
+`ModAttachments.CURRENT_WAVE`, déjà incrémenté à chaque entrée en Construction par
+`PhaseTransitions#enterBuild`. Le coffre "sait" donc tout seul s'il peut redonner du mana pour
+la vague en cours, sans qu'aucun code n'ait besoin de remettre ce champ à zéro explicitement.
+
+`manaAmount` (25 par défaut) est **configurable par coffre**, pas une constante globale du mod
+— décidé avec le joueur : la bonne quantité dépend de la taille et de la difficulté de chaque
+map, pas d'une seule valeur qui conviendrait à toutes.
+
+### Disparition et réapparition visuelles — `ManaChestBlock#OPENED`, `#respawnAll`
+
+Décidé avec le joueur (2026-08-24), comme dans le jeu de référence : un coffre ouvert ne reste
+pas visible mais inerte, il **disparaît** jusqu'à la vague suivante. `OPENED` est une vraie
+propriété de `BlockState` (`BooleanProperty`, comme `HORIZONTAL_FACING` sur le Harpoon Turret) :
+
+- `getRenderShape` renvoie `RenderShape.INVISIBLE` si `OPENED`, sinon `MODEL`.
+- `getShape`/`getCollisionShape` renvoient `Shapes.empty()` si `OPENED` — traversable, et
+  surtout **impossible à cibler au clic droit** (le rayon d'interaction du joueur se base sur
+  cette même forme) : un coffre déjà ouvert ne peut donc plus jamais être re-cliqué tant qu'il
+  n'a pas réapparu, sans avoir besoin d'une vérification explicite côté interaction.
+
+`ManaChestBlockEntity#tryOpen` bascule `OPENED` à `true` (`level.setBlock(pos,
+state.setValue(OPENED, true), ...)`) juste après avoir donné le mana — le bloc entity lui-même
+n'est ni recréé ni perturbé (même `Block` Java, seule une propriété change ; vanilla ne
+recrée un block entity que si le `Block` sous-jacent change, pas une simple propriété).
+
+Pour la **réapparition**, un registre `ModAttachments.ACTIVE_MANA_CHESTS`
+(`Set<BlockPos>`, même principe qu'`ACTIVE_SPAWNERS`) est nécessaire : `ManaChestBlockEntity`
+s'y ajoute/retire via `setLevel`/`setRemoved`, et `ManaChestBlock.respawnAll(level)` (appelé
+par `PhaseTransitions#enterBuild`, à chaque nouvelle Construction) parcourt ce registre et
+repasse `OPENED` à `false` pour tout coffre encore ouvert — contrairement à ce qui avait été
+envisagé au départ (voir 05-etat-et-problemes-connus.md), un simple champ sur le block entity
+ne suffisait pas : rien d'autre ne "réveille" un coffre qui n'est visité par personne, il faut
+bien un point d'entrée explicite au changement de phase pour le repasser visible/solide.
+
+### Apparence
+
+Modèle provisoire : texture vanilla `minecraft:block/barrel_top` (thème conteneur/stockage,
+volontairement distinct des autres placeholders du mod). Pas de PV, pas d'`AiAttackTarget` —
+un monstre ne peut ni l'attaquer ni le cibler, comme le Cristal de la Taverne.
+
+**Jamais testé en jeu** — voir [06-a-tester.md](06-a-tester.md).
+
 ## La vie du joueur
 
 Contrairement au mana, la vie n'est pas une ressource inventée pour le mod : c'est l'attribut

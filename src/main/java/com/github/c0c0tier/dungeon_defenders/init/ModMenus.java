@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.init;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.menu.ManaChestConfigMenu;
 import com.github.c0c0tier.dungeon_defenders.menu.SpawnerConfigMenu;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
@@ -19,6 +20,10 @@ public class ModMenus {
     public static final DeferredHolder<MenuType<?>, MenuType<SpawnerConfigMenu>> SPAWNER_CONFIG = MENU_TYPES.register(
             "spawner_config",
             () -> IMenuTypeExtension.create(SpawnerConfigMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<ManaChestConfigMenu>> MANA_CHEST_CONFIG = MENU_TYPES.register(
+            "mana_chest_config",
+            () -> IMenuTypeExtension.create(ManaChestConfigMenu::new));
 
     public static void register(IEventBus modEventBus) {
         MENU_TYPES.register(modEventBus);

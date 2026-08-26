@@ -3,6 +3,7 @@ package com.github.c0c0tier.dungeon_defenders.init;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.EterniaCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.block.HarpoonTurretBlock;
+import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpawnerBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpikeBlockadeBlock;
 import com.github.c0c0tier.dungeon_defenders.block.TavernCrystalBlock;
@@ -82,6 +83,16 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> TAVERN_CRYSTAL_ITEM =
             ITEMS.registerSimpleBlockItem("tavern_crystal", TAVERN_CRYSTAL);
+
+    // 7. Coffre de mana : meuble de map (comme le cristal de la taverne), pas de PV, donne du
+    // mana au clic droit en survie (une fois par vague), configurable en créatif (voir
+    // ManaChestBlock).
+    public static final DeferredBlock<ManaChestBlock> MANA_CHEST = BLOCKS.registerBlock("mana_chest",
+            ManaChestBlock::new,
+            properties -> properties.strength(2.5F));
+
+    public static final DeferredItem<BlockItem> MANA_CHEST_ITEM =
+            ITEMS.registerSimpleBlockItem("mana_chest", MANA_CHEST);
 
     // Connexion au bus d'événements
     public static void register(IEventBus modEventBus) {

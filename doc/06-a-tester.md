@@ -172,6 +172,34 @@ branchée) — jamais vérifié visuellement.
 - [ ] L'écran de config du mod (menu Mods > Dungeon Defenders > Config) s'ouvre sans erreur et
       affiche bien les 3 options (au lieu de l'ancien contenu d'exemple du template).
 
+## Le coffre de mana (`ManaChestBlock`, `ManaChestBlockEntity`)
+
+Nouveau meuble de map (comme le Cristal d'Eternia/le Spawner) : donne du mana au clic droit en
+survie, une fois par vague, configurable en créatif — jamais vérifié visuellement.
+
+- [ ] Prendre `mana_chest` dans l'onglet créatif, le poser en Construction.
+- [ ] **En créatif**, clic droit dessus : ouvre l'écran de configuration (un seul champ,
+      "Quantité de mana", pré-rempli à 25). Changer la valeur, valider, refermer et
+      recliquer : la nouvelle valeur doit être là (bien appliquée et resynchronisée), pas
+      revenue à 25.
+- [ ] **En survie**, clic droit en phase Construction : donne bien la quantité configurée de
+      mana (message + HUD), une seule fois.
+- [ ] **Après ouverture, le coffre doit disparaître** (invisible) et devenir traversable — le
+      point le plus important de cette section : vérifie `OPENED`/`getRenderShape`/`getShape`/
+      `getCollisionShape` dans `ManaChestBlock`. Essayer de re-cliquer à l'endroit où il était :
+      ne doit plus rien cibler (le clic doit traverser, pas afficher "coffre vide").
+- [ ] Passer en Combat puis revenir en Construction (nouvelle vague) : le coffre doit
+      **réapparaître** (visible, solide) et s'ouvrir à nouveau une fois — vérifie
+      `ManaChestBlock#respawnAll` appelé par `PhaseTransitions#enterBuild`.
+- [ ] Plusieurs coffres sur la même map : ouvrir l'un ne doit pas faire disparaître les autres,
+      et tous doivent réapparaître à la vague suivante (pas seulement le premier du registre).
+- [ ] Clic droit en phase Combat : message "Construction uniquement", pas de mana donné.
+- [ ] Mana déjà à 100/100 : le coffre s'ouvre quand même (marqué comme utilisé pour la vague),
+      mais le mana ne dépasse pas 100.
+- [ ] Un son de coffre qui s'ouvre doit se faire entendre à l'ouverture réussie.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ManaChestBlock`,
+      `ManaChestBlockEntity`, `ManaChestConfigScreen`/`Menu`/`Payload`.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

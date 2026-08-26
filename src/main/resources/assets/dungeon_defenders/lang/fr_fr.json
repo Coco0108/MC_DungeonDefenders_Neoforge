@@ -7,6 +7,7 @@
   "dungeon_defenders.tower.harpoon_turret": "Tourelle Harpon",
   "block.dungeon_defenders.spawner": "Générateur",
   "block.dungeon_defenders.tavern_crystal": "Cristal de la Taverne",
+  "block.dungeon_defenders.mana_chest": "Coffre de Mana",
   "item.dungeon_defenders.mana_test_wand": "Baguette de test (mana)",
   "item.dungeon_defenders.mana_fill_wand": "Baguette de remplissage (mana)",
   "key.category.dungeon_defenders.keys": "Dungeon Defenders",
@@ -61,6 +62,13 @@
   "dungeon_defenders.map.test_map": "Map de test",
   "dungeon_defenders.tower_wheel.title": "Choisir une tour",
   "dungeon_defenders.tower_wheel.mana_cost": "Coût : %s mana",
+
+  "dungeon_defenders.mana_chest.opened": "+%s mana grâce au coffre (%s/%s)",
+  "dungeon_defenders.mana_chest.already_opened": "Ce coffre est vide, reviens à la prochaine vague.",
+  "dungeon_defenders.mana_chest.build_phase_only": "Le coffre de mana ne peut être ouvert qu'en phase de Construction !",
+  "dungeon_defenders.mana_chest.config_title": "Configuration du coffre de mana",
+  "dungeon_defenders.mana_chest.config_amount": "Quantité de mana",
+  "dungeon_defenders.mana_chest.config_confirm": "Valider",
 
   "dungeon_defenders.configuration.title": "Configuration de Dungeon Defenders",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml": "Configuration de Dungeon Defenders",
