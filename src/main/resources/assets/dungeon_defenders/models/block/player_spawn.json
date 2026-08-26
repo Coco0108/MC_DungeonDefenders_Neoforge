@@ -1,0 +1,7 @@
+{
+  "comment": "Placeholder : réutilise la texture vanilla du lodestone (thème 'point d'ancrage/repère') en attendant une texture dédiée.",
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "minecraft:block/lodestone_top"
+  }
+}

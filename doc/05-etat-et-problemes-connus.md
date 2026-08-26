@@ -313,6 +313,16 @@ vérifie la CI.
   vraiment casser la tour) — `onTowerBreak` a été retiré dans cette branche de test. **À régler
   pour de vrai** avant/au moment de merger l'une des deux PR dans `main` : celle qui merge en
   second devra retirer ce handler (ou les réconcilier autrement).
+- ✅ Bloc de spawn joueur (`ModBlocks.PLAYER_SPAWN`,
+  `MapInstance#findAndConsumeSpawnMarker`) : décidé avec le joueur (2026-08-26), repris du plan
+  Excel (feuille "Idées" > "CHOIX DE MAP") — le créateur d'une map peut poser ce bloc à
+  l'endroit où les joueurs doivent apparaître ; `MapInstance.startGame` le cherche, le retire,
+  et téléporte les joueurs sur sa position plutôt que sur `MAP_POS`. Retombe sur `MAP_POS`
+  (comportement inchangé) si aucun n'est trouvé — **toujours le cas aujourd'hui**, le
+  mécanisme n'a rien à trouver tant que `buildPlaceholderArena()` ne pose qu'un sol générique.
+  **Pas concrètement testable avant qu'une vraie structure `.nbt` de map n'existe** — voir
+  "Système de maps/structures" plus bas et
+  [02-gameplay.md](02-gameplay.md#le-bloc-de-spawn-joueur--bloc-player_spawn-mapinstancefindandconsumespawnmarker).
 
 ## Corrections apportées
 
@@ -652,6 +662,10 @@ Plan affiné au fil de plusieurs échanges avec le joueur, pas encore tout codé
   taverne via la commande `/dd_leave` (`returnToTavern`), aussi accessible comme lien
   cliquable dans les messages de victoire/défaite (voir "Ce qui est implémenté" plus haut).
   Voir [02-gameplay.md](02-gameplay.md#la-map-active--mapinstancejava).
+- Le **mécanisme** du bloc de spawn joueur (`PLAYER_SPAWN`,
+  `findAndConsumeSpawnMarker`, voir "Ce qui est implémenté" plus haut) : prêt à remplacer le
+  repli sur `MAP_POS` dès qu'une vraie structure en pose un, mais rien à trouver tant que
+  `buildPlaceholderArena()` ne pose qu'un sol générique.
 
 **Reste à faire** : le choix de map précis dans le carrousel n'a toujours aucun effet (une
 seule map placeholder générique pour l'instant, quel que soit l'élément sélectionné) ; la

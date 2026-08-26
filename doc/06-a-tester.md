@@ -290,6 +290,24 @@ seulement les tours.
 - [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
       `ModEvents.onBlockBreakAttempt` ou `BreakBlockEvent`.
 
+## Le bloc de spawn joueur (`ModBlocks.PLAYER_SPAWN`, `MapInstance#findAndConsumeSpawnMarker`)
+
+Jamais testé en jeu. **Le mécanisme complet n'est pas testable pour l'instant** — voir
+05-etat-et-problemes-connus.md, "Système de maps/structures" : il ne peut être exercé qu'une
+fois qu'une vraie structure `.nbt` de map (avec un `PLAYER_SPAWN` posé dedans) remplace
+`buildPlaceholderArena()`. Seuls les points suivants sont vérifiables dès maintenant :
+
+- [ ] En créatif, ouvrir l'onglet créatif du mod : un item "Spawn Joueur" doit apparaître,
+      poser le bloc correspondant sans crash.
+- [ ] Poser le bloc n'importe où (taverne, placeholder de map...) : doit avoir l'apparence
+      d'un bloc de lodestone (texture placeholder, voir doc/02-gameplay.md), pas de texture
+      manquante.
+- [ ] Cliquer sur "Jouer" dans la taverne avec un `PLAYER_SPAWN` posé quelque part dans le
+      placeholder de map (par exemple posé juste avant de cliquer, en restant sur place) :
+      comportement attendu **inchangé** pour l'instant (téléportation à `MAP_POS` comme avant),
+      puisque `clearZone` efface la zone avant que le scan n'ait lieu — **pas un bug**, la
+      limite est documentée ci-dessus.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni
