@@ -58,14 +58,13 @@ public class EterniaCrystalBlock extends BaseEntityBlock {
         return Shapes.box(0.0D, 0.0D, 0.0D, 1.0D, 3.0D, 1.0D);
     }
 
-    /** Dégâts infligés au clic droit à main nue en Combat. Harnais de test. */
-    private static final int DEBUG_DAMAGE_ON_USE = 10;
-
     /**
      * Clic droit sur le cristal : en Construction, bascule "prêt" (déclenche le Combat une
-     * fois tous les joueurs présents prêts, voir toggleReady) ; en Combat, garde l'ancien
-     * harnais de test qui inflige des dégâts (utile pour tester la destruction du cristal
-     * sans attendre une vraie vague).
+     * fois tous les joueurs présents prêts, voir toggleReady). En Combat, ne fait plus rien —
+     * l'ancien harnais de test qui infligeait 10 dégâts au clic a été retiré : le clic droit
+     * doit rester disponible pour le vote de la prochaine vague sans risque de faire perdre
+     * des PV au cristal par erreur en combat, maintenant que les monstres l'endommagent pour
+     * de vrai.
      */
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
@@ -78,16 +77,7 @@ public class EterniaCrystalBlock extends BaseEntityBlock {
             return toggleReady(level, player);
         }
 
-        BlockEntity blockEntity = level.getBlockEntity(pos);
-        if (!(blockEntity instanceof EterniaCrystalBlockEntity crystal)) {
-            return InteractionResult.PASS;
-        }
-
-        crystal.damage(DEBUG_DAMAGE_ON_USE);
-        player.sendSystemMessage(Component.translatable(
-                "dungeon_defenders.eternia_crystal.damaged", DEBUG_DAMAGE_ON_USE, crystal.getCrystalHealth()));
-
-        return InteractionResult.SUCCESS;
+        return InteractionResult.PASS;
     }
 
     // Déclencheur du Combat : il faut que tous les joueurs actuellement dans cette Level

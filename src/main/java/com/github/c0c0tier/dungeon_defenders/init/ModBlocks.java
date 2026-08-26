@@ -7,6 +7,7 @@ import com.github.c0c0tier.dungeon_defenders.block.SpawnerBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpikeBlockadeBlock;
 import com.github.c0c0tier.dungeon_defenders.block.TavernCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.block.TowerBlockItem;
+import com.github.c0c0tier.dungeon_defenders.item.ManaFillWandItem;
 import com.github.c0c0tier.dungeon_defenders.item.ManaTestWandItem;
 import net.minecraft.world.item.BlockItem;
 import net.neoforged.bus.api.IEventBus;
@@ -55,6 +56,11 @@ public class ModBlocks {
     // 4. Baguette de test : retire 10 de mana au clic droit, pour vérifier le HUD (mana)
     public static final DeferredItem<ManaTestWandItem> MANA_TEST_WAND =
             ITEMS.registerItem("mana_test_wand", ManaTestWandItem::new);
+
+    // 4bis. Baguette de test symétrique : remplit le mana au maximum au clic droit, pour
+    // tester la pose de tours sans farmer des cristaux de mana à chaque essai.
+    public static final DeferredItem<ManaFillWandItem> MANA_FILL_WAND =
+            ITEMS.registerItem("mana_fill_wand", ManaFillWandItem::new);
 
     // 5. Spawner : fait apparaître des zombies pendant la phase de combat (voir
     // SpawnerBlockEntity pour l'algorithme). Clic droit = harnais de test qui bascule la phase.

@@ -45,8 +45,8 @@ public final class PhaseTransitions {
 
     /**
      * Passe en Construction : fait avancer la vague (plafonnée à MAX_WAVE — pas de condition
-     * de victoire pour l'instant, voir 05-etat-et-problemes-connus.md) et recalcule le total
-     * de la nouvelle vague à partir des spawners actifs.
+     * de victoire pour l'instant, voir 05-etat-et-problemes-connus.md), remet le compteur de
+     * tués à zéro, et recalcule le total de la nouvelle vague à partir des spawners actifs.
      */
     public static void enterBuild(Level level) {
         int nextWave = Math.min(level.getData(ModAttachments.CURRENT_WAVE) + 1, ModAttachments.MAX_WAVE);
@@ -55,6 +55,9 @@ public final class PhaseTransitions {
 
         level.setData(ModAttachments.GAME_PHASE, GamePhase.BUILD.ordinal());
         level.syncData(ModAttachments.GAME_PHASE);
+
+        level.setData(ModAttachments.WAVE_ENEMIES_KILLED, 0);
+        level.syncData(ModAttachments.WAVE_ENEMIES_KILLED);
 
         recomputeWaveEnemiesTotal(level);
     }
@@ -114,7 +117,14 @@ public final class PhaseTransitions {
         recomputeWaveEnemiesTotal(level);
     }
 
-    private static void recomputeWaveEnemiesTotal(Level level) {
+    /**
+     * Recalcule WAVE_ENEMIES_TOTAL à partir des spawners actifs et de la vague courante.
+     * Appelée à l'entrée en Construction, mais aussi chaque fois qu'un spawner apparaît,
+     * disparaît ou est reconfiguré (voir SpawnerBlockEntity, ModNetworking.handleSpawnerConfig)
+     * — pour que le total affiché au joueur ne reste jamais bloqué à la valeur par défaut avant
+     * la toute première transition de phase d'une partie.
+     */
+    public static void recomputeWaveEnemiesTotal(Level level) {
         int currentWave = level.getData(ModAttachments.CURRENT_WAVE);
         double multiplier = DifficultyScaling.getMultiplier(level);
 

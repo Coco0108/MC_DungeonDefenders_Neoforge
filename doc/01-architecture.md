@@ -17,7 +17,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── TavernSpawn.java                  # Point de spawn fixe + plateforme provisoire (monde vide)
     │   ├── MapInstance.java                  # "La map active" : emplacement partagé, placeholder, téléportation
     │   ├── ModCommands.java                  # /dd_leave (retour à la taverne, harnais de test)
-    │   ├── Config.java                       # Spec de config (héritée du template, non branchée)
+    │   ├── Config.java                       # Spec de config réelle (PV cristal, dégâts, portée), branchée
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
     │   │   ├── ModAttachments.java           # DeferredRegister des data attachments (mana, vagues, phase...)
@@ -28,7 +28,9 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── SpawnableEnemy.java           # Liste fermée des ennemis choisissables dans un spawner
     │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild : transitions de phase centralisées
     │   │   ├── GameMap.java                  # Liste des maps proposées dans l'écran de choix (visible = false pour masquer une map en cours de conception)
-    │   │   └── TowerDefinition.java          # Catalogue des tours posables via la roue (voir client/gui/screen/TowerWheelScreen.java)
+    │   │   ├── TowerDefinition.java          # Catalogue des tours posables via la roue (voir client/gui/screen/TowerWheelScreen.java)
+    │   │   ├── ManaCrystalType.java           # Paliers de cristaux de mana (un seul pour l'instant, extensible)
+    │   │   └── ModEntities.java               # DeferredRegister.Entities (premier Entity custom du mod : le cristal de mana)
     │   ├── menu/
     │   │   ├── SpawnerConfigMenu.java        # AbstractContainerMenu sans slot, transmet juste le BlockPos
     │   │   └── SpawnerConfigMenuProvider.java # MenuProvider ouvert par SpawnerBlock au clic droit
@@ -60,10 +62,16 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── ScoreOverlay.java             # Couche HUD affichant le score de la carte, bas centre (client uniquement)
     │   │   ├── CharacterOverlay.java         # Couche HUD affichant "Nom - niv X", bas centre (client uniquement)
     │   │   └── AbilitySlotsOverlay.java      # 4 emplacements de compétences, bas gauche, à côté des losanges (client uniquement)
-    │   ├── entity/ai/
-    │   │   ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal (un seul sous-classeur : la version à distance)
-    │   │   ├── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal (archers, ignorent Blockade/Turret)
-    │   │   └── AttackPriorityTargetGoal.java         # Goal unique des monstres de mêlée : choisit Block > Corps à corps > Cristal > Tourelle selon AiAttackTarget
+    │   ├── entity/
+    │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
+    │   │   ├── MobHealthBarLayer.java         # RenderLayer : barre de vie zombie/squelette, cachée à PV pleins/hors portée (client)
+    │   │   └── ai/
+    │   │       ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal (un seul sous-classeur : la version à distance)
+    │   │       ├── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal (archers, ignorent Blockade/Turret)
+    │   │       └── AttackPriorityTargetGoal.java         # Goal unique des monstres de mêlée : choisit Block > Corps à corps > Cristal > Tourelle selon AiAttackTarget
+    │   ├── gametest/
+    │   │   ├── DungeonDefendersGameTests.java # Fonctions de test + enregistrement (RegisterGameTestsEvent)
+    │   │   └── ModGameTestInstance.java       # GameTestInstance custom (contourne Registries.TEST_FUNCTION, hors d'atteinte d'un mod)
     │   └── block/
     │       ├── EterniaCrystalBlock.java      # Le bloc : hitbox, interaction, codec
     │       ├── SpikeBlockadeBlock.java       # Premier tower "Blockade" : mur à PV qui pique au contact
@@ -74,13 +82,17 @@ MC_DungeonDefenders_Neoforge/
     │       └── entity/
     │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal)
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
-    │           ├── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D (client)
+    │           ├── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D, toujours affichée (client)
     │           ├── AiAttackTarget.java                     # Interface : contrat + paliers de priorité IA (Block/Corps à corps/Cristal/Tourelle)
     │           ├── AbstractTowerBlockEntity.java           # Base commune à TOUTE catégorie de tour : PV, coût mana, persistance, sync, AiAttackTarget (voir 02-gameplay.md)
     │           ├── AbstractBlockadeBlockEntity.java        # Catégorie "Blockade" : dégâts de contact optionnels, priorité selon dealsContactDamage
     │           ├── SpikeBlockadeBlockEntity.java           # Sous-classe : fixe les stats du Spike Blockade (voir 02-gameplay.md)
     │           ├── AbstractTurretBlockEntity.java          # Catégorie "Turret" : portée + cône + tir (scan/tir par tick, pas de Goal)
     │           ├── HarpoonTurretBlockEntity.java           # Sous-classe : fixe les stats du Harpoon Turret (voir 02-gameplay.md)
+    │           ├── TowerHealthBarRenderState.java          # Instantané pour le rendu (client)
+    │           ├── TowerHealthBarRenderer.java             # Barre de vie 3D générique à toute tour, cachée à PV pleins/hors portée (client)
+    │           ├── HealthLerp.java                         # Animation temps réel d'un ratio de PV (client, partagée cristal/tours)
+    │           ├── HealthBarRendering.java                 # Dessin du quad de barre de vie (client, partagée cristal/tours)
     │           ├── SpawnerBlockEntity.java                 # Algorithme de spawn pondéré (voir 02-gameplay.md)
     │           ├── SpawnerRenderState.java                 # Instantané pour le rendu (client)
     │           └── SpawnerBlockEntityRenderer.java         # Aperçu de composition en phase Construction, à travers les murs (client)
@@ -94,9 +106,9 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── items/{eternia_crystal,spike_blockade,spawner,tavern_crystal,harpoon_turret}.json # Modèles d'item
     │   │   └── textures/gui/maps/<id>.png                  # Aperçu de chaque GameMap (une image par map)
     │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_blockade,spawner,tavern_crystal,harpoon_turret}.json
+    │   ├── data/dungeon_defenders/structure/gametest/empty.nbt  # Gabarit 3x3x3 sans bloc, partagé par les gametests
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
-    │   ├── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
-    │   └── META-INF/accesstransformer.cfg         # Access Transformers
+    │   └── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
     └── templates/META-INF/neoforge.mods.toml      # Métadonnées, expansées par Gradle
 ```
 
@@ -165,12 +177,13 @@ référencé sans risque.
 
 ```
 Chargement FML
-   └─ new DungeonDefendersMod(modEventBus)
+   └─ new DungeonDefendersMod(modEventBus, container)
         ├─ ModBlocks.register(bus)        → BLOCKS + ITEMS
         ├─ ModAttachments.register(bus)   → ATTACHMENT_TYPES
         ├─ ModMenus.register(bus)         → MENU_TYPES
         ├─ BLOCK_ENTITIES.register(bus)
-        └─ CREATIVE_MODE_TABS.register(bus)
+        ├─ CREATIVE_MODE_TABS.register(bus)
+        └─ container.registerConfig(COMMON, Config.SPEC)
 
 Événements du bus mod
    ├─ RegisterEvent(BLOCK)             → eternia_crystal, spike_blockade, spawner, tavern_crystal
@@ -184,11 +197,16 @@ Chargement FML
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
    ├─ RegisterPayloadHandlersEvent     → SpawnerConfigPayload, SetDifficultyPayload,
    │                                      StartGamePayload (C2S, ModNetworking — commun, pas client-only)
-   ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer, SpawnerBlockEntityRenderer
+   ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer, SpawnerBlockEntityRenderer, TowerHealthBarRenderer (Blockade + Turret)
+   ├─ RegisterRenderStateModifiersEvent [client] → HEALTH/MAX_HEALTH/ENTITY_ID sur tout LivingEntityRenderState
+   │                                                (MobHealthBarLayer, lu par la couche ci-dessous)
+   ├─ AddLayers [client]               → MobHealthBarLayer sur ZombieRenderer + SkeletonRenderer
    ├─ RegisterGuiLayersEvent [client]  → ManaOverlay, HealthOverlay, ExperienceOverlay,
    │                                      WaveOverlay, WaveEnemiesOverlay, PhaseOverlay,
    │                                      ScoreOverlay, CharacterOverlay, AbilitySlotsOverlay
-   └─ RegisterMenuScreensEvent [client] → spawner_config -> SpawnerConfigScreen
+   ├─ RegisterMenuScreensEvent [client] → spawner_config -> SpawnerConfigScreen
+   └─ RegisterGameTestsEvent           → eternia_crystal_damage, phase_transitions
+                                          (DungeonDefendersGameTests, voir 05-etat-et-problemes-connus.md)
 
 Bus de jeu (NeoForge.EVENT_BUS)
    ├─ ModEvents.onMonsterSpawn(EntityJoinLevelEvent)
@@ -249,18 +267,10 @@ s'abonne donc au **bus de jeu**, celui des événements runtime (`EntityJoinLeve
 
 ## Access Transformers
 
-`src/main/resources/META-INF/accesstransformer.cfg` élargit la visibilité de trois méthodes
-de `Display` / `Display.TextDisplay` :
-
-```
-public net.minecraft.world.entity.Display$TextDisplay setText(...)
-public net.minecraft.world.entity.Display setBillboardConstraints(...)
-public net.minecraft.world.entity.Display setViewRange(F)V
-```
-
-Elles servaient à une première version de l'affichage des PV, basée sur une entité
-`TextDisplay`. Ce code a été retiré au profit d'un rendu custom (voir
-[02-gameplay.md](02-gameplay.md)) : **l'AT n'est plus utilisé par aucune classe du mod**. Il
-est conservé pour ne pas fermer la porte à cette approche, mais il peut être supprimé sans
-conséquence. NeoForge détecte automatiquement ce fichier, aucune déclaration Gradle n'est
-requise.
+Aucun pour l'instant. `src/main/resources/META-INF/accesstransformer.cfg` élargissait la
+visibilité de trois méthodes de `Display`/`Display.TextDisplay`, utilisées par une première
+version (retirée) de l'affichage des PV basée sur une entité `TextDisplay` — supprimé le
+2026-08-24, plus aucune classe du mod ne les utilisait (rendu custom depuis, voir
+[02-gameplay.md](02-gameplay.md)). Si un futur besoin d'AT se présente : NeoForge détecte
+automatiquement `src/main/resources/META-INF/accesstransformer.cfg`, aucune déclaration Gradle
+n'est requise (voir `build.gradle`, ligne commentée `accessTransformers = ...`).

@@ -6,6 +6,7 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpikeBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
+import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
@@ -14,7 +15,9 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
@@ -65,18 +68,22 @@ public class DungeonDefendersMod {
                         // (TowerWheelScreen) — voir TowerBlockItem, dont useOn() ne fait plus
                         // rien.
                         output.accept(ModBlocks.MANA_TEST_WAND.get());
+                        output.accept(ModBlocks.MANA_FILL_WAND.get());
                         output.accept(ModBlocks.SPAWNER_ITEM.get());
                         output.accept(ModBlocks.TAVERN_CRYSTAL_ITEM.get());
                     })
                     .build());
 
-    public DungeonDefendersMod(IEventBus modEventBus) {
+    public DungeonDefendersMod(IEventBus modEventBus, ModContainer container) {
         // On enregistre tes deux fichiers de registres sur le bus
         ModBlocks.register(modEventBus);
         ModAttachments.register(modEventBus);
         ModMenus.register(modEventBus);
+        ModEntities.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
+
+        container.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
         LOGGER.info("Le mod Dungeon Defenders est initialisé proprement !");
     }

@@ -4,6 +4,7 @@ import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.init.DifficultyScaling;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -169,16 +170,34 @@ public class SpawnerBlockEntity extends BlockEntity {
     @Override
     public void setLevel(Level level) {
         super.setLevel(level);
-        if (level instanceof ServerLevel) {
-            level.getData(ModAttachments.ACTIVE_SPAWNERS).add(this.worldPosition);
+        if (level instanceof ServerLevel serverLevel) {
+            serverLevel.getData(ModAttachments.ACTIVE_SPAWNERS).add(this.worldPosition);
+            // Sinon le total affiché au HUD reste bloqué sur la valeur par défaut de
+            // l'attachment tant qu'aucune vague n'a encore été nettoyée une première fois
+            // (recomputeWaveEnemiesTotal n'était sinon appelée qu'aux transitions de phase).
+            //
+            // Différé via getServer().execute(...) et PAS appelé directement ici : setLevel()
+            // est invoqué par LevelChunk.setBlockEntity() AVANT que ce block entity soit
+            // inséré dans la table du chunk. recomputeWaveEnemiesTotal() appelle
+            // level.getBlockEntity(pos) pour chaque spawner actif (potentiellement lui-même,
+            // pas encore trouvable) — s'il ne le trouve pas, le chunk en recrée un exemplaire à
+            // la volée, qui rappelle setLevel(), qui rappelle recomputeWaveEnemiesTotal(), etc.
+            // : récursion infinie -> StackOverflowError (planté en jeu, voir
+            // 05-etat-et-problemes-connus.md). Exécuter la recompute au tick suivant, une fois
+            // l'enregistrement terminé, élimine la réentrance.
+            serverLevel.getServer().execute(() -> PhaseTransitions.recomputeWaveEnemiesTotal(serverLevel));
         }
     }
 
     @Override
     public void setRemoved() {
         super.setRemoved();
-        if (this.level instanceof ServerLevel) {
-            this.level.getData(ModAttachments.ACTIVE_SPAWNERS).remove(this.worldPosition);
+        if (this.level instanceof ServerLevel serverLevel) {
+            serverLevel.getData(ModAttachments.ACTIVE_SPAWNERS).remove(this.worldPosition);
+            // Différé pour la même raison que dans setLevel() ci-dessus (setRemoved() peut lui
+            // aussi être appelée pendant l'enregistrement d'un autre block entity, quand
+            // LevelChunk.setBlockEntity remplace un exemplaire existant).
+            serverLevel.getServer().execute(() -> PhaseTransitions.recomputeWaveEnemiesTotal(serverLevel));
         }
     }
 

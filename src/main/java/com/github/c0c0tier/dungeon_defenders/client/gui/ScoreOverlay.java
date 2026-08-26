@@ -14,7 +14,7 @@ import net.neoforged.neoforge.client.gui.GuiLayer;
 // 05-etat-et-problemes-connus.md. État de la Level (comme current_wave), pas du joueur.
 public class ScoreOverlay implements GuiLayer {
     private static final int MARGIN = 4;
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
 
     @Override
     public void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {

@@ -82,12 +82,20 @@ public class ModAttachments {
                     .build());
 
     // Phase de la partie (construction, combat...) : état de la Level, comme current_wave.
-    // Stockée comme l'ordinal de GamePhase (même approche que les autres compteurs, pas
-    // besoin d'un Codec dédié à l'enum pour l'instant). Démarre en phase de construction.
+    // En mémoire/réseau, reste l'ordinal de GamePhase (VAR_INT, comme les autres compteurs :
+    // pas besoin d'un Codec dédié à l'enum pour la sync, et tout le reste du mod compare
+    // toujours des ordinaux). Seule la PERSISTANCE (sauvegarde/chargement du monde) passe par
+    // le nom de la constante plutôt que son ordinal : contrairement à l'ordinal, il reste
+    // correct même si l'ordre des valeurs de GamePhase change un jour (insertion d'une phase
+    // avant COMBAT, par exemple) — sans ça une sauvegarde existante se retrouverait avec la
+    // mauvaise phase au chargement. Démarre en phase de construction.
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> GAME_PHASE = ATTACHMENT_TYPES.register(
             "game_phase",
             () -> AttachmentType.builder(() -> GamePhase.BUILD.ordinal())
-                    .serialize(Codec.INT.fieldOf("GamePhase"))
+                    .serialize(Codec.STRING.xmap(
+                            name -> GamePhase.valueOf(name).ordinal(),
+                            ordinal -> GamePhase.values()[ordinal].name()
+                    ).fieldOf("GamePhase"))
                     .sync(ByteBufCodecs.VAR_INT)
                     .build());
 
@@ -124,12 +132,17 @@ public class ModAttachments {
 
     // Difficulté de la partie : état de la Level (comme current_wave), censée être choisie
     // au lancement de la map — aucun écran pour le faire n'existe encore, donc démarre en
-    // Normal. Stockée comme l'ordinal de GameDifficulty, même approche que game_phase.
+    // Normal. Stockée comme l'ordinal de GameDifficulty en mémoire/réseau, comme game_phase ;
+    // la persistance stocke le nom plutôt que l'ordinal, pour la même raison (robuste si
+    // l'ordre de GameDifficulty change un jour — voir le commentaire de GAME_PHASE ci-dessus).
     // Consultée par DifficultyScaling pour calculer le multiplicateur des spawners.
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> DIFFICULTY = ATTACHMENT_TYPES.register(
             "difficulty",
             () -> AttachmentType.builder(() -> GameDifficulty.NORMAL.ordinal())
-                    .serialize(Codec.INT.fieldOf("Difficulty"))
+                    .serialize(Codec.STRING.xmap(
+                            name -> GameDifficulty.valueOf(name).ordinal(),
+                            ordinal -> GameDifficulty.values()[ordinal].name()
+                    ).fieldOf("Difficulty"))
                     .sync(ByteBufCodecs.VAR_INT)
                     .build());
 

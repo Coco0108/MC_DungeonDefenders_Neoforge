@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.entity.ai;
 
+import com.github.c0c0tier.dungeon_defenders.Config;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import net.minecraft.core.BlockPos;
@@ -21,8 +22,6 @@ import org.jspecify.annotations.Nullable;
 // depuis AttackPriorityTargetGoal.
 public abstract class AbstractEterniaCrystalAttackGoal extends MoveToBlockGoal {
 
-    private static final int DEFAULT_SEARCH_RANGE = 16;
-
     /** Dégâts infligés par attaque réussie — lu par les sous-classes dans leur onReachedTarget(...). */
     protected final int damagePerHit;
 
@@ -30,7 +29,7 @@ public abstract class AbstractEterniaCrystalAttackGoal extends MoveToBlockGoal {
 
     protected AbstractEterniaCrystalAttackGoal(
             PathfinderMob mob, double speedModifier, double acceptedDistance, int damagePerHit) {
-        super(mob, speedModifier, DEFAULT_SEARCH_RANGE);
+        super(mob, speedModifier, Config.SEARCH_RANGE.get());
         this.acceptedDistance = acceptedDistance;
         this.damagePerHit = damagePerHit;
     }

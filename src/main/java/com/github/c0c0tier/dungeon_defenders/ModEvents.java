@@ -1,12 +1,15 @@
 package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.entity.ManaCrystalEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackPriorityTargetGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
+import com.github.c0c0tier.dungeon_defenders.init.ManaCrystalType;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
@@ -17,7 +20,10 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class ModEvents {
@@ -25,6 +31,17 @@ public class ModEvents {
     // Vie maximale par défaut d'un joueur (vanilla : 20.0). Lue directement par HealthOverlay
     // via player.getMaxHealth(), pas besoin de la partager ailleurs.
     private static final double PLAYER_MAX_HEALTH = 100.0D;
+
+    // Part du coût de pose remboursée en mana quand le joueur casse lui-même sa tour à la
+    // pioche (voir onTowerBreak) — valeur de test, pas encore équilibrée.
+    private static final float TOWER_MANA_REFUND_RATIO = 0.5F;
+
+    // Décidé avec le joueur : pas de mécanique de faim dans ce mod, la barre est déjà masquée
+    // (DungeonDefendersModClient) mais rien n'empêchait encore la faim de baisser en arrière-
+    // plan (sprint, saut, minage...) — repoussée à son maximum à chaque tick serveur plutôt
+    // que d'essayer d'annuler chaque source d'exhaustion une par une.
+    private static final int FULL_FOOD_LEVEL = 20;
+    private static final float FULL_SATURATION = 20.0F;
 
     @SubscribeEvent
     public static void onMonsterSpawn(EntityJoinLevelEvent event) {
@@ -125,10 +142,28 @@ public class ModEvents {
     }
 
     @SubscribeEvent
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide()) {
+            return;
+        }
+
+        player.getFoodData().setFoodLevel(FULL_FOOD_LEVEL);
+        player.getFoodData().setSaturation(FULL_SATURATION);
+    }
+
+    @SubscribeEvent
     public static void onMonsterDeath(LivingDeathEvent event) {
         Level level = event.getEntity().level();
-        if (level.isClientSide() || !(event.getEntity() instanceof Monster)) {
+        if (level.isClientSide() || !(event.getEntity() instanceof Monster monster)) {
             return;
+        }
+
+        // Décidé avec le joueur : tous les monstres, à chaque mort, quelle que soit la phase
+        // (contrairement au comptage de vague juste en dessous, qui reste Combat uniquement).
+        if (level instanceof ServerLevel serverLevel) {
+            serverLevel.addFreshEntity(new ManaCrystalEntity(
+                    serverLevel, monster.getX(), monster.getY(), monster.getZ(), ManaCrystalType.SMALL.value()));
         }
 
         // Ne compte que les morts pendant le combat : un zombie qui traîne encore en phase
@@ -158,5 +193,46 @@ public class ModEvents {
                         Component.translatable("dungeon_defenders.spawner.wave_cleared")));
             }
         }
+    }
+
+    // Les monstres de ce mod n'ont thématiquement aucune raison de donner de la vraie XP
+    // Minecraft (le système "experience" du mod est déjà séparé et sans rapport) — annulé ici
+    // plutôt que laissé tel quel. Empêche aussi un vrai risque de bug : ExperienceOrb fusionne
+    // automatiquement les orbes proches de même valeur (voir ManaCrystalEntity), une vraie
+    // orbe d'XP vanilla pourrait sinon fusionner avec un cristal de mana et corrompre le
+    // ramassage.
+    @SubscribeEvent
+    public static void onExperienceDrop(LivingExperienceDropEvent event) {
+        if (event.getEntity() instanceof Monster) {
+            event.setCanceled(true);
+        }
+    }
+
+    // BreakBlockEvent (pas BlockEvent.BreakEvent, qui n'existe plus dans cette version) ne
+    // fire que pour une casse initiée par un joueur (a toujours un Player) — jamais pour
+    // Level#destroyBlock déclenché par AbstractTowerBlockEntity.setHealth() à 0 PV en combat.
+    // Le remboursement ne s'applique donc jamais à une tour détruite au combat, seulement à
+    // une casse volontaire à la pioche.
+    @SubscribeEvent
+    public static void onTowerBreak(BreakBlockEvent event) {
+        if (event.getLevel().isClientSide()) {
+            return;
+        }
+
+        if (!(event.getLevel().getBlockEntity(event.getPos()) instanceof AbstractTowerBlockEntity tower)) {
+            return;
+        }
+
+        int refund = Math.round(tower.getManaCost() * TOWER_MANA_REFUND_RATIO);
+        if (refund <= 0) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+        int newMana = Math.min(ModAttachments.MAX_MANA, player.getData(ModAttachments.MANA) + refund);
+        player.setData(ModAttachments.MANA, newMana);
+        player.syncData(ModAttachments.MANA);
+        player.sendSystemMessage(Component.translatable(
+                "dungeon_defenders.tower.mana_refunded", refund, newMana, ModAttachments.MAX_MANA));
     }
 }

@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -15,4 +16,6 @@ public class SpawnerRenderState extends BlockEntityRenderState {
     public boolean visible;
     /** Le total en premier, puis une ligne par ennemi de la composition. */
     public final List<Component> lines = new ArrayList<>();
+    /** Une icône (œuf d'invocation) par ligne de détail de {@link #lines} (donc pas la ligne "total"). */
+    public final List<ItemStackRenderState> icons = new ArrayList<>();
 }
