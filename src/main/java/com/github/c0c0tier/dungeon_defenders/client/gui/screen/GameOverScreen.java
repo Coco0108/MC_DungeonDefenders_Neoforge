@@ -1,0 +1,77 @@
+package com.github.c0c0tier.dungeon_defenders.client.gui.screen;
+
+import com.github.c0c0tier.dungeon_defenders.MapInstance;
+import com.github.c0c0tier.dungeon_defenders.network.StartGamePayload;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.network.chat.Component;
+
+// Ouvert côté client par GameOverPayload (voir PhaseTransitions.onVictory/onDefeat,
+// ModNetworking, DungeonDefendersModClient#onRegisterClientPayloadHandlers) à la fin d'une
+// partie. Deux boutons :
+// - "Rejouer" envoie StartGamePayload, exactement comme le bouton "Jouer" de
+//   MapSelectionScreen (MapInstance.startGame recompose la même zone et retéléporte) ;
+// - "Retour à la taverne" exécute la commande de harnais MapInstance.RETURN_COMMAND, même
+//   effet que le lien cliquable historique dans le chat (voir PhaseTransitions).
+// Pas de Menu ni d'échange serveur pour l'affichage lui-même : victory/defeat est déjà connu
+// au moment où le paquet arrive, rien à lire de plus.
+public class GameOverScreen extends Screen {
+
+    private static final int BUTTON_WIDTH = 150;
+    private static final int BUTTON_HEIGHT = 20;
+    private static final int BUTTON_GAP = 8;
+    private static final int TITLE_COLOR_VICTORY = 0x55FF55;
+    private static final int TITLE_COLOR_DEFEAT = 0xFF5555;
+
+    private final boolean victory;
+
+    public GameOverScreen(boolean victory) {
+        super(Component.translatable(victory
+                ? "dungeon_defenders.game.victory"
+                : "dungeon_defenders.game.defeat"));
+        this.victory = victory;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+
+        int centerX = this.width / 2;
+        int firstButtonY = this.height / 2;
+
+        this.addRenderableWidget(Button.builder(
+                        Component.translatable("dungeon_defenders.game_over.replay"), button -> onReplay())
+                .bounds(centerX - BUTTON_WIDTH / 2, firstButtonY, BUTTON_WIDTH, BUTTON_HEIGHT)
+                .build());
+        this.addRenderableWidget(Button.builder(
+                        Component.translatable("dungeon_defenders.game_over.return_to_tavern"), button -> onReturnToTavern())
+                .bounds(centerX - BUTTON_WIDTH / 2, firstButtonY + BUTTON_HEIGHT + BUTTON_GAP, BUTTON_WIDTH, BUTTON_HEIGHT)
+                .build());
+    }
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
+        guiGraphics.centeredText(this.font, this.getTitle(), this.width / 2, this.height / 2 - 40,
+                this.victory ? TITLE_COLOR_VICTORY : TITLE_COLOR_DEFEAT);
+    }
+
+    private void onReplay() {
+        ClientPacketListener connection = Minecraft.getInstance().getConnection();
+        if (connection != null) {
+            connection.send(new StartGamePayload().toVanillaServerbound());
+        }
+        this.onClose();
+    }
+
+    private void onReturnToTavern() {
+        ClientPacketListener connection = Minecraft.getInstance().getConnection();
+        if (connection != null) {
+            connection.sendCommand(MapInstance.RETURN_COMMAND);
+        }
+        this.onClose();
+    }
+}

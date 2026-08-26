@@ -3,10 +3,12 @@ package com.github.c0c0tier.dungeon_defenders.init;
 import com.github.c0c0tier.dungeon_defenders.MapInstance;
 import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.network.GameOverPayload;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
@@ -68,10 +70,10 @@ public final class PhaseTransitions {
 
     /**
      * La dernière vague (MAX_WAVE) vient d'être nettoyée : diffuse un message de victoire (+
-     * un lien de retour à la taverne) et remet la partie à zéro (vague 1, phase Construction)
-     * pour pouvoir relancer une partie proprement. N'agit pas sur le Cristal d'Eternia
-     * lui-même — voir 05-etat-et-problemes-connus.md, la remise à neuf de la map (tours,
-     * cristal) reste à faire, liée au futur système de maps/structures.
+     * un lien de retour à la taverne, + l'écran GameOverScreen), et remet la partie à zéro
+     * (vague 1, phase Construction) pour pouvoir relancer une partie proprement. N'agit pas sur
+     * le Cristal d'Eternia lui-même — voir 05-etat-et-problemes-connus.md, la remise à neuf de
+     * la map (tours, cristal) reste à faire, liée au futur système de maps/structures.
      */
     public static void onVictory(Level level) {
         resetGameState(level);
@@ -79,15 +81,16 @@ public final class PhaseTransitions {
             player.sendSystemMessage(Component.translatable("dungeon_defenders.game.victory")
                     .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
             player.sendSystemMessage(returnToTavernLink());
+            sendGameOverScreen(player, true);
         }
     }
 
     /**
      * Le Cristal d'Eternia vient d'être détruit : diffuse un message de défaite (+ un lien de
-     * retour à la taverne) et remet la partie à zéro (vague 1, phase Construction), pour que
-     * les spawners arrêtent de faire apparaître des ennemis sur une partie déjà perdue. Le
-     * cristal détruit lui-même n'est pas replacé automatiquement — même remarque que pour
-     * onVictory.
+     * retour à la taverne, + l'écran GameOverScreen), et remet la partie à zéro (vague 1, phase
+     * Construction), pour que les spawners arrêtent de faire apparaître des ennemis sur une
+     * partie déjà perdue. Le cristal détruit lui-même n'est pas replacé automatiquement — même
+     * remarque que pour onVictory.
      */
     public static void onDefeat(Level level) {
         resetGameState(level);
@@ -95,6 +98,18 @@ public final class PhaseTransitions {
             player.sendSystemMessage(Component.translatable("dungeon_defenders.game.defeat")
                     .withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
             player.sendSystemMessage(returnToTavernLink());
+            sendGameOverScreen(player, false);
+        }
+    }
+
+    // level.players() est statiquement typé Player (Level est commun client/serveur), mais
+    // onVictory/onDefeat ne s'exécutent jamais côté client (déclenchés uniquement par de la
+    // logique serveur) : le cast est donc toujours valide en pratique, gardé quand même par
+    // sécurité plutôt que supposé, même principe que les `instanceof ServerLevel` ailleurs
+    // dans le mod.
+    private static void sendGameOverScreen(Player player, boolean victory) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            serverPlayer.connection.send(new GameOverPayload(victory).toVanillaClientbound());
         }
     }
 
