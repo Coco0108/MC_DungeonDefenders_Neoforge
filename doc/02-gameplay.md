@@ -159,10 +159,10 @@ besoin d'une grille de coordonnées puisqu'il n'y en a jamais deux en même temp
 - **`startGame(level)`** (déclenché par `StartGamePayload`) : nettoie la zone (remplace tout
   par de l'air dans un volume autour de `MAP_POS` — plus large que le placeholder lui-même,
   pour rattraper d'éventuelles tours posées autour une fois qu'elles existeront), pose un
-  placeholder générique (même technique que `TavernSpawn`, une simple plateforme), puis
-  téléporte **tous** les joueurs de la `Level` — pas seulement celui qui a cliqué "Jouer",
-  puisqu'une seule partie est partagée par tout le monde (confirmé explicitement : "de toute
-  façon on devra le faire").
+  placeholder générique (même technique que `TavernSpawn`, une simple plateforme), cherche et
+  consomme un `PLAYER_SPAWN` (voir plus bas), puis téléporte **tous** les joueurs de la `Level`
+  — pas seulement celui qui a cliqué "Jouer", puisqu'une seule partie est partagée par tout le
+  monde (confirmé explicitement : "de toute façon on devra le faire").
 - **`returnToTavern(level)`** : même nettoyage de la zone, puis téléporte tout le monde vers
   `TavernSpawn.SPAWN_POS`. Déclenché par la commande `/dd_leave` (voir `ModCommands` et
   "Victoire et défaite" plus bas) — pas encore par un vrai point de sortie posé dans la map
@@ -171,6 +171,31 @@ besoin d'une grille de coordonnées puisqu'il n'y en a jamais deux en même temp
 `MapInstance` est pensé pour que le seul changement nécessaire, une fois de vraies maps
 prêtes, soit de remplacer `buildPlaceholderArena()` par un vrai chargement de structure
 `.nbt` — même logique que ce qui est prévu pour `TavernSpawn` (voir plus haut).
+
+### Le bloc de spawn joueur — `block PLAYER_SPAWN`, `MapInstance#findAndConsumeSpawnMarker`
+
+Décidé avec le joueur (2026-08-26), repris du plan Excel (feuille "Idées" > "CHOIX DE MAP") :
+plutôt qu'une téléportation vers `MAP_POS` codée en dur, le créateur d'une map peut poser un
+bloc `PLAYER_SPAWN` (bloc plein simple, aucun comportement au clic — `BLOCKS.registerSimpleBlock`,
+pas de classe dédiée) à l'endroit exact où les joueurs doivent apparaître.
+
+`findAndConsumeSpawnMarker(level)` parcourt le même volume que `clearZone`/
+`buildPlaceholderArena` (autour de `MAP_POS`), juste après que l'arène a été (re)posée : le
+premier `PLAYER_SPAWN` trouvé est **retiré** (`setBlockAndUpdate(pos, AIR)` — "se supprime pour
+ne pas le voir", comme prévu dans le plan Excel) et sa position devient la destination du
+téléport ; si aucun n'est trouvé, `startGame` retombe sur `MAP_POS` comme avant — **toujours le
+cas aujourd'hui**, puisque `buildPlaceholderArena()` ne pose qu'un sol générique, jamais de
+`PLAYER_SPAWN`. Un seul marqueur est attendu par map ; le premier trouvé gagne, pas de gestion
+de plusieurs candidats.
+
+**Pas concrètement testable pour l'instant** : le mécanisme ne peut être exercé qu'une fois
+qu'une vraie structure `.nbt` de map (contenant un `PLAYER_SPAWN` posé par le créateur) est
+chargée à la place du placeholder — voir "Système de maps/structures" dans
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md). Un `PLAYER_SPAWN` posé
+manuellement dans le placeholder actuel ne survivrait de toute façon pas à la prochaine
+préparation de map (`clearZone` efface tout, y compris un marqueur posé à la main, avant que le
+scan n'ait lieu) : ce n'est pas une limite de `findAndConsumeSpawnMarker` en soi, juste
+l'absence actuelle de structures réelles à charger.
 
 ## Le Cristal d'Eternia
 

@@ -67,6 +67,7 @@ public class DungeonDefendersMod {
                         output.accept(ModBlocks.MANA_TEST_WAND.get());
                         output.accept(ModBlocks.SPAWNER_ITEM.get());
                         output.accept(ModBlocks.TAVERN_CRYSTAL_ITEM.get());
+                        output.accept(ModBlocks.PLAYER_SPAWN_ITEM.get());
                     })
                     .build());
 

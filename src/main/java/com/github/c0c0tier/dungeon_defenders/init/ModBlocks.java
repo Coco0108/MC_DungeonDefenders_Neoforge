@@ -9,6 +9,7 @@ import com.github.c0c0tier.dungeon_defenders.block.TavernCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.block.TowerBlockItem;
 import com.github.c0c0tier.dungeon_defenders.item.ManaTestWandItem;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -76,6 +77,17 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> TAVERN_CRYSTAL_ITEM =
             ITEMS.registerSimpleBlockItem("tavern_crystal", TAVERN_CRYSTAL);
+
+    // 7. Bloc de spawn joueur (plan Excel, feuille "Idées" > "CHOIX DE MAP") : marqueur posé
+    // par le créateur de map à l'endroit où les joueurs doivent apparaître. Bloc plein simple,
+    // aucun comportement au clic : repéré et consommé par MapInstance.startGame() (scan de la
+    // zone + téléportation + auto-suppression), toute la logique vit là-bas, pas ici. Voir
+    // MapInstance et doc/02-gameplay.md.
+    public static final DeferredBlock<Block> PLAYER_SPAWN = BLOCKS.registerSimpleBlock("player_spawn",
+            properties -> properties.strength(2.0F));
+
+    public static final DeferredItem<BlockItem> PLAYER_SPAWN_ITEM =
+            ITEMS.registerSimpleBlockItem("player_spawn", PLAYER_SPAWN);
 
     // Connexion au bus d'événements
     public static void register(IEventBus modEventBus) {
