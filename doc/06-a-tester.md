@@ -654,8 +654,9 @@ block entity — rien de tout ça n'a pu être vérifié visuellement pendant le
 
 ## La suppression de tour (`TowerRemovalState`, `TowerRemovalClientEvents`, `RemoveTowerPayload`)
 
-Jamais testé en jeu. Premier usage d'une touche "bascule" (pas maintenue) dans le mod, et
-premier test du remboursement de mana.
+Deux corrections le 2026-08-26 suite à un premier passage de test — le mode reste actif d'une
+suppression à l'autre a été retiré, et l'exclusion mutuelle avec la roue de pose (qui ne
+bloquait que dans un sens) a été rendue symétrique. Les deux restent à reconfirmer.
 
 - [ ] Poser une tour (Spike Blockade ou Harpoon Turret) via la roue, en phase Construction.
       Appuyer sur `X` (touche par défaut, "Basculer le mode suppression de tour") : un message
@@ -672,22 +673,24 @@ premier test du remboursement de mana.
       monstre à proximité) : **rien** ne doit se passer (pas de dégât au monstre, pas de bloc
       cassé) — le clic gauche doit être totalement neutralisé pendant ce mode, cible valide ou
       non.
-- [ ] Poser deux tours proches, activer le mode, supprimer la première (clic gauche) : le mode
-      doit **rester actif** ensuite (pas besoin de rappuyer sur `X`) — viser et cliquer la
-      seconde tour doit la supprimer aussi, à la suite.
-- [ ] Rappuyer sur `X` pendant que le mode est actif : message "Mode suppression de tour :
-      DÉSACTIVÉ.", le contour orange disparaît même en visant une tour, et le clic gauche
-      redevient normal (peut à nouveau frapper un monstre — casser un bloc reste impossible
-      hors créatif, voir la section dédiée plus bas).
+- [ ] **Changé (2026-08-26)** : après avoir supprimé une tour (clic gauche réussi), le mode
+      doit se **désactiver automatiquement** — message "Mode suppression de tour : DÉSACTIVÉ.",
+      contour orange disparaît, clic gauche redevient normal. Poser deux tours proches, activer
+      le mode, en supprimer une : viser la seconde immédiatement après ne doit **plus** afficher
+      de contour orange (il faut rappuyer sur `X` pour la retirer aussi).
+- [ ] Rappuyer sur `X` (bascule manuelle, sans avoir rien supprimé) pendant que le mode est
+      actif : mêmes effets que ci-dessus (désactivation, message, contour disparaît).
 - [ ] Activer le mode en phase Construction, puis faire basculer en Combat (harnais de test du
       spawner) pendant que le mode est actif : doit se désactiver **automatiquement**, avec le
       message "Les tours ne peuvent être posées qu'en phase de Construction !" (message
       réutilisé, un peu trompeur ici puisqu'il ne parle que de pose — à surveiller si ça prête
       à confusion en jeu).
-- [ ] Essayer d'ouvrir la roue de pose (`R`) pendant que le mode suppression est actif : ne doit
-      **rien** faire (les deux modes ne doivent jamais être actifs en même temps) — et
-      inversement, essayer d'activer le mode suppression (`X`) pendant que le mode pose est
-      actif (hologramme affiché) ne doit rien faire non plus.
+- [ ] **Corrigé (2026-08-26)** : essayer d'ouvrir la roue de pose (`R`) pendant que le mode
+      suppression est actif : ne doit **rien** faire (auparavant, ça ouvrait la roue quand
+      même — bug signalé en jeu : les deux modes restaient actifs en même temps, un clic gauche
+      déclenchait alors à la fois l'annulation de la pose et la suppression de la tour visée).
+      Vérifier aussi le sens inverse : activer le mode suppression (`X`) pendant que le mode
+      pose est actif (hologramme affiché) ne doit rien faire non plus (déjà correct avant).
 - [ ] Essayer de casser une tour à la **pioche**, en survie, hors du mode suppression : ne doit
       **plus rien** faire (voir la section dédiée juste en dessous, "Casser un bloc est
       désactivé") — la touche dédiée est désormais la seule vraie façon de retirer une tour.

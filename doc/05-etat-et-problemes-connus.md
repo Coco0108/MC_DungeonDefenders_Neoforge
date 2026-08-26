@@ -188,11 +188,16 @@ vérifie la CI.
   joueur (2026-08-26) sur le modèle du jeu de référence — touche dédiée (`remove_tower_mode`,
   `X` par défaut) pour entrer/sortir d'un mode suppression, puis clic gauche sur une tour visée
   pour la détruire instantanément et récupérer 50% de son coût en mana
-  (`TOWER_MANA_REFUND_RATIO`, valeur de test comme les coûts de pose). Reste actif après une
-  suppression pour en enchaîner plusieurs. Symétrique à la roue de pose côté serveur (phase
-  Construction uniquement, revalidation complète, aucune confiance dans le client). Détail dans
+  (`TOWER_MANA_REFUND_RATIO`, valeur de test comme les coûts de pose). Symétrique à la roue de
+  pose côté serveur (phase Construction uniquement, revalidation complète, aucune confiance
+  dans le client). **Deux retours de test corrigés le 2026-08-26** : le mode se désactive
+  maintenant après **chaque** suppression (au lieu de rester actif pour en enchaîner plusieurs
+  — retour du joueur, usage réel généralement une tour à la fois) ; et l'exclusion mutuelle
+  avec la roue de pose, qui ne bloquait que dans un sens, bloque maintenant les deux (ouvrir la
+  roue pendant que le mode suppression est actif ne faisait rien pour l'empêcher — un clic
+  gauche pendant la pose déclenchait alors à la fois l'annulation de la pose et la suppression
+  de la tour visée). Détail dans
   [02-gameplay.md](02-gameplay.md#la-suppression-de-tour--clienttowerremovalstatejava-clienttowerremovalclienteventsjava-networkremovetowerpayloadjava).
-  **Jamais testé en jeu.**
 - ✅ Casser un bloc est désactivé pour tout joueur non créatif (`ModEvents.onBlockBreakAttempt`,
   `BreakBlockEvent`) : décidé avec le joueur (2026-08-26), suite directe du point précédent —
   plutôt que de traiter les tours au cas par cas, plus aucun bloc ne se casse en survie, quel
