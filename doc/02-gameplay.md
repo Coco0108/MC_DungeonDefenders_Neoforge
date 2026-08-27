@@ -1710,18 +1710,19 @@ détectait le gain en comparant le total synchronisé d'une frame à l'autre —
 `SCORE` n'est qu'un total : impossible d'en déduire la **source** du gain (kill ? fin de vague ?
 multiplicateur ?). Comme plusieurs sources de score sont prévues (voir "Feuille de route du
 score" plus bas) et que le joueur voulait cette information affichée, `ModEvents.grantScore`
-diffuse maintenant un `ScoreGainPayload(amount, sourceOrdinal)` **en plus** de la sync
-d'attachment habituelle :
+diffuse maintenant un `ScoreGainPayload(amount, sourceOrdinal, enemyOrdinal)` **en plus** de la
+sync d'attachment habituelle :
 
 ```java
-private static void grantScore(Level level, int amount, ScoreSource source) {
+private static void grantScore(Level level, int amount, ScoreSource source, int enemyOrdinal) {
     int score = level.getData(ModAttachments.SCORE) + amount;
     level.setData(ModAttachments.SCORE, score);
     level.syncData(ModAttachments.SCORE);
 
     for (Player player : level.players()) {
         if (player instanceof ServerPlayer serverPlayer) {
-            serverPlayer.connection.send(new ScoreGainPayload(amount, source.ordinal()).toVanillaClientbound());
+            serverPlayer.connection.send(
+                    new ScoreGainPayload(amount, source.ordinal(), enemyOrdinal).toVanillaClientbound());
         }
     }
 }
@@ -1729,9 +1730,11 @@ private static void grantScore(Level level, int amount, ScoreSource source) {
 
 Toute future source de score (fin de vague, fin de map, multiplicateurs) devra passer par
 `grantScore` plutôt que toucher `SCORE` directement, pour ne jamais dupliquer cette double mise
-à jour (attachment + paquet). `init/ScoreSource.java` est l'enum de la source, transmise par
-ordinal comme le reste des enums réseau du mod (`GamePhase`, `GameDifficulty`...) — un seul
-membre pour l'instant (`MONSTER_KILLED`), les futures sources ajouteront le leur le moment venu.
+à jour (attachment + paquet), avec `ScoreGainPayload.NO_ENEMY` (`-1`) comme `enemyOrdinal` tant
+qu'elle n'a pas d'ennemi précis à associer (voir "L'icône de l'ennemi tué" plus bas).
+`init/ScoreSource.java` est l'enum de la source, transmise par ordinal comme le reste des enums
+réseau du mod (`GamePhase`, `GameDifficulty`...) — un seul membre pour l'instant
+(`MONSTER_KILLED`), les futures sources ajouteront le leur le moment venu.
 
 **Premier paquet clientbound de cette branche** (même principe que celui décrit pour
 `GameOverScreen` sur une autre branche, pas encore mergée ici) : le type/codec est enregistré
@@ -1750,8 +1753,8 @@ plus.
 public class ScoreGainOverlay implements GuiLayer {
     public static final ScoreGainOverlay INSTANCE = new ScoreGainOverlay();
     ...
-    public void addPopup(int amount, ScoreSource source) {
-        this.popups.add(new Popup(amount, source, Util.getMillis()));
+    public void addPopup(int amount, ScoreSource source, SpawnableEnemy enemy) {
+        this.popups.add(new Popup(amount, source, enemy, Util.getMillis()));
     }
 }
 ```
@@ -1774,6 +1777,33 @@ fois dans le même tick (plusieurs morts simultanées), chaque appel envoie son 
 contrairement à l'ancienne version basée sur la sync d'attachment, ce n'est **plus** une
 limite : chaque kill produit bien son propre popup, même simultané. La seule limite restante est
 visuelle (superposition à l'écran, pas de décalage automatique).
+
+#### L'icône de l'ennemi tué
+
+Décidé avec le joueur (2026-08-27), juste après le paquet dédié ci-dessus : l'œuf d'invocation
+de l'ennemi apparaît à gauche du texte (ex. œuf de zombie + "+10 Ennemi tué"), même principe que
+l'aperçu de composition du Spawner (`SpawnerBlockEntityRenderer`, qui réutilise déjà les œufs
+comme icônes reconnaissables — mais celui-là dessine en 3D dans le monde, celui-ci en 2D dans le
+HUD).
+
+**Transport** : `ScoreGainPayload` porte un troisième champ, `enemyOrdinal` — l'ordinal du
+`SpawnableEnemy` tué, transmis comme `sourceOrdinal`, ou `ScoreGainPayload.NO_ENEMY` (`-1`) si
+ce gain n'a pas d'ennemi associé (toute future source hors kill). Pas d'`Optional<Integer>` sur
+le réseau : ce mod n'utilise ce patron nulle part ailleurs, une sentinelle entière suffit et
+reste lisible. Résolu côté serveur dans `ModEvents.awardExperienceAndScore` via
+`SpawnableEnemy.find(EntityType<?>)` (rendue publique à cette occasion — auparavant un détail
+privé de `xpValueFor`), avec le même repli `NO_ENEMY` que `DEFAULT_XP_VALUE` si jamais le
+monstre tué n'est pas dans la liste fermée du Spawner.
+
+**Rendu** : `guiGraphics.item(ItemStack, x, y)` — la même méthode que la hotbar vanilla, pas une
+API spéciale à découvrir. Positionnée à gauche du texte (`ICON_GAP` = 2px d'écart), centrée
+verticalement sur la ligne de texte (icône 16px, texte ~9px de haut). **Limite assumée** :
+contrairement au texte, l'icône ne s'estompe pas progressivement — `GuiGraphicsExtractor#item`
+n'a pas de paramètre de teinte/alpha exploité ici, elle reste pleinement opaque tant que le
+popup est affiché puis disparaît d'un coup avec lui, pas de fondu. Coût jugé négligeable :
+l'icône vient de l'atlas de textures des items déjà chargé en mémoire (même atlas que la
+hotbar/l'inventaire vanilla), aucun nouvel asset, et il n'y a jamais plus qu'une poignée de
+popups vivants à la fois (durée de vie 1,5s).
 
 ### Le personnage — `client/gui/CharacterOverlay.java`
 

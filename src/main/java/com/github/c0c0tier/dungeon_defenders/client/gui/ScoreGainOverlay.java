@@ -1,21 +1,23 @@
 package com.github.c0c0tier.dungeon_defenders.client.gui;
 
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
+import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.gui.GuiLayer;
 
 import java.util.ArrayList;
 import java.util.List;
 
-// Petit "+X <source>" flottant en bas à droite de l'écran à chaque gain de score. Alimenté par
-// ScoreGainPayload (network/), pas par une lecture de ModAttachments.SCORE : le total seul ne
-// dit pas d'où vient le gain (kill ? fin de vague ? multiplicateur ?), voir ce paquet et
-// ModEvents.grantScore pour le pourquoi de ce canal séparé.
+// Petit "<œuf> +X <source>" flottant en bas à droite de l'écran à chaque gain de score.
+// Alimenté par ScoreGainPayload (network/), pas par une lecture de ModAttachments.SCORE : le
+// total seul ne dit pas d'où vient le gain (kill ? fin de vague ? multiplicateur ?), voir ce
+// paquet et ModEvents.grantScore pour le pourquoi de ce canal séparé.
 //
 // Instance unique exposée en statique plutôt qu'enregistrée par valeur : le handler client du
 // paquet (DungeonDefendersModClient) doit pouvoir pousser un popup dans la même instance que
@@ -28,17 +30,28 @@ public class ScoreGainOverlay implements GuiLayer {
     private static final int MARGIN = 4;
     private static final int RGB = 0x22C55E; // même vert que ExperienceOverlay
 
+    // Taille fixe d'une icône d'item dessinée par GuiGraphicsExtractor#item (même taille que
+    // dans la hotbar vanilla) — pas de mise à l'échelle, on se contente de la place qu'il faut.
+    private static final int ICON_SIZE = 16;
+    private static final int ICON_GAP = 2;
+
     private final List<Popup> popups = new ArrayList<>();
 
-    private record Popup(int amount, ScoreSource source, long spawnTimeMs) {
+    // enemy peut être null : toute source de score sans ennemi précis (fin de vague/de map, pas
+    // encore implémentées, voir doc/02-gameplay.md) n'a simplement pas d'icône à afficher.
+    private record Popup(int amount, ScoreSource source, SpawnableEnemy enemy, long spawnTimeMs) {
     }
 
     private ScoreGainOverlay() {
     }
 
-    /** Appelé par le handler client de ScoreGainPayload à chaque gain de score reçu du serveur. */
-    public void addPopup(int amount, ScoreSource source) {
-        this.popups.add(new Popup(amount, source, Util.getMillis()));
+    /**
+     * Appelé par le handler client de ScoreGainPayload à chaque gain de score reçu du serveur.
+     *
+     * @param enemy null si ce gain n'a pas d'ennemi associé (pas d'icône affichée pour ce popup)
+     */
+    public void addPopup(int amount, ScoreSource source, SpawnableEnemy enemy) {
+        this.popups.add(new Popup(amount, source, enemy, Util.getMillis()));
     }
 
     @Override
@@ -73,8 +86,19 @@ public class ScoreGainOverlay implements GuiLayer {
 
             Component text = Component.translatable("dungeon_defenders.hud.score_gain",
                     popup.amount(), Component.translatable(popup.source().translationKey()));
-            int width = minecraft.font.width(text);
-            guiGraphics.text(minecraft.font, text, rightX - width, y, color);
+            int textWidth = minecraft.font.width(text);
+            int textX = rightX - textWidth;
+            guiGraphics.text(minecraft.font, text, textX, y, color);
+
+            // L'icône ne suit pas le fondu du texte (GuiGraphicsExtractor#item n'a pas de
+            // paramètre de teinte/alpha) : elle reste pleinement opaque tant que le popup est
+            // affiché, puis disparaît d'un coup avec lui — simplification assumée plutôt qu'une
+            // vraie transition, voir doc/02-gameplay.md.
+            if (popup.enemy() != null) {
+                int iconX = textX - ICON_GAP - ICON_SIZE;
+                int iconY = y - (ICON_SIZE - minecraft.font.lineHeight) / 2;
+                guiGraphics.item(new ItemStack(popup.enemy().spawnEggItem()), iconX, iconY);
+            }
         }
     }
 }

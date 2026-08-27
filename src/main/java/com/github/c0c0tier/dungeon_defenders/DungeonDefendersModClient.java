@@ -19,6 +19,7 @@ import com.github.c0c0tier.dungeon_defenders.entity.MobHealthBarRenderer;
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
+import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
 import com.google.common.reflect.TypeToken;
 
@@ -186,11 +187,15 @@ public class DungeonDefendersModClient {
 
     private static void handleScoreGain(ScoreGainPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            // Pas de borne-check sur l'ordinal ici, contrairement à ModNetworking : ce paquet
-            // vient du serveur (autoritaire dans ce mod co-op), pas d'un client — même confiance
-            // que les autres ordinaux d'enum synchronisés par attachment (GamePhase,
-            // GameDifficulty...), jamais revérifiés côté client non plus.
-            ScoreGainOverlay.INSTANCE.addPopup(payload.amount(), ScoreSource.values()[payload.sourceOrdinal()]);
+            // Pas de borne-check sur les ordinaux ici, contrairement à ModNetworking : ce
+            // paquet vient du serveur (autoritaire dans ce mod co-op), pas d'un client — même
+            // confiance que les autres ordinaux d'enum synchronisés par attachment (GamePhase,
+            // GameDifficulty...), jamais revérifiés côté client non plus. NO_ENEMY (-1) reste un
+            // cas à part : ce n'est pas un ordinal invalide, juste "aucun ennemi associé".
+            SpawnableEnemy enemy = payload.enemyOrdinal() == ScoreGainPayload.NO_ENEMY
+                    ? null
+                    : SpawnableEnemy.values()[payload.enemyOrdinal()];
+            ScoreGainOverlay.INSTANCE.addPopup(payload.amount(), ScoreSource.values()[payload.sourceOrdinal()], enemy);
         });
     }
 

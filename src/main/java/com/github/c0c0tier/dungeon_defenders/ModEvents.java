@@ -210,7 +210,12 @@ public class ModEvents {
     private static void awardExperienceAndScore(Level level, Monster monster) {
         int xpValue = SpawnableEnemy.xpValueFor(monster.getType());
 
-        grantScore(level, xpValue, ScoreSource.MONSTER_KILLED);
+        // NO_ENEMY en repli si jamais ce monstre n'est pas dans la liste fermée du Spawner
+        // (même repli défensif que SpawnableEnemy.xpValueFor juste au-dessus).
+        int enemyOrdinal = SpawnableEnemy.find(monster.getType())
+                .map(SpawnableEnemy::ordinal)
+                .orElse(ScoreGainPayload.NO_ENEMY);
+        grantScore(level, xpValue, ScoreSource.MONSTER_KILLED, enemyOrdinal);
 
         for (Player player : level.players()) {
             grantExperience(player, xpValue);
@@ -222,15 +227,17 @@ public class ModEvents {
     // ScoreGainOverlay côté client — voir ce paquet pour le pourquoi des deux canaux distincts).
     // Toute future source de score (fin de vague, fin de map, multiplicateurs — voir
     // doc/02-gameplay.md) doit passer par ici plutôt que toucher SCORE directement, pour ne pas
-    // dupliquer cette double mise à jour.
-    private static void grantScore(Level level, int amount, ScoreSource source) {
+    // dupliquer cette double mise à jour ; passer ScoreGainPayload.NO_ENEMY si le gain n'a pas
+    // d'ennemi associé (tout ce qui n'est pas un kill).
+    private static void grantScore(Level level, int amount, ScoreSource source, int enemyOrdinal) {
         int score = level.getData(ModAttachments.SCORE) + amount;
         level.setData(ModAttachments.SCORE, score);
         level.syncData(ModAttachments.SCORE);
 
         for (Player player : level.players()) {
             if (player instanceof ServerPlayer serverPlayer) {
-                serverPlayer.connection.send(new ScoreGainPayload(amount, source.ordinal()).toVanillaClientbound());
+                serverPlayer.connection.send(
+                        new ScoreGainPayload(amount, source.ordinal(), enemyOrdinal).toVanillaClientbound());
             }
         }
     }

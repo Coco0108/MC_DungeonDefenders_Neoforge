@@ -98,6 +98,11 @@ vérifier ensemble ici (le mécanisme a changé, le résultat visible attendu au
 - [ ] Tuer un monstre : un "+10 Ennemi tué" (zombie) ou "+15 Ennemi tué" (squelette) apparaît en
       bas à **droite** de l'écran (pas au même endroit que le Score en bas centre), monte
       doucement puis s'estompe en environ 1,5 seconde.
+- [ ] L'œuf d'invocation correspondant (zombie ou squelette) apparaît à gauche du texte, bien
+      centré verticalement dessus, ni minuscule ni énorme (16px, comme dans la hotbar).
+- [ ] L'œuf **disparaît d'un coup** avec le popup à la fin des 1,5 secondes (pas de fondu
+      progressif sur l'icône, contrairement au texte qui s'estompe bien lui) — comportement
+      attendu, pas un bug (voir doc/05).
 - [ ] Tuer plusieurs monstres à quelques instants d'écart : chaque kill affiche son propre
       popup (pas un seul cumulé) — cette fois, ça doit être vrai **même pour des kills
       quasi simultanés** (contrairement à l'ancienne version basée sur la sync d'attachment,

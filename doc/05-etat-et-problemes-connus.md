@@ -158,7 +158,11 @@ vérifie la CI.
   par `ModEvents.grantScore` à chaque gain, en plus de la sync d'attachment habituelle. Un seul
   membre pour l'instant sur `ScoreSource` (`MONSTER_KILLED`) — les futures sources de score
   (fin de vague, fin de map, multiplicateurs) devront passer par `grantScore` et ajouter leur
-  propre membre. Détail dans
+  propre membre. L'œuf d'invocation de l'ennemi tué s'affiche à gauche du texte (même œuf que
+  l'aperçu de composition du Spawner, transporté par un `enemyOrdinal` de plus sur
+  `ScoreGainPayload`, `NO_ENEMY`/`-1` pour toute future source sans ennemi précis) — reste
+  pleinement opaque tant que le popup est affiché, ne suit pas le fondu du texte (limite
+  assumée, `GuiGraphicsExtractor#item` n'a pas de paramètre d'alpha exploité ici). Détail dans
   [02-gameplay.md](02-gameplay.md#le-gain-de-score-flottant--clientguiscoregainoverlayjava-networkscoregainpayloadjava).
   **Jamais testé en jeu.**
 - ✅ Vague en cours : data attachment `current_wave` sur la `Level` (persistant, synchronisé,

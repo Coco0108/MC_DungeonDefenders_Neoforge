@@ -50,10 +50,13 @@ public enum SpawnableEnemy {
     // des ennemis listés ici via le Spawner, mais reste défensif plutôt que de supposer une
     // correspondance garantie (ex. un futur monstre spawné autrement).
     public static int xpValueFor(EntityType<?> entityType) {
-        return findFor(entityType).map(SpawnableEnemy::xpValue).orElse(DEFAULT_XP_VALUE);
+        return find(entityType).map(SpawnableEnemy::xpValue).orElse(DEFAULT_XP_VALUE);
     }
 
-    private static Optional<SpawnableEnemy> findFor(EntityType<?> entityType) {
+    // Public (plutôt que juste un détail interne de xpValueFor) : ModEvents.awardExperienceAndScore
+    // en a aussi besoin pour savoir QUEL ennemi a été tué, pas seulement sa valeur — utilisé
+    // pour l'icône du popup de gain de score (ScoreGainOverlay, via ScoreGainPayload).
+    public static Optional<SpawnableEnemy> find(EntityType<?> entityType) {
         for (SpawnableEnemy enemy : values()) {
             if (enemy.entityType == entityType) {
                 return Optional.of(enemy);
