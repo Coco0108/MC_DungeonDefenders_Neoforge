@@ -34,7 +34,7 @@ fait foi sur ce qui est réellement implémenté.
 
 Catégories utilisées (ouvertes à en ajouter si besoin) : **Tours**, **Mana**,
 **IA / Monstres**, **Vagues / Spawner**, **HUD / UI**, **Maps / Monde**,
-**Classes / Héros**, **Sorts**, **Armes / Armures**, **Divers**.
+**Classes / Héros**, **Sorts**, **Armes / Armures**, **Score / Progression**, **Divers**.
 
 Difficulté : **Facile** / **Moyen** / **Difficile** (estimation grossière, pas
 un chiffrage précis). Statut : **Idée** (brute, pas encore creusée) / **Prête**
@@ -48,6 +48,11 @@ un chiffrage précis). Statut : **Idée** (brute, pas encore creusée) / **Prêt
 | Tours | Upgrade de tour : 4 niveaux par tour (comme le jeu de référence), payant en mana, améliore probablement PV/dégâts/portée. | Difficile | Idée | Touche l'équilibrage de toutes les tours existantes et la roue/l'UI de pose (afficher/choisir un niveau). Proposée par Claude (2026-08-27), pas encore creusée avec le joueur — formule de coût/gain à définir. |
 | IA / Monstres | Vague boss/mini-boss périodique (ex. toutes les 4 vagues) : un ennemi plus costaud que zombie/squelette dans la composition de la vague. | Moyen | Idée | Le Spawner (`SpawnableEnemy`, `SpawnEntry`) sait déjà composer une vague par type/nombre ; le nouveau est surtout le monstre lui-même (stats, éventuellement un comportement dédié) et le déclenchement périodique. Proposée par Claude (2026-08-27). |
 | Vagues / Spawner | Compte à rebours visible avant le début du Combat (ex. "3, 2, 1") au lieu d'un démarrage instantané dès que tout le monde a voté prêt — laisse le temps de finir de placer une tour. | Facile | Idée | Nouvel état transitoire entre le vote et `PhaseTransitions.enterCombat` (ou juste un délai avant l'appel), plus un overlay HUD pour l'afficher. Proposée par Claude (2026-08-27). |
+| Score / Progression | Bonus de score à la fin d'une vague nettoyée (en plus du score déjà donné par chaque kill). | Facile | Idée | Point d'accroche évident : là où `WAVE_ENEMIES_KILLED >= WAVE_ENEMIES_TOTAL` déclenche déjà `PhaseTransitions.enterBuild` (`ModEvents.onMonsterDeath`). Valeur pas encore décidée. Voir [02-gameplay.md](02-gameplay.md#feuille-de-route-du-score-décidée-avec-le-joueur-pas-codée-pour-linstant). |
+| Score / Progression | Bonus de score à la fin de la map (victoire). | Facile | Idée | Point d'accroche : `PhaseTransitions.onVictory`. Valeur pas encore décidée. |
+| Score / Progression | Multiplicateurs de score par vague : aucun dégât pris par un joueur / par le Cristal d'Eternia / aucune tour détruite par les ennemis (cumulables, d'autres critères possibles). | Moyen | Idée | Demande un suivi de dégâts par vague qui n'existe pas encore, pour chacune des trois sources (joueur, cristal, tour) — le plus gros morceau des trois idées de score. |
+| Score / Progression | Multiplicateur de score selon la difficulté choisie (`ModAttachments.DIFFICULTY`). | Facile | Idée | L'attachment existe déjà ; il ne manque qu'une table de multiplicateurs et le point où l'appliquer (probablement au moment de créditer le score, `ModEvents.awardExperienceAndScore`). |
+| Score / Progression | Multiplicateur de score selon la difficulté de la map, un paramètre à définir par le créateur de chaque map. | Difficile | Idée | Nécessite d'ajouter un champ à `init/GameMap.java` (aucun aujourd'hui) — lié au futur système de maps/structures, pas indépendant. |
 
 ## Référence : roadmap de l'ancien prototype
 

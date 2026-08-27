@@ -1761,6 +1761,29 @@ l'origine (voir "L'expérience custom du joueur" plus haut).
 l'instant purement un compteur affiché, voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 
+### Feuille de route du score (décidée avec le joueur, pas codée pour l'instant)
+
+Le kill est **une seule source de score parmi plusieurs prévues** — confirmé avec le joueur
+(2026-08-27) : "le score est officieusement l'XP gagnée sur ce niveau", donc toute future
+source de score suit la même logique (Level-scopée, remise à 0 à chaque partie), sans forcément
+donner de l'expérience joueur en parallèle (l'un n'implique pas l'autre, seul le kill fait
+aujourd'hui les deux à la fois). Prévu, mais **volontairement pas implémenté maintenant** —
+seul le kill (ci-dessus) est en place :
+
+- Bonus de score à la fin d'une vague nettoyée.
+- Bonus de score à la fin de la map (victoire).
+- Multiplicateurs par vague, cumulables (probablement) : aucun dégât pris par un joueur, aucun
+  dégât pris par le Cristal d'Eternia, aucune tour détruite par les ennemis — d'autres pourront
+  s'ajouter. Demande un suivi de dégâts par vague qui n'existe pas encore (ni pour le joueur, ni
+  pour le cristal, ni pour les tours).
+- Multiplicateur selon la difficulté choisie (`ModAttachments.DIFFICULTY`, existe déjà — juste
+  la table de multiplicateurs à définir).
+- Multiplicateur selon la difficulté de la map : un futur paramètre par map (`init/GameMap.java`
+  n'a pas encore ce champ), estimé par le créateur de la map au moment de sa conception.
+
+Formules, valeurs et ordre d'implémentation pas encore tranchés — voir
+[07-idées-et-backlog.md](07-idées-et-backlog.md) pour le suivi ligne par ligne.
+
 ## Les emplacements de compétences — `client/gui/AbilitySlotsOverlay.java`
 
 Quatre ronds en bas à **gauche** de l'écran, juste à droite des losanges vie/mana et
