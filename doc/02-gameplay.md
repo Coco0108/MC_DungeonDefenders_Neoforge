@@ -1175,8 +1175,8 @@ avec 100 PV ils s'étaleraient sur plusieurs rangées de cœurs (le rendu vanill
 ## L'expérience custom du joueur
 
 **Rien à voir avec l'XP vanilla** (`EXPERIENCE_LEVEL`/`getExperienceLevel()`) : c'est une
-ressource propre au mod, pensée pour un futur système de progression/niveaux (pas encore
-défini — rien ne la fait varier pour l'instant, elle démarre à 0).
+ressource propre au mod. Gagnée en tuant des monstres (voir "Expérience, score et niveau —
+`ModEvents.awardExperienceAndScore`" plus bas), elle fait monter `ModAttachments.LEVEL`.
 
 ### L'état — `init/ModAttachments.java`
 
@@ -1194,16 +1194,15 @@ public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> E
                 .build());
 ```
 
-`MAX_EXPERIENCE = 100` est une valeur provisoire : sans système de niveaux défini, il n'y a
-pas encore de vraie notion de "maximum", c'est surtout ce qui donne son échelle à la jauge.
+`MAX_EXPERIENCE = 100` est un plafond **fixe par niveau** (pas de barème croissant du type
+"niveau N demande N×100") : valeur de test, pas encore équilibrée, comme les coûts de pose des
+tours.
 
 ### L'affichage — `client/gui/ExperienceOverlay.java`
 
 Contrairement à `ManaOverlay`/`HealthOverlay`, reste une **barre horizontale** classique
 (jauge + texte `Experience: X/Y` à sa droite, clé `dungeon_defenders.hud.experience`), en
-vert, tout en bas de l'écran, sous les deux losanges. Comme rien ne fait encore varier
-l'attachment, elle s'affiche `0/100` en permanence tant qu'aucun mécanisme n'alimente
-`ModAttachments.EXPERIENCE`.
+vert, tout en bas de l'écran, sous les deux losanges.
 
 ## Le groupe bas-gauche — mana, vie, expérience
 
@@ -1688,12 +1687,11 @@ la barre d'expérience, qui elle est en bas à gauche) :
 ### Le score — `client/gui/ScoreOverlay.java`
 
 `ModAttachments.SCORE` est conceptuellement l'expérience gagnée **sur la carte en cours**,
-par opposition à `ModAttachments.EXPERIENCE` qui est censée persister au-delà d'une carte.
-C'est pourquoi ce n'est pas le même attachment, même si les deux valeurs pourraient un jour
-augmenter ensemble (une capacité tuant un ennemi donnerait de l'XP *et* du score, un peu comme
-la vue et le score au sens jeu vidéo classique). Comme `current_wave`, c'est un état de la
-`Level` : "notre score" est partagé par la partie, pas individuel par joueur. Démarre à `0`,
-rien ne l'alimente encore.
+par opposition à `ModAttachments.EXPERIENCE` qui persiste au-delà d'une carte. Comme
+`current_wave`, c'est un état de la `Level` : "notre score" est partagé par la partie, pas
+individuel par joueur. Démarre à `0`, remis à `0` à chaque nouvelle partie
+(`PhaseTransitions.resetGameState`, appelé à la victoire/défaite — voir "Victoire et défaite"
+plus bas), alimenté par chaque monstre tué (voir "Expérience, score et niveau" ci-dessous).
 
 Affiché en texte seul (pas de jauge, un score n'a pas de maximum), clé
 `dungeon_defenders.hud.score`, centré via `guiGraphics.centeredText(...)`. Expose
@@ -1715,8 +1713,53 @@ Affiche `Nom - niv X` (clé `dungeon_defenders.hud.character`), juste au-dessus 
   d'écran de création de personnage) : voir
   [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 - **Le niveau** (`ModAttachments.LEVEL`) est un attachment joueur (contrairement au score),
-  démarre à `1`, persistant, synchronisé. Rien ne le fait encore monter — pas de formule
-  d'XP → niveau, pas de notion de "monter de niveau".
+  démarre à `1`, persistant, synchronisé. Monte via l'expérience gagnée en tuant des monstres
+  (voir ci-dessous).
+
+### Expérience, score et niveau — `ModEvents.awardExperienceAndScore`/`grantExperience`
+
+Décidé avec le joueur (2026-08-27) : tuer un monstre (toute phase, comme le drop de cristal de
+mana ci-dessus) donne à la fois du score (carte) et de l'expérience (joueur), branché dans le
+même `onMonsterDeath` que le cristal de mana.
+
+**Valeur par monstre** — `init/SpawnableEnemy.xpValue()`, un champ de plus sur l'enum déjà
+utilisé par le Spawner (zombie = 10, squelette = 15, valeurs de test pas encore équilibrées,
+le squelette rapportant plus car il attaque à distance). `SpawnableEnemy.xpValueFor(EntityType)`
+fait la correspondance depuis le monstre tué ; 5 en repli si jamais un monstre hors de cette
+liste venait à mourir (défensif, ne devrait pas arriver tant que le Spawner reste l'unique
+source de monstres).
+
+**Le score** est incrémenté sans conditions : `level.getData(SCORE) + xpValue`.
+
+**L'expérience est partagée entre tous les joueurs présents**, pas seulement celui qui a porté
+le coup fatal — décidé avec le joueur : ce sont surtout les tours qui tuent dans ce mod
+(`AbstractTurretBlockEntity`, dégâts directs sans lien avec un joueur), et rien ne capte
+aujourd'hui "quel joueur a tué quoi". Même logique co-op que le ramassage des cristaux de mana,
+ouvert à n'importe qui plutôt qu'à un seul joueur :
+
+```java
+for (Player player : level.players()) {
+    grantExperience(player, xpValue);
+}
+```
+
+`grantExperience` ajoute la valeur à `EXPERIENCE`, puis boucle tant que `experience >=
+MAX_EXPERIENCE` (100, plafond fixe par niveau, pas de barème croissant pour l'instant) :
+chaque passage décrémente `experience` de `MAX_EXPERIENCE` et incrémente `LEVEL` — une boucle
+plutôt qu'un seul `if`, pour rester correct si un futur monstre à forte valeur d'XP fait
+franchir plusieurs paliers d'un coup. Un message système (`dungeon_defenders.level.up`) est
+envoyé au joueur concerné à chaque passage de niveau — pas redondant avec le HUD, contrairement
+aux anciens messages de victoire/défaite retirés (voir "Victoire et défaite" plus bas) : c'est
+un événement ponctuel, pas un état déjà affiché en permanence.
+
+`ModAttachments.SCORE` est remis à `0` par `PhaseTransitions.resetGameState` (victoire/défaite,
+donc à chaque nouvelle partie) — cohérent avec "score de la carte en cours". `EXPERIENCE`/
+`LEVEL`, eux, ne sont jamais remis à zéro : ils persistent au-delà d'une carte, comme prévu dès
+l'origine (voir "L'expérience custom du joueur" plus haut).
+
+**Pas encore fait** : aucun bonus de statistique (mana/vie max, etc.) lié au niveau — pour
+l'instant purement un compteur affiché, voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 
 ## Les emplacements de compétences — `client/gui/AbilitySlotsOverlay.java`
 

@@ -136,6 +136,19 @@ vérifie la CI.
   rapport avec l'XP vanilla. Le groupe des trois est décrit dans
   [02-gameplay.md](02-gameplay.md#le-groupe-bas-gauche--mana-vie-expérience). **Positionnement
   testé en jeu** (2026-08-23).
+- ✅ Expérience, score et niveau reliés entre eux (`ModEvents.awardExperienceAndScore`/
+  `grantExperience`, 2026-08-27) : chaque monstre tué (toute phase, même logique que le drop de
+  cristal de mana) donne du score à la carte (`ModAttachments.SCORE`) et de l'expérience à
+  **tous les joueurs présents** (partagée, décidé avec le joueur — ce sont surtout les tours
+  qui tuent, pas un joueur en particulier, aucune attribution de kill n'existe). Valeur par
+  monstre = `SpawnableEnemy.xpValue()` (zombie 10, squelette 15, valeurs de test). L'expérience
+  fait monter `ModAttachments.LEVEL` par paliers de `MAX_EXPERIENCE` (100, plafond fixe, pas de
+  barème croissant), avec un message système au passage de niveau. `SCORE` est remis à 0 par
+  `PhaseTransitions.resetGameState` à chaque nouvelle partie ; `EXPERIENCE`/`LEVEL` persistent
+  au-delà d'une carte, sans changement. Pas de bonus de statistique lié au niveau pour
+  l'instant (voir "Ce qui reste"). Détail dans
+  [02-gameplay.md](02-gameplay.md#expérience-score-et-niveau--modeventsawardexperienceandscoregrantexperience).
+  **Jamais testé en jeu.**
 - ✅ Vague en cours : data attachment `current_wave` sur la `Level` (persistant, synchronisé,
   démarre à 1), affichée en haut à droite (`Vague X/5`) via `WaveOverlay` — texte seul, pas de
   jauge. Aucun déroulement de vagues n'existe encore. **Positionnement testé en jeu**
@@ -151,14 +164,14 @@ vérifie la CI.
   (2026-08-23).
 - ✅ Score de la carte : data attachment `score` sur la `Level` (persistant, synchronisé,
   démarre à 0), affiché tout en bas centre de l'écran via `ScoreOverlay` (`Score : X`, texte
-  seul). Censé correspondre à l'expérience gagnée sur la carte en cours, mais distinct de
-  `experience` (qui elle persiste au-delà d'une carte) — rien ne l'alimente encore.
-  **Positionnement testé en jeu** (2026-08-23).
+  seul). Correspond à l'expérience gagnée sur la carte en cours, remis à 0 à chaque nouvelle
+  partie — voir le point ci-dessous. **Positionnement testé en jeu** (2026-08-23).
 - ✅ Nom et niveau du personnage : `character_name` (`String`, distinct du pseudo Minecraft
   mais initialisé avec, faute de mieux) et `level` (`Integer`, démarre à 1) — deux data
   attachments sur le joueur, persistants, synchronisés. Affichés juste au-dessus du score via
-  `CharacterOverlay` (`Nom - niv X`). Rien ne fait encore varier ni l'un ni l'autre.
-  **Positionnement testé en jeu** (2026-08-23).
+  `CharacterOverlay` (`Nom - niv X`). Le nom reste éditable nulle part encore ; le niveau monte
+  désormais avec l'expérience — voir le point ci-dessous. **Positionnement testé en jeu**
+  (2026-08-23).
 - ✅ 4 emplacements de compétences (soin sur soi, sort 1, sort 2, réparation de tour) en bas à
   gauche via `AbilitySlotsOverlay`, juste à droite des losanges vie/mana, dans cet ordre —
   fond en rond (`CircleSlot`), purement visuel : pas de clic, pas de cooldown, pas d'icône.
@@ -370,20 +383,6 @@ système "un item par main" annoncé par le joueur (pas encore conçu ni implém
 vraie perte d'information en jeu, pas seulement esthétique — à garder en tête en testant (voir
 [06-a-tester.md](06-a-tester.md)).
 
-### L'expérience custom n'a pas de vraie utilité de gameplay
-
-Comme le mana à ses débuts : l'attachment `experience` existe et s'affiche, mais rien ne le
-fait varier — pas de source de gain, pas de système de niveaux. Reste `0/100` en permanence
-tant que ça n'existe pas.
-
-### Le score et le niveau ne sont reliés à rien
-
-`score` et `level` existent et s'affichent, mais rien ne les fait varier, et surtout **rien
-ne les relie entre eux ni à `experience`** : tuer un ennemi ne devrait-il pas donner de
-l'expérience *et* du score en même temps ? Le score d'une carte devrait-il remettre `level` à
-jour selon un barème ? Aucune de ces questions n'est tranchée — les trois attachments
-(`experience`, `score`, `level`) coexistent pour l'instant sans logique commune.
-
 ### Pas moyen de changer le nom du personnage
 
 `character_name` est bien un champ distinct du pseudo Minecraft (voir
@@ -391,6 +390,14 @@ jour selon un barème ? Aucune de ces questions n'est tranchée — les trois at
 en pratique, il reste égal au pseudo Minecraft du joueur pour toujours, exactement comme si
 l'attachment n'existait pas. L'intérêt de l'avoir séparé du compte ne se concrétise que le
 jour où une interface de renommage est ajoutée.
+
+### Le niveau n'a pas encore de bonus de statistique
+
+Monter de niveau (voir "Ce qui est implémenté" plus haut) incrémente `ModAttachments.LEVEL` et
+prévient le joueur par un message système, mais reste pour l'instant un pur compteur affiché —
+aucun effet sur le mana max, la vie max, ou quoi que ce soit d'autre. Pas tranché avec le
+joueur : à revoir une fois le reste de la progression (emplacements de compétences, sorts) plus
+avancé.
 
 ### Les emplacements de compétences ne font rien
 

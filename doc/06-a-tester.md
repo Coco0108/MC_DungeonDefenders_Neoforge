@@ -61,6 +61,34 @@ vanilla) et la toute première fois que le mana remonte en jeu.
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ManaCrystalEntity`,
       `ModEntities`, `ModEvents.onExperienceDrop` ou `onTowerBreak`.
 
+## Expérience, score et niveau (`ModEvents.awardExperienceAndScore`/`grantExperience`)
+
+Nouveau (2026-08-27), jamais vérifié visuellement. Branché juste après le drop de cristal de
+mana dans `onMonsterDeath` — même monstre tué, deux effets à vérifier en même temps.
+
+- [ ] Tuer un zombie : le HUD **Score** (bas centre) augmente de **10**, et le HUD
+      **Expérience** (barre verte bas gauche) augmente aussi de **10**.
+- [ ] Tuer un squelette : les deux augmentent de **15** cette fois (zombie et squelette n'ont
+      pas la même valeur, vérifie `SpawnableEnemy.xpValue()`).
+- [ ] **En multijoueur (2 joueurs ou plus)** : tuer un monstre donne bien l'XP à **tous les
+      joueurs présents** en même temps, pas seulement à celui qui a porté le coup — décidé
+      volontairement, à vérifier que ce n'est pas juste un seul joueur qui progresse.
+- [ ] Faire monter l'expérience jusqu'à 100 (plusieurs kills) : au palier, la barre d'XP
+      revient à une valeur basse (pas juste bloquée à 100), le HUD **Nom - niv X** passe au
+      niveau supérieur, et un message système "Niveau supérieur !" apparaît **au joueur
+      concerné seulement**.
+- [ ] Faire un très gros kill d'un coup (si possible, ou vérifier par relecture) ne devrait pas
+      être nécessaire pour ce test — mais si l'XP dépasse 200 en un seul kill, vérifier que le
+      niveau peut monter de 2 d'un coup (boucle `while`, pas juste un `if`).
+- [ ] Aller jusqu'à la victoire ou la défaite (ou utiliser le harnais de test) : le **Score**
+      revient à **0** au redémarrage de la partie (`PhaseTransitions.resetGameState`), mais le
+      **Niveau** et l'**Expérience** du joueur restent inchangés (ils sont censés persister
+      au-delà d'une carte).
+- [ ] Se déconnecter/reconnecter après avoir gagné de l'expérience/un niveau : les deux valeurs
+      sont bien conservées (persistance de l'attachment joueur).
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `awardExperienceAndScore`,
+      `grantExperience` ou `SpawnableEnemy.xpValueFor`.
+
 ## HUD vanilla masqué, faim et hotbar désactivées
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

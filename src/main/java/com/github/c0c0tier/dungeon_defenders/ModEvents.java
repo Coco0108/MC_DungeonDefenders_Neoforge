@@ -8,6 +8,7 @@ import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ManaCrystalType;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
+import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -166,6 +167,8 @@ public class ModEvents {
                     serverLevel, monster.getX(), monster.getY(), monster.getZ(), ManaCrystalType.SMALL.value()));
         }
 
+        awardExperienceAndScore(level, monster);
+
         // Ne compte que les morts pendant le combat : un zombie qui traîne encore en phase
         // de construction (rechargement de chunk, etc.) ne doit pas fausser le compteur.
         if (level.getData(ModAttachments.GAME_PHASE) != GamePhase.COMBAT.ordinal()) {
@@ -192,6 +195,48 @@ public class ModEvents {
                 level.players().forEach(player -> player.sendSystemMessage(
                         Component.translatable("dungeon_defenders.spawner.wave_cleared")));
             }
+        }
+    }
+
+    // Score de la carte (Level) + XP de personnage (joueur) pour chaque monstre tué, quelle
+    // que soit la phase — même inconditionnel que le drop de cristal de mana ci-dessus. Décidé
+    // avec le joueur : partagé entre TOUS les joueurs présents plutôt qu'attribué à celui qui a
+    // porté le coup fatal, parce que ce sont surtout les tours qui tuent dans ce mod (aucune
+    // notion de "quel joueur a tué quoi" n'existe aujourd'hui) — même logique co-op que le
+    // ramassage des cristaux de mana, ouvert à tous.
+    private static void awardExperienceAndScore(Level level, Monster monster) {
+        int xpValue = SpawnableEnemy.xpValueFor(monster.getType());
+
+        int score = level.getData(ModAttachments.SCORE) + xpValue;
+        level.setData(ModAttachments.SCORE, score);
+        level.syncData(ModAttachments.SCORE);
+
+        for (Player player : level.players()) {
+            grantExperience(player, xpValue);
+        }
+    }
+
+    // Boucle plutôt qu'un seul passage : un futur ennemi à forte valeur d'XP pourrait franchir
+    // plusieurs paliers de niveau d'un coup. MAX_EXPERIENCE reste un plafond fixe par niveau
+    // pour l'instant (pas de barème croissant), comme les autres valeurs de test du mod.
+    private static void grantExperience(Player player, int xpValue) {
+        int experience = player.getData(ModAttachments.EXPERIENCE) + xpValue;
+        int level = player.getData(ModAttachments.LEVEL);
+
+        while (experience >= ModAttachments.MAX_EXPERIENCE) {
+            experience -= ModAttachments.MAX_EXPERIENCE;
+            level++;
+        }
+
+        boolean leveledUp = level != player.getData(ModAttachments.LEVEL);
+
+        player.setData(ModAttachments.EXPERIENCE, experience);
+        player.syncData(ModAttachments.EXPERIENCE);
+        player.setData(ModAttachments.LEVEL, level);
+        player.syncData(ModAttachments.LEVEL);
+
+        if (leveledUp) {
+            player.sendSystemMessage(Component.translatable("dungeon_defenders.level.up", level));
         }
     }
 
