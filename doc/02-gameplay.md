@@ -1012,15 +1012,20 @@ fait" plus bas.
 
 État transitoire client (pas persistant, pas synchronisé), même esprit que
 `TowerPlacementState` mais plus simple : juste `active`/`targetPos`/`targetValid`, pas
-d'étapes. Contrairement au mode pose (qui se termine après une seule confirmation), **reste
-actif après une suppression** pour pouvoir en enchaîner plusieurs sans rappuyer sur la touche à
-chaque fois — comme dans le jeu de référence. Ne se désactive que sur un nouvel appui sur la
-touche, ou automatiquement si la phase quitte Construction, si l'écran ou le niveau/joueur
-deviennent indisponibles.
+d'étapes. **Se désactive après chaque suppression** (retour du joueur, 2026-08-26, changé
+depuis le comportement d'origine qui restait actif pour enchaîner plusieurs suppressions comme
+dans le jeu de référence) — en usage réel, le joueur en retire généralement une seule à la
+fois, rester en mode suppression après coup gênait plus qu'il n'aidait. Se désactive aussi sur
+un nouvel appui sur la touche (bascule manuelle), ou automatiquement si la phase quitte
+Construction, si l'écran ou le niveau/joueur deviennent indisponibles.
 
 `TowerRemovalClientEvents.onClientTick` refuse de basculer le mode si la roue de pose
-(`TowerPlacementState.isActive()`) est déjà active ou qu'un écran est ouvert — les deux modes ne
-se chevauchent jamais.
+(`TowerPlacementState.isActive()`) est déjà active ou qu'un écran est ouvert. **Symétriquement**
+(bug signalé en jeu et corrigé le 2026-08-26), `TowerPlacementClientEvents.onClientTick` refuse
+maintenant d'ouvrir la roue si le mode suppression (`TowerRemovalState.isActive()`) est déjà
+actif — l'ancienne version ne vérifiait ce garde-fou que dans un seul sens : rester en mode
+suppression pendant tout un mode pose laissait un clic gauche déclencher les deux handlers à la
+fois (annulation de la pose **et** suppression de la tour visée).
 
 ### Le ciblage — raycast `OUTLINE`, comme la pose
 

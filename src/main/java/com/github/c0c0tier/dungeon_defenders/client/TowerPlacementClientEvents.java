@@ -62,11 +62,17 @@ public class TowerPlacementClientEvents {
     static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
 
-        if (ModKeyMappings.TOWER_WHEEL.consumeClick() && minecraft.screen == null) {
+        if (ModKeyMappings.TOWER_WHEEL.consumeClick() && minecraft.screen == null
+                && !TowerRemovalState.isActive()) {
             // Autant prévenir tout de suite plutôt que de laisser le joueur faire tout le
             // mode pose pour se faire refuser à la toute fin (voir ModEvents.onBlockadePlace,
             // seule autorité réelle côté serveur) : la roue elle-même ne s'ouvre qu'en phase
-            // Construction.
+            // Construction. Le garde !TowerRemovalState.isActive() est le pendant exact de
+            // celui de TowerRemovalClientEvents (!TowerPlacementState.isActive()) : sans lui,
+            // le mode suppression restait actif pendant tout le mode pose (bug signalé en jeu,
+            // 2026-08-26) — un clic gauche déclenchait alors À LA FOIS l'annulation de la pose
+            // (TowerPlacementClientEvents) ET une suppression de la tour visée
+            // (TowerRemovalClientEvents), les deux handlers traitant le même événement.
             if (minecraft.level != null && minecraft.player != null
                     && minecraft.level.getData(ModAttachments.GAME_PHASE) == GamePhase.BUILD.ordinal()) {
                 minecraft.setScreen(new TowerWheelScreen());

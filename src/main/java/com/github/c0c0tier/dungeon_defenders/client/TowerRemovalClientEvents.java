@@ -125,8 +125,17 @@ public class TowerRemovalClientEvents {
         if (connection != null) {
             connection.send(new RemoveTowerPayload(pos).toVanillaServerbound());
         }
-        // Reste actif : voir TowerRemovalState, pour enchaîner plusieurs suppressions comme
-        // dans le jeu de référence.
+
+        // Désactivé après chaque suppression plutôt que laissé actif pour en enchaîner
+        // plusieurs (comportement d'origine) : changé sur retour du joueur (2026-08-26), qui
+        // supprime généralement une seule tour à la fois — redevenir actif à chaque suppression
+        // était plus gênant que pratique en usage réel. Reste un simple appui sur `X` pour
+        // repartir sur la suivante.
+        TowerRemovalState.cancel();
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player != null) {
+            player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.removal_mode_off"));
+        }
     }
 
     @SubscribeEvent
