@@ -68,7 +68,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── AbilitySlotsOverlay.java      # 4 emplacements de compétences, bas gauche, à côté des losanges (client uniquement)
     │   ├── entity/
     │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
-    │   │   ├── MobHealthBarLayer.java         # RenderLayer : barre de vie zombie/squelette, cachée à PV pleins/hors portée (client)
+    │   │   ├── MobHealthBarRenderer.java      # RenderLivingEvent.Post : barre de vie zombie/squelette, cachée à PV pleins/hors portée (client)
     │   │   └── ai/
     │   │       ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal (un seul sous-classeur : la version à distance)
     │   │       ├── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal (archers, ignorent Blockade/Turret)
@@ -205,8 +205,8 @@ Chargement FML
    │                                      (C2S, ModNetworking — commun, pas client-only)
    ├─ RegisterRenderers [client]       → EterniaCrystalBlockEntityRenderer, SpawnerBlockEntityRenderer, TowerHealthBarRenderer (Blockade + Turret)
    ├─ RegisterRenderStateModifiersEvent [client] → HEALTH/MAX_HEALTH/ENTITY_ID sur tout LivingEntityRenderState
-   │                                                (MobHealthBarLayer, lu par la couche ci-dessous)
-   ├─ AddLayers [client]               → MobHealthBarLayer sur ZombieRenderer + SkeletonRenderer
+   │                                                (lu par MobHealthBarRenderer, bus de jeu ci-dessous — pas
+   │                                                un RenderLayer/AddLayers, voir 02-gameplay.md pour le pourquoi)
    ├─ RegisterGuiLayersEvent [client]  → ManaOverlay, HealthOverlay, ExperienceOverlay,
    │                                      WaveOverlay, WaveEnemiesOverlay, PhaseOverlay,
    │                                      ScoreOverlay, CharacterOverlay, AbilitySlotsOverlay
@@ -216,6 +216,8 @@ Chargement FML
                                           (DungeonDefendersGameTests, voir 05-etat-et-problemes-connus.md)
 
 Bus de jeu (NeoForge.EVENT_BUS)
+   ├─ MobHealthBarRenderer.onRenderLiving(RenderLivingEvent.Post) [client] → billboard de vie
+   │    filtré sur zombie/squelette, lit HEALTH/MAX_HEALTH/ENTITY_ID posés ci-dessus
    ├─ ModEvents.onMonsterSpawn(EntityJoinLevelEvent)
    ├─ ModEvents.onPlayerJoin(EntityJoinLevelEvent)
    ├─ ModEvents.onMonsterDeath(LivingDeathEvent)
