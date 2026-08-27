@@ -307,6 +307,9 @@ fois qu'une vraie structure `.nbt` de map (avec un `PLAYER_SPAWN` posé dedans) 
 
 - [ ] En créatif, ouvrir l'onglet créatif du mod : un item "Spawn Joueur" doit apparaître,
       poser le bloc correspondant sans crash.
+- [ ] **Corrigé (2026-08-26)** : l'item dans la main/l'inventaire doit maintenant afficher la
+      texture de lodestone (auparavant cassée, `models/item/player_spawn.json` manquant) —
+      identique à l'apparence du bloc posé, pas de texture manquante/magenta-noir.
 - [ ] Poser le bloc n'importe où (taverne, placeholder de map...) : doit avoir l'apparence
       d'un bloc de lodestone (texture placeholder, voir doc/02-gameplay.md), pas de texture
       manquante.

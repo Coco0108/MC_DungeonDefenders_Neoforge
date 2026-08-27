@@ -197,6 +197,22 @@ préparation de map (`clearZone` efface tout, y compris un marqueur posé à la 
 scan n'ait lieu) : ce n'est pas une limite de `findAndConsumeSpawnMarker` en soi, juste
 l'absence actuelle de structures réelles à charger.
 
+### Texture cassée en main — `models/item/player_spawn.json`
+
+Signalé en jeu (2026-08-26) : l'item s'affichait avec une texture manquante dans la main/
+l'inventaire, alors que le bloc posé s'affichait correctement. Cause : contrairement au modèle
+de **bloc** (`models/block/player_spawn.json`, ajouté dès le départ), aucun modèle d'**item**
+n'avait été créé — sans lui, rien n'indique au jeu quel modèle utiliser pour l'icône. Corrigé
+en ajoutant `models/item/player_spawn.json` avec `"parent":
+"dungeon_defenders:block/player_spawn"` — le même mécanisme standard que les blocs vanilla
+simples (ex. `minecraft:item/dirt`, qui référence directement `minecraft:block/dirt`).
+
+> Plusieurs autres blocs du mod (`spawner`, `tavern_crystal`, `spike_blockade`,
+> `harpoon_turret`, `eternia_crystal`) n'ont eux non plus jamais eu de `models/item/*.json`
+> dédié — probablement le même problème en main/inventaire pour chacun, jamais signalé jusqu'ici
+> faute d'avoir été spécifiquement regardé. Pas corrigé ici (hors scope de cette branche/PR,
+> chacun vit dans un autre fichier/PR) — à vérifier et corriger au cas par cas.
+
 ## Le Cristal d'Eternia
 
 ### Le bloc — `block/EterniaCrystalBlock.java`
