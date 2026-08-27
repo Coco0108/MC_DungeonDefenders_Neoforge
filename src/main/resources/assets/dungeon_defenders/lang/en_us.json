@@ -20,7 +20,6 @@
   "dungeon_defenders.eternia_crystal.ready_progress": "Ready: %s/%s",
   "dungeon_defenders.game.victory": "Victory! All waves cleared.",
   "dungeon_defenders.game.defeat": "Defeat! The Eternia Crystal has fallen.",
-  "dungeon_defenders.game.return_to_tavern": "[Return to the tavern]",
   "dungeon_defenders.game_over.replay": "Play again",
   "dungeon_defenders.game_over.return_to_tavern": "Return to the tavern",
   "dungeon_defenders.tower.build_phase_only": "Towers can only be placed during the Build phase!",

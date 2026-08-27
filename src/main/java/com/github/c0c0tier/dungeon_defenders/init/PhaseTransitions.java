@@ -1,13 +1,9 @@
 package com.github.c0c0tier.dungeon_defenders.init;
 
-import com.github.c0c0tier.dungeon_defenders.MapInstance;
 import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.network.GameOverPayload;
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.ClickEvent;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -69,35 +65,32 @@ public final class PhaseTransitions {
     }
 
     /**
-     * La dernière vague (MAX_WAVE) vient d'être nettoyée : diffuse un message de victoire (+
-     * un lien de retour à la taverne, + l'écran GameOverScreen), et remet la partie à zéro
-     * (vague 1, phase Construction) pour pouvoir relancer une partie proprement. N'agit pas sur
-     * le Cristal d'Eternia lui-même — voir 05-etat-et-problemes-connus.md, la remise à neuf de
-     * la map (tours, cristal) reste à faire, liée au futur système de maps/structures.
+     * La dernière vague (MAX_WAVE) vient d'être nettoyée : ouvre {@code GameOverScreen} pour
+     * chaque joueur (voir {@link #sendGameOverScreen}) et remet la partie à zéro (vague 1,
+     * phase Construction) pour pouvoir relancer une partie proprement. N'agit pas sur le
+     * Cristal d'Eternia lui-même — voir 05-etat-et-problemes-connus.md, la remise à neuf de la
+     * map (tours, cristal) reste à faire, liée au futur système de maps/structures.
+     *
+     * <p>Décidé avec le joueur (2026-08-26) : plus de message système ni de lien "Retour à la
+     * taverne" dans le chat, devenus redondants avec {@code GameOverScreen} (qui a ses propres
+     * boutons "Rejouer"/"Retour à la taverne") — voir doc/02-gameplay.md.
      */
     public static void onVictory(Level level) {
         resetGameState(level);
         for (Player player : level.players()) {
-            player.sendSystemMessage(Component.translatable("dungeon_defenders.game.victory")
-                    .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
-            player.sendSystemMessage(returnToTavernLink());
             sendGameOverScreen(player, true);
         }
     }
 
     /**
-     * Le Cristal d'Eternia vient d'être détruit : diffuse un message de défaite (+ un lien de
-     * retour à la taverne, + l'écran GameOverScreen), et remet la partie à zéro (vague 1, phase
-     * Construction), pour que les spawners arrêtent de faire apparaître des ennemis sur une
-     * partie déjà perdue. Le cristal détruit lui-même n'est pas replacé automatiquement — même
-     * remarque que pour onVictory.
+     * Le Cristal d'Eternia vient d'être détruit : ouvre {@code GameOverScreen} pour chaque
+     * joueur et remet la partie à zéro (vague 1, phase Construction), pour que les spawners
+     * arrêtent de faire apparaître des ennemis sur une partie déjà perdue. Le cristal détruit
+     * lui-même n'est pas replacé automatiquement — même remarque que pour {@link #onVictory}.
      */
     public static void onDefeat(Level level) {
         resetGameState(level);
         for (Player player : level.players()) {
-            player.sendSystemMessage(Component.translatable("dungeon_defenders.game.defeat")
-                    .withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
-            player.sendSystemMessage(returnToTavernLink());
             sendGameOverScreen(player, false);
         }
     }
@@ -111,16 +104,6 @@ public final class PhaseTransitions {
         if (player instanceof ServerPlayer serverPlayer) {
             serverPlayer.connection.send(new GameOverPayload(victory).toVanillaClientbound());
         }
-    }
-
-    // Lien cliquable qui lance la commande de harnais MapInstance.RETURN_COMMAND (voir
-    // ModCommands) — en attendant un vrai point de sortie posé dans chaque map.
-    private static Component returnToTavernLink() {
-        return Component.translatable("dungeon_defenders.game.return_to_tavern")
-                .withStyle(style -> style
-                        .withColor(ChatFormatting.AQUA)
-                        .withUnderlined(true)
-                        .withClickEvent(new ClickEvent.RunCommand("/" + MapInstance.RETURN_COMMAND)));
     }
 
     private static void resetGameState(Level level) {

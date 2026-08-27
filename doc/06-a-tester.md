@@ -321,15 +321,23 @@ fois qu'une vraie structure `.nbt` de map (avec un `PLAYER_SPAWN` posé dedans) 
 
 ## L'écran de fin de partie (`GameOverScreen`, `GameOverPayload`)
 
-Jamais testé en jeu. Premier paquet **clientbound** du mod — à surveiller particulièrement
-(risque de `NoClassDefFoundError` côté serveur dédié si le handler avait été enregistré au
-mauvais endroit, voir doc/02-gameplay.md).
+Premier paquet **clientbound** du mod — à surveiller particulièrement (risque de
+`NoClassDefFoundError` côté serveur dédié si le handler avait été enregistré au mauvais
+endroit, voir doc/02-gameplay.md). **Deux corrections le 2026-08-26** suite à un premier test :
+le titre ne s'affichait pas (couleurs sans octet alpha explicite, corrigé) et les messages de
+chat victoire/défaite ont été retirés (redondants avec l'écran). Les points ci-dessous sont à
+reconfirmer avec ces deux changements.
 
-- [ ] À la **victoire** (voir section précédente) : en plus du message système, un écran plein
-      doit s'ouvrir automatiquement, titre **"Victoire ! Toutes les vagues sont nettoyées."**
-      en **vert**, avec deux boutons **"Rejouer"** et **"Retour à la taverne"**.
-- [ ] À la **défaite** : même écran, titre **"Défaite ! Le Cristal d'Eternia est tombé."** en
-      **rouge**.
+- [ ] À la **victoire** (voir section précédente) : un écran plein doit s'ouvrir
+      automatiquement, avec le titre **"Victoire ! Toutes les vagues sont nettoyées."** bien
+      **visible** en **vert** (auparavant invisible, seuls les boutons apparaissaient), avec
+      deux boutons **"Rejouer"** et **"Retour à la taverne"**.
+- [ ] À la **défaite** : même écran, titre **"Défaite ! Le Cristal d'Eternia est tombé."** bien
+      visible en **rouge**.
+- [ ] **Changé (2026-08-26)** : plus aucun message système de victoire/défaite ni lien "Retour
+      à la taverne" ne doit apparaître dans le chat — seul l'écran `GameOverScreen` doit
+      annoncer le résultat désormais (le message de destruction du cristal lui-même,
+      `eternia_crystal.destroyed`, reste inchangé, c'est un message distinct).
 - [ ] Avec **plusieurs joueurs** présents : l'écran doit s'ouvrir pour **tous**, pas seulement
       celui qui a déclenché la victoire/défaite (ex. celui qui a tué le dernier monstre, ou
       celui dont l'attaque a détruit le cristal).

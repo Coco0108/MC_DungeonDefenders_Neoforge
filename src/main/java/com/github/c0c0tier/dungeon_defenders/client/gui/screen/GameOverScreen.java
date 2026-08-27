@@ -23,8 +23,16 @@ public class GameOverScreen extends Screen {
     private static final int BUTTON_WIDTH = 150;
     private static final int BUTTON_HEIGHT = 20;
     private static final int BUTTON_GAP = 8;
-    private static final int TITLE_COLOR_VICTORY = 0x55FF55;
-    private static final int TITLE_COLOR_DEFEAT = 0xFF5555;
+    // Alpha explicite (0xFF______) obligatoire : GuiGraphicsExtractor#text (voir
+    // extractRenderState ci-dessous) ignore silencieusement tout texte dont le canal alpha vaut
+    // 0 (if (ARGB.alpha(color) != 0) avant d'ajouter le texte au render state, vérifié dans les
+    // sources décompilées) — contrairement à l'ancien GuiGraphics.drawString, cette version ne
+    // force plus alpha=0xFF par défaut pour une couleur écrite sans son octet de poids fort.
+    // Un littéral 0xRRGGBB "nu" (comme ici avant correction, 2026-08-26) vaut donc 0x00RRGGBB
+    // en pratique : texte soumis au rendu mais totalement transparent, donc invisible sans la
+    // moindre erreur — exactement le bug signalé en jeu ("juste les boutons, pas le texte").
+    private static final int TITLE_COLOR_VICTORY = 0xFF55FF55;
+    private static final int TITLE_COLOR_DEFEAT = 0xFFFF5555;
 
     private final boolean victory;
 
