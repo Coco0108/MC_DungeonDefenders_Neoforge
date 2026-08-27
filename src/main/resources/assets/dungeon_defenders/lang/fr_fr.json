@@ -72,7 +72,6 @@
 
   "dungeon_defenders.mana_chest.opened": "+%s mana grâce au coffre (%s/%s)",
   "dungeon_defenders.mana_chest.already_opened": "Ce coffre est vide, reviens à la prochaine vague.",
-  "dungeon_defenders.mana_chest.build_phase_only": "Le coffre de mana ne peut être ouvert qu'en phase de Construction !",
   "dungeon_defenders.mana_chest.config_title": "Configuration du coffre de mana",
   "dungeon_defenders.mana_chest.config_amount": "Quantité de mana",
   "dungeon_defenders.mana_chest.config_confirm": "Valider",

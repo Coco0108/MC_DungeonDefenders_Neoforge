@@ -282,15 +282,17 @@ vérifie la CI.
   feuille "Idées" du plan Excel du joueur) : meuble de map, comme le Cristal d'Eternia/le
   Spawner — posé par le créateur, pas par un joueur en jeu. Donne une quantité de mana
   configurable par map au clic droit en survie, une fois par vague (comparaison à
-  `CURRENT_WAVE`), uniquement en phase Construction. Comme dans le jeu de référence, le coffre
-  **disparaît** une fois ouvert (invisible et traversable, propriété de blockstate `OPENED`) et
-  **réapparaît** à la vague suivante (`ManaChestBlock#respawnAll`, appelé par
-  `PhaseTransitions#enterBuild`, via un registre `ACTIVE_MANA_CHESTS` — même principe
-  qu'`ACTIVE_SPAWNERS`). Clic droit en créatif ouvre un écran de configuration (même patron que
-  `SpawnerConfigScreen`, un seul champ) — configuration figée hors créatif, comme le spawner.
-  Distribuera aussi des armes plus tard, hors scope pour l'instant (voir "Ce qui reste"). Détail
-  dans [02-gameplay.md](02-gameplay.md#le-coffre-de-mana--blockmanachestblockjava). **Jamais testé
-  en jeu.**
+  `CURRENT_WAVE`), **quelle que soit la phase** (2026-08-26 : la restriction "Construction
+  uniquement" a été retirée, un joueur peut vouloir du mana en pleine Combat). Comme dans le
+  jeu de référence, le coffre **disparaît** une fois ouvert (invisible et traversable,
+  propriété de blockstate `OPENED`) et **réapparaît** à la vague suivante
+  (`ManaChestBlock#respawnAll`, appelé par `PhaseTransitions#enterBuild`, via un registre
+  `ACTIVE_MANA_CHESTS` — même principe qu'`ACTIVE_SPAWNERS`) — **signalé cassé en jeu**
+  (2026-08-26), revu en détail sans trouver de cause, voir "Ce qui reste" ci-dessous. Clic
+  droit en créatif ouvre un écran de configuration (même patron que `SpawnerConfigScreen`, un
+  seul champ) — configuration figée hors créatif, comme le spawner. Distribuera aussi des
+  armes plus tard, hors scope pour l'instant (voir "Ce qui reste"). Détail dans
+  [02-gameplay.md](02-gameplay.md#le-coffre-de-mana--blockmanachestblockjava).
 - ✅ Suppression de tour (`client/TowerRemovalState.java`,
   `client/TowerRemovalClientEvents.java`, `network/RemoveTowerPayload.java`) : décidé avec le
   joueur (2026-08-26) sur le modèle du jeu de référence — touche dédiée (`remove_tower_mode`,
@@ -397,6 +399,28 @@ Même situation pour `models/block/spike_blockade.json`, qui pointe sur
 `minecraft:block/dripstone_block` en attendant `textures/block/spike_blockade.png`. Même
 situation encore pour `models/block/mana_chest.json`, qui pointe sur
 `minecraft:block/barrel_top`.
+
+### Les coffres ne réapparaissent pas en jeu — cause non trouvée
+
+Signalé en testant en jeu (2026-08-26). Relu en détail (`ManaChestBlock#respawnAll`,
+`PhaseTransitions#enterBuild`/`resetGameState`, `ModAttachments.ACTIVE_MANA_CHESTS`) sans
+trouver de bug : les deux points d'entrée en Construction appellent bien `respawnAll`, le
+registre suit le même patron qu'`ACTIVE_SPAWNERS` (fonctionnel, confirmé en jeu), et le
+changement de blockstate utilise le mécanisme vanilla standard. Pas corrigé faute d'avoir
+trouvé la vraie cause — détail dans
+[02-gameplay.md](02-gameplay.md#disparition-et-réapparition-visuelles--manachestblockopened-respawnall).
+À retester avec un scénario précis (un seul coffre, harnais de test du spawner pour changer de
+phase manuellement) pour resserrer le diagnostic la prochaine fois.
+
+### Le coffre ne fait pas tomber l'excédent de mana au sol
+
+Demandé le 2026-08-26 : si le mana du joueur est déjà proche du maximum à l'ouverture, la
+partie qui dépasserait 100 devrait tomber au sol sous forme ramassable plutôt que d'être
+perdue — actuellement `tryOpen` plafonne juste au maximum (`Math.min(MAX_MANA, ...)`) sans
+rien faire du surplus. Pas implémenté : dépend probablement de `ManaCrystalEntity`
+(`feature/mana-crystals`, PR #12, pas encore mergée dans cette branche) pour représenter le
+mana qui tombe — même dépendance déjà notée plus haut pour la distribution d'armes. À reprendre
+une fois #12 mergée.
 
 ### Le coffre de mana ne distribue pas encore d'armes
 

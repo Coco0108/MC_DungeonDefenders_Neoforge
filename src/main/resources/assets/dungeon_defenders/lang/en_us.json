@@ -72,7 +72,6 @@
 
   "dungeon_defenders.mana_chest.opened": "+%s mana from the chest (%s/%s)",
   "dungeon_defenders.mana_chest.already_opened": "This chest is empty, come back next wave.",
-  "dungeon_defenders.mana_chest.build_phase_only": "The mana chest can only be opened during the Build phase!",
   "dungeon_defenders.mana_chest.config_title": "Mana chest configuration",
   "dungeon_defenders.mana_chest.config_amount": "Mana amount",
   "dungeon_defenders.mana_chest.config_confirm": "Confirm",
