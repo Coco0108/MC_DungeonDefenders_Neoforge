@@ -10,6 +10,7 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.ExperienceOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.HealthOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ManaOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.PhaseOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreGainOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveOverlay;
@@ -131,6 +132,9 @@ public class DungeonDefendersModClient {
         event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "score_overlay"),
                 new ScoreOverlay());
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "score_gain_overlay"),
+                new ScoreGainOverlay());
         event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "character_overlay"),
                 new CharacterOverlay());

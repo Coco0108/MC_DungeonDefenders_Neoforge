@@ -1699,6 +1699,47 @@ Affiché en texte seul (pas de jauge, un score n'a pas de maximum), clé
 positionner juste au-dessus (même principe que `WaveOverlay.waveText(...)` ou
 `ExperienceOverlay.barTop(...)`).
 
+### Le gain de score flottant — `client/gui/ScoreGainOverlay.java`
+
+Décidé avec le joueur (2026-08-27) : un "+X" apparaît en bas à **droite** de l'écran à chaque
+gain de score (aujourd'hui uniquement les kills, voir "Expérience, score et niveau" plus bas —
+l'overlay lui-même ne sait rien de la source du gain), monte de 20px et s'estompe sur 1,5
+seconde, indépendamment pour chaque popup (pas de paquet réseau dédié — voir plus bas).
+
+**Détection du gain : diff côté client, pas d'event serveur→client dédié.** `ModAttachments.
+SCORE` est déjà synchronisé au client via `level.syncData(SCORE)` (voir "Le score" ci-dessus) :
+`ScoreGainOverlay` compare simplement la valeur lue à chaque frame à la dernière valeur connue
+(champ d'instance, l'overlay est un singleton enregistré une fois) :
+
+```java
+if (score > this.lastKnownScore) {
+    this.popups.add(new Popup(score - this.lastKnownScore, Util.getMillis()));
+}
+this.lastKnownScore = score;
+```
+
+Deux cas particuliers gérés explicitement :
+
+- **Premier tick observé** (connexion/rejoin en cours de partie) : initialise `lastKnownScore`
+  sans créer de popup, pour ne pas afficher d'un coup tout le score déjà accumulé sur la carte.
+- **Score qui redescend** (`PhaseTransitions.resetGameState` le remet à 0 à chaque nouvelle
+  partie) : juste resynchronisé silencieusement, pas de popup "-X" qui n'aurait aucun sens.
+
+**Animation** : même source de temps que `HealthLerp` (`Util.getMillis()`, temps réel plutôt
+que `partialTicks` — un `GuiLayer` n'a pas cette contrainte du `BlockEntityRenderState` recréé
+chaque frame, mais rester cohérent avec le reste du mod). Chaque `Popup` (record local `amount`
++ `spawnTimeMs`) calcule sa propre progression 0→1 sur `DURATION_MS` (1500 ms), utilisée à la
+fois pour la montée (`RISE_PIXELS`) et le fondu (canal alpha du texte, `(alpha << 24) | RGB`) —
+même vert que `ExperienceOverlay` (`0x22C55E`). Les popups simultanés se superposent
+simplement (pas de logique d'empilement) — volontairement simple, effet acceptable pour une
+salve de kills rapprochés.
+
+**Limite assumée** : si le serveur incrémente `SCORE` plusieurs fois dans le même tick
+(plusieurs morts simultanées), rien ne garantit que la synchronisation d'attachment envoie un
+paquet par incrément plutôt qu'un seul paquet avec la valeur finale — le client peut alors
+n'afficher qu'un seul popup combiné au lieu d'un par kill. Sans effet dans le cas courant (kills
+espacés dans le temps, même à quelques ticks d'écart).
+
 ### Le personnage — `client/gui/CharacterOverlay.java`
 
 Affiche `Nom - niv X` (clé `dungeon_defenders.hud.character`), juste au-dessus de

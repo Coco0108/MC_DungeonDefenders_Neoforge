@@ -149,6 +149,13 @@ vérifie la CI.
   l'instant (voir "Ce qui reste"). Détail dans
   [02-gameplay.md](02-gameplay.md#expérience-score-et-niveau--modeventsawardexperienceandscoregrantexperience).
   **Jamais testé en jeu.**
+- ✅ Gain de score flottant (`client/gui/ScoreGainOverlay.java`, 2026-08-27) : un "+X" apparaît
+  en bas à droite de l'écran à chaque gain de score, monte et s'estompe sur 1,5 seconde. Détecté
+  par diff côté client sur `ModAttachments.SCORE` (déjà synchronisé), pas de paquet réseau
+  dédié. Pas de popup au premier tick observé (rejoin en cours de partie) ni quand le score
+  redescend (remise à 0 en début de partie). Détail dans
+  [02-gameplay.md](02-gameplay.md#le-gain-de-score-flottant--clientguiscoregainoverlayjava).
+  **Jamais testé en jeu.**
 - ✅ Vague en cours : data attachment `current_wave` sur la `Level` (persistant, synchronisé,
   démarre à 1), affichée en haut à droite (`Vague X/5`) via `WaveOverlay` — texte seul, pas de
   jauge. Aucun déroulement de vagues n'existe encore. **Positionnement testé en jeu**

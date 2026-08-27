@@ -89,6 +89,22 @@ mana dans `onMonsterDeath` — même monstre tué, deux effets à vérifier en m
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `awardExperienceAndScore`,
       `grantExperience` ou `SpawnableEnemy.xpValueFor`.
 
+## Gain de score flottant (`ScoreGainOverlay`)
+
+Nouveau (2026-08-27), jamais vérifié visuellement.
+
+- [ ] Tuer un monstre : un "+10" (zombie) ou "+15" (squelette) apparaît en bas à **droite** de
+      l'écran (pas au même endroit que le Score en bas centre), monte doucement puis s'estompe
+      en environ 1,5 seconde.
+- [ ] Tuer plusieurs monstres à quelques instants d'écart : chaque kill affiche son propre
+      "+X" (pas un seul cumulé) — sauf s'ils meurent exactement au même tick serveur, limite
+      connue (voir doc/05).
+- [ ] Se connecter en cours de partie (score déjà > 0, ex. rejoindre après quelques kills) :
+      **aucun** popup géant ne doit apparaître au premier affichage du HUD.
+- [ ] Aller jusqu'à la victoire/défaite : le score revient à 0 (voir section précédente) sans
+      qu'un popup "-X" n'apparaisse à ce moment-là.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ScoreGainOverlay`.
+
 ## HUD vanilla masqué, faim et hotbar désactivées
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

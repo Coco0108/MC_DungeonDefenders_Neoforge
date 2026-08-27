@@ -33,6 +33,7 @@
   "dungeon_defenders.phase.build": "Construction",
   "dungeon_defenders.phase.combat": "Combat",
   "dungeon_defenders.hud.score": "Score : %s",
+  "dungeon_defenders.hud.score_gain": "+%s",
   "dungeon_defenders.hud.character": "%s - niv %s",
   "dungeon_defenders.mana_test_wand.used": "-%s mana (%s/%s)",
   "dungeon_defenders.mana_test_wand.empty": "Pas assez de mana !",
