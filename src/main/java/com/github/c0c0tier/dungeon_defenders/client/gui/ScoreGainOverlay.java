@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.client.gui;
 
+import com.github.c0c0tier.dungeon_defenders.client.ClientDisplayConfig;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
 import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import net.minecraft.client.DeltaTracker;
@@ -61,7 +62,12 @@ public class ScoreGainOverlay implements GuiLayer {
             return;
         }
 
+        // purgeExpired() tourne même si l'affichage est désactivé, pour ne pas laisser la
+        // liste grossir indéfiniment tant que l'option reste décochée pendant toute une partie.
         purgeExpired();
+        if (!ClientDisplayConfig.SHOW_SCORE_GAIN_POPUP.get()) {
+            return;
+        }
         drawPopups(guiGraphics, minecraft);
     }
 

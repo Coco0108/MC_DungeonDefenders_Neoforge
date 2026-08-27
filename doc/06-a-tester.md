@@ -117,6 +117,25 @@ vérifier ensemble ici (le mécanisme a changé, le résultat visible attendu au
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ScoreGainOverlay`,
       `ScoreGainPayload` ou `handleScoreGain`.
 
+## Config CLIENT — options d'affichage HUD (`ClientDisplayConfig`)
+
+Nouveau (2026-08-27), jamais vérifié visuellement.
+
+- [ ] Au premier lancement, un fichier `config/dungeon_defenders-client.toml` apparaît, avec
+      `showScoreGainPopup=true` dedans.
+- [ ] Menu Mods > Dungeon Defenders > Config : un écran distinct "HUD Display"/"Affichage
+      (HUD)" apparaît (en plus de celui déjà existant pour la config de gameplay), avec une
+      case à cocher "Show score gain popup"/"Afficher le popup de gain de score".
+- [ ] Décocher l'option, valider : tuer un monstre n'affiche plus le popup "+X" en bas à
+      droite — le reste du HUD (Score en bas centre, HUD général) continue de fonctionner
+      normalement.
+- [ ] Recocher l'option : le popup réapparaît au kill suivant.
+- [ ] L'option ne touche que **ce client** : en multijoueur, un autre joueur qui n'a pas
+      décoché la sienne continue de voir ses propres popups normalement.
+- [ ] Modifier directement `showScoreGainPopup=false` dans le fichier `.toml` (jeu fermé) puis
+      relancer : l'option décochée dans l'écran de config reflète bien la valeur du fichier.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ClientDisplayConfig`.
+
 ## HUD vanilla masqué, faim et hotbar désactivées
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar

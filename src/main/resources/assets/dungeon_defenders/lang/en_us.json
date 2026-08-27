@@ -67,5 +67,8 @@
 
   "dungeon_defenders.configuration.title": "Dungeon Defenders Configs",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml": "Dungeon Defenders Configs",
-  "dungeon_defenders.configuration.section.dungeon_defenders.common.toml.title": "Dungeon Defenders Configs"
+  "dungeon_defenders.configuration.section.dungeon_defenders.common.toml.title": "Dungeon Defenders Configs",
+  "dungeon_defenders.configuration.section.dungeon_defenders.client.toml": "HUD Display",
+  "dungeon_defenders.configuration.section.dungeon_defenders.client.toml.title": "HUD Display",
+  "dungeon_defenders.configuration.showScoreGainPopup": "Show score gain popup"
 }

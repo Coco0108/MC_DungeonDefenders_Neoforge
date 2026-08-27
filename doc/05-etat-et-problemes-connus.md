@@ -165,6 +165,18 @@ vérifie la CI.
   assumée, `GuiGraphicsExtractor#item` n'a pas de paramètre d'alpha exploité ici). Détail dans
   [02-gameplay.md](02-gameplay.md#le-gain-de-score-flottant--clientguiscoregainoverlayjava-networkscoregainpayloadjava).
   **Jamais testé en jeu.**
+- ✅ Config CLIENT pour les options d'affichage HUD facultatives
+  (`client/ClientDisplayConfig.java`, 2026-08-27) : mécanisme générique préparé sur demande du
+  joueur, pour pouvoir ajouter au fil de l'eau des interrupteurs "afficher/masquer X" sans
+  reconstruire la plomberie à chaque fois — voir la recette dans
+  [04-guide-ajout-contenu.md](04-guide-ajout-contenu.md#ajouter-une-option-daffichage-hud-facultative-masquerafficher-un-élément).
+  Type `CLIENT` (fichier local `config/dungeon_defenders-client.toml`, jamais lu côté serveur ni
+  synchronisé entre joueurs) — distinct de `Config.java` (`COMMON`, valeurs de gameplay comme
+  les PV du Cristal d'Eternia). Une seule option concrète pour l'instant, `showScoreGainPopup`,
+  branchée dans `ScoreGainOverlay` : décochée, le popup de gain de score ne se dessine plus (la
+  purge des popups expirés continue quand même de tourner en arrière-plan, pour ne pas laisser
+  la liste grossir indéfiniment). **Jamais testé en jeu** — écran de config généré par NeoForge
+  jamais ouvert.
 - ✅ Vague en cours : data attachment `current_wave` sur la `Level` (persistant, synchronisé,
   démarre à 1), affichée en haut à droite (`Vague X/5`) via `WaveOverlay` — texte seul, pas de
   jauge. Aucun déroulement de vagues n'existe encore. **Positionnement testé en jeu**

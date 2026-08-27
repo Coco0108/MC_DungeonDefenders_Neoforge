@@ -3,6 +3,7 @@ package com.github.c0c0tier.dungeon_defenders;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntityRenderer;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntityRenderer;
 import com.github.c0c0tier.dungeon_defenders.block.entity.TowerHealthBarRenderer;
+import com.github.c0c0tier.dungeon_defenders.client.ClientDisplayConfig;
 import com.github.c0c0tier.dungeon_defenders.client.ModKeyMappings;
 import com.github.c0c0tier.dungeon_defenders.client.gui.AbilitySlotsOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.CharacterOverlay;
@@ -36,6 +37,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
@@ -64,6 +66,11 @@ public class DungeonDefendersModClient {
         // The config screen is accessed by going to the Mods screen > clicking on your mod > clicking on config.
         // Do not forget to add translations for your config options to the en_us.json file.
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+
+        // Type CLIENT (pas COMMON comme Config.SPEC dans DungeonDefendersMod) : préférences
+        // d'affichage HUD, propres à ce joueur, jamais lues côté serveur — voir
+        // ClientDisplayConfig pour le pourquoi et le patron pour en ajouter d'autres.
+        container.registerConfig(ModConfig.Type.CLIENT, ClientDisplayConfig.SPEC);
     }
 
     @SubscribeEvent

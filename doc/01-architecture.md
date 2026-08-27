@@ -17,7 +17,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── TavernSpawn.java                  # Point de spawn fixe + plateforme provisoire (monde vide)
     │   ├── MapInstance.java                  # "La map active" : emplacement partagé, placeholder, téléportation
     │   ├── ModCommands.java                  # /dd_leave (retour à la taverne, harnais de test)
-    │   ├── Config.java                       # Spec de config réelle (PV cristal, dégâts, portée), branchée
+    │   ├── Config.java                       # Spec de config COMMON (PV cristal, dégâts, portée), branchée
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
     │   │   ├── ModAttachments.java           # DeferredRegister des data attachments (mana, vagues, phase...)
@@ -44,7 +44,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── ModKeyMappings.java           # Touches roue des tours + rotation (RegisterKeyMappingsEvent)
     │   │   ├── TowerPlacementState.java      # État transitoire du mode pose (AIMING/ORIENTING, tour choisie, rotation)
     │   │   ├── TowerPlacementRenderState.java # Instantané pour le rendu de l'hologramme (ContextKey sur LevelRenderState)
-    │   │   └── TowerPlacementClientEvents.java # Ouverture roue, rayon de visée, rotation, confirmation, rendu hologramme/portée
+    │   │   ├── TowerPlacementClientEvents.java # Ouverture roue, rayon de visée, rotation, confirmation, rendu hologramme/portée
+    │   │   └── ClientDisplayConfig.java      # Spec de config CLIENT (options d'affichage HUD facultatives), branchée dans DungeonDefendersModClient
     │   ├── client/gui/screen/
     │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
     │   │   ├── MapSelectionScreen.java       # Écran de choix de map + difficulté (client uniquement, pas de Menu)
@@ -154,19 +155,26 @@ Cette classe n'est jamais chargée sur un serveur dédié — le code client peu
 référencé sans risque.
 
 - Constructeur : enregistre le `IConfigScreenFactory` (`ConfigurationScreen::new`) pour que
-  NeoForge génère un écran de config depuis l'écran « Mods ».
+  NeoForge génère un écran de config depuis l'écran « Mods », **et**
+  `container.registerConfig(CLIENT, ClientDisplayConfig.SPEC)` — contrairement à `Config.SPEC`
+  (COMMON) enregistré depuis `DungeonDefendersMod`, ce spec-là ne doit jamais être chargé sur un
+  serveur dédié, d'où l'enregistrement ici plutôt que là-bas.
 - `@EventBusSubscriber(value = Dist.CLIENT)` + `onRegisterRenderers(EntityRenderersEvent.RegisterRenderers)` :
   enregistre le renderer de block entity du cristal.
 - `onRegisterGuiLayers(RegisterGuiLayersEvent)` : enregistre `ManaOverlay`, `HealthOverlay`,
   `ExperienceOverlay`, `WaveOverlay`, `WaveEnemiesOverlay`, `PhaseOverlay`, `ScoreOverlay`,
-  `CharacterOverlay` et `AbilitySlotsOverlay` via `event.registerAboveAll(...)`, au-dessus de
-  toutes les autres couches du HUD, et masque les cœurs, la faim, l'expérience et la hotbar
-  vanilla via
-  `event.replaceLayer(...)` — voir [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
+  `ScoreGainOverlay`, `CharacterOverlay` et `AbilitySlotsOverlay` via
+  `event.registerAboveAll(...)`, au-dessus de toutes les autres couches du HUD, et masque les
+  cœurs, la faim, l'expérience et la hotbar vanilla via `event.replaceLayer(...)` — voir
+  [02-gameplay.md](02-gameplay.md#le-hud-vanilla-masqué).
 - `onRegisterMenuScreens(RegisterMenuScreensEvent)` : associe `ModMenus.SPAWNER_CONFIG` à
   `SpawnerConfigScreen::new`. Contrairement à `RegisterGuiLayersEvent`, ce n'est pas
   `MenuScreens.register(...)` qu'on appelle directement (privée dans cette version) mais cet
   événement, sur le même principe.
+- `onRegisterClientPayloadHandlers(RegisterClientPayloadHandlersEvent)` : associe le handler de
+  `ScoreGainPayload` (paquet clientbound) à `ScoreGainOverlay.INSTANCE` — le type/codec est
+  enregistré côté partagé (`ModNetworking`), mais le handler ne peut vivre qu'ici, voir
+  [02-gameplay.md](02-gameplay.md#le-gain-de-score-flottant--clientguiscoregainoverlayjava-networkscoregainpayloadjava).
 
 > `@EventBusSubscriber` n'a pas de paramètre `bus` dans cette version : les événements qui
 > implémentent `IModBusEvent` (comme `RegisterRenderers`) partent automatiquement sur le bus
