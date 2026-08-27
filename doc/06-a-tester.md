@@ -89,21 +89,28 @@ mana dans `onMonsterDeath` — même monstre tué, deux effets à vérifier en m
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `awardExperienceAndScore`,
       `grantExperience` ou `SpawnableEnemy.xpValueFor`.
 
-## Gain de score flottant (`ScoreGainOverlay`)
+## Gain de score flottant, avec sa source (`ScoreGainOverlay`, `ScoreGainPayload`)
 
-Nouveau (2026-08-27), jamais vérifié visuellement.
+Nouveau (2026-08-27), jamais vérifié visuellement. Refait une fois pour passer d'un simple
+"+X" deviné côté client à un vrai paquet réseau portant la source — les deux versions sont à
+vérifier ensemble ici (le mécanisme a changé, le résultat visible attendu aussi).
 
-- [ ] Tuer un monstre : un "+10" (zombie) ou "+15" (squelette) apparaît en bas à **droite** de
-      l'écran (pas au même endroit que le Score en bas centre), monte doucement puis s'estompe
-      en environ 1,5 seconde.
+- [ ] Tuer un monstre : un "+10 Ennemi tué" (zombie) ou "+15 Ennemi tué" (squelette) apparaît en
+      bas à **droite** de l'écran (pas au même endroit que le Score en bas centre), monte
+      doucement puis s'estompe en environ 1,5 seconde.
 - [ ] Tuer plusieurs monstres à quelques instants d'écart : chaque kill affiche son propre
-      "+X" (pas un seul cumulé) — sauf s'ils meurent exactement au même tick serveur, limite
-      connue (voir doc/05).
+      popup (pas un seul cumulé) — cette fois, ça doit être vrai **même pour des kills
+      quasi simultanés** (contrairement à l'ancienne version basée sur la sync d'attachment,
+      chaque `grantScore` envoie désormais son propre paquet).
 - [ ] Se connecter en cours de partie (score déjà > 0, ex. rejoindre après quelques kills) :
-      **aucun** popup géant ne doit apparaître au premier affichage du HUD.
+      **aucun** popup ne doit apparaître au premier affichage du HUD (plus aucun mécanisme de
+      "diff" qui pourrait en générer un par erreur).
 - [ ] Aller jusqu'à la victoire/défaite : le score revient à 0 (voir section précédente) sans
-      qu'un popup "-X" n'apparaisse à ce moment-là.
-- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ScoreGainOverlay`.
+      qu'un popup n'apparaisse à ce moment-là (`resetGameState` ne passe pas par `grantScore`).
+- [ ] **En multijoueur** : chaque joueur présent reçoit bien son propre popup au même kill (le
+      paquet est envoyé à tous les joueurs de la `Level`, comme l'XP).
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ScoreGainOverlay`,
+      `ScoreGainPayload` ou `handleScoreGain`.
 
 ## HUD vanilla masqué, faim et hotbar désactivées
 

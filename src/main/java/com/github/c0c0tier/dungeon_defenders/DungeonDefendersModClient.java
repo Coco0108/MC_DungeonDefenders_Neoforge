@@ -18,6 +18,8 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScre
 import com.github.c0c0tier.dungeon_defenders.entity.MobHealthBarRenderer;
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
+import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
+import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
 import com.google.common.reflect.TypeToken;
 
 import net.minecraft.client.KeyMapping;
@@ -43,7 +45,9 @@ import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.GuiLayer;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 // This class will not load on dedicated servers. Accessing client side code from here is safe.
 @Mod(value = DungeonDefendersMod.MODID, dist = Dist.CLIENT)
@@ -134,7 +138,7 @@ public class DungeonDefendersModClient {
                 new ScoreOverlay());
         event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "score_gain_overlay"),
-                new ScoreGainOverlay());
+                ScoreGainOverlay.INSTANCE);
         event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "character_overlay"),
                 new CharacterOverlay());
@@ -169,6 +173,25 @@ public class DungeonDefendersModClient {
     @SubscribeEvent
     static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.SPAWNER_CONFIG.get(), SpawnerConfigScreen::new);
+    }
+
+    // Handler du seul paquet clientbound du mod (voir network/ScoreGainPayload.java) : le type
+    // est enregistré côté partagé (ModNetworking, chargée des deux côtés), mais le handler
+    // lui-même ne peut vivre qu'ici, une classe strictement client — il touche
+    // ScoreGainOverlay, jamais chargée sur un serveur dédié.
+    @SubscribeEvent
+    static void onRegisterClientPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
+        event.register(ScoreGainPayload.TYPE, DungeonDefendersModClient::handleScoreGain);
+    }
+
+    private static void handleScoreGain(ScoreGainPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            // Pas de borne-check sur l'ordinal ici, contrairement à ModNetworking : ce paquet
+            // vient du serveur (autoritaire dans ce mod co-op), pas d'un client — même confiance
+            // que les autres ordinaux d'enum synchronisés par attachment (GamePhase,
+            // GameDifficulty...), jamais revérifiés côté client non plus.
+            ScoreGainOverlay.INSTANCE.addPopup(payload.amount(), ScoreSource.values()[payload.sourceOrdinal()]);
+        });
     }
 
     @SubscribeEvent

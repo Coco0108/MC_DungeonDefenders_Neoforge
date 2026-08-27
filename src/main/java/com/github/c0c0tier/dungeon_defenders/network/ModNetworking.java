@@ -62,6 +62,15 @@ public class ModNetworking {
                 PlaceTowerPayload.STREAM_CODEC,
                 ModNetworking::handlePlaceTower
         );
+        // Clientbound, sans handler ici : le handler touche ScoreGainOverlay (classe cliente),
+        // enregistré séparément via RegisterClientPayloadHandlersEvent dans
+        // DungeonDefendersModClient pour ne jamais la charger sur un serveur dédié — cette
+        // classe-ci (ModNetworking) est chargée des deux côtés, elle ne fait qu'enregistrer le
+        // type/codec, communs aux deux.
+        registrar.playToClient(
+                ScoreGainPayload.TYPE,
+                ScoreGainPayload.STREAM_CODEC
+        );
     }
 
     private static void handlePlaceTower(PlaceTowerPayload payload, IPayloadContext context) {

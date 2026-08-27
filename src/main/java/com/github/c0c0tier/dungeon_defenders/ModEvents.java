@@ -8,9 +8,12 @@ import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ManaCrystalType;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
+import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
 import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
+import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
@@ -207,12 +210,28 @@ public class ModEvents {
     private static void awardExperienceAndScore(Level level, Monster monster) {
         int xpValue = SpawnableEnemy.xpValueFor(monster.getType());
 
-        int score = level.getData(ModAttachments.SCORE) + xpValue;
+        grantScore(level, xpValue, ScoreSource.MONSTER_KILLED);
+
+        for (Player player : level.players()) {
+            grantExperience(player, xpValue);
+        }
+    }
+
+    // Centralise tout gain de score : met à jour ModAttachments.SCORE (le total, lu par
+    // ScoreOverlay) ET diffuse un ScoreGainPayload à chaque joueur présent (le détail, lu par
+    // ScoreGainOverlay côté client — voir ce paquet pour le pourquoi des deux canaux distincts).
+    // Toute future source de score (fin de vague, fin de map, multiplicateurs — voir
+    // doc/02-gameplay.md) doit passer par ici plutôt que toucher SCORE directement, pour ne pas
+    // dupliquer cette double mise à jour.
+    private static void grantScore(Level level, int amount, ScoreSource source) {
+        int score = level.getData(ModAttachments.SCORE) + amount;
         level.setData(ModAttachments.SCORE, score);
         level.syncData(ModAttachments.SCORE);
 
         for (Player player : level.players()) {
-            grantExperience(player, xpValue);
+            if (player instanceof ServerPlayer serverPlayer) {
+                serverPlayer.connection.send(new ScoreGainPayload(amount, source.ordinal()).toVanillaClientbound());
+            }
         }
     }
 

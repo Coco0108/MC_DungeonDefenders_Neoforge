@@ -1699,46 +1699,81 @@ Affiché en texte seul (pas de jauge, un score n'a pas de maximum), clé
 positionner juste au-dessus (même principe que `WaveOverlay.waveText(...)` ou
 `ExperienceOverlay.barTop(...)`).
 
-### Le gain de score flottant — `client/gui/ScoreGainOverlay.java`
+### Le gain de score flottant — `client/gui/ScoreGainOverlay.java`, `network/ScoreGainPayload.java`
 
-Décidé avec le joueur (2026-08-27) : un "+X" apparaît en bas à **droite** de l'écran à chaque
-gain de score (aujourd'hui uniquement les kills, voir "Expérience, score et niveau" plus bas —
-l'overlay lui-même ne sait rien de la source du gain), monte de 20px et s'estompe sur 1,5
-seconde, indépendamment pour chaque popup (pas de paquet réseau dédié — voir plus bas).
+Décidé avec le joueur (2026-08-27) : un "+X \<source\>" apparaît en bas à **droite** de l'écran
+à chaque gain de score (ex. "+10 Ennemi tué"), monte de 20px et s'estompe sur 1,5 seconde,
+indépendamment pour chaque popup.
 
-**Détection du gain : diff côté client, pas d'event serveur→client dédié.** `ModAttachments.
-SCORE` est déjà synchronisé au client via `level.syncData(SCORE)` (voir "Le score" ci-dessus) :
-`ScoreGainOverlay` compare simplement la valeur lue à chaque frame à la dernière valeur connue
-(champ d'instance, l'overlay est un singleton enregistré une fois) :
+**Pourquoi un paquet dédié plutôt que de lire `ModAttachments.SCORE` ?** Une première version
+détectait le gain en comparant le total synchronisé d'une frame à l'autre — ça marchait, mais
+`SCORE` n'est qu'un total : impossible d'en déduire la **source** du gain (kill ? fin de vague ?
+multiplicateur ?). Comme plusieurs sources de score sont prévues (voir "Feuille de route du
+score" plus bas) et que le joueur voulait cette information affichée, `ModEvents.grantScore`
+diffuse maintenant un `ScoreGainPayload(amount, sourceOrdinal)` **en plus** de la sync
+d'attachment habituelle :
 
 ```java
-if (score > this.lastKnownScore) {
-    this.popups.add(new Popup(score - this.lastKnownScore, Util.getMillis()));
+private static void grantScore(Level level, int amount, ScoreSource source) {
+    int score = level.getData(ModAttachments.SCORE) + amount;
+    level.setData(ModAttachments.SCORE, score);
+    level.syncData(ModAttachments.SCORE);
+
+    for (Player player : level.players()) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            serverPlayer.connection.send(new ScoreGainPayload(amount, source.ordinal()).toVanillaClientbound());
+        }
+    }
 }
-this.lastKnownScore = score;
 ```
 
-Deux cas particuliers gérés explicitement :
+Toute future source de score (fin de vague, fin de map, multiplicateurs) devra passer par
+`grantScore` plutôt que toucher `SCORE` directement, pour ne jamais dupliquer cette double mise
+à jour (attachment + paquet). `init/ScoreSource.java` est l'enum de la source, transmise par
+ordinal comme le reste des enums réseau du mod (`GamePhase`, `GameDifficulty`...) — un seul
+membre pour l'instant (`MONSTER_KILLED`), les futures sources ajouteront le leur le moment venu.
 
-- **Premier tick observé** (connexion/rejoin en cours de partie) : initialise `lastKnownScore`
-  sans créer de popup, pour ne pas afficher d'un coup tout le score déjà accumulé sur la carte.
-- **Score qui redescend** (`PhaseTransitions.resetGameState` le remet à 0 à chaque nouvelle
-  partie) : juste resynchronisé silencieusement, pas de popup "-X" qui n'aurait aucun sens.
+**Premier paquet clientbound de cette branche** (même principe que celui décrit pour
+`GameOverScreen` sur une autre branche, pas encore mergée ici) : le type/codec est enregistré
+côté partagé (`ModNetworking.onRegisterPayloadHandlers`, `registrar.playToClient(...)` **sans**
+handler), mais le handler lui-même — qui touche `ScoreGainOverlay`, une classe strictement
+cliente — n'est enregistré que dans `DungeonDefendersModClient`, via
+`RegisterClientPayloadHandlersEvent`. Pas de borne-check sur l'ordinal reçu côté client
+(contrairement à `ModNetworking`, qui valide tout ordinal reçu d'un **client**) : ce paquet
+vient du serveur, autoritaire dans ce mod co-op — même confiance que les autres ordinaux
+synchronisés par attachment (`GamePhase`, `GameDifficulty`), jamais revérifiés côté client non
+plus.
 
-**Animation** : même source de temps que `HealthLerp` (`Util.getMillis()`, temps réel plutôt
-que `partialTicks` — un `GuiLayer` n'a pas cette contrainte du `BlockEntityRenderState` recréé
-chaque frame, mais rester cohérent avec le reste du mod). Chaque `Popup` (record local `amount`
-+ `spawnTimeMs`) calcule sa propre progression 0→1 sur `DURATION_MS` (1500 ms), utilisée à la
-fois pour la montée (`RISE_PIXELS`) et le fondu (canal alpha du texte, `(alpha << 24) | RGB`) —
-même vert que `ExperienceOverlay` (`0x22C55E`). Les popups simultanés se superposent
-simplement (pas de logique d'empilement) — volontairement simple, effet acceptable pour une
-salve de kills rapprochés.
+**`ScoreGainOverlay` devient un pur récepteur d'événements**, plus une lecture de `SCORE` :
 
-**Limite assumée** : si le serveur incrémente `SCORE` plusieurs fois dans le même tick
-(plusieurs morts simultanées), rien ne garantit que la synchronisation d'attachment envoie un
-paquet par incrément plutôt qu'un seul paquet avec la valeur finale — le client peut alors
-n'afficher qu'un seul popup combiné au lieu d'un par kill. Sans effet dans le cas courant (kills
-espacés dans le temps, même à quelques ticks d'écart).
+```java
+public class ScoreGainOverlay implements GuiLayer {
+    public static final ScoreGainOverlay INSTANCE = new ScoreGainOverlay();
+    ...
+    public void addPopup(int amount, ScoreSource source) {
+        this.popups.add(new Popup(amount, source, Util.getMillis()));
+    }
+}
+```
+
+Instance unique exposée en statique (constructeur privé) : `RegisterGuiLayersEvent` enregistre
+`ScoreGainOverlay.INSTANCE` pour le rendu, et le handler du paquet pousse dans cette même
+instance — les deux se rejoignent là plutôt que par un paquet réseau interne au client. Plus
+besoin de gérer "premier tick observé" ou "score qui redescend" : sans paquet, pas de popup,
+ces cas se résolvent d'eux-mêmes.
+
+**Animation inchangée** : même source de temps que `HealthLerp` (`Util.getMillis()`, temps réel
+plutôt que `partialTicks`). Chaque `Popup` (record `amount`/`source`/`spawnTimeMs`) calcule sa
+propre progression 0→1 sur `DURATION_MS` (1500 ms), utilisée à la fois pour la montée
+(`RISE_PIXELS`) et le fondu (canal alpha du texte, `(alpha << 24) | RGB`) — même vert que
+`ExperienceOverlay` (`0x22C55E`). Les popups simultanés se superposent simplement (pas de
+logique d'empilement) — volontairement simple.
+
+**Limite assumée, inchangée par ce changement** : si le serveur appelle `grantScore` plusieurs
+fois dans le même tick (plusieurs morts simultanées), chaque appel envoie son propre paquet —
+contrairement à l'ancienne version basée sur la sync d'attachment, ce n'est **plus** une
+limite : chaque kill produit bien son propre popup, même simultané. La seule limite restante est
+visuelle (superposition à l'écran, pas de décalage automatique).
 
 ### Le personnage — `client/gui/CharacterOverlay.java`
 

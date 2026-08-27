@@ -1,69 +1,55 @@
 package com.github.c0c0tier.dungeon_defenders.client.gui;
 
-import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
-import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.client.gui.GuiLayer;
 
 import java.util.ArrayList;
 import java.util.List;
 
-// Petit "+X" flottant en bas à droite de l'écran à chaque gain de score (aujourd'hui : chaque
-// kill, voir ModEvents.awardExperienceAndScore ; plus tard fin de vague/de map/multiplicateurs,
-// voir doc/02-gameplay.md). Détecte le gain en comparant ModAttachments.SCORE d'une frame à
-// l'autre plutôt que d'ajouter un paquet réseau dédié : le score arrive déjà par la sync
-// d'attachment existante (level.syncData), pas besoin d'un mécanisme séparé.
+// Petit "+X <source>" flottant en bas à droite de l'écran à chaque gain de score. Alimenté par
+// ScoreGainPayload (network/), pas par une lecture de ModAttachments.SCORE : le total seul ne
+// dit pas d'où vient le gain (kill ? fin de vague ? multiplicateur ?), voir ce paquet et
+// ModEvents.grantScore pour le pourquoi de ce canal séparé.
 //
-// Limite assumée : si le serveur incrémente SCORE plusieurs fois dans le même tick (plusieurs
-// morts simultanées), la synchronisation d'attachment ne garantit pas un paquet par
-// incrément — le client peut alors observer un seul saut combiné plutôt que deux popups
-// distincts. Sans effet dans le cas courant (kills espacés dans le temps).
+// Instance unique exposée en statique plutôt qu'enregistrée par valeur : le handler client du
+// paquet (DungeonDefendersModClient) doit pouvoir pousser un popup dans la même instance que
+// celle enregistrée pour le rendu (RegisterGuiLayersEvent) — les deux se rejoignent ici.
 public class ScoreGainOverlay implements GuiLayer {
+    public static final ScoreGainOverlay INSTANCE = new ScoreGainOverlay();
+
     private static final long DURATION_MS = 1500L;
     private static final float RISE_PIXELS = 20.0F;
     private static final int MARGIN = 4;
     private static final int RGB = 0x22C55E; // même vert que ExperienceOverlay
 
     private final List<Popup> popups = new ArrayList<>();
-    private boolean initialized = false;
-    private int lastKnownScore = 0;
 
-    private record Popup(int amount, long spawnTimeMs) {
+    private record Popup(int amount, ScoreSource source, long spawnTimeMs) {
+    }
+
+    private ScoreGainOverlay() {
+    }
+
+    /** Appelé par le handler client de ScoreGainPayload à chaque gain de score reçu du serveur. */
+    public void addPopup(int amount, ScoreSource source) {
+        this.popups.add(new Popup(amount, source, Util.getMillis()));
     }
 
     @Override
     public void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
-        Level level = minecraft.level;
-        if (level == null || minecraft.options.hideGui) {
+        if (minecraft.level == null || minecraft.options.hideGui) {
             return;
         }
 
-        trackScoreChange(level);
         purgeExpired();
         drawPopups(guiGraphics, minecraft);
-    }
-
-    private void trackScoreChange(Level level) {
-        int score = level.getData(ModAttachments.SCORE);
-        if (!this.initialized) {
-            // Premier tick observé (connexion/rejoin en cours de partie) : initialise sans
-            // popup, pour ne pas afficher d'un coup tout le score déjà accumulé.
-            this.initialized = true;
-            this.lastKnownScore = score;
-            return;
-        }
-        if (score > this.lastKnownScore) {
-            this.popups.add(new Popup(score - this.lastKnownScore, Util.getMillis()));
-        }
-        // score < lastKnownScore : remise à zéro en début de partie
-        // (PhaseTransitions.resetGameState), pas un gain — resynchronisé sans popup.
-        this.lastKnownScore = score;
     }
 
     private void purgeExpired() {
@@ -85,7 +71,8 @@ public class ScoreGainOverlay implements GuiLayer {
             int y = baseY - (int) (progress * RISE_PIXELS);
             int color = (alpha << 24) | RGB;
 
-            Component text = Component.translatable("dungeon_defenders.hud.score_gain", popup.amount());
+            Component text = Component.translatable("dungeon_defenders.hud.score_gain",
+                    popup.amount(), Component.translatable(popup.source().translationKey()));
             int width = minecraft.font.width(text);
             guiGraphics.text(minecraft.font, text, rightX - width, y, color);
         }
