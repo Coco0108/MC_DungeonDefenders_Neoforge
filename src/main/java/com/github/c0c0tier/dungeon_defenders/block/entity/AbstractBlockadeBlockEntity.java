@@ -77,13 +77,15 @@ public abstract class AbstractBlockadeBlockEntity extends AbstractTowerBlockEnti
             monster.hurt(serverLevel.damageSources().stalagmite(), blockEntity.contactDamage);
 
             if (blockEntity.knockbackStrength > 0.0F) {
-                // Même convention que LivingEntity#blockedByItem (repousse un attaquant hors
-                // du bouclier) : le vecteur passé est "position du monstre moins position de
-                // la source", pas l'inverse — vérifié dans les sources vanilla plutôt que
-                // deviné, cette classe de bug (sens inversé) a déjà été rencontrée une fois
-                // dans ce mod (rotation de la roue des tours, voir doc/05).
-                double dx = monster.getX() - (pos.getX() + 0.5D);
-                double dz = monster.getZ() - (pos.getZ() + 0.5D);
+                // "Position de la source moins position du monstre" (PAS l'inverse) : le
+                // vecteur passé à Entity#knockback pointe vers la source, la formule pousse
+                // alors dans le sens opposé (voir son corps : deltaMovement - normalize(xd,zd)),
+                // donc bien loin d'elle. Testé en jeu (2026-08-29) : la version précédente
+                // (monstre moins source, en pensant reproduire LivingEntity#blockedByItem)
+                // attirait les monstres AU LIEU de les repousser — signe inversé, corrigé ici
+                // à partir du comportement observé plutôt que re-deviné depuis les sources.
+                double dx = (pos.getX() + 0.5D) - monster.getX();
+                double dz = (pos.getZ() + 0.5D) - monster.getZ();
                 monster.knockback(blockEntity.knockbackStrength, dx, dz);
             }
         }

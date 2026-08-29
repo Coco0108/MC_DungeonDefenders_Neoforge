@@ -712,21 +712,30 @@ Blockade et Slice N Dice Blockade, > 0 pour Bouncer) :
 
 ```java
 if (blockEntity.knockbackStrength > 0.0F) {
-    double dx = monster.getX() - (pos.getX() + 0.5D);
-    double dz = monster.getZ() - (pos.getZ() + 0.5D);
+    double dx = (pos.getX() + 0.5D) - monster.getX();
+    double dz = (pos.getZ() + 0.5D) - monster.getZ();
     monster.knockback(blockEntity.knockbackStrength, dx, dz);
 }
 ```
 
-Le vecteur passé (position du monstre moins position de la source) suit la même convention que
-`LivingEntity#blockedByItem` (repousse un attaquant hors d'un bouclier) — vérifié dans les
-sources vanilla plutôt que deviné : cette classe de bug (sens de rotation/direction inversé)
-avait déjà été rencontrée une fois dans ce mod (la convention de rotation `Axis.YP` de la roue
-des tours, voir plus haut) — le sens s'est avéré correct au premier test en jeu. 25 PV, 25 mana
-(moins cher que Spike Blockade, l'intérêt n'étant pas les dégâts), 1 PV toutes les 10 ticks —
-valeurs de test, pas encore équilibrées. `KNOCKBACK_STRENGTH` : 0.8F au premier essai s'est
-révélé quasi imperceptible en jeu (le monstre ne bougeait presque pas), remonté à **1.6F**
-(2026-08-29) — échelle proche d'un enchantement de Recul II vanilla, nettement plus franc.
+**Sens du vecteur, corrigé une fois en jeu (2026-08-29)** : la toute première version passait
+"position du monstre moins position de la source" en pensant reproduire la convention de
+`LivingEntity#blockedByItem` — au premier test, les monstres étaient **attirés** vers le
+blockade au lieu d'être repoussés, signe que la lecture de cette convention vanilla était
+inversée. Corrigé à partir du comportement réellement observé (pas re-déduit des sources une
+deuxième fois, pour éviter de refaire la même erreur d'interprétation) : `Entity#knockback`
+pousse dans le sens **opposé** au vecteur passé (son corps calcule
+`deltaMovement - normalize(xd, zd)`), donc pour repousser loin de la source, il faut lui passer
+un vecteur qui pointe **vers** elle (source moins monstre), pas l'inverse. Même classe de bug
+que la convention de rotation `Axis.YP` de la roue des tours (voir plus haut) : un sens de
+vecteur/rotation mal interprété malgré une vérification dans les sources — matérialisé cette
+fois par un test en jeu plutôt qu'un rendu visuel.
+
+25 PV, 25 mana (moins cher que Spike Blockade, l'intérêt n'étant pas les dégâts), 1 PV toutes
+les 10 ticks — valeurs de test, pas encore équilibrées. `KNOCKBACK_STRENGTH` : 0.8F au premier
+essai s'est révélé quasi imperceptible en jeu (le monstre ne bougeait presque pas), remonté à
+**1.6F** (2026-08-29) — échelle proche d'un enchantement de Recul II vanilla, nettement plus
+franc.
 
 ### Slice N Dice Blockade — `block/SliceNDiceBlockadeBlock.java`
 
@@ -821,7 +830,7 @@ d'explosion au point d'impact**, jouée au même instant que les dégâts :
 @Override
 protected void fireAt(ServerLevel level, BlockPos pos, Monster target, Direction facing) {
     Vec3 impact = target.position();
-    level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, impact.x, impact.y, impact.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+    level.sendParticles(ParticleTypes.EXPLOSION, impact.x, impact.y, impact.z, 4, 0.3D, 0.3D, 0.3D, 0.0D);
 
     AABB splashArea = new AABB(target.blockPosition()).inflate(SPLASH_RADIUS);
     for (Monster monster : level.getEntitiesOfClass(Monster.class, splashArea)) {
@@ -830,13 +839,18 @@ protected void fireAt(ServerLevel level, BlockPos pos, Monster target, Direction
 }
 ```
 
-`ParticleTypes.EXPLOSION_EMITTER` est la particule que vanilla joue une seule fois au centre
-d'une explosion TNT/creeper (le "poof" dramatique, distinct de `ParticleTypes.EXPLOSION` — de
-nombreuses petites particules dispersées dans le rayon) : un seul appel, `count=1`, sans
-dispersion (`xDist`/`yDist`/`zDist`/`speed` à 0) pour qu'elle apparaisse pile au point d'impact.
-**Purement visuelle** : `ServerLevel#sendParticles` ne fait que diffuser l'information de rendu
-aux joueurs proches, aucun rapport avec une vraie `Explosion` vanilla — aucun risque de dégât de
-terrain, cohérent avec la demande explicite du joueur.
+**Taille de l'effet, ajustée une fois en jeu (2026-08-29)** : la toute première version
+utilisait `ParticleTypes.EXPLOSION_EMITTER` (le grand "poof" dramatique qu'une explosion TNT/
+creeper joue une fois en son centre) — jugé trop imposant pour un impact de mortier qui se
+répète toutes les 3 secondes. Remplacé par `ParticleTypes.EXPLOSION` (la petite particule
+dispersée en nombre dans le rayon d'une vraie explosion vanilla), 4 exemplaires légèrement
+éparpillés (`0.3` bloc de rayon) plutôt qu'un seul point — un effet plus modeste, mais toujours
+lisible comme une explosion. **Purement visuelle** dans les deux cas : `ServerLevel#sendParticles`
+ne fait que diffuser l'information de rendu aux joueurs proches, aucun rapport avec une vraie
+`Explosion` vanilla — aucun risque de dégât de terrain, cohérent avec la demande explicite du
+joueur. **Pas encore fait** : un vrai visuel de trajectoire avant l'impact (obus qui vole puis
+explose) — le joueur a explicitement reporté ce point à plus tard, l'effet actuel est instantané
+à l'envoi du tir, comme les dégâts.
 
 Même principe de scan par `AABB` que `AbstractBlockadeBlockEntity#serverTick` pour les dégâts,
 mais appliqué **une fois** au point d'impact plutôt qu'en continu autour du bloc. Tour la plus
