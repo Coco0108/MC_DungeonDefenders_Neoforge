@@ -20,7 +20,7 @@ public class ExperienceOverlay implements GuiLayer {
     private static final int BAR_WIDTH = 100;
     private static final int FILLED_COLOR = 0xFF22C55E;
     private static final int EMPTY_COLOR = 0xFF2B2B2B;
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
 
     @Override
     public void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {

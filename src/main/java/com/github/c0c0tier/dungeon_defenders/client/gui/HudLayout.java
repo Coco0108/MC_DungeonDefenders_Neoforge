@@ -7,8 +7,8 @@ package com.github.c0c0tier.dungeon_defenders.client.gui;
 // (voir WaveOverlay.ROW_Y/ROW_HEIGHT).
 final class HudLayout {
     static final int MARGIN = 4;
-    // Losanges mana (gauche) / vie (droite) — voir DiamondGauge. Chaque losange occupe un
-    // carré de 2*DIAMOND_RADIUS de côté.
+    // Losanges vie (gauche) / mana (droite), comme dans le jeu de référence — voir
+    // DiamondGauge. Chaque losange occupe un carré de 2*DIAMOND_RADIUS de côté.
     static final int DIAMOND_RADIUS = 24;
     static final int DIAMOND_GAP = 10;
     // Espace vertical entre la pointe basse des losanges et le haut de la barre d'expérience.

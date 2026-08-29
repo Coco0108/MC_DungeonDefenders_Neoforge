@@ -1,0 +1,9 @@
+{
+  "comment": "Placeholder : réutilise des textures vanilla (thématiquement proche, un bloc qui éjecte quelque chose) en attendant une texture dédiée.",
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "minecraft:block/furnace_top",
+    "front": "minecraft:block/dispenser_front",
+    "side": "minecraft:block/furnace_side"
+  }
+}

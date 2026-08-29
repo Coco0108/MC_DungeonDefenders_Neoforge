@@ -4,6 +4,7 @@ import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.init.DifficultyScaling;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -110,12 +111,18 @@ public class SpawnerBlockEntity extends BlockEntity {
      * Choisit une position de spawn dans le rayon configuré, en évitant l'intérieur d'un bloc
      * plein (mur, terrain irrégulier...) : essaie plusieurs offsets aléatoires en vérifiant
      * que la position et celle juste au-dessus (place pour les pieds et la tête) sont toutes
-     * les deux traversables, puis replie sur pos.above() si aucune n'a marché — cette position
-     * par défaut (juste au-dessus du bloc) est censée toujours être libre, c'est celle utilisée
-     * avant l'ajout du rayon de spawn.
+     * les deux traversables, puis replie sur {@code pos} si aucune n'a marché.
+     *
+     * <p>Le repli est {@code pos} (la cellule du spawner lui-même), pas {@code pos.above()} :
+     * depuis que le bloc spawner n'a plus jamais de collision (voir SpawnerBlock, décidé avec
+     * le joueur le 2026-08-25 — plus un obstacle physique, comme dans le jeu de référence), il
+     * ne peut plus servir de "sol" sous les pieds d'un monstre spawné juste au-dessus de lui.
+     * {@code pos} lui-même, en revanche, est censé reposer sur le vrai sol construit par le
+     * créateur de la map (le spawner n'est qu'un marqueur posé au niveau du sol, pas une
+     * plateforme) — {@code pos.below()} porte donc le monstre, pas le bloc du spawner.
      */
     private static BlockPos findSafeSpawnPos(ServerLevel level, BlockPos pos, int spawnRadius) {
-        BlockPos fallback = pos.above();
+        BlockPos fallback = pos;
         if (spawnRadius <= 0) {
             return fallback;
         }
@@ -169,16 +176,34 @@ public class SpawnerBlockEntity extends BlockEntity {
     @Override
     public void setLevel(Level level) {
         super.setLevel(level);
-        if (level instanceof ServerLevel) {
-            level.getData(ModAttachments.ACTIVE_SPAWNERS).add(this.worldPosition);
+        if (level instanceof ServerLevel serverLevel) {
+            serverLevel.getData(ModAttachments.ACTIVE_SPAWNERS).add(this.worldPosition);
+            // Sinon le total affiché au HUD reste bloqué sur la valeur par défaut de
+            // l'attachment tant qu'aucune vague n'a encore été nettoyée une première fois
+            // (recomputeWaveEnemiesTotal n'était sinon appelée qu'aux transitions de phase).
+            //
+            // Différé via getServer().execute(...) et PAS appelé directement ici : setLevel()
+            // est invoqué par LevelChunk.setBlockEntity() AVANT que ce block entity soit
+            // inséré dans la table du chunk. recomputeWaveEnemiesTotal() appelle
+            // level.getBlockEntity(pos) pour chaque spawner actif (potentiellement lui-même,
+            // pas encore trouvable) — s'il ne le trouve pas, le chunk en recrée un exemplaire à
+            // la volée, qui rappelle setLevel(), qui rappelle recomputeWaveEnemiesTotal(), etc.
+            // : récursion infinie -> StackOverflowError (planté en jeu, voir
+            // 05-etat-et-problemes-connus.md). Exécuter la recompute au tick suivant, une fois
+            // l'enregistrement terminé, élimine la réentrance.
+            serverLevel.getServer().execute(() -> PhaseTransitions.recomputeWaveEnemiesTotal(serverLevel));
         }
     }
 
     @Override
     public void setRemoved() {
         super.setRemoved();
-        if (this.level instanceof ServerLevel) {
-            this.level.getData(ModAttachments.ACTIVE_SPAWNERS).remove(this.worldPosition);
+        if (this.level instanceof ServerLevel serverLevel) {
+            serverLevel.getData(ModAttachments.ACTIVE_SPAWNERS).remove(this.worldPosition);
+            // Différé pour la même raison que dans setLevel() ci-dessus (setRemoved() peut lui
+            // aussi être appelée pendant l'enregistrement d'un autre block entity, quand
+            // LevelChunk.setBlockEntity remplace un exemplaire existant).
+            serverLevel.getServer().execute(() -> PhaseTransitions.recomputeWaveEnemiesTotal(serverLevel));
         }
     }
 

@@ -159,10 +159,10 @@ besoin d'une grille de coordonnées puisqu'il n'y en a jamais deux en même temp
 - **`startGame(level)`** (déclenché par `StartGamePayload`) : nettoie la zone (remplace tout
   par de l'air dans un volume autour de `MAP_POS` — plus large que le placeholder lui-même,
   pour rattraper d'éventuelles tours posées autour une fois qu'elles existeront), pose un
-  placeholder générique (même technique que `TavernSpawn`, une simple plateforme), puis
-  téléporte **tous** les joueurs de la `Level` — pas seulement celui qui a cliqué "Jouer",
-  puisqu'une seule partie est partagée par tout le monde (confirmé explicitement : "de toute
-  façon on devra le faire").
+  placeholder générique (même technique que `TavernSpawn`, une simple plateforme), cherche et
+  consomme un `PLAYER_SPAWN` (voir plus bas), puis téléporte **tous** les joueurs de la `Level`
+  — pas seulement celui qui a cliqué "Jouer", puisqu'une seule partie est partagée par tout le
+  monde (confirmé explicitement : "de toute façon on devra le faire").
 - **`returnToTavern(level)`** : même nettoyage de la zone, puis téléporte tout le monde vers
   `TavernSpawn.SPAWN_POS`. Déclenché par la commande `/dd_leave` (voir `ModCommands` et
   "Victoire et défaite" plus bas) — pas encore par un vrai point de sortie posé dans la map
@@ -171,6 +171,47 @@ besoin d'une grille de coordonnées puisqu'il n'y en a jamais deux en même temp
 `MapInstance` est pensé pour que le seul changement nécessaire, une fois de vraies maps
 prêtes, soit de remplacer `buildPlaceholderArena()` par un vrai chargement de structure
 `.nbt` — même logique que ce qui est prévu pour `TavernSpawn` (voir plus haut).
+
+### Le bloc de spawn joueur — `block PLAYER_SPAWN`, `MapInstance#findAndConsumeSpawnMarker`
+
+Décidé avec le joueur (2026-08-26), repris du plan Excel (feuille "Idées" > "CHOIX DE MAP") :
+plutôt qu'une téléportation vers `MAP_POS` codée en dur, le créateur d'une map peut poser un
+bloc `PLAYER_SPAWN` (bloc plein simple, aucun comportement au clic — `BLOCKS.registerSimpleBlock`,
+pas de classe dédiée) à l'endroit exact où les joueurs doivent apparaître.
+
+`findAndConsumeSpawnMarker(level)` parcourt le même volume que `clearZone`/
+`buildPlaceholderArena` (autour de `MAP_POS`), juste après que l'arène a été (re)posée : le
+premier `PLAYER_SPAWN` trouvé est **retiré** (`setBlockAndUpdate(pos, AIR)` — "se supprime pour
+ne pas le voir", comme prévu dans le plan Excel) et sa position devient la destination du
+téléport ; si aucun n'est trouvé, `startGame` retombe sur `MAP_POS` comme avant — **toujours le
+cas aujourd'hui**, puisque `buildPlaceholderArena()` ne pose qu'un sol générique, jamais de
+`PLAYER_SPAWN`. Un seul marqueur est attendu par map ; le premier trouvé gagne, pas de gestion
+de plusieurs candidats.
+
+**Pas concrètement testable pour l'instant** : le mécanisme ne peut être exercé qu'une fois
+qu'une vraie structure `.nbt` de map (contenant un `PLAYER_SPAWN` posé par le créateur) est
+chargée à la place du placeholder — voir "Système de maps/structures" dans
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md). Un `PLAYER_SPAWN` posé
+manuellement dans le placeholder actuel ne survivrait de toute façon pas à la prochaine
+préparation de map (`clearZone` efface tout, y compris un marqueur posé à la main, avant que le
+scan n'ait lieu) : ce n'est pas une limite de `findAndConsumeSpawnMarker` en soi, juste
+l'absence actuelle de structures réelles à charger.
+
+### Texture cassée en main — `models/item/player_spawn.json`
+
+Signalé en jeu (2026-08-26) : l'item s'affichait avec une texture manquante dans la main/
+l'inventaire, alors que le bloc posé s'affichait correctement. Cause : contrairement au modèle
+de **bloc** (`models/block/player_spawn.json`, ajouté dès le départ), aucun modèle d'**item**
+n'avait été créé — sans lui, rien n'indique au jeu quel modèle utiliser pour l'icône. Corrigé
+en ajoutant `models/item/player_spawn.json` avec `"parent":
+"dungeon_defenders:block/player_spawn"` — le même mécanisme standard que les blocs vanilla
+simples (ex. `minecraft:item/dirt`, qui référence directement `minecraft:block/dirt`).
+
+> Plusieurs autres blocs du mod (`spawner`, `tavern_crystal`, `spike_blockade`,
+> `harpoon_turret`, `eternia_crystal`) n'ont eux non plus jamais eu de `models/item/*.json`
+> dédié — probablement le même problème en main/inventaire pour chacun, jamais signalé jusqu'ici
+> faute d'avoir été spécifiquement regardé. Pas corrigé ici (hors scope de cette branche/PR,
+> chacun vit dans un autre fichier/PR) — à vérifier et corriger au cas par cas.
 
 ## Le Cristal d'Eternia
 
@@ -274,21 +315,46 @@ Depuis 26.1, un `BlockEntityRenderer` ne voit plus le block entity au moment du 
 cycle est en trois temps :
 
 1. **`createRenderState()`** → un `EterniaCrystalRenderState` (sous-classe de
-   `BlockEntityRenderState` portant un simple `float healthPercent`).
+   `BlockEntityRenderState` portant un simple `float healthPercent`) — **neuf à chaque frame**
+   (voir `BlockEntityRenderDispatcher#tryExtractRenderState`), donc incapable de retenir quoi
+   que ce soit d'une frame à l'autre tout seul (voir l'animation ci-dessous).
 2. **`extractRenderState(...)`** — appelé côté extraction, avec accès au block entity :
-   remplit `healthPercent = clamp(getCrystalHealth() / DEFAULT_HEALTH, 0, 1)`.
+   calcule la cible `clamp(getCrystalHealth() / DEFAULT_HEALTH, 0, 1)`, la passe à un
+   `HealthLerp` (voir plus bas) et remplit `healthPercent` avec sa valeur **animée**, pas la
+   cible brute.
 3. **`submit(state, poseStack, collector, camera)`** — ne voit que l'état :
    - translation à `(0.5, 3.2, 0.5)`, au-dessus de la hitbox de 3 blocs ;
    - billboard via `poseStack.mulPose(camera.orientation)`. Après cette rotation `+X` va vers
      la droite et **`+Y` vers le bas** (même convention que les name tags vanilla), d'où le
      `scale(1, -1, 1)` qui rétablit des coordonnées naturelles ;
-   - `collector.submitCustomGeometry(poseStack, RenderTypes.debugQuads(), ...)` — la
-     géométrie est *soumise*, plus dessinée immédiatement ; le lambda reçoit un
-     `PoseStack.Pose` et un `VertexConsumer` au moment du rendu réel.
+   - délègue le dessin à `HealthBarRendering.render(...)` (voir plus bas).
 
-Deux quads sont émis via `addSegment`, **juxtaposés et jamais superposés** : la jauge
-colorée occupe la portion pleine (`healthPercent`), le gris (`0.3, 0.3, 0.3`) le reste. Un
-segment de largeur nulle n'est pas émis du tout.
+### L'animation entre deux paliers de PV — `HealthLerp.java`
+
+Avant (jusqu'au 2026-08-24) : la barre sautait instantanément d'un palier à l'autre à chaque
+coup. `HealthLerp` anime la transition sur 300 ms, **en temps réel** (`Util.getMillis()`), pas
+sur `partialTicks` — même principe que `LerpingBossEvent` vanilla (barres de boss, 100 ms),
+mais `partialTicks` ne convient pas ici : il interpole entre deux valeurs connues à la frontière
+d'un tick, alors qu'un `EterniaCrystalRenderState` neuf à chaque frame ne peut stocker ni
+l'ancienne valeur ni un point de départ d'animation lui-même. L'objet `HealthLerp` vit donc sur
+le **renderer** (une seule instance, réutilisée pour tous les cristaux), dans une
+`Map<BlockPos, HealthLerp>` — une entrée par position de cristal vue dans la session, jamais
+nettoyée mais négligeable (en pratique une seule à la fois, une seule map active).
+`setTarget(...)` repart de la valeur **actuellement affichée** (pas de l'ancienne cible) : un
+coup qui arrive pendant que la barre bouge encore redirige l'animation en cours au lieu de la
+faire sauter en arrière avant de repartir. Réutilisée telle quelle par `TowerHealthBarRenderer`
+(voir plus bas, "La barre de vie des tours") — généralisée dès ce deuxième exemple concret.
+
+### Le dessin du quad — `HealthBarRendering.java`
+
+`collector.submitCustomGeometry(poseStack, RenderTypes.debugQuads(), ...)` — la géométrie est
+*soumise*, plus dessinée immédiatement ; le lambda reçoit un `PoseStack.Pose` et un
+`VertexConsumer` au moment du rendu réel. Deux quads sont émis via `addSegment`, **juxtaposés
+et jamais superposés** : la jauge colorée occupe la portion pleine (`healthPercent`), le gris
+(`0.3, 0.3, 0.3`) le reste. Un segment de largeur nulle n'est pas émis du tout. Extraite dans sa
+propre classe (statique, sans état) pour la même raison que `HealthLerp` : réutilisée telle
+quelle par `TowerHealthBarRenderer`, seules la taille du quad et la portée de la caméra
+diffèrent entre les deux usages.
 
 > C'est volontaire. `debugQuads` est déclaré avec `sortOnUpload()`, un tri de transparence
 > par distance à la caméra. Avec un fond pleine largeur recouvert par la jauge, les deux
@@ -454,6 +520,62 @@ monster.goalSelector.getAvailableGoals().stream()
 Sans ce test, un même monstre cumulerait plusieurs exemplaires du goal et attaquerait le
 cristal plusieurs fois par seconde.
 
+## La barre de vie des monstres — `entity/MobHealthBarRenderer.java`
+
+Même mécanisme et mêmes conditions d'affichage que "La barre de vie des tours" (endommagé + à
+moins de 16 blocs, animation 300 ms via `HealthLerp`, dessin via `HealthBarRendering`,
+2026-08-24) — mais le rendu d'entité vivante fonctionne différemment de celui d'un block
+entity, donc une intégration à part plutôt qu'un simple troisième appelant des mêmes classes.
+
+**Le problème (vie absente du render state)** : `EntityRenderState`/`LivingEntityRenderState`
+(vanilla) ne portent **aucun** champ de vie — vérifié dans le code source, contrairement à ce
+qu'on pourrait attendre par analogie avec `getCrystalHealth()`/`getHealth()` des block entities
+de ce mod. **`RegisterRenderStateModifiersEvent`** (NeoForge, bus mod,
+`onRegisterRenderStateModifiers` dans `DungeonDefendersModClient`) permet d'exécuter du code
+juste après l'extraction vanilla d'un render state, pour y ajouter des données — enregistré sur
+`LivingEntityRenderer<LivingEntity, LivingEntityRenderState, ?>` (capturé via un
+`com.google.common.reflect.TypeToken` anonyme — un simple `Class<...>` ne suffit pas ici, le
+compilateur ne peut pas vérifier les bornes génériques à partir d'un type brut), donc appliqué
+à **toute** entité vivante, coût négligeable (deux `float` + un `int` copiés) même si le rendu
+lui-même ne filtre que deux types de mob (voir plus bas). Stockage via `ContextKey<T>`
+(`net.minecraft.util.context`, vanilla) : `MobHealthBarRenderer.HEALTH`/`MAX_HEALTH`/
+`ENTITY_ID`, écrites par le modificateur (`state.setRenderData(HEALTH, entity.getHealth())`) et
+relues côté rendu (`state.getRenderData(HEALTH)`) — le stockage vit sur `BaseRenderState`
+(`net.neoforged.neoforge.client.renderstate`), une extension NeoForge que `EntityRenderState`
+hérite déjà. **Cette moitié n'a jamais été le bug** (voir plus bas).
+
+**Le vrai bug (trouvé le 2026-08-26, en testant en jeu) — mauvais repère de pose** : la
+première version dessinait via un `RenderLayer<S, M>` (mécanisme vanilla pour ajouter du rendu
+par-dessus un mob, ex. le collier du loup), branché via `EntityRenderersEvent.AddLayers`. Un
+`RenderLayer#submit(...)` s'exécute **à l'intérieur** du repère local du modèle : dans
+`LivingEntityRenderer#submit`, la boucle `for (RenderLayer<S,M> layer : this.layers)` a lieu
+**entre** un `poseStack.pushPose()` qui applique `scale(-1,-1,1)` (convention de modèle
+vanilla) + une rotation selon `state.bodyRot`, et le `poseStack.popPose()` qui referme ce
+repère. Essayer d'y superposer sa propre rotation caméra pour un billboard (comme le fait
+`HealthBarRendering`/`TowerHealthBarRenderer` dans un repère monde normal) compose deux
+transformations incompatibles : la géométrie est bien soumise, mais mal placée/orientée —
+invisible en pratique, pas un crash, donc rien dans les logs pour orienter le diagnostic.
+
+**Le nametag vanilla évite exactement ce piège** : `EntityRenderer#submitNameDisplay` est
+appelé depuis `EntityRenderer#submit` (la classe de base), lui-même invoqué par
+`LivingEntityRenderer#submit` via `super.submit(...)`, **après** le `popPose()` qui referme le
+repère du modèle — donc dans le même repère caméra-relatif "brut" qu'un `BlockEntityRenderer`.
+
+**La solution retenue** : abandonner `RenderLayer` au profit de
+`net.neoforged.neoforge.client.event.RenderLivingEvent.Post` (bus de jeu, pas bus mod), qui se
+déclenche juste après ce `super.submit(...)` — même repère que le nametag, donc valide pour un
+billboard caméra-face comme `HealthBarRendering`. Pas de filtre générique par type d'entité sur
+cet event (contrairement à `RegisterRenderStateModifiersEvent`) : `onRenderLiving` reçoit
+**toute** `LivingEntity` rendue et filtre lui-même sur `state.entityType` (zombie/squelette
+uniquement, seuls monstres du mod pour l'instant — pas de liste partagée avec
+`SpawnableEnemy`). Sort tôt si vide/PV pleins/trop loin (`state.distanceToCameraSq`, un champ
+vanilla), sinon anime via `HealthLerp` (indexé par `ENTITY_ID` plutôt que `BlockPos` — un
+monstre bouge, `LERP_BY_ENTITY_ID` static plutôt que porté par une instance de couche
+puisqu'il n'y a plus de couche) et dessine via `HealthBarRendering`, exactement comme avant.
+
+**Corrigé le 2026-08-26 suite à un test en jeu, mais le correctif lui-même reste à confirmer en
+jeu** — voir [06-a-tester.md](06-a-tester.md).
+
 ## Onglet créatif
 
 `dungeon_defenders_tab`, titre `Component.translatable("itemGroup.dungeon_defenders")`,
@@ -479,10 +601,17 @@ différent — supprimé, pas juste renommé) : les deux idées ne se recoupent 
 garder les deux, et le joueur a choisi de repartir sur la vraie mécanique de blocage/PV du
 plan Excel plutôt que de garder l'ancien piège en parallèle.
 
-**Le blocage du passage est gratuit** : un bloc plein (propriété par défaut de n'importe quel
-`Block` Minecraft, rien à coder) bloque déjà la marche d'un mob. Toute la logique custom sert
-donc uniquement à donner des PV au blockade et à faire en sorte qu'un ennemi choisisse de
-l'attaquer plutôt que de rester bloqué bêtement devant.
+**Le blocage du passage est en grande partie gratuit** : un bloc plein (propriété par défaut de
+n'importe quel `Block` Minecraft, rien à coder) bloque déjà la marche d'un mob. Une seule
+correction a été nécessaire : la hitbox par défaut fait 1 bloc de haut, hauteur qu'un monstre
+peut sauter (~1,25 bloc) pour se retrouver debout dessus et continuer son chemin par-dessus la
+tour — testé en jeu le 2026-08-23 (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#corrections-trouvées-lors-des-tests-en-jeu-du-2026-08-23)).
+`getCollisionShape`/`getShape` sont donc surchargés pour renvoyer une boîte de 1,5 bloc de haut
+(`Shapes.box(0, 0, 0, 1, 1.5, 1)`, même principe que les murs/barrières vanilla), même style que
+la hitbox 1×3×1 déjà utilisée par `EterniaCrystalBlock`. Le reste de la logique custom sert à
+donner des PV au blockade et à faire en sorte qu'un ennemi choisisse de l'attaquer plutôt que de
+rester bloqué bêtement devant.
 
 ### La catégorie "Blockade" — `block/entity/AbstractBlockadeBlockEntity.java`
 
@@ -589,9 +718,10 @@ niveau d'outil) et se drope lui-même via
 - Coût en mana à la pose branché (30, valeur de test — voir "Le coût en mana et la restriction
   de phase" plus haut), mais **pas encore équilibré** : choisi arbitrairement pour vérifier que
   le mécanisme fonctionne, pas après réflexion sur l'économie de mana globale.
-- Pas de remboursement de mana en le cassant.
-- Pas d'indicateur visuel de PV restants (barre de vie, changement de texture...) — seul
-  `getHealth()` existe côté code, rien ne l'affiche encore.
+- ~~Pas de remboursement de mana en le cassant~~ — fait, voir `ModEvents.onTowerBreak`
+  ("Ce qui est implémenté" dans 05-etat-et-problemes-connus.md).
+- ~~Pas d'indicateur visuel de PV restants~~ — fait (2026-08-24) : `TowerHealthBarRenderer`,
+  générique à toute catégorie de tour, voir plus bas "La barre de vie des tours".
 - Un seul membre concret de la catégorie "Blockade" pour l'instant (Spike Blockade). Une
   deuxième catégorie existe désormais ("Turret", voir plus bas), mais pas encore d'aura/piège
   non attaquable ni de piège de sol (les autres catégories envisagées par le joueur, voir
@@ -604,8 +734,10 @@ Premier membre de la catégorie "Turret" (nom repris du plan Excel — Squire) :
 Blockade, ce n'est pas un mur qu'on percute, c'est une **tour à distance** qui scanne et tire
 toute seule — construite pour tester l'aperçu de portée de la roue (jamais exercé jusque-là,
 aucune tour n'avait `range > 0`). Ne bloque pas spécialement le passage plus qu'un bloc plein
-normal (gratuit, comme Blockade), mais ce n'est pas son rôle : elle est pensée "posée en
-retrait" (voir la taxonomie du joueur), à l'inverse d'un mur pensé pour être au contact.
+normal, mais ce n'est pas son rôle : elle est pensée "posée en retrait" (voir la taxonomie du
+joueur), à l'inverse d'un mur pensé pour être au contact. Même hitbox custom de 1,5 bloc de
+haut que Spike Blockade (voir plus haut) : sans ça, un monstre pourrait sauter sur la tourelle
+et continuer son chemin par-dessus au lieu de la contourner ou de l'attaquer.
 
 ### La base commune à toutes les tours — `block/entity/AbstractTowerBlockEntity.java`
 
@@ -688,10 +820,263 @@ se drope lui-même via `data/dungeon_defenders/loot_table/blocks/harpoon_turret.
   égaré en phase Construction se ferait quand même tirer dessus ; comportement mineur, cohérent
   avec les dégâts de contact de Blockade, jamais phase-gatés non plus.
 - Pas de son/particules au tir, juste la flèche visuelle + dégâts directs.
-- Pas d'indicateur visuel de PV restants (même manque que Spike Blockade).
-- La convention de rotation de l'hologramme (voir "L'hologramme et le cercle de portée"
-  ci-dessous) n'a été vérifiée visuellement que pour `NORTH` (rotation identité, à l'abri de
-  toute inversion de sens) — **pas** pour `EAST`/`SOUTH`/`WEST`, jamais lancé en jeu.
+- ~~Pas d'indicateur visuel de PV restants~~ — fait (2026-08-24), voir "La barre de vie des
+  tours" plus bas (même renderer générique que Spike Blockade).
+- Deux bugs de rotation successifs corrigés en jeu (2026-08-21), tous les deux dans l'aperçu
+  (le bloc réellement posé, lui, a toujours été correct — voir plus bas "L'hologramme et le
+  cercle de portée" pour le détail des deux causes) :
+  1. La rotation utilisait `Direction.toYRot()` (convention `SOUTH=0°/WEST=90°/NORTH=180°/
+     EAST=270°`, pensée pour le yaw des entités) — le cône pointait à l'opposé de la vraie
+     direction de tir.
+  2. Une fois remplacée par les valeurs `y` du blockstate (`NORTH=0°/EAST=90°/SOUTH=180°/
+     WEST=270°`, comme `furnace.json`), EST et OUEST restaient inversés : ces valeurs sont
+     correctes pour le système de blockstate de Minecraft, mais pas pour
+     `Axis.YP.rotationDegrees(...)` (rotation main-droite standard, l'inverse avec les axes de
+     Minecraft) utilisé pour dessiner l'aperçu — l'utilisateur choisissait une rotation en se
+     fiant au cône, et la tour réellement posée (correcte, mais différente de ce que montrait
+     le cône) semblait donc "tournée à l'envers" une fois confirmée.
+
+## La barre de vie des tours — `block/entity/TowerHealthBarRenderer.java`
+
+Un seul renderer, générique sur `AbstractTowerBlockEntity` (`<T extends AbstractTowerBlockEntity>
+implements BlockEntityRenderer<T, TowerHealthBarRenderState>`), couvre toute catégorie de tour
+existante ou future — enregistré une fois par `BlockEntityType` concret dans
+`DungeonDefendersModClient#onRegisterRenderers` (une ligne `event.registerBlockEntityRenderer(...)`
+par tour, mais toujours `TowerHealthBarRenderer::new`).
+
+**Conditions d'affichage**, décidées avec le joueur (2026-08-24) : contrairement à la barre du
+Cristal d'Eternia (toujours affichée — il n'y en a jamais qu'un), une base peut compter des
+dizaines de tours posées. Une barre visible sur toutes en permanence deviendrait illisible, donc
+`extractRenderState` la cache tant que :
+
+- la tour n'est **pas endommagée** (`getHealth() >= getMaxHealth()`) ;
+- ou la caméra est à plus de 16 blocs (`MAX_DISTANCE_SQ`, même principe que l'aperçu du
+  spawner, voir plus bas).
+
+Seules les tours réellement endommagées et à portée de vue affichent donc leur barre.
+
+**Rendu et animation** : même mécanisme que le cristal, extrait dans deux classes partagées
+pour éviter la duplication après ce deuxième exemple concret :
+
+- `HealthLerp` — anime le passage d'un ratio de PV à l'autre sur 300 ms, en **temps réel**
+  (`Util.getMillis()`), pas sur `partialTicks` : un `BlockEntityRenderState` est recréé à
+  chaque frame (`BlockEntityRenderDispatcher#tryExtractRenderState`), impossible d'y retenir
+  quoi que ce soit d'une frame à l'autre — l'animation vit donc sur le renderer lui-même, dans
+  une `Map<BlockPos, HealthLerp>` (une entrée par position de tour/cristal vue dans la session).
+  Un nouveau coup pendant que la barre bouge encore redirige l'animation en cours plutôt que de
+  la faire sauter en arrière.
+- `HealthBarRendering` — dessine le quad (dégradé vert → jaune → rouge + segment gris restant),
+  appelée par les deux renderers une fois le `poseStack` positionné/orienté en billboard.
+
+`TowerHealthBarRenderState` ne porte que `visible` et `healthPercent` — la condition
+d'affichage elle-même est calculée dans `extractRenderState`, pas dans `submit`.
+
+## Le reste du roster de l'Écuyer
+
+Décidé avec le joueur (2026-08-29) : les quatre tours suivantes complètent le roster de
+l'Écuyer (Spike Blockade et Harpoon Turret existaient déjà). Chaque design a été discuté et
+validé un par un avec le joueur avant d'être codé — les questions d'architecture (fallait-il un
+nouveau mécanisme, ou les catégories existantes suffisaient-elles ?) ont été tranchées au même
+moment, pas devinées après coup.
+
+### Bouncer Blockade — `block/BouncerBlockadeBlock.java`
+
+Deuxième membre de "Blockade" : au contact, inflige des dégâts **et** repousse — décidé avec le
+joueur, les deux effets ensemble, pas l'un à la place de l'autre, et seulement les monstres déjà
+dans sa portée de contact (même `AABB` que les dégâts, pas un rayon séparé).
+
+`AbstractBlockadeBlockEntity` gagne un nouveau paramètre, `knockbackStrength` (0 pour Spike
+Blockade et Slice N Dice Blockade, > 0 pour Bouncer) :
+
+```java
+if (blockEntity.knockbackStrength > 0.0F) {
+    double dx = (pos.getX() + 0.5D) - monster.getX();
+    double dz = (pos.getZ() + 0.5D) - monster.getZ();
+    monster.knockback(blockEntity.knockbackStrength, dx, dz);
+}
+```
+
+**Sens du vecteur, corrigé une fois en jeu (2026-08-29)** : la toute première version passait
+"position du monstre moins position de la source" en pensant reproduire la convention de
+`LivingEntity#blockedByItem` — au premier test, les monstres étaient **attirés** vers le
+blockade au lieu d'être repoussés, signe que la lecture de cette convention vanilla était
+inversée. Corrigé à partir du comportement réellement observé (pas re-déduit des sources une
+deuxième fois, pour éviter de refaire la même erreur d'interprétation) : `Entity#knockback`
+pousse dans le sens **opposé** au vecteur passé (son corps calcule
+`deltaMovement - normalize(xd, zd)`), donc pour repousser loin de la source, il faut lui passer
+un vecteur qui pointe **vers** elle (source moins monstre), pas l'inverse. Même classe de bug
+que la convention de rotation `Axis.YP` de la roue des tours (voir plus haut) : un sens de
+vecteur/rotation mal interprété malgré une vérification dans les sources — matérialisé cette
+fois par un test en jeu plutôt qu'un rendu visuel.
+
+**"Vitesse d'attaque" (question du joueur, 2026-08-29)** : oui, c'est déjà géré —
+`contactDamageIntervalTicks` (10 ticks pour Bouncer, soit 0,5s) est le même cooldown pour les
+dégâts **et** la repousse, par monstre (`AbstractBlockadeBlockEntity#serverTick`,
+`lastContactDamageTick`). Un monstre au contact ne se fait donc pousser qu'une fois par
+intervalle, jamais en continu tant qu'il reste collé au blockade — c'est ce qui empêche déjà la
+repousse d'être "trop forte" par répétition ; `knockbackStrength` ne règle que l'intensité d'une
+poussée isolée, pas sa fréquence.
+
+25 PV, 25 mana (moins cher que Spike Blockade, l'intérêt n'étant pas les dégâts), 1 PV toutes
+les 10 ticks — valeurs de test, pas encore équilibrées. `KNOCKBACK_STRENGTH` a fait un aller-
+retour en jeu (2026-08-29) : 0.8F d'abord jugée imperceptible — mais le sens du vecteur était
+encore inversé à ce moment-là (voir ci-dessus), donc cette impression n'était pas fiable ;
+remontée à 1.6F dans la foulée, puis le sens corrigé séparément. Une fois la repousse
+effectivement fonctionnelle dans le bon sens, 1.6F s'est avérée trop forte — **remise à 0.8F**,
+sa valeur d'origine.
+
+### Slice N Dice Blockade — `block/SliceNDiceBlockadeBlock.java`
+
+Troisième membre de "Blockade" : confirmé avec le joueur ("tout est correct") — **aucun nouveau
+comportement**. `AbstractBlockadeBlockEntity#serverTick` inflige déjà ses dégâts à **tous** les
+monstres présents dans `contactRange`, pas seulement le premier ; Spike Blockade ne l'exploite
+juste pas vraiment avec son rayon d'1 bloc. Se différencie par une cadence bien plus rapide et
+des dégâts plus faibles par coup (DPS continu façon lames tournantes plutôt que coups espacés
+façon pics) et un rayon légèrement plus large (1,5 bloc). 35 PV, 40 mana, 1 PV toutes les
+5 ticks.
+
+### Bowling Ball Turret — `block/BowlingBallTurretBlock.java`, `entity/BowlingBallEntity.java`
+
+Deuxième membre de "Turret" : demandé explicitement par le joueur — "on veut vraiment que la
+boule continue sur une certaine longueur même si elle touche un ennemi, elle continue". Contrairement
+à Harpoon Turret (flèche purement visuelle, dégâts appliqués directement par le code appelant à
+une seule cible), Bowling Ball Turret lance une vraie `BowlingBallEntity` avec une vraie
+collision — c'est **elle** qui applique les dégâts, pas `fireAt`.
+
+**`BowlingBallEntity extends Arrow`** plutôt qu'une nouvelle entité construite de zéro :
+`AbstractArrow` a déjà tout ce qu'il faut pour "traverse plusieurs ennemis sans s'arrêter au
+premier" — c'est exactement le mécanisme vanilla d'une flèche enchantée **Perforation**
+(`piercingIgnoreEntityIds`, qui retient les entités déjà touchées pour ne jamais les re-toucher,
+et empêche l'arrêt tant que le nombre de perforations n'est pas dépassé). Problème : le niveau
+de perforation se règle via `setPierceLevel(byte)`, **privé** dans `AbstractArrow` — inaccessible
+depuis une sous-classe. Le seul point d'entrée public est le constructeur qui accepte un
+`firedFromWeapon` réellement enchanté :
+
+```java
+private static ItemStack fakePiercingWeapon(ServerLevel level) {
+    Holder<Enchantment> piercing = level.registryAccess().getOrThrow(Enchantments.PIERCING);
+    ItemStack weapon = new ItemStack(Items.CROSSBOW);
+    weapon.enchant(piercing, PIERCE_LEVEL);
+    return weapon;
+}
+```
+
+Cette fausse arme (jamais donnée à personne, jamais visible) est passée au constructeur
+`Arrow(level, x, y, z, pickupItemStack, firedFromWeapon)` — en interne, `AbstractArrow` lit
+l'enchantement via `EnchantmentHelper.getPiercingCount(...)` et appelle lui-même son propre
+`setPierceLevel` privé. Pas de réflexion sur un champ privé vanilla, juste le chemin public
+prévu pour ce cas — vérifié dans les sources plutôt que deviné.
+
+Le reste vient gratuitement d'`AbstractArrow#onHitEntity` (déjà appelé par le `tick()` hérité,
+rien à réimplémenter) : dégâts (`setBaseDamage`, nuance à noter — proportionnels à la vitesse au
+moment de l'impact, comme une vraie flèche vanilla, donc légèrement décroissants avec la
+distance déjà parcourue), son au contact, léger recul de la cible. `setNoGravity(true)` : la
+boule roule en ligne droite plutôt que de retomber en cloche ; `tick()` est surchargé pour se
+`discard()` une fois `MAX_BALL_DISTANCE` parcourue, indépendamment du nombre d'ennemis
+traversés en chemin.
+
+**Direction du tir : uniquement horizontale, pas visée sur `target.getEyeY()`** — signalé au
+premier test en jeu (2026-08-29) : viser la hauteur des yeux de la cible faisait partir la boule
+vers le haut, façon tir à l'arbalète, alors qu'une boule qui roule doit garder une hauteur fixe.
+Corrigé dans `BowlingBallTurretBlockEntity.fireAt` (pas dans `BowlingBallEntity` lui-même — le
+calcul de direction reste la responsabilité de l'appelant, l'entité ne fait que voler droit une
+fois lancée) :
+
+```java
+Vec3 direction = new Vec3(
+        target.getX() - origin.x,
+        0.0D,
+        target.getZ() - origin.z
+).normalize();
+```
+
+Combiné à `setNoGravity(true)`, la boule part maintenant en ligne parfaitement horizontale, à la
+hauteur de tir de la tourelle (`muzzlePosition`, mi-hauteur du bloc).
+
+**`extends Arrow` plutôt qu'un nouvel `EntityType` custom** : le constructeur position d'`Arrow`
+force `EntityType.ARROW` en interne (voir `Arrow.java`) — la boule prend donc l'apparence d'une
+flèche vanilla en vol, pas une vraie boule. Limite assumée, même famille que les autres
+placeholders visuels du mod (le cristal de mana a l'air d'une orbe d'XP vanilla, etc.) : évite
+d'enregistrer un `EntityType`/renderer dédié pour un MVP. 20 PV, 55 mana, 5 dégâts/tir, cadence
+lente (40 ticks).
+
+### Mortar Turret — `block/MortarTurretBlock.java`
+
+Troisième membre de "Turret" : confirmé avec le joueur — contrairement à Bowling Ball Turret,
+on veut ici de vrais **dégâts de zone façon explosion** à l'impact (sans dégât de terrain,
+décidé explicitement), pas une perforation en ligne.
+
+**Version initiale (2026-08-29) : réutilisait le tir cosmétique de la base (`spawnArrow`,
+la même flèche vanilla à gravité que Harpoon Turret).** Signalé au premier test en jeu : la
+flèche partait vers le ciel et ne semblait jamais redescendre de façon satisfaisante pour un
+"impact" — les dégâts, eux, ont toujours été appliqués instantanément à l'envoi du tir (jamais
+liés à l'arrivée réelle d'une flèche), donc la flèche volante n'apportait ni information ni
+retour visuel cohérent avec ce qui se passait réellement. **Remplacée par une particule
+d'explosion au point d'impact**, jouée au même instant que les dégâts :
+
+```java
+@Override
+protected void fireAt(ServerLevel level, BlockPos pos, Monster target, Direction facing) {
+    Vec3 impact = target.position();
+    level.sendParticles(ParticleTypes.EXPLOSION, impact.x, impact.y, impact.z, 4, 0.3D, 0.3D, 0.3D, 0.0D);
+
+    AABB splashArea = new AABB(target.blockPosition()).inflate(SPLASH_RADIUS);
+    for (Monster monster : level.getEntitiesOfClass(Monster.class, splashArea)) {
+        monster.hurt(level.damageSources().generic(), getDamage());
+    }
+}
+```
+
+**Taille de l'effet, ajustée une fois en jeu (2026-08-29)** : la toute première version
+utilisait `ParticleTypes.EXPLOSION_EMITTER` (le grand "poof" dramatique qu'une explosion TNT/
+creeper joue une fois en son centre) — jugé trop imposant pour un impact de mortier qui se
+répète toutes les 3 secondes. Remplacé par `ParticleTypes.EXPLOSION` (la petite particule
+dispersée en nombre dans le rayon d'une vraie explosion vanilla), 4 exemplaires légèrement
+éparpillés (`0.3` bloc de rayon) plutôt qu'un seul point — un effet plus modeste, mais toujours
+lisible comme une explosion. **Purement visuelle** dans les deux cas : `ServerLevel#sendParticles`
+ne fait que diffuser l'information de rendu aux joueurs proches, aucun rapport avec une vraie
+`Explosion` vanilla — aucun risque de dégât de terrain, cohérent avec la demande explicite du
+joueur. **Pas encore fait** : un vrai visuel de trajectoire avant l'impact (obus qui vole puis
+explose) — le joueur a explicitement reporté ce point à plus tard, l'effet actuel est instantané
+à l'envoi du tir, comme les dégâts.
+
+Même principe de scan par `AABB` que `AbstractBlockadeBlockEntity#serverTick` pour les dégâts,
+mais appliqué **une fois** au point d'impact plutôt qu'en continu autour du bloc. Tour la plus
+chère et la plus lente du roster (20 PV, 70 mana, 8 dégâts par ennemi touché, rayon 2 blocs,
+cadence 60 ticks) : compense la puissance des dégâts de zone.
+
+### Le refactor commun — `block/entity/AbstractTurretBlockEntity.java`
+
+`fireAt`, `spawnArrow` et le nouveau `muzzlePosition` sont passés de `private` à `protected`
+pour permettre à Bowling Ball Turret et Mortar Turret de redéfinir `fireAt` — même principe que
+l'extraction d'`AbstractTowerBlockEntity` en son temps (voir plus haut) : généralisé seulement
+une fois un vrai deuxième besoin concret constaté (ici, deux tours qui ont chacune besoin d'un
+comportement de tir différent de celui de Harpoon), pas une généralisation devinée à l'avance.
+
+**Deux bugs trouvés en touchant cette classe** (donc déjà présents sur Harpoon Turret, pas
+seulement les deux nouvelles tours à distance) :
+
+- `lastFireTick` était initialisé à `Long.MIN_VALUE`. `now - lastFireTick` déborde alors vers un
+  nombre toujours négatif (overflow de `long`), donc `now - lastFireTick < attackIntervalTicks`
+  était **toujours vrai** — le tir ne se déclenchait jamais, pour aucune tourelle. Remplacé par
+  `-attackIntervalTicks`, qui permet un premier tir immédiat sans provoquer le même débordement.
+- L'origine du tir n'était pas décalée hors du cube plein du bloc — sans effet visible pour
+  Harpoon Turret (flèche purement cosmétique, les dégâts sont appliqués directement, la flèche
+  peut bien se figer sans que ça ne change rien au gameplay), mais **bloquant** pour
+  `BowlingBallEntity`, qui a besoin d'une vraie collision : une flèche qui apparaît dans la
+  géométrie de collision du bloc sous elle se fige au premier tick
+  (`AbstractArrow#tick`). `muzzlePosition` centralise maintenant ce décalage de 0,6 bloc, la
+  même valeur déjà utilisée par `spawnArrow`.
+
+### Assets
+
+Les quatre nouveaux blocs réutilisent des textures vanilla thématiquement proches, en attendant
+de vraies textures dédiées (même principe que Spike Blockade/dripstone, Harpoon Turret/furnace) :
+Bouncer Blockade → `slime_block` (rebondissant), Slice N Dice Blockade → `iron_block`
+(métallique, lames), Bowling Ball Turret → `dispenser`/`furnace` (éjecte quelque chose),
+Mortar Turret → `blast_furnace` (arme lourde). Modèle directionnel (`orientable`) pour les deux
+tours, `cube_all` pour les deux blockades — mêmes conventions que Harpoon Turret/Spike Blockade
+respectivement.
 
 ## La roue de sélection des tours et la pose — `client/gui/screen/TowerWheelScreen.java`
 
@@ -713,9 +1098,13 @@ portée, `coneAngleDegrees` sans effet) ; `HARPOON_TURRET` a `range=12.0`,
 
 ### Les touches — `client/ModKeyMappings.java`
 
-Deux `KeyMapping` (catégorie vanilla `GAMEPLAY`) : `tower_wheel` (ouvre la roue, `R` par
-défaut) et `rotate_tower` (fait pivoter l'hologramme pendant l'étape orientation, `T` par
-défaut).
+Deux `KeyMapping`, sous une catégorie dédiée `ModKeyMappings.CATEGORY` (pas la catégorie
+vanilla `GAMEPLAY`) — enregistrée via `RegisterKeyMappingsEvent#registerCategory`, avec sa
+propre clé de lang `key.category.dungeon_defenders.keys` ("Dungeon Defenders") : regroupées
+sous leur propre en-tête dans Options > Contrôles > Touches, plus simples à retrouver que
+noyées parmi les touches vanilla. `tower_wheel` (ouvre la roue, `R` par défaut) et
+`rotate_tower` (fait pivoter l'hologramme pendant l'étape orientation, `G` par défaut — pas
+`T`, déjà pris par le chat vanilla).
 
 ### La roue — `TowerWheelScreen`
 
@@ -733,22 +1122,26 @@ Ouverte directement côté client par `TowerPlacementClientEvents` (sur `ClientT
 si la touche est consommée et qu'aucun écran n'est déjà ouvert) — comme `MapSelectionScreen`,
 pas de `Menu` ni d'aller-retour serveur nécessaire pour l'ouvrir.
 
-### Le mode pose, deux étapes — `client/TowerPlacementState.java`, `client/TowerPlacementClientEvents.java`
+### Le mode pose, une seule étape — `client/TowerPlacementState.java`, `client/TowerPlacementClientEvents.java`
 
 Sélectionner une tour dans la roue démarre `TowerPlacementState` (état transitoire, pas
-persistant) en étape **AIMING**, puis fait basculer en **ORIENTING** au premier clic droit
-valide :
+persistant). Position et rotation évoluent **en parallèle**, dans n'importe quel ordre, tant
+que le mode pose reste actif :
 
-- **AIMING** : chaque tick, un rayon est lancé depuis les yeux du joueur
-  (`level.clip(new ClipContext(...))`, portée 20 blocs, `ClipContext.Block.OUTLINE`) ; la
-  position juste après le bloc touché (`hit.getBlockPos().relative(hit.getDirection())`)
-  devient la cible, valide si `canBeReplaced()`. **Clic gauche** annule tout le mode pose.
-  **Clic droit** sur une cible valide verrouille la position et passe en ORIENTING (ignoré sur
-  une cible invalide).
-- **ORIENTING** : la position ne bouge plus. La touche `rotate_tower` fait pivoter la rotation
-  courante (`Direction`, pas de 90°, `getClockWise()`). **Clic droit** envoie
-  `PlaceTowerPayload` (tour + position + rotation) au serveur et quitte le mode pose. **Clic
-  gauche** annule tout (pas de retour à AIMING).
+- Chaque tick, un rayon est lancé depuis les yeux du joueur (`level.clip(new
+  ClipContext(...))`, portée 20 blocs, `ClipContext.Block.OUTLINE`) ; la position juste après
+  le bloc touché (`hit.getBlockPos().relative(hit.getDirection())`) devient la cible, valide si
+  `canBeReplaced()`.
+- La touche `rotate_tower` fait pivoter la rotation courante (`Direction`, pas de 90°,
+  `getClockWise()`) à tout moment, y compris en visant encore une position.
+- **Clic droit** sur une cible valide pose la tour immédiatement, avec la position et la
+  rotation courantes (`PlaceTowerPayload`, tour + position + rotation), et quitte le mode pose
+  — ignoré sur une cible invalide. **Clic gauche** annule tout le mode pose à tout moment.
+
+Une seule confirmation, pas deux : jusqu'au 2026-08-2x, le mode pose comptait une étape
+AIMING (position mobile) suivie d'une étape ORIENTING (position figée, seule la rotation
+changeait, un second clic droit pour confirmer) — simplifié en une seule étape à la demande du
+joueur, la rotation n'ayant pas besoin d'une étape dédiée pour un cycle à 4 valeurs.
 
 L'interception des clics passe par `InputEvent.InteractionKeyMappingTriggered`
 (`isAttack()`/`isUseItem()`, annulés le temps du mode pose pour ne pas déclencher l'action
@@ -757,9 +1150,8 @@ clic droit (l'event se déclenche une fois par main pour "Use Item").
 
 **Spike Blockade** est un cube symétrique, sans propriété d'orientation dans son `BlockState` —
 tourner son hologramme n'a donc aucun effet visuel ni gameplay sur cette tour précise. C'est le
-**Harpoon Turret** qui exerce enfin cette étape pour de vrai (`HORIZONTAL_FACING` + cône de
-tir orienté, voir plus haut) — l'étape ORIENTING avait été construite génériquement par
-anticipation, avant qu'une tour concrète n'en ait besoin.
+**Harpoon Turret** qui exerce enfin la rotation pour de vrai (`HORIZONTAL_FACING` + cône de tir
+orienté, voir plus haut).
 
 ### L'hologramme et le cercle de portée — rendu
 
@@ -772,26 +1164,33 @@ block entity à qui l'accrocher, contrairement aux autres renderers du mod) ;
 - **Contour filaire du bloc** (`Shapes.block()`, parcouru arête par arête comme le fait
   `ShapeRenderer.renderShape` vanilla en interne — réimplémenté ici car cette méthode attend un
   `PoseStack` complet, alors que `submitCustomGeometry` ne fournit qu'un `PoseStack.Pose`
-  différé) : **vert si la position visée est valide, rouge sinon** — toujours vert en
-  ORIENTING, puisque la position y est déjà verrouillée comme valide.
+  différé) : **vert si la position visée est valide, rouge sinon**, tourné selon `state.rotation`
+  en permanence (voir `facingYRot` plus bas).
 - **Zone de portée** (`renderRangeArea`, `RenderTypes.lines()`), uniquement si
   `TowerDefinition.range() > 0` — **cercle complet** si `coneAngleDegrees >= 360`
   (omnidirectionnel), sinon un **secteur/cône** : l'arc borné à `[-coneAngleDegrees/2,
   +coneAngleDegrees/2]` **plus** deux segments droits vers l'origine, pour lire visuellement un
-  cône et pas un arc flottant dans le vide. La rotation de la zone suit `state.rotation`
-  **en permanence** (pas seulement en ORIENTING comme pour le contour du bloc, qui ne montre de
-  toute façon jamais sa rotation visuellement pour un cube parfait) : le cône reflète déjà
-  l'orientation par défaut (`NORTH`) dès l'étape AIMING, et suit la touche de rotation une fois
-  en ORIENTING.
+  cône et pas un arc flottant dans le vide. La rotation de la zone suit `state.rotation` en
+  permanence elle aussi, dès l'orientation par défaut (`NORTH`).
 
   Convention du gabarit local : angle `-90°` (dans le repère `cos`/`sin` déjà utilisé par
-  l'ancien cercle complet) correspond à la direction `NORTH`, cohérente avec
-  `Direction.NORTH.toYRot() == 0` (rotation identité) — déduite par construction, donc fiable
-  pour `NORTH`. **Non vérifiée visuellement pour `EAST`/`SOUTH`/`WEST`** (dépend du sens de
-  rotation réel de `Axis.YP.rotationDegrees`, jamais confirmé faute de lancer le client) — à
-  contrôler en priorité au premier test du Harpoon Turret, voir `doc/06-a-tester.md`.
-  Jamais rien à dessiner pour Spike Blockade (`range = 0.0`) ; le Harpoon Turret
-  (`range=12.0`, `coneAngleDegrees=45.0`) est le premier à l'exercer réellement.
+  l'ancien cercle complet) correspond à la direction `NORTH`, c'est-à-dire au point local
+  `(0,0,-radius)` — cohérent avec le vecteur normal vanilla de `Direction.NORTH` ((0,0,-1)).
+
+  La rotation appliquée vient de `facingYRot(Direction)`, une table dédiée avec
+  **`NORTH=0°, EAST=270°, SOUTH=180°, WEST=90°`** — ni `Direction.toYRot()` (convention encore
+  différente, pensée pour le yaw des entités), ni les valeurs `y` du blockstate posé prises
+  telles quelles (`facing=east → y:90` dans `harpoon_turret.json`, correctes pour le système de
+  blockstate de Minecraft mais pas pour la rotation appliquée ici). Deux bugs successifs
+  corrigés après des tests en jeu : d'abord `toYRot()` (la tour tirait à l'opposé exact du cône
+  affiché), puis les valeurs du blockstate telles quelles (EST/OUEST inversés spécifiquement,
+  NORD/SUD corrects par symétrie — vérifié par calcul : `Axis.YP.rotationDegrees(...)` applique
+  la rotation main-droite standard de JOML, qui avec les axes de Minecraft (+X est, +Z sud) va
+  dans le sens inverse de la convention "horaire vu du dessus" du blockstate). Voir "Ce qui
+  n'est PAS fait" ci-dessus et `doc/05-etat-et-problemes-connus.md`. Jamais rien à dessiner
+  pour Spike Blockade (`range = 0.0`) ; le Harpoon Turret (`range=12.0`,
+  `coneAngleDegrees=45.0`) est le premier à
+  l'exercer réellement.
 
 ### Le paquet final — `network/PlaceTowerPayload.java`, `ModNetworking.handlePlaceTower`
 
@@ -822,10 +1221,110 @@ restauré (`before.restore(...)`) — le bloc disparaît comme s'il n'avait jama
 - Pas de filtrage par héros — la roue liste toutes les tours, en attendant ce système.
 - Pas de remplissage translucide de l'hologramme, juste le contour filaire.
 
+## La suppression de tour — `client/TowerRemovalState.java`, `client/TowerRemovalClientEvents.java`, `network/RemoveTowerPayload.java`
+
+Décidé avec le joueur (2026-08-26), sur le modèle du jeu de référence plutôt que sur le minage
+vanilla à la pioche : une **touche dédiée** (`remove_tower_mode`, `X` par défaut,
+`client/ModKeyMappings.java`) fait entrer/sortir du **mode suppression** ; pendant ce mode, un
+**clic gauche** sur une tour visée la détruit instantanément et rembourse une partie de son coût
+en mana. Symétrique à la roue de pose (une seule vraie façon de poser, une seule vraie façon de
+retirer), mais l'ancien chemin pioche existe toujours en parallèle — voir "Ce qui n'est PAS
+fait" plus bas.
+
+### L'état et la bascule — `TowerRemovalState`
+
+État transitoire client (pas persistant, pas synchronisé), même esprit que
+`TowerPlacementState` mais plus simple : juste `active`/`targetPos`/`targetValid`, pas
+d'étapes. **Se désactive après chaque suppression** (retour du joueur, 2026-08-26, changé
+depuis le comportement d'origine qui restait actif pour enchaîner plusieurs suppressions comme
+dans le jeu de référence) — en usage réel, le joueur en retire généralement une seule à la
+fois, rester en mode suppression après coup gênait plus qu'il n'aidait. Se désactive aussi sur
+un nouvel appui sur la touche (bascule manuelle), ou automatiquement si la phase quitte
+Construction, si l'écran ou le niveau/joueur deviennent indisponibles.
+
+`TowerRemovalClientEvents.onClientTick` refuse de basculer le mode si la roue de pose
+(`TowerPlacementState.isActive()`) est déjà active ou qu'un écran est ouvert. **Symétriquement**
+(bug signalé en jeu et corrigé le 2026-08-26), `TowerPlacementClientEvents.onClientTick` refuse
+maintenant d'ouvrir la roue si le mode suppression (`TowerRemovalState.isActive()`) est déjà
+actif — l'ancienne version ne vérifiait ce garde-fou que dans un seul sens : rester en mode
+suppression pendant tout un mode pose laissait un clic gauche déclencher les deux handlers à la
+fois (annulation de la pose **et** suppression de la tour visée).
+
+### Le ciblage — raycast `OUTLINE`, comme la pose
+
+Même mécanisme que `TowerPlacementClientEvents.updateTargetFromRaycast` : rayon de 20 blocs
+depuis les yeux du joueur, `ClipContext.Block.OUTLINE`. Une position est une cible valide si
+`level.getBlockEntity(pos) instanceof AbstractTowerBlockEntity` — générique à toute catégorie de
+tour (Blockade et Turret), aucun cas particulier par type. Rendu d'un contour filaire orange
+(`renderBoxOutline`, même technique que le contour vert/rouge de la pose, submit-node pipeline)
+autour de la tour visée quand elle est valide — orange choisi délibérément pour ne pas laisser
+croire aux deux modes une sémantique commune avec le vert/rouge de validité de pose.
+
+### Le clic et le paquet — `RemoveTowerPayload`, `ModNetworking.handleRemoveTower`
+
+`InputEvent.InteractionKeyMappingTriggered` : pendant le mode, **tout clic gauche est annulé**
+(`event.isAttack()`), pour ne jamais casser un bloc ou frapper un monstre par accident en visant
+une tour — que la cible soit valide ou non. Si elle est valide, `RemoveTowerPayload(pos)` part
+vers le serveur.
+
+Le serveur revalide tout, comme n'importe quel autre paquet du mod : phase Construction
+uniquement (même message `tower.build_phase_only` que la pose, symétrique), distance
+(`MAX_DISTANCE_SQ`, même constante que la config du spawner), et présence réelle d'une
+`AbstractTowerBlockEntity` à la position reçue — le client n'est jamais l'autorité, même s'il a
+déjà refusé une cible invalide de son côté.
+
+Remboursement : `Math.round(tower.getManaCost() * TOWER_MANA_REFUND_RATIO)`, avec
+`TOWER_MANA_REFUND_RATIO = 0.5F` — valeur de test, pas encore équilibrée, comme les coûts de
+pose eux-mêmes (`TowerDefinition`). Plafonné à `MAX_MANA` comme tout gain de mana. La
+destruction passe par `serverLevel.destroyBlock(pos, false)` — **pas de drop d'item**, même
+convention qu'une tour détruite au combat (`AbstractTowerBlockEntity#setHealth`, `dropBlock =
+false`) : la touche dédiée est voulue comme l'unique façon "propre" de retirer une tour.
+
+### Ce qui n'est PAS fait, volontairement
+
+- Pas de confirmation ("es-tu sûr ?") avant suppression — un clic suffit, comme la pose.
+- Pas de retour visuel pendant que le mode est actif hors du contour orange sur la cible.
+
+**Le minage à la pioche est réglé par ailleurs** : voir "Casser un bloc est désormais
+désactivé" juste en dessous — la touche dédiée n'est plus seulement l'unique façon "propre" de
+retirer une tour, c'est désormais **la seule façon tout court**, plus aucun bloc ne se casse à
+la pioche en survie, tour ou pas.
+
+## Casser un bloc est désormais désactivé — `ModEvents.onBlockBreakAttempt`
+
+Décidé avec le joueur (2026-08-26), directement en réaction au clutter d'item inerte laissé par
+le minage des tours (voir plus haut) : plutôt que de traiter chaque bloc au cas par cas
+(rendre les tours incassables, puis le spawner, puis le Cristal d'Eternia...), un seul handler
+générique **annule toute tentative de casse de bloc pour un joueur non créatif**, quel que soit
+le bloc visé — terrain, structure de la taverne, tours, tout. Ce n'est pas ce genre de jeu : pas
+de minage, pas de récolte de ressources.
+
+`BreakBlockEvent` (`net.neoforged.neoforge.event.level.block.BreakBlockEvent` — **pas**
+`BlockEvent.BreakEvent`, qui n'existe plus dans cette version de NeoForge, renommé/déplacé) se
+déclenche **indépendamment côté client ET côté serveur** (précisé dans sa javadoc). Le handler
+annule sans condition de camp — pour stopper net à la fois la prédiction client (le bloc
+n'affiche jamais de cassure qui se corrige ensuite) et la casse réelle côté serveur — mais
+n'envoie le message système ("Impossible de casser des blocs dans ce monde.") que côté serveur
+(`!event.getLevel().isClientSide()`), pour ne pas l'afficher deux fois (une fois localement,
+une fois via le paquet réseau).
+
+Réservé aux joueurs non créatifs (`player.isCreative()`), même principe que partout ailleurs
+dans le mod : le créatif reste le seul mode où une map se construit/modifie.
+
+**Effet de bord voulu** : comme le handler est générique à tout bloc, il rend aussi le minage
+des tours à la pioche impossible sans rien coder de spécifique aux tours — le chemin
+"suppression avec remboursement" (voir plus haut) devient de fait la seule façon de retirer une
+tour, sans avoir eu besoin de toucher à `strength()`/`getDestroyProgress()` par bloc.
+- Aucun retour visuel pendant que le mode est actif hors du contour orange sur la cible (pas de
+  changement de curseur, pas d'indicateur HUD permanent) — seul le message système à
+  l'activation/désactivation l'indique.
+
 ## Le mana du joueur
 
-Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore : pour
-l'instant le mana ne se dépense ni ne se régénère, il reste affiché plein).
+Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore) **et** la
+pose de tours (voir `ModEvents.onTowerPlace`, plus haut). Se dépense à la pose, remonte
+uniquement en ramassant des cristaux de mana lâchés par les monstres — voir "Les cristaux de
+mana" plus bas. **Pas de régénération passive dans le temps** (décidé avec le joueur).
 
 ### L'état — `init/ModAttachments.java`
 
@@ -862,14 +1361,84 @@ ci-dessous :
 - un losange (`DiamondGauge`, voir plus bas), en bas à gauche de l'écran : fond gris foncé sur
   toute sa hauteur, recouvert par le bas d'un losange bleu dont la hauteur est proportionnelle
   à `currentMana / maxMana` — la jauge se remplit du bas vers le haut, comme avant, mais dans
-  une forme de losange plutôt qu'un rectangle. C'est le losange de **gauche** du groupe (vie à
-  droite) ;
+  une forme de losange plutôt qu'un rectangle. C'est le losange de **droite** du groupe (vie à
+  gauche, comme dans le jeu de référence) ;
 - au-dessus du losange, le texte `Mana: X/Y` (clé `dungeon_defenders.hud.mana`), centré
   horizontalement (`guiGraphics.centeredText`) sur son centre.
 
 Lit `player.getData(ModAttachments.MANA)` à chaque frame ; pas d'état côté overlay lui-même.
 Voir [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) pour ce qu'il reste à
-faire (texture, régénération).
+faire (texture).
+
+### Les cristaux de mana — `entity/ManaCrystalEntity.java`, `init/ManaCrystalType.java`
+
+Décidé avec le joueur, comme le vrai Dungeon Defenders : un monstre tué lâche un **cristal de
+mana** au sol, ramassé en marchant dessus — jamais un item d'inventaire, un ramassage direct
+comme l'expérience vanilla. Premier vrai `Entity` custom du mod (tout ce qui précède était des
+`Block`/`BlockEntity`).
+
+`ManaCrystalEntity extends net.minecraft.world.entity.ExperienceOrb` — pas une simple
+inspiration, une vraie sous-classe : `ExperienceOrb` a déjà tout ce qu'il faut pour ce
+comportement (flotte, gravité, se magnétise vers le joueur le plus proche, fusionne avec les
+cristaux voisins, disparaît après un temps), et son point d'entrée de ramassage,
+`playerTouch(Player)`, est `public` (pas `final`) — directement surchargeable. Seuls le
+constructeur (position/vélocité initiale) et `playerTouch` sont réécrits ; tout le reste
+(mouvement, fusion, despawn) vient gratuitement de la classe parente.
+
+```java
+@Override
+public void playerTouch(Player player) {
+    if (!(player instanceof ServerPlayer) || player.takeXpDelay != 0) {
+        return;
+    }
+    player.takeXpDelay = 2;
+    player.take(this, 1); // anime le ramassage (son + particule), purement visuel
+
+    int newMana = Math.min(ModAttachments.MAX_MANA, player.getData(ModAttachments.MANA) + this.getValue());
+    player.setData(ModAttachments.MANA, newMana);
+    player.syncData(ModAttachments.MANA);
+    this.discard();
+}
+```
+
+**Point de sécurité important** : `ExperienceOrb` fusionne automatiquement les orbes proches de
+même valeur (`scanForMerges`/`tryMergeToExisting`, `private`, non surchargeables) — sans
+précaution, un cristal de mana pourrait fusionner avec une **vraie** orbe d'XP vanilla si elles
+ont la même valeur numérique, corrompant le ramassage (l'orbe fusionnée ne se ramasse plus
+qu'une fois, avec le comportement de celle qui "survit" à la fusion). Réglé à la racine par
+`ModEvents.onExperienceDrop`, qui annule `LivingExperienceDropEvent` (NeoForge) pour tout
+`Monster` : les monstres de ce mod n'ont de toute façon thématiquement aucune raison de donner
+de la vraie XP Minecraft (le système `experience` custom du mod est déjà séparé et sans
+rapport) — plus aucune vraie orbe d'XP ne peut donc exister dans une partie.
+
+`init/ModEntities.java` (nouveau registre, `DeferredRegister.Entities` — API NeoForge dédiée
+qui applique déjà la `ResourceKey` correctement, même esprit que `registerBlock` pour les
+blocs) enregistre l'`EntityType`. Le rendu réutilise **tel quel** le renderer vanilla de l'orbe
+d'XP (`ExperienceOrbRenderer`, pas `final`, paramétré sur `ExperienceOrb` donc valide pour une
+sous-classe) — le cristal de mana a donc visuellement l'air d'une orbe d'XP verte/jaune,
+**pas** de couleur "mana" dédiée pour l'instant (limite connue, voir
+05-etat-et-problemes-connus.md).
+
+`init/ManaCrystalType.java` (enum) porte la valeur du cristal — `SMALL(5)`, un seul membre pour
+l'instant (valeur de test), prêt à en accueillir au moins 6 plus tard (le joueur prévoit des
+paliers différents, comme le vrai jeu) sans logique de sélection pondérée tant qu'un second
+palier concret n'existe pas.
+
+`ModEvents.onMonsterDeath` (existant, voir "Le déroulement d'une vague" plus bas) fait tomber
+un cristal à **chaque** mort de `Monster`, **quelle que soit la phase** — contrairement au
+comptage de vague juste à côté, qui reste réservé au Combat.
+
+### Le remboursement à la casse — `ModEvents.onTowerBreak`
+
+Casser sa propre tour à la pioche rembourse **50%** du coût de pose en mana (valeur de test,
+décidé avec le joueur — "remboursement partiel"). Écoute
+`net.neoforged.neoforge.event.level.block.BreakBlockEvent` — **pas** `BlockEvent.BreakEvent`,
+qui n'existe plus dans cette version de NeoForge (renommé/déplacé). Ce point est ce qui rend le
+mécanisme sûr sans code supplémentaire : `BreakBlockEvent` ne se déclenche que pour une casse
+**initiée par un joueur** (son constructeur exige un `Player` non nul), jamais pour
+`Level#destroyBlock` déclenché par `AbstractTowerBlockEntity.setHealth()` à 0 PV en combat (qui
+n'implique aucun joueur) — le remboursement ne s'applique donc **jamais** à une tour détruite
+au combat, cohérent avec "détruite au combat ne se récupère pas" déjà en place pour les PV.
 
 ### La baguette de test — `item/ManaTestWandItem.java`
 
@@ -886,7 +1455,115 @@ clic droit du Cristal d'Eternia :
 - toute la logique est côté serveur (`level.isClientSide()` en sortie anticipée) ; le client
   reçoit juste `InteractionResult.SUCCESS` pour l'animation de bras.
 
+### La baguette de remplissage — `item/ManaFillWandItem.java`
+
+Symétrique de `ManaTestWandItem` (même enregistrement dans `ModBlocks`, texture vanilla
+`glowstone_dust` pour rester visuellement distincte) : clic droit remplit le mana au maximum
+(`ModAttachments.MAX_MANA`) plutôt que d'en retirer — pour tester la pose de tours (Spike
+Blockade 30, Harpoon Turret 50) sans avoir à farmer des cristaux de mana à chaque essai. Message
+`dungeon_defenders.mana_fill_wand.used`, ou `.full` si déjà au maximum. Harnais de test, comme
+`ManaTestWandItem` : pas destiné à survivre une fois un vrai système de sorts/capacités en
+place.
+
 Modèle provisoire : texture vanilla `minecraft:item/blaze_rod`, pas de modèle dédié.
+
+## Le coffre de mana — `block/ManaChestBlock.java`
+
+Premier item de la feuille "Idées" du plan Excel du joueur à être construit : un coffre qui
+donne du mana "entre les vagues", et distribuera aussi des armes plus tard (hors scope tant
+qu'il n'y a rien à distribuer, voir 05-etat-et-problemes-connus.md).
+
+**Meuble de map, pas un objet de joueur** : même statut que le Cristal d'Eternia ou le Spawner
+— posé par le créateur pendant la construction de la map, jamais par un joueur en jeu (pas
+d'item qui le pose via une interaction ni la roue).
+
+### Deux comportements selon le mode — `useWithoutItem`
+
+`ManaChestBlock.useWithoutItem` distingue par `player.isCreative()`, exactement comme
+`SpawnerBlock` distingue configuration et harnais de test par `isShiftKeyDown()` — même absence
+volontaire d'un vrai système de rôle "créateur de map" vs "joueur" dans ce mod, le mode créatif
+sert de proxy :
+
+- **Créatif** → ouvre `ManaChestConfigMenuProvider`/`ManaChestConfigMenu`/
+  `ManaChestConfigScreen`, un patron identique à `SpawnerConfigScreen` mais réduit à un seul
+  champ scalaire (`manaAmount`), sans les lignes dynamiques de composition. Au clic sur
+  "Valider", envoie `ManaChestConfigPayload` au serveur, appliqué par
+  `ManaChestBlockEntity#applyConfig` après revérification de portée (`ModNetworking`).
+- **Survie** → délègue directement à `ManaChestBlockEntity#tryOpen`. Décidé avec le joueur
+  (2026-08-26) : plus de restriction de phase (auparavant `GAME_PHASE != BUILD` refusait
+  l'ouverture avec un message) — un joueur peut vouloir aller chercher du mana en pleine
+  Combat, le coffre s'ouvre désormais **quelle que soit la phase**.
+
+### L'état et l'ouverture — `block/entity/ManaChestBlockEntity.java`
+
+```java
+public boolean tryOpen(Player player, int currentWave) {
+    if (this.lastOpenedWave == currentWave) {
+        return false;
+    }
+    this.lastOpenedWave = currentWave;
+    ...
+    int newMana = Math.min(ModAttachments.MAX_MANA, player.getData(ModAttachments.MANA) + this.manaAmount);
+    player.setData(ModAttachments.MANA, newMana);
+    player.syncData(ModAttachments.MANA);
+    ...
+    return true;
+}
+```
+
+`lastOpenedWave` (0 = jamais ouvert) plutôt qu'un simple booléen "déjà ouvert" : comparé à
+`ModAttachments.CURRENT_WAVE`, déjà incrémenté à chaque entrée en Construction par
+`PhaseTransitions#enterBuild`. Le coffre "sait" donc tout seul s'il peut redonner du mana pour
+la vague en cours, sans qu'aucun code n'ait besoin de remettre ce champ à zéro explicitement.
+
+`manaAmount` (25 par défaut) est **configurable par coffre**, pas une constante globale du mod
+— décidé avec le joueur : la bonne quantité dépend de la taille et de la difficulté de chaque
+map, pas d'une seule valeur qui conviendrait à toutes.
+
+### Disparition et réapparition visuelles — `ManaChestBlock#OPENED`, `#respawnAll`
+
+Décidé avec le joueur (2026-08-24), comme dans le jeu de référence : un coffre ouvert ne reste
+pas visible mais inerte, il **disparaît** jusqu'à la vague suivante. `OPENED` est une vraie
+propriété de `BlockState` (`BooleanProperty`, comme `HORIZONTAL_FACING` sur le Harpoon Turret) :
+
+- `getRenderShape` renvoie `RenderShape.INVISIBLE` si `OPENED`, sinon `MODEL`.
+- `getShape`/`getCollisionShape` renvoient `Shapes.empty()` si `OPENED` — traversable, et
+  surtout **impossible à cibler au clic droit** (le rayon d'interaction du joueur se base sur
+  cette même forme) : un coffre déjà ouvert ne peut donc plus jamais être re-cliqué tant qu'il
+  n'a pas réapparu, sans avoir besoin d'une vérification explicite côté interaction.
+
+`ManaChestBlockEntity#tryOpen` bascule `OPENED` à `true` (`level.setBlock(pos,
+state.setValue(OPENED, true), ...)`) juste après avoir donné le mana — le bloc entity lui-même
+n'est ni recréé ni perturbé (même `Block` Java, seule une propriété change ; vanilla ne
+recrée un block entity que si le `Block` sous-jacent change, pas une simple propriété).
+
+Pour la **réapparition**, un registre `ModAttachments.ACTIVE_MANA_CHESTS`
+(`Set<BlockPos>`, même principe qu'`ACTIVE_SPAWNERS`) est nécessaire : `ManaChestBlockEntity`
+s'y ajoute/retire via `setLevel`/`setRemoved`, et `ManaChestBlock.respawnAll(level)` (appelé
+par `PhaseTransitions#enterBuild`, à chaque nouvelle Construction) parcourt ce registre et
+repasse `OPENED` à `false` pour tout coffre encore ouvert — contrairement à ce qui avait été
+envisagé au départ (voir 05-etat-et-problemes-connus.md), un simple champ sur le block entity
+ne suffisait pas : rien d'autre ne "réveille" un coffre qui n'est visité par personne, il faut
+bien un point d'entrée explicite au changement de phase pour le repasser visible/solide.
+
+> **Signalé en jeu (2026-08-26) : les coffres ne réapparaîtraient pas au retour en
+> Construction.** Relu en détail sans trouver de bug : `respawnAll` est bien appelé par les
+> deux points d'entrée en Construction (`enterBuild` — retour manuel via le harnais du
+> spawner, et automatique via `ModEvents.onMonsterDeath` à la fin d'une vague —, et
+> `resetGameState` — victoire/défaite), le registre `ACTIVE_MANA_CHESTS` suit exactement le
+> même patron qu'`ACTIVE_SPAWNERS` (confirmé fonctionnel en jeu), et `level.setBlock(pos,
+> state.setValue(OPENED, false), Block.UPDATE_ALL)` est le mécanisme vanilla standard pour
+> faire réagir le rendu client à un changement de propriété de blockstate. Pas corrigé faute
+> d'avoir trouvé la cause réelle — à retester avec un scénario précis (harnais de test vs
+> vague automatique, un seul coffre vs plusieurs) pour resserrer le diagnostic.
+
+### Apparence
+
+Modèle provisoire : texture vanilla `minecraft:block/barrel_top` (thème conteneur/stockage,
+volontairement distinct des autres placeholders du mod). Pas de PV, pas d'`AiAttackTarget` —
+un monstre ne peut ni l'attaquer ni le cibler, comme le Cristal de la Taverne.
+
+**Jamais testé en jeu** — voir [06-a-tester.md](06-a-tester.md).
 
 ## La vie du joueur
 
@@ -928,10 +1605,11 @@ join, où le joueur vient de spawn à 20/20 avant que l'attribut ne soit modifi�
 ### L'affichage — `client/gui/HealthOverlay.java`
 
 Même structure que `ManaOverlay` (losange + texte `Health: X/Y`, clé
-`dungeon_defenders.hud.health`), en rouge, positionné juste à **droite** du losange mana
-(centré sur `HudLayout.MARGIN + DIAMOND_RADIUS * 3 + DIAMOND_GAP`), même taille. Lit
-directement `player.getHealth()` / `player.getMaxHealth()` à chaque frame — pas besoin
-d'attachment, ces valeurs sont déjà tenues à jour et synchronisées par le moteur.
+`dungeon_defenders.hud.health`), en rouge, positionné le plus à **gauche** du groupe (centré sur
+`HudLayout.MARGIN + DIAMOND_RADIUS`, comme dans le jeu de référence — vie à gauche, mana à
+droite), même taille. Lit directement `player.getHealth()` / `player.getMaxHealth()` à chaque
+frame — pas besoin d'attachment, ces valeurs sont déjà tenues à jour et synchronisées par le
+moteur.
 
 Les cœurs vanilla (`VanillaGuiLayers.PLAYER_HEALTH`) sont masqués dans
 `DungeonDefendersModClient.onRegisterGuiLayers` via `event.replaceLayer(..., HIDDEN)` :
@@ -941,8 +1619,8 @@ avec 100 PV ils s'étaleraient sur plusieurs rangées de cœurs (le rendu vanill
 ## L'expérience custom du joueur
 
 **Rien à voir avec l'XP vanilla** (`EXPERIENCE_LEVEL`/`getExperienceLevel()`) : c'est une
-ressource propre au mod, pensée pour un futur système de progression/niveaux (pas encore
-défini — rien ne la fait varier pour l'instant, elle démarre à 0).
+ressource propre au mod. Gagnée en tuant des monstres (voir "Expérience, score et niveau —
+`ModEvents.awardExperienceAndScore`" plus bas), elle fait monter `ModAttachments.LEVEL`.
 
 ### L'état — `init/ModAttachments.java`
 
@@ -960,16 +1638,15 @@ public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> E
                 .build());
 ```
 
-`MAX_EXPERIENCE = 100` est une valeur provisoire : sans système de niveaux défini, il n'y a
-pas encore de vraie notion de "maximum", c'est surtout ce qui donne son échelle à la jauge.
+`MAX_EXPERIENCE = 100` est un plafond **fixe par niveau** (pas de barème croissant du type
+"niveau N demande N×100") : valeur de test, pas encore équilibrée, comme les coûts de pose des
+tours.
 
 ### L'affichage — `client/gui/ExperienceOverlay.java`
 
 Contrairement à `ManaOverlay`/`HealthOverlay`, reste une **barre horizontale** classique
 (jauge + texte `Experience: X/Y` à sa droite, clé `dungeon_defenders.hud.experience`), en
-vert, tout en bas de l'écran, sous les deux losanges. Comme rien ne fait encore varier
-l'attachment, elle s'affiche `0/100` en permanence tant qu'aucun mécanisme n'alimente
-`ModAttachments.EXPERIENCE`.
+vert, tout en bas de l'écran, sous les deux losanges.
 
 ## Le groupe bas-gauche — mana, vie, expérience
 
@@ -977,9 +1654,9 @@ l'attachment, elle s'affiche `0/100` en permanence tant qu'aucun mécanisme n'al
 coin bas-gauche de l'écran :
 
 ```
-   Mana        Vie
+   Vie         Mana
     ◆           ◆     <- losanges, remplissage bas → haut (pointe basse → pointe haute)
-   ▓█▓         ▓█▓        mana à gauche, vie à droite
+   ▓█▓         ▓█▓        vie à gauche, mana à droite (comme le jeu de référence)
   ▓███▓       ▓███▓
   ░░░░░       ▓▓▓▓▓
     ░           ▓
@@ -1115,10 +1792,60 @@ type.spawn(level, spawnPos, EntitySpawnReason.SPAWNER);
 terrain irrégulier autour du spawner). `findSafeSpawnPos` essaie jusqu'à 8 positions
 aléatoires, en ne retenant que celles où la position **et** celle juste au-dessus (place pour
 les pieds et la tête) sont toutes les deux traversables (`BlockState#getCollisionShape(...)
-.isEmpty()`) ; si aucune des 8 ne convient, replie sur `pos.above()` — la position par défaut
-utilisée avant l'ajout du rayon, censée toujours être libre. Pas de vérification qu'il y a un
-sol en dessous (un ennemi qui spawn au-dessus d'un trou tombe simplement, ce n'est pas un bug)
-— seul l'enlisement dans un bloc plein est évité.
+.isEmpty()`) ; si aucune des 8 ne convient, replie sur `pos` (**pas** `pos.above()`, voir plus
+bas). Pas de vérification qu'il y a un sol en dessous (un ennemi qui spawn au-dessus d'un trou
+tombe simplement, ce n'est pas un bug) — seul l'enlisement dans un bloc plein est évité.
+
+> **Le repli a changé de `pos.above()` à `pos`** le jour où le spawner est devenu un marqueur
+> sans collision (voir plus bas, "Jamais un obstacle physique"). Avant, le bloc du spawner
+> lui-même servait de sol sous les pieds d'un monstre spawné juste au-dessus ; ce n'est plus
+> possible puisqu'il n'a plus jamais de collision. `pos` lui-même est censé reposer sur le vrai
+> sol construit par le créateur de la map (le spawner n'est qu'un marqueur au niveau du sol,
+> pas une plateforme) — sans ce changement, tout spawn par défaut (rayon 0, le cas le plus
+> courant) aurait fait tomber le monstre indéfiniment dans le vide (voir "Le monde et le point
+> de spawn" : ce mod tourne dans une dimension entièrement vide, rien pour rattraper une chute).
+
+### Jamais un obstacle physique — `getShape`/`getCollisionShape`/`getRenderShape`
+
+Décidé avec le joueur (2026-08-25) : dans le jeu de référence, un point de spawn est une zone/
+un marqueur, pas un objet physique. Le spawner ne bloque donc plus jamais le passage d'un
+monstre ni du joueur, en Construction comme en Combat — avant, c'était un bloc plein classique,
+qui pouvait gêner un monstre essayant de se frayer un chemin près de son propre point de spawn.
+
+- **`getCollisionShape`** renvoie toujours `Shapes.empty()` — la forme lue pour la résolution
+  physique des déplacements. Traversable pour tout le monde, tout le temps.
+- **`getRenderShape`** renvoie toujours `RenderShape.INVISIBLE` — jamais rendu, pour personne.
+  Une limite assumée : cette méthode ne reçoit que le `BlockState`, pas de niveau ni de joueur,
+  donc impossible de la faire dépendre de qui regarde (contrairement à `getShape` ci-dessous).
+  Le repérage en jeu reste possible via l'aperçu de composition (texte à travers les murs en
+  Construction, voir plus bas) et, en créatif, via le contour de visée.
+- **`getShape`** (forme de ciblage/sélection, **différente** de `getCollisionShape`) renvoie un
+  cube plein **seulement si l'entité qui regarde est un joueur en mode créatif**, sinon vide :
+
+  ```java
+  protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+      if (context instanceof EntityCollisionContext entityContext
+              && entityContext.getEntity() instanceof Player player
+              && player.isCreative()) {
+          return Shapes.block();
+      }
+      return Shapes.empty();
+  }
+  ```
+
+  Vérifié dans le code source de cette version (`ClipContext.Block.OUTLINE` → `getShape`,
+  utilisé aussi bien pour le rayon de visée du joueur — donc pour savoir quel bloc `useWithoutItem`
+  reçoit au clic droit — que pour le contour noir de sélection) : **`getCollisionShape` n'a
+  aucun rôle dans le ciblage**, seul `getShape` compte. Résultat : un joueur en survie ne peut
+  plus jamais viser/cliquer un spawner (son clic traverse, comme s'il n'était pas là), tandis
+  qu'un créatif peut toujours le voir en contour et cliquer dessus pour le configurer — sans
+  vérification supplémentaire dans `useWithoutItem` (voir plus bas), le ciblage filtre déjà tout.
+  `EntityCollisionContext`/`CollisionContext.empty()` (utilisé par des vérifications sans
+  entité précise, génération de terrain, pathfinding...) laisse `getEntity()` à `null` : traité
+  comme "pas un joueur créatif", repli sûr sur `Shapes.empty()`.
+
+**Conséquence sur la position de spawn** : `findSafeSpawnPos` (voir plus haut) ne peut plus
+compter sur le bloc du spawner comme sol — corrigé au même moment, voir la remarque plus haut.
 
 ### L'état — `block/entity/SpawnerBlockEntity.java`
 
@@ -1368,8 +2095,9 @@ par le même code, plutôt que de dupliquer la remise à zéro des compteurs à 
   `WAVE_ENEMIES_KILLED` à 0, et remet "prêt" à faux pour tous les joueurs présents (voir plus
   haut, "Le vote prêt").
 - `enterBuild(level)` : fait avancer `CURRENT_WAVE` de 1 (plafonné à `MAX_WAVE`, voir "Ce qui
-  reste" plus bas), phase → `BUILD`, recalcule `WAVE_ENEMIES_TOTAL` à partir du registre pour
-  la nouvelle vague.
+  reste" plus bas), phase → `BUILD`, remet `WAVE_ENEMIES_KILLED` à 0 (corrigé — restait
+  auparavant à l'ancienne valeur pendant toute la Construction suivante), recalcule
+  `WAVE_ENEMIES_TOTAL` à partir du registre pour la nouvelle vague.
 
 **Le retour automatique** (`ModEvents.onMonsterDeath`) : après avoir incrémenté
 `WAVE_ENEMIES_KILLED`, si `killed >= total` (et `total > 0`, pour ne pas basculer
@@ -1387,25 +2115,31 @@ Deux nouvelles transitions, sur le même principe que `enterCombat`/`enterBuild`
 (centralisées dans `PhaseTransitions`, pas dupliquées à chaque appelant) :
 
 - **`onVictory(level)`** — appelée par `ModEvents.onMonsterDeath` quand la dernière vague
-  vient d'être nettoyée. Diffuse `dungeon_defenders.game.victory` (vert, gras) à tous les
-  joueurs, puis remet la partie à zéro.
+  vient d'être nettoyée. Remet la partie à zéro, puis ouvre `GameOverScreen` (victoire) pour
+  chaque joueur.
 - **`onDefeat(level)`** — appelée par `EterniaCrystalBlockEntity` juste après la destruction
-  du bloc à 0 PV (à la suite du message `eternia_crystal.destroyed` déjà existant). Diffuse
-  `dungeon_defenders.game.defeat` (rouge, gras), puis remet la partie à zéro.
+  du bloc à 0 PV (à la suite du message `eternia_crystal.destroyed` déjà existant). Même chose,
+  version défaite.
+
+**Changé le 2026-08-26** (retour du joueur) : les deux **n'envoient plus** de message système
+ni de lien "Retour à la taverne" dans le chat — devenus redondants une fois `GameOverScreen`
+en place (voir plus bas), qui a ses propres boutons "Rejouer"/"Retour à la taverne". `onVictory`
+et `onDefeat` ne font donc plus que `resetGameState(level)` puis `sendGameOverScreen(player,
+victory)` pour chaque joueur — `ChatFormatting`/`ClickEvent`/`Component`, plus utilisés dans ce
+fichier, retirés ; `dungeon_defenders.game.return_to_tavern` (l'ancien lien) retiré des deux
+fichiers de langue, devenu une clé morte.
 
 Les deux passent par le même `resetGameState(level)` privé : `CURRENT_WAVE` → 1, phase →
 `BUILD`, `WAVE_ENEMIES_KILLED` → 0, et `WAVE_ENEMIES_TOTAL` recalculé (réutilise
-`recomputeWaveEnemiesTotal`, la même méthode privée qu'`enterBuild`) — pour que la partie soit
+`recomputeWaveEnemiesTotal`, aussi appelée par `enterBuild`) — pour que la partie soit
 immédiatement prête à relancer une vague 1 propre, sans qu'un spawner continue à faire
 apparaître des ennemis sur une partie déjà gagnée ou perdue.
 
-**Le lien "Retour à la taverne"** : les deux méthodes diffusent aussi, juste après le message
-de victoire/défaite, un second message — un simple `Component.translatable(...)` stylé
-(`ChatFormatting.AQUA`, souligné) avec un `ClickEvent.RunCommand("/dd_leave")` accroché via
-`Style#withClickEvent(...)`. Cliquer dessus revient à taper la commande `/dd_leave`
-(`ModCommands`), qui appelle `MapInstance.returnToTavern(level)` — nettoie l'emplacement de
-map et téléporte tout le monde. Pas de nouveau paquet réseau : le clic déclenche directement
-une commande déjà existante, exactement comme si le joueur l'avait tapée lui-même.
+`recomputeWaveEnemiesTotal` est **publique** (pas seulement appelée aux transitions de phase) :
+`SpawnerBlockEntity.setLevel`/`setRemoved` et `ModNetworking.handleSpawnerConfig` l'appellent
+aussi, pour que `WAVE_ENEMIES_TOTAL` reste juste dès qu'un spawner apparaît, disparaît ou est
+reconfiguré — plutôt que de rester bloqué sur la valeur par défaut de l'attachment (`10`)
+jusqu'à la toute première transition de phase d'une partie (bug constaté en jeu, corrigé).
 
 **Ce qui n'est PAS fait ici**, volontairement — voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md) :
@@ -1415,17 +2149,65 @@ une commande déjà existante, exactement comme si le joueur l'avait tapée lui-
   la main. Remettre "le cristal" en jeu après une défaite fait partie de la future remise à
   neuf d'une map (structure reposée, tours retirées, PV du cristal restaurés), pas de ce
   morceau-ci.
-- Pas d'écran dédié "Victoire"/"Game Over" — juste deux messages système (le résultat, puis le
-  lien de retour). L'idée d'un écran avec choix "rejouer/retour à la taverne" existe (vue dans
-  le plan Excel du joueur) ; pour l'instant, revenir à la taverne permet déjà de "rejouer" en
-  rouvrant `MapSelectionScreen`, donc un vrai écran dédié reste un raffinement visuel, pas un
-  vrai manque fonctionnel.
-- Rien ne distingue encore une partie "terminée" (victoire/défaite) d'une simple pause entre
-  deux vagues : les deux ramènent en phase `BUILD`, vague 1. Un joueur qui n'a pas vu le
-  message peut ne pas remarquer que la partie a recommencé à zéro.
+- `GameOverScreen` (voir plus bas) atténue le problème de confusion "partie terminée vs.
+  simple pause entre deux vagues" (un écran plein est bien plus visible qu'un message système),
+  mais ne le résout pas totalement : `Échap` le ferme sans rien faire, et rien n'empêche de
+  continuer à jouer sur la vague 1 fraîchement réinitialisée sans avoir cliqué un bouton.
 - `/dd_leave` reste une commande de harnais, pas un vrai point de sortie posé dans chaque
   map — un joueur pourrait aussi la taper à tout moment, pas seulement après une victoire/
-  défaite (pas grave en soi, mais pas le vrai flux prévu à terme).
+  défaite (pas grave en soi, mais pas le vrai flux prévu à terme). `GameOverScreen` s'en sert
+  toujours pour son bouton "Retour à la taverne" (`connection.sendCommand(...)`), juste sans
+  passer par le chat.
+
+### L'écran de fin de partie — `client/gui/screen/GameOverScreen.java`, `network/GameOverPayload.java`
+
+Décidé avec le joueur (2026-08-26), repris du plan Excel : *"GUI avec rejouer ou taverne"*.
+Ouvert automatiquement sur chaque client par `GameOverPayload(victory)`, envoyé depuis
+`PhaseTransitions.onVictory/onDefeat` — seule source de retour visuel à la fin d'une partie
+désormais, les messages système ont été retirés (voir "Victoire et défaite" plus haut).
+
+**Premier paquet clientbound du mod** — tous les autres (`PlaceTowerPayload`,
+`SpawnerConfigPayload`...) vont du client vers le serveur. Enregistré en deux temps, comme
+recommandé par la javadoc de `RegisterClientPayloadHandlersEvent` :
+
+- `ModNetworking.onRegisterPayloadHandlers` enregistre seulement le `TYPE`/`STREAM_CODEC` via
+  `registrar.playToClient(type, codec)` **sans handler** — cette classe est chargée des deux
+  côtés (pas de `Dist.CLIENT`), un serveur dédié doit donc pouvoir décoder ce paquet en théorie,
+  mais ne l'exécute jamais lui-même.
+- `DungeonDefendersModClient.onRegisterClientPayloadHandlers` (nouveau, classe client-only)
+  enregistre le vrai handler, qui appelle `Minecraft.getInstance().setScreen(new
+  GameOverScreen(payload.victory()))` sur le thread principal (`context.enqueueWork(...)`).
+  Séparer les deux évite de charger une classe cliente (`Minecraft`, `Screen`...) sur un
+  serveur dédié en enregistrant juste le handler dans la mauvaise classe.
+
+`PhaseTransitions.sendGameOverScreen(player, victory)` envoie le paquet via
+`serverPlayer.connection.send(new GameOverPayload(victory).toVanillaClientbound())` — le
+symétrique exact de `.toVanillaServerbound()`, déjà utilisé partout ailleurs côté client.
+
+`GameOverScreen` (simple `Screen`, pas de `Menu`) affiche le titre en vert/rouge
+(`dungeon_defenders.game.victory`/`defeat`, réutilisées) et deux boutons :
+
+- **"Rejouer"** envoie `StartGamePayload` — **exactement** le même paquet que le bouton "Jouer"
+  de `MapSelectionScreen` : `MapInstance.startGame` nettoie la zone, la repose, et retéléporte.
+  Pas de distinction "rejouer la même map" vs "choisir une nouvelle map" pour l'instant, une
+  seule map placeholder existe de toute façon (voir 05-etat-et-problemes-connus.md).
+- **"Retour à la taverne"** appelle `connection.sendCommand(MapInstance.RETURN_COMMAND)` —
+  même commande de harnais qu'utilisait l'ancien lien cliquable du chat (retiré, voir "Victoire
+  et défaite" plus haut), juste déclenchée depuis un bouton.
+
+> **Bug trouvé en testant en jeu (2026-08-26) : le titre ne s'affichait jamais, seuls les
+> boutons apparaissaient.** Cause : `TITLE_COLOR_VICTORY`/`TITLE_COLOR_DEFEAT` étaient écrites
+> comme des littéraux à 6 chiffres (`0x55FF55`/`0xFF5555`), donc avec un octet alpha implicite
+> à `0x00` — entièrement transparent. Vérifié dans les sources décompilées :
+> `GuiGraphicsExtractor#text(Font, FormattedCharSequence, int, int, int, boolean)` ignore
+> silencieusement l'ajout au render state si `ARGB.alpha(color) == 0`, sans la moindre erreur.
+> Contrairement à l'ancien `GuiGraphics.drawString` (versions antérieures de Minecraft), cette
+> version du pipeline de rendu **ne force plus** l'alpha à `0xFF` par défaut pour une couleur
+> écrite sans son octet de poids fort — un piège classique pour tout code qui recopie l'ancienne
+> convention. Corrigé en écrivant les deux constantes avec leur alpha explicite
+> (`0xFF55FF55`/`0xFFFF5555`). **`MapSelectionScreen.TEXT_COLOR = 0xFFFFFF` a très probablement
+> le même défaut** (même convention "RGB nu") — jamais vérifié/signalé, hors scope de cette
+> branche/PR (fichier déjà mergé dans `main`), à corriger séparément.
 
 ### Apparence
 
@@ -1447,18 +2229,123 @@ la barre d'expérience, qui elle est en bas à gauche) :
 ### Le score — `client/gui/ScoreOverlay.java`
 
 `ModAttachments.SCORE` est conceptuellement l'expérience gagnée **sur la carte en cours**,
-par opposition à `ModAttachments.EXPERIENCE` qui est censée persister au-delà d'une carte.
-C'est pourquoi ce n'est pas le même attachment, même si les deux valeurs pourraient un jour
-augmenter ensemble (une capacité tuant un ennemi donnerait de l'XP *et* du score, un peu comme
-la vue et le score au sens jeu vidéo classique). Comme `current_wave`, c'est un état de la
-`Level` : "notre score" est partagé par la partie, pas individuel par joueur. Démarre à `0`,
-rien ne l'alimente encore.
+par opposition à `ModAttachments.EXPERIENCE` qui persiste au-delà d'une carte. Comme
+`current_wave`, c'est un état de la `Level` : "notre score" est partagé par la partie, pas
+individuel par joueur. Démarre à `0`, remis à `0` à chaque nouvelle partie
+(`PhaseTransitions.resetGameState`, appelé à la victoire/défaite — voir "Victoire et défaite"
+plus bas), alimenté par chaque monstre tué (voir "Expérience, score et niveau" ci-dessous).
 
 Affiché en texte seul (pas de jauge, un score n'a pas de maximum), clé
 `dungeon_defenders.hud.score`, centré via `guiGraphics.centeredText(...)`. Expose
 `rowY(guiGraphics)`, une méthode package-visible que `CharacterOverlay` utilise pour se
 positionner juste au-dessus (même principe que `WaveOverlay.waveText(...)` ou
 `ExperienceOverlay.barTop(...)`).
+
+### Le gain de score flottant — `client/gui/ScoreGainOverlay.java`, `network/ScoreGainPayload.java`
+
+Décidé avec le joueur (2026-08-27) : un "+X \<source\>" apparaît en bas à **droite** de l'écran
+à chaque gain de score (ex. "+10 Ennemi tué"), monte de 20px et s'estompe sur 1,5 seconde,
+indépendamment pour chaque popup.
+
+**Pourquoi un paquet dédié plutôt que de lire `ModAttachments.SCORE` ?** Une première version
+détectait le gain en comparant le total synchronisé d'une frame à l'autre — ça marchait, mais
+`SCORE` n'est qu'un total : impossible d'en déduire la **source** du gain (kill ? fin de vague ?
+multiplicateur ?). Comme plusieurs sources de score sont prévues (voir "Feuille de route du
+score" plus bas) et que le joueur voulait cette information affichée, `ModEvents.grantScore`
+diffuse maintenant un `ScoreGainPayload(amount, sourceOrdinal, enemyOrdinal)` **en plus** de la
+sync d'attachment habituelle :
+
+```java
+private static void grantScore(Level level, int amount, ScoreSource source, int enemyOrdinal) {
+    int score = level.getData(ModAttachments.SCORE) + amount;
+    level.setData(ModAttachments.SCORE, score);
+    level.syncData(ModAttachments.SCORE);
+
+    for (Player player : level.players()) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            serverPlayer.connection.send(
+                    new ScoreGainPayload(amount, source.ordinal(), enemyOrdinal).toVanillaClientbound());
+        }
+    }
+}
+```
+
+Toute future source de score (fin de vague, fin de map, multiplicateurs) devra passer par
+`grantScore` plutôt que toucher `SCORE` directement, pour ne jamais dupliquer cette double mise
+à jour (attachment + paquet), avec `ScoreGainPayload.NO_ENEMY` (`-1`) comme `enemyOrdinal` tant
+qu'elle n'a pas d'ennemi précis à associer (voir "L'icône de l'ennemi tué" plus bas).
+`init/ScoreSource.java` est l'enum de la source, transmise par ordinal comme le reste des enums
+réseau du mod (`GamePhase`, `GameDifficulty`...) — un seul membre pour l'instant
+(`MONSTER_KILLED`), les futures sources ajouteront le leur le moment venu.
+
+**Premier paquet clientbound de cette branche** (même principe que celui décrit pour
+`GameOverScreen` sur une autre branche, pas encore mergée ici) : le type/codec est enregistré
+côté partagé (`ModNetworking.onRegisterPayloadHandlers`, `registrar.playToClient(...)` **sans**
+handler), mais le handler lui-même — qui touche `ScoreGainOverlay`, une classe strictement
+cliente — n'est enregistré que dans `DungeonDefendersModClient`, via
+`RegisterClientPayloadHandlersEvent`. Pas de borne-check sur l'ordinal reçu côté client
+(contrairement à `ModNetworking`, qui valide tout ordinal reçu d'un **client**) : ce paquet
+vient du serveur, autoritaire dans ce mod co-op — même confiance que les autres ordinaux
+synchronisés par attachment (`GamePhase`, `GameDifficulty`), jamais revérifiés côté client non
+plus.
+
+**`ScoreGainOverlay` devient un pur récepteur d'événements**, plus une lecture de `SCORE` :
+
+```java
+public class ScoreGainOverlay implements GuiLayer {
+    public static final ScoreGainOverlay INSTANCE = new ScoreGainOverlay();
+    ...
+    public void addPopup(int amount, ScoreSource source, SpawnableEnemy enemy) {
+        this.popups.add(new Popup(amount, source, enemy, Util.getMillis()));
+    }
+}
+```
+
+Instance unique exposée en statique (constructeur privé) : `RegisterGuiLayersEvent` enregistre
+`ScoreGainOverlay.INSTANCE` pour le rendu, et le handler du paquet pousse dans cette même
+instance — les deux se rejoignent là plutôt que par un paquet réseau interne au client. Plus
+besoin de gérer "premier tick observé" ou "score qui redescend" : sans paquet, pas de popup,
+ces cas se résolvent d'eux-mêmes.
+
+**Animation inchangée** : même source de temps que `HealthLerp` (`Util.getMillis()`, temps réel
+plutôt que `partialTicks`). Chaque `Popup` (record `amount`/`source`/`spawnTimeMs`) calcule sa
+propre progression 0→1 sur `DURATION_MS` (1500 ms), utilisée à la fois pour la montée
+(`RISE_PIXELS`) et le fondu (canal alpha du texte, `(alpha << 24) | RGB`) — même vert que
+`ExperienceOverlay` (`0x22C55E`). Les popups simultanés se superposent simplement (pas de
+logique d'empilement) — volontairement simple.
+
+**Limite assumée, inchangée par ce changement** : si le serveur appelle `grantScore` plusieurs
+fois dans le même tick (plusieurs morts simultanées), chaque appel envoie son propre paquet —
+contrairement à l'ancienne version basée sur la sync d'attachment, ce n'est **plus** une
+limite : chaque kill produit bien son propre popup, même simultané. La seule limite restante est
+visuelle (superposition à l'écran, pas de décalage automatique).
+
+#### L'icône de l'ennemi tué
+
+Décidé avec le joueur (2026-08-27), juste après le paquet dédié ci-dessus : l'œuf d'invocation
+de l'ennemi apparaît à gauche du texte (ex. œuf de zombie + "+10 Ennemi tué"), même principe que
+l'aperçu de composition du Spawner (`SpawnerBlockEntityRenderer`, qui réutilise déjà les œufs
+comme icônes reconnaissables — mais celui-là dessine en 3D dans le monde, celui-ci en 2D dans le
+HUD).
+
+**Transport** : `ScoreGainPayload` porte un troisième champ, `enemyOrdinal` — l'ordinal du
+`SpawnableEnemy` tué, transmis comme `sourceOrdinal`, ou `ScoreGainPayload.NO_ENEMY` (`-1`) si
+ce gain n'a pas d'ennemi associé (toute future source hors kill). Pas d'`Optional<Integer>` sur
+le réseau : ce mod n'utilise ce patron nulle part ailleurs, une sentinelle entière suffit et
+reste lisible. Résolu côté serveur dans `ModEvents.awardExperienceAndScore` via
+`SpawnableEnemy.find(EntityType<?>)` (rendue publique à cette occasion — auparavant un détail
+privé de `xpValueFor`), avec le même repli `NO_ENEMY` que `DEFAULT_XP_VALUE` si jamais le
+monstre tué n'est pas dans la liste fermée du Spawner.
+
+**Rendu** : `guiGraphics.item(ItemStack, x, y)` — la même méthode que la hotbar vanilla, pas une
+API spéciale à découvrir. Positionnée à gauche du texte (`ICON_GAP` = 2px d'écart), centrée
+verticalement sur la ligne de texte (icône 16px, texte ~9px de haut). **Limite assumée** :
+contrairement au texte, l'icône ne s'estompe pas progressivement — `GuiGraphicsExtractor#item`
+n'a pas de paramètre de teinte/alpha exploité ici, elle reste pleinement opaque tant que le
+popup est affiché puis disparaît d'un coup avec lui, pas de fondu. Coût jugé négligeable :
+l'icône vient de l'atlas de textures des items déjà chargé en mémoire (même atlas que la
+hotbar/l'inventaire vanilla), aucun nouvel asset, et il n'y a jamais plus qu'une poignée de
+popups vivants à la fois (durée de vie 1,5s).
 
 ### Le personnage — `client/gui/CharacterOverlay.java`
 
@@ -1474,17 +2361,85 @@ Affiche `Nom - niv X` (clé `dungeon_defenders.hud.character`), juste au-dessus 
   d'écran de création de personnage) : voir
   [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 - **Le niveau** (`ModAttachments.LEVEL`) est un attachment joueur (contrairement au score),
-  démarre à `1`, persistant, synchronisé. Rien ne le fait encore monter — pas de formule
-  d'XP → niveau, pas de notion de "monter de niveau".
+  démarre à `1`, persistant, synchronisé. Monte via l'expérience gagnée en tuant des monstres
+  (voir ci-dessous).
+
+### Expérience, score et niveau — `ModEvents.awardExperienceAndScore`/`grantExperience`
+
+Décidé avec le joueur (2026-08-27) : tuer un monstre (toute phase, comme le drop de cristal de
+mana ci-dessus) donne à la fois du score (carte) et de l'expérience (joueur), branché dans le
+même `onMonsterDeath` que le cristal de mana.
+
+**Valeur par monstre** — `init/SpawnableEnemy.xpValue()`, un champ de plus sur l'enum déjà
+utilisé par le Spawner (zombie = 10, squelette = 15, valeurs de test pas encore équilibrées,
+le squelette rapportant plus car il attaque à distance). `SpawnableEnemy.xpValueFor(EntityType)`
+fait la correspondance depuis le monstre tué ; 5 en repli si jamais un monstre hors de cette
+liste venait à mourir (défensif, ne devrait pas arriver tant que le Spawner reste l'unique
+source de monstres).
+
+**Le score** est incrémenté sans conditions : `level.getData(SCORE) + xpValue`.
+
+**L'expérience est partagée entre tous les joueurs présents**, pas seulement celui qui a porté
+le coup fatal — décidé avec le joueur : ce sont surtout les tours qui tuent dans ce mod
+(`AbstractTurretBlockEntity`, dégâts directs sans lien avec un joueur), et rien ne capte
+aujourd'hui "quel joueur a tué quoi". Même logique co-op que le ramassage des cristaux de mana,
+ouvert à n'importe qui plutôt qu'à un seul joueur :
+
+```java
+for (Player player : level.players()) {
+    grantExperience(player, xpValue);
+}
+```
+
+`grantExperience` ajoute la valeur à `EXPERIENCE`, puis boucle tant que `experience >=
+MAX_EXPERIENCE` (100, plafond fixe par niveau, pas de barème croissant pour l'instant) :
+chaque passage décrémente `experience` de `MAX_EXPERIENCE` et incrémente `LEVEL` — une boucle
+plutôt qu'un seul `if`, pour rester correct si un futur monstre à forte valeur d'XP fait
+franchir plusieurs paliers d'un coup. Un message système (`dungeon_defenders.level.up`) est
+envoyé au joueur concerné à chaque passage de niveau — pas redondant avec le HUD, contrairement
+aux anciens messages de victoire/défaite retirés (voir "Victoire et défaite" plus bas) : c'est
+un événement ponctuel, pas un état déjà affiché en permanence.
+
+`ModAttachments.SCORE` est remis à `0` par `PhaseTransitions.resetGameState` (victoire/défaite,
+donc à chaque nouvelle partie) — cohérent avec "score de la carte en cours". `EXPERIENCE`/
+`LEVEL`, eux, ne sont jamais remis à zéro : ils persistent au-delà d'une carte, comme prévu dès
+l'origine (voir "L'expérience custom du joueur" plus haut).
+
+**Pas encore fait** : aucun bonus de statistique (mana/vie max, etc.) lié au niveau — pour
+l'instant purement un compteur affiché, voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
+### Feuille de route du score (décidée avec le joueur, pas codée pour l'instant)
+
+Le kill est **une seule source de score parmi plusieurs prévues** — confirmé avec le joueur
+(2026-08-27) : "le score est officieusement l'XP gagnée sur ce niveau", donc toute future
+source de score suit la même logique (Level-scopée, remise à 0 à chaque partie), sans forcément
+donner de l'expérience joueur en parallèle (l'un n'implique pas l'autre, seul le kill fait
+aujourd'hui les deux à la fois). Prévu, mais **volontairement pas implémenté maintenant** —
+seul le kill (ci-dessus) est en place :
+
+- Bonus de score à la fin d'une vague nettoyée.
+- Bonus de score à la fin de la map (victoire).
+- Multiplicateurs par vague, cumulables (probablement) : aucun dégât pris par un joueur, aucun
+  dégât pris par le Cristal d'Eternia, aucune tour détruite par les ennemis — d'autres pourront
+  s'ajouter. Demande un suivi de dégâts par vague qui n'existe pas encore (ni pour le joueur, ni
+  pour le cristal, ni pour les tours).
+- Multiplicateur selon la difficulté choisie (`ModAttachments.DIFFICULTY`, existe déjà — juste
+  la table de multiplicateurs à définir).
+- Multiplicateur selon la difficulté de la map : un futur paramètre par map (`init/GameMap.java`
+  n'a pas encore ce champ), estimé par le créateur de la map au moment de sa conception.
+
+Formules, valeurs et ordre d'implémentation pas encore tranchés — voir
+[07-idées-et-backlog.md](07-idées-et-backlog.md) pour le suivi ligne par ligne.
 
 ## Les emplacements de compétences — `client/gui/AbilitySlotsOverlay.java`
 
-Quatre ronds en bas à **gauche** de l'écran, juste à droite des losanges mana/vie et
+Quatre ronds en bas à **gauche** de l'écran, juste à droite des losanges vie/mana et
 au-dessus de la barre d'expérience — dans le prolongement du groupe bas-gauche décrit plus
 haut, comme dans le jeu de référence, dans l'ordre gauche → droite :
 
 ```
-   Mana        Vie
+   Vie         Mana
     ◆           ◆     ( ) ( ) ( ) ( )
    ▓█▓         ▓█▓     soin sort1 sort2 répare
   ▓███▓       ▓███▓

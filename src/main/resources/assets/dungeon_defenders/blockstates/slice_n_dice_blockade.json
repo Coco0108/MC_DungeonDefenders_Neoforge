@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "dungeon_defenders:block/slice_n_dice_blockade"
+    }
+  }
+}

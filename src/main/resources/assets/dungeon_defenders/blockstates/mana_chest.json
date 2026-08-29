@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "opened=false": {
+      "model": "dungeon_defenders:block/mana_chest"
+    },
+    "opened=true": {
+      "model": "dungeon_defenders:block/mana_chest"
+    }
+  }
+}

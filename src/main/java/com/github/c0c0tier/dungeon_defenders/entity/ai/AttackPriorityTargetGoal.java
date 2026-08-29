@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.entity.ai;
 
+import com.github.c0c0tier.dungeon_defenders.Config;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AiAttackTarget;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
@@ -17,7 +18,6 @@ import net.minecraft.world.level.LevelReader;
 // reçoivent ce goal (ModEvents.onMonsterSpawn).
 public class AttackPriorityTargetGoal extends MoveToBlockGoal {
 
-    public static final int DAMAGE_PER_HIT = 5;
     public static final int TICKS_BETWEEN_HITS = 20;
 
     // Paliers dans l'ordre croissant de priorité (10 = le plus prioritaire). Un palier plus
@@ -30,10 +30,11 @@ public class AttackPriorityTargetGoal extends MoveToBlockGoal {
             AiAttackTarget.PRIORITY_RANGED_TOWER
     };
 
-    // Même portée que l'ancien AttackBlockadeGoal pour Block/Corps à corps/Tourelle (8 blocs) ;
-    // même portée que l'ancien AbstractEterniaCrystalAttackGoal pour le Cristal (16).
+    // Même portée que l'ancien AttackBlockadeGoal pour Block/Corps à corps/Tourelle (8 blocs,
+    // pas encore externalisée en Config — seule la portée cristal est un vrai doublon entre
+    // fichiers, voir Config.SEARCH_RANGE) ; la portée cristal (Config.SEARCH_RANGE) est
+    // partagée avec AbstractEterniaCrystalAttackGoal (archers).
     private static final int SEARCH_RANGE_TOWER = 8;
-    private static final int SEARCH_RANGE_CRYSTAL = 16;
     private static final int VERTICAL_SEARCH_RANGE = 1;
 
     private static final double SPEED_MODIFIER = 1.2D;
@@ -45,7 +46,7 @@ public class AttackPriorityTargetGoal extends MoveToBlockGoal {
         // searchRange passé au super constructeur n'est jamais utilisé : findNearestBlock()
         // est entièrement réimplémenté ci-dessous (une passe par palier, chacune avec sa
         // propre portée).
-        super(mob, SPEED_MODIFIER, SEARCH_RANGE_CRYSTAL);
+        super(mob, SPEED_MODIFIER, Config.SEARCH_RANGE.get());
     }
 
     @Override
@@ -61,7 +62,7 @@ public class AttackPriorityTargetGoal extends MoveToBlockGoal {
     }
 
     private int searchRangeForTier(int tier) {
-        return tier == AiAttackTarget.PRIORITY_CRYSTAL ? SEARCH_RANGE_CRYSTAL : SEARCH_RANGE_TOWER;
+        return tier == AiAttackTarget.PRIORITY_CRYSTAL ? Config.SEARCH_RANGE.get() : SEARCH_RANGE_TOWER;
     }
 
     // Même algorithme en spirale que MoveToBlockGoal.findNearestBlock() (vanilla) : rejoué une
@@ -136,7 +137,7 @@ public class AttackPriorityTargetGoal extends MoveToBlockGoal {
             return;
         }
 
-        target.damage(DAMAGE_PER_HIT);
+        target.damage(Config.DAMAGE_PER_HIT.get());
         this.mob.swing(InteractionHand.MAIN_HAND);
         this.hitCooldown = TICKS_BETWEEN_HITS;
     }

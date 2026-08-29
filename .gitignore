@@ -38,3 +38,10 @@ run/
 **/src/generated/**/.cache/
 repo/
 !**/src/**/repo/
+
+# neoforge.mods.toml généré par Gradle (replaceProperties) à partir de
+# src/main/templates/META-INF/neoforge.mods.toml — build output, pas du code source.
+/META-INF/
+
+# Fichier isolé sans lien avec ce projet Gradle/Java, jamais volontairement créé.
+/package-lock.json

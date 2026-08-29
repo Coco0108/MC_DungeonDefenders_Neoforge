@@ -37,7 +37,7 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
     private static final int FIELD_WIDTH = 70;
     private static final int FIELD_HEIGHT = 16;
     private static final int ROW_HEIGHT = 32;
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
 
     private static final int CYCLE_BUTTON_WIDTH = 90;
     private static final int COUNT_FIELD_WIDTH = 50;

@@ -12,13 +12,13 @@ import net.neoforged.neoforge.client.gui.GuiLayer;
 // la forme du HUD de référence (cristaux de mana en losange/triangle), en couleurs plates —
 // les vraies textures viendront dans un second temps, voir 05-etat-et-problemes-connus.md.
 //
-// Losange de gauche du groupe bas-gauche (mana | vie), au-dessus de la barre d'expérience.
-// Se remplit du bas vers le haut. Voir HudLayout pour les constantes partagées avec
-// HealthOverlay/ExperienceOverlay.
+// Losange de droite du groupe bas-gauche (vie | mana, comme dans le jeu de référence),
+// au-dessus de la barre d'expérience. Se remplit du bas vers le haut. Voir HudLayout pour les
+// constantes partagées avec HealthOverlay/ExperienceOverlay.
 public class ManaOverlay implements GuiLayer {
     private static final int FILLED_COLOR = 0xFF3B82F6;
     private static final int EMPTY_COLOR = 0xFF2B2B2B;
-    private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
 
     @Override
     public void render(GuiGraphicsExtractor guiGraphics, DeltaTracker deltaTracker) {
@@ -31,7 +31,7 @@ public class ManaOverlay implements GuiLayer {
         int currentMana = player.getData(ModAttachments.MANA);
         int maxMana = ModAttachments.MAX_MANA;
 
-        int centerX = HudLayout.MARGIN + HudLayout.DIAMOND_RADIUS;
+        int centerX = HudLayout.MARGIN + HudLayout.DIAMOND_RADIUS * 3 + HudLayout.DIAMOND_GAP;
         int bottomY = ExperienceOverlay.barTop(guiGraphics) - HudLayout.ROW_GAP;
         double fillRatio = maxMana <= 0 ? 0 : (double) currentMana / maxMana;
 

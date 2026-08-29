@@ -1,0 +1,7 @@
+{
+  "comment": "Placeholder : réutilise une texture vanilla (tonneau, thème conteneur/stockage) en attendant une texture dédiée.",
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "minecraft:block/barrel_top"
+  }
+}

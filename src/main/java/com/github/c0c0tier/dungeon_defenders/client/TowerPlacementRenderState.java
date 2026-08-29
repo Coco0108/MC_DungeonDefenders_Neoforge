@@ -16,7 +16,6 @@ import net.minecraft.core.Direction;
 public class TowerPlacementRenderState {
     public BlockPos pos = BlockPos.ZERO;
     public boolean valid;
-    public TowerPlacementState.Step step = TowerPlacementState.Step.AIMING;
     public Direction rotation = Direction.NORTH;
     public double range;
     // >= 360 = cercle complet (omnidirectionnel), sinon dessiné comme un cône.

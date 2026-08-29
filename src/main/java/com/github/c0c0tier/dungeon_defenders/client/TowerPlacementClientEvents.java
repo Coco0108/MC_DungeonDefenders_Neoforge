@@ -14,6 +14,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
@@ -61,11 +62,17 @@ public class TowerPlacementClientEvents {
     static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
 
-        if (ModKeyMappings.TOWER_WHEEL.consumeClick() && minecraft.screen == null) {
+        if (ModKeyMappings.TOWER_WHEEL.consumeClick() && minecraft.screen == null
+                && !TowerRemovalState.isActive()) {
             // Autant prévenir tout de suite plutôt que de laisser le joueur faire tout le
             // mode pose pour se faire refuser à la toute fin (voir ModEvents.onBlockadePlace,
             // seule autorité réelle côté serveur) : la roue elle-même ne s'ouvre qu'en phase
-            // Construction.
+            // Construction. Le garde !TowerRemovalState.isActive() est le pendant exact de
+            // celui de TowerRemovalClientEvents (!TowerPlacementState.isActive()) : sans lui,
+            // le mode suppression restait actif pendant tout le mode pose (bug signalé en jeu,
+            // 2026-08-26) — un clic gauche déclenchait alors À LA FOIS l'annulation de la pose
+            // (TowerPlacementClientEvents) ET une suppression de la tour visée
+            // (TowerRemovalClientEvents), les deux handlers traitant le même événement.
             if (minecraft.level != null && minecraft.player != null
                     && minecraft.level.getData(ModAttachments.GAME_PHASE) == GamePhase.BUILD.ordinal()) {
                 minecraft.setScreen(new TowerWheelScreen());
@@ -85,13 +92,12 @@ public class TowerPlacementClientEvents {
             return;
         }
 
-        if (TowerPlacementState.step() == TowerPlacementState.Step.AIMING) {
-            // Draine une éventuelle rotation en attente : elle n'a pas d'effet tant que la
-            // position n'est pas verrouillée, et ne doit pas s'appliquer en rafale une fois
-            // l'étape orientation atteinte.
-            ModKeyMappings.ROTATE_TOWER.consumeClick();
-            updateTargetFromRaycast(player, level);
-        } else if (ModKeyMappings.ROTATE_TOWER.consumeClick()) {
+        // Position et rotation évoluent en permanence, en parallèle : viser une nouvelle
+        // position et tourner l'hologramme (touche ROTATE_TOWER) peuvent se faire dans
+        // n'importe quel ordre, jusqu'au clic droit qui pose la tour avec les deux valeurs
+        // courantes — une seule étape, pas de position à verrouiller au préalable.
+        updateTargetFromRaycast(player, level);
+        if (ModKeyMappings.ROTATE_TOWER.consumeClick()) {
             TowerPlacementState.rotate();
         }
     }
@@ -131,14 +137,9 @@ public class TowerPlacementClientEvents {
         }
         event.setCanceled(true);
 
-        if (TowerPlacementState.step() == TowerPlacementState.Step.AIMING) {
-            if (TowerPlacementState.isTargetValid() && TowerPlacementState.targetPos() != null) {
-                TowerPlacementState.lockPosition();
-            }
-            return;
+        if (TowerPlacementState.isTargetValid() && TowerPlacementState.targetPos() != null) {
+            confirmPlacement();
         }
-
-        confirmPlacement();
     }
 
     private static void confirmPlacement() {
@@ -169,11 +170,7 @@ public class TowerPlacementClientEvents {
 
         TowerPlacementRenderState state = new TowerPlacementRenderState();
         state.pos = pos;
-        // En ORIENTING, la position est déjà verrouillée comme valide (voir
-        // onInteractionKeyTriggered) : toujours vert à cette étape.
-        state.valid = TowerPlacementState.step() == TowerPlacementState.Step.ORIENTING
-                || TowerPlacementState.isTargetValid();
-        state.step = TowerPlacementState.step();
+        state.valid = TowerPlacementState.isTargetValid();
         state.rotation = TowerPlacementState.rotation();
         state.range = tower.range();
         state.coneAngleDegrees = tower.coneAngleDegrees();
@@ -193,14 +190,12 @@ public class TowerPlacementClientEvents {
 
         poseStack.pushPose();
         poseStack.translate(state.pos.getX() - camPos.x, state.pos.getY() - camPos.y, state.pos.getZ() - camPos.z);
-        if (state.step == TowerPlacementState.Step.ORIENTING) {
-            // Symbolique pour l'instant : Spike Blockade est un cube symétrique, cette
-            // rotation n'a donc aucun effet visuel sur lui — prête pour une future tour
-            // asymétrique (voir doc/02-gameplay.md).
-            poseStack.translate(0.5D, 0.5D, 0.5D);
-            poseStack.mulPose(Axis.YP.rotationDegrees(state.rotation.toYRot()));
-            poseStack.translate(-0.5D, -0.5D, -0.5D);
-        }
+        // Toujours appliquée, dès la visée (pas d'étape séparée où la rotation "n'aurait pas
+        // encore d'effet") : symbolique pour l'instant pour Spike Blockade, cube symétrique
+        // sans effet visuel, mais prête pour une future tour asymétrique (doc/02-gameplay.md).
+        poseStack.translate(0.5D, 0.5D, 0.5D);
+        poseStack.mulPose(Axis.YP.rotationDegrees(facingYRot(state.rotation)));
+        poseStack.translate(-0.5D, -0.5D, -0.5D);
         event.getSubmitNodeCollector().submitCustomGeometry(poseStack, RenderTypes.lines(),
                 (pose, buffer) -> renderBoxOutline(pose, buffer, Shapes.block(), color, LINE_WIDTH));
         poseStack.popPose();
@@ -211,11 +206,7 @@ public class TowerPlacementClientEvents {
                     state.pos.getX() - camPos.x + 0.5D,
                     state.pos.getY() - camPos.y,
                     state.pos.getZ() - camPos.z + 0.5D);
-            // Toujours appliquée (pas seulement en ORIENTING comme pour le contour du bloc,
-            // qui ne montre de toute façon jamais sa rotation visuellement pour un cube
-            // parfait) : le cône doit refléter state.rotation dès l'étape "visée" (NORTH par
-            // défaut), pas seulement une fois la position verrouillée.
-            poseStack.mulPose(Axis.YP.rotationDegrees(state.rotation.toYRot()));
+            poseStack.mulPose(Axis.YP.rotationDegrees(facingYRot(state.rotation)));
             double coneAngle = state.coneAngleDegrees;
             event.getSubmitNodeCollector().submitCustomGeometry(poseStack, RenderTypes.lines(),
                     (pose, buffer) -> renderRangeArea(pose, buffer, state.range, coneAngle, COLOR_RANGE, LINE_WIDTH));
@@ -235,15 +226,42 @@ public class TowerPlacementClientEvents {
         });
     }
 
+    // Rotation Y (degrés) à appliquer via Axis.YP.rotationDegrees(...) au gabarit du
+    // cône/contour pour qu'il pointe dans la direction donnée.
+    //
+    // Volontairement PAS Direction.toYRot() : cette méthode a une convention différente
+    // (SOUTH=0°, WEST=90°, NORTH=180°, EAST=270°, utilisée pour le yaw des entités), qui avait
+    // fait pointer le cône à 180° de la vraie direction de tir (premier bug constaté en jeu).
+    //
+    // Et volontairement PAS non plus les valeurs `y` du blockstate posé telles quelles
+    // (facing=north→0°, east→90°, south→180°, west→270°, voir harpoon_turret.json) : ces
+    // valeurs sont correctes pour le système de blockstate de Minecraft (rotation "horaire vue
+    // du dessus"), mais PAS pour Axis.YP.rotationDegrees(...), qui applique la convention
+    // main-droite standard (JOML `Quaternionf.rotationY`) — l'inverse. Vérifié par le calcul :
+    // avec les axes de Minecraft (+X est, +Z sud), une rotation POSITIVE de Axis.YP envoie le
+    // nord (0,0,-1) vers l'OUEST, pas l'est. Utiliser les valeurs du blockstate telles quelles
+    // ici faisait donc apparaître le bloc réellement posé tourné à 180° de la direction visée
+    // (deuxième bug constaté en jeu, EST/OUEST inversés — NORD/SUD par symétrie n'étaient pas
+    // affectés, d'où un décalage de 180° pile sur les rotations testées). EST et OUEST sont
+    // donc inversés ici par rapport au blockstate.
+    private static float facingYRot(Direction direction) {
+        return switch (direction) {
+            case EAST -> 270.0F;
+            case SOUTH -> 180.0F;
+            case WEST -> 90.0F;
+            default -> 0.0F; // NORTH (et UP/DOWN, qui n'arrivent jamais ici)
+        };
+    }
+
     // Cercle complet si coneAngleDegrees >= 360 (omnidirectionnel, ex. Spike Blockade si un
     // jour range() > 0), sinon un secteur/cône borné : l'arc PLUS deux segments droits vers
     // l'origine, pour lire visuellement un cône et pas un arc flottant dans le vide.
     //
     // Convention du gabarit local (avant rotation par l'appelant) : angle -90° = (0,0,-radius),
-    // soit la direction NORTH — cohérent avec Direction.NORTH.toYRot() == 0 (rotation identité)
-    // déjà utilisé pour le contour du bloc. Non vérifié visuellement pour EAST/SOUTH/WEST (seul
-    // NORTH est à l'abri d'une éventuelle inversion de sens de rotation) — voir
-    // doc/06-a-tester.md, à confirmer avec une vraie texture directionnelle (Harpoon Turret).
+    // soit la direction NORTH — cohérent avec facingYRot(NORTH) == 0 (rotation identité),
+    // vérifiée pour les 4 directions (voir facingYRot ci-dessus ; ce gabarit utilisait
+    // auparavant Direction.toYRot(), qui a une convention différente et faisait pointer le
+    // cône à 180° de la vraie direction de tir — corrigé).
     private static void renderRangeArea(
             PoseStack.Pose pose, VertexConsumer buffer, double radius, double coneAngleDegrees, int color, float width) {
         Vector3f normal = new Vector3f(0.0F, 1.0F, 0.0F);

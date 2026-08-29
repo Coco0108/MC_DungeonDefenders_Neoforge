@@ -1,11 +1,17 @@
 package com.github.c0c0tier.dungeon_defenders;
 
+import com.github.c0c0tier.dungeon_defenders.block.entity.BouncerBlockadeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.BowlingBallTurretBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.HarpoonTurretBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MortarTurretBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.SliceNDiceBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpikeBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
+import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
@@ -14,7 +20,9 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
@@ -53,6 +61,39 @@ public class DungeonDefendersMod {
                     ModBlocks.HARPOON_TURRET.get()
             ));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ManaChestBlockEntity>> MANA_CHEST_BE =
+            BLOCK_ENTITIES.register("mana_chest", () -> new BlockEntityType<>(
+                    ManaChestBlockEntity::new,
+                    ModBlocks.MANA_CHEST.get()
+            ));
+
+    // Reste du roster de tours de l'Écuyer (2026-08-29) : mêmes catégories que ci-dessus
+    // (Blockade pour Bouncer/Slice N Dice, Turret pour Bowling Ball/Mortar), voir chaque block
+    // entity pour le détail du comportement.
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BouncerBlockadeBlockEntity>> BOUNCER_BLOCKADE_BE =
+            BLOCK_ENTITIES.register("bouncer_blockade", () -> new BlockEntityType<>(
+                    BouncerBlockadeBlockEntity::new,
+                    ModBlocks.BOUNCER_BLOCKADE.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SliceNDiceBlockadeBlockEntity>> SLICE_N_DICE_BLOCKADE_BE =
+            BLOCK_ENTITIES.register("slice_n_dice_blockade", () -> new BlockEntityType<>(
+                    SliceNDiceBlockadeBlockEntity::new,
+                    ModBlocks.SLICE_N_DICE_BLOCKADE.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BowlingBallTurretBlockEntity>> BOWLING_BALL_TURRET_BE =
+            BLOCK_ENTITIES.register("bowling_ball_turret", () -> new BlockEntityType<>(
+                    BowlingBallTurretBlockEntity::new,
+                    ModBlocks.BOWLING_BALL_TURRET.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MortarTurretBlockEntity>> MORTAR_TURRET_BE =
+            BLOCK_ENTITIES.register("mortar_turret", () -> new BlockEntityType<>(
+                    MortarTurretBlockEntity::new,
+                    ModBlocks.MORTAR_TURRET.get()
+            ));
+
     // 3. L'onglet Créatif
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> DUNGEON_DEFENDERS_TAB = CREATIVE_MODE_TABS.register("dungeon_defenders_tab",
             () -> CreativeModeTab.builder()
@@ -65,18 +106,24 @@ public class DungeonDefendersMod {
                         // (TowerWheelScreen) — voir TowerBlockItem, dont useOn() ne fait plus
                         // rien.
                         output.accept(ModBlocks.MANA_TEST_WAND.get());
+                        output.accept(ModBlocks.MANA_FILL_WAND.get());
                         output.accept(ModBlocks.SPAWNER_ITEM.get());
                         output.accept(ModBlocks.TAVERN_CRYSTAL_ITEM.get());
+                        output.accept(ModBlocks.MANA_CHEST_ITEM.get());
+                        output.accept(ModBlocks.PLAYER_SPAWN_ITEM.get());
                     })
                     .build());
 
-    public DungeonDefendersMod(IEventBus modEventBus) {
+    public DungeonDefendersMod(IEventBus modEventBus, ModContainer container) {
         // On enregistre tes deux fichiers de registres sur le bus
         ModBlocks.register(modEventBus);
         ModAttachments.register(modEventBus);
         ModMenus.register(modEventBus);
+        ModEntities.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
+
+        container.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
         LOGGER.info("Le mod Dungeon Defenders est initialisé proprement !");
     }

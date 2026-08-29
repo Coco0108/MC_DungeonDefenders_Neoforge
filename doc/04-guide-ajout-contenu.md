@@ -239,13 +239,18 @@ catégorie de tour existante (mur à PV type "Blockade", ou tour à distance typ
 `05-etat-et-problemes-connus.md`), pas besoin de repartir de zéro :
 
 - **Blockade** : étendre `block/entity/AbstractBlockadeBlockEntity.java` (stats seulement, voir
-  `SpikeBlockadeBlockEntity` comme modèle) et ajouter le nouveau bloc au tag
-  `data/dungeon_defenders/tags/block/blockades.json` pour qu'`AttackBlockadeGoal` le vise
-  automatiquement.
+  `SpikeBlockadeBlockEntity`/`BouncerBlockadeBlockEntity`/`SliceNDiceBlockadeBlockEntity` comme
+  modèles). Aucun tag à tenir à jour : `AttackPriorityTargetGoal` vise génériquement tout
+  `AiAttackTarget` (donc tout `AbstractTowerBlockEntity`), pas une liste fermée — le tag
+  `dungeon_defenders:blockades` et l'ancien `AttackBlockadeGoal` qui le lisait ont tous les deux
+  été supprimés (voir 05-etat-et-problemes-connus.md, "Système de priorité IA").
 - **Turret** : étendre `block/entity/AbstractTurretBlockEntity.java` (stats seulement, voir
-  `HarpoonTurretBlockEntity` comme modèle) ; si la tour doit avoir une orientation, déclarer
-  `BlockStateProperties.HORIZONTAL_FACING` sur le bloc (voir `HarpoonTurretBlock` — la rotation
-  choisie dans la roue est déjà appliquée automatiquement par
+  `HarpoonTurretBlockEntity` comme modèle — ou surcharger `fireAt` pour un comportement de tir
+  différent d'"une flèche cosmétique + dégâts à une seule cible", voir
+  `BowlingBallTurretBlockEntity`/`MortarTurretBlockEntity` pour deux exemples concrets, l'un
+  avec une vraie collision perforante, l'autre avec des dégâts de zone) ; si la tour doit avoir
+  une orientation, déclarer `BlockStateProperties.HORIZONTAL_FACING` sur le bloc (voir
+  `HarpoonTurretBlock` — la rotation choisie dans la roue est déjà appliquée automatiquement par
   `ModNetworking.handlePlaceTower`, rien à faire côté réseau).
 - Dans tous les cas, ajouter un membre à `init/TowerDefinition.java` pour que la tour
   apparaisse dans la roue (`TowerWheelScreen`) — c'est l'unique façon de la poser, voir
@@ -408,16 +413,68 @@ cours, comme l'annulation d'une tension d'arc dans la version à distance).
 
 ## Ajouter une option de configuration
 
-[`Config.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/Config.java) contient
-la spec d'exemple du template. Pour l'utiliser réellement, il faut l'enregistrer dans le
-constructeur du mod — ce n'est **pas** fait aujourd'hui :
+[`Config.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/Config.java) est une
+vraie spec (plus l'exemple du template), enregistrée dans le constructeur du mod :
 
 ```java
-public DungeonDefendersMod(IEventBus modEventBus, ModContainer modContainer) {
+public DungeonDefendersMod(IEventBus modEventBus, ModContainer container) {
     ...
-    modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+    container.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 }
 ```
 
-Une bonne première option serait d'externaliser les constantes actuellement en dur
-(`DEFAULT_HEALTH = 100`, dégâts de `5`, portée de recherche `16`).
+Génère `config/dungeon_defenders-common.toml` au premier lancement. Trois valeurs y sont déjà
+externalisées : `defaultHealth` (PV du Cristal d'Eternia, 100 par défaut), `damagePerHit`
+(dégâts de mêlée d'`AttackPriorityTargetGoal`, 5 par défaut) et `searchRange` (portée de
+détection du cristal, mêlée et distance confondues, 16 par défaut). Pour en ajouter une :
+déclarer le champ dans `Config.java` (`BUILDER.comment(...).defineInRange(...)` ou
+`.define(...)` selon le type), puis lire sa valeur via `Config.MA_VALEUR.get()` là où c'était
+une constante en dur.
+
+**Cette config (`COMMON`) est chargée des deux côtés** (client et serveur dédié) : réservée aux
+valeurs de gameplay, jamais à une préférence purement visuelle — voir la recette suivante pour
+ça.
+
+## Ajouter une option d'affichage HUD facultative (masquer/afficher un élément)
+
+Pour une préférence propre à **ce joueur** (masquer un overlay, désactiver une animation...),
+pas la config de gameplay ci-dessus : [`client/ClientDisplayConfig.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/client/ClientDisplayConfig.java)
+est le spec dédié, type `CLIENT` plutôt que `COMMON` — un fichier **local**
+(`config/dungeon_defenders-client.toml`), jamais lu ni synchronisé côté serveur. Exemple
+existant : `showScoreGainPopup` (affichage du popup de `ScoreGainOverlay`).
+
+1. Déclarer le champ dans `ClientDisplayConfig.java` :
+
+   ```java
+   public static final ModConfigSpec.BooleanValue SHOW_MON_TRUC = BUILDER
+           .comment("Description affichée en tooltip dans l'écran de config.")
+           .define("showMonTruc", true);
+   ```
+
+2. Clé de lang pour le libellé de l'option (sinon NeoForge affiche le nom du champ brut) :
+
+   ```json
+   "dungeon_defenders.configuration.showMonTruc": "Afficher mon truc"
+   ```
+
+3. Dans le `GuiLayer` concerné, tout en haut de `render(...)`, **après** les gardes existantes
+   (`minecraft.level == null`, `minecraft.options.hideGui`...) mais avant tout calcul de
+   dessin :
+
+   ```java
+   if (!ClientDisplayConfig.SHOW_MON_TRUC.get()) {
+       return;
+   }
+   ```
+
+   Si l'overlay fait aussi du travail utile indépendamment de l'affichage (ex.
+   `ScoreGainOverlay.purgeExpired()`, qui doit tourner même masqué pour ne pas laisser une
+   liste grossir indéfiniment), placer ce travail **avant** le `if`, pour qu'il continue de
+   s'exécuter même quand l'option est décochée — seul le dessin doit être sauté.
+
+**Rien à enregistrer côté réseau** : contrairement à `Config.SPEC`, ce spec ne concerne qu'un
+seul client, aucun autre joueur de la partie ne le voit ni n'en dépend. Déjà branché dans le
+constructeur de `DungeonDefendersModClient`
+(`container.registerConfig(ModConfig.Type.CLIENT, ClientDisplayConfig.SPEC)`) — pas la peine d'y
+retoucher pour une nouvelle option, seulement pour la toute première fois que ce fichier a été
+créé.

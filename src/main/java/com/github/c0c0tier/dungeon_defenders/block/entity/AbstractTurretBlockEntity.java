@@ -30,17 +30,29 @@ import org.jspecify.annotations.Nullable;
 // catégories de tours. Priorité IA la plus basse (voir AiAttackTarget) : un monstre de mêlée
 // (entity/ai/AttackPriorityTargetGoal.java) ne s'attaque à un turret qu'en tout dernier
 // recours, rien de plus proche/prioritaire à portée.
+//
+// fireAt/spawnArrow/muzzlePosition sont protected (pas private, 2026-08-29) : Bowling Ball
+// Turret et Mortar Turret redéfinissent fireAt pour leurs propres mécaniques (perforation
+// réelle, dégâts de zone) — voir chaque block entity pour le détail.
 public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity {
 
     private static final float ARROW_VELOCITY = 3.0F;
     private static final float ARROW_INACCURACY = 1.0F;
+
+    // Décale l'origine du tir hors du cube plein du bloc : une flèche qui apparaît DANS la
+    // géométrie de collision du bloc sous elle se fige immédiatement au premier tick
+    // (AbstractArrow#tick considère qu'elle est "in ground" dès que sa position de spawn est
+    // contenue dans la forme de collision du bloc sous elle) — vrai aussi bien pour une flèche
+    // purement visuelle (spawnArrow) que pour une vraie flèche à collision réelle (voir
+    // BowlingBallEntity) : sans ce décalage, aucun tir n'est jamais visible ni fonctionnel.
+    private static final double MUZZLE_OFFSET = 0.6D;
 
     private final double range;
     private final double coneAngleDegrees;
     private final float damage;
     private final long attackIntervalTicks;
 
-    private long lastFireTick = Long.MIN_VALUE;
+    private long lastFireTick;
 
     protected AbstractTurretBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state,
             int maxHealth, int manaCost, double range, double coneAngleDegrees,
@@ -50,6 +62,17 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
         this.coneAngleDegrees = coneAngleDegrees;
         this.damage = damage;
         this.attackIntervalTicks = attackIntervalTicks;
+        // -attackIntervalTicks (pas Long.MIN_VALUE, la valeur d'origine) : permet de tirer dès
+        // la première cible trouvée sans délai, tout en évitant l'overflow de
+        // `now - lastFireTick` qu'un sentinel trop extrême provoque — Long.MIN_VALUE fait
+        // déborder la soustraction vers un nombre toujours négatif, empêchant tout tir pour
+        // toujours (bug trouvé en construisant le reste du roster de tours, 2026-08-29 : toute
+        // tour de cette base — donc aussi Harpoon Turret — ne tirait en réalité jamais).
+        this.lastFireTick = -attackIntervalTicks;
+    }
+
+    protected float getDamage() {
+        return this.damage;
     }
 
     @Override
@@ -78,7 +101,7 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
         }
 
         turret.lastFireTick = now;
-        turret.fireAt(serverLevel, pos, target);
+        turret.fireAt(serverLevel, pos, target, facing);
     }
 
     private @Nullable Monster findTarget(ServerLevel level, BlockPos pos, Direction facing) {
@@ -113,29 +136,39 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
         return nearest;
     }
 
-    private void fireAt(ServerLevel level, BlockPos pos, Monster target) {
-        spawnArrow(level, pos, target);
+    // Comportement par défaut (Harpoon Turret) : flèche purement visuelle + dégâts appliqués
+    // directement à la cible unique, comme RangedAttackEterniaCrystalGoal pour le squelette
+    // archer. Bowling Ball Turret et Mortar Turret redéfinissent entièrement cette méthode.
+    protected void fireAt(ServerLevel level, BlockPos pos, Monster target, Direction facing) {
+        spawnArrow(level, pos, target, facing);
         target.hurt(level.damageSources().generic(), this.damage);
     }
 
-    // Flèche purement visuelle, comme RangedAttackEterniaCrystalGoal pour le squelette archer :
-    // les dégâts sont appliqués directement (voir fireAt), pas via une détection de collision.
-    private void spawnArrow(ServerLevel level, BlockPos pos, Monster target) {
-        double originX = pos.getX() + 0.5D;
-        double originY = pos.getY() + 0.5D;
-        double originZ = pos.getZ() + 0.5D;
+    // Protected final (pas private) : Mortar Turret réutilise cette flèche cosmétique telle
+    // quelle pour son propre tir, seuls ses dégâts diffèrent (zone plutôt qu'une seule cible).
+    // Bowling Ball Turret NE l'utilise PAS : il a besoin d'une vraie collision, pas d'une
+    // flèche cosmétique — voir BowlingBallEntity.
+    protected final void spawnArrow(ServerLevel level, BlockPos pos, Monster target, Direction facing) {
+        Vec3 origin = muzzlePosition(pos, facing);
 
         // Pas de LivingEntity propriétaire (c'est un bloc) : constructeur Arrow sans owner.
-        Arrow arrow = new Arrow(level, originX, originY, originZ, new ItemStack(Items.ARROW), null);
+        Arrow arrow = new Arrow(level, origin.x, origin.y, origin.z, new ItemStack(Items.ARROW), null);
 
-        double dx = target.getX() - originX;
-        double dy = target.getEyeY() - originY;
-        double dz = target.getZ() - originZ;
+        double dx = target.getX() - origin.x;
+        double dy = target.getEyeY() - origin.y;
+        double dz = target.getZ() - origin.z;
         double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
 
         // Léger arc vers le haut pour compenser la gravité sur la distance, même calcul que
         // RangedAttackEterniaCrystalGoal (et les tirs vanilla : squelette, dispenser...).
         arrow.shoot(dx, dy + horizontalDistance * 0.2D, dz, ARROW_VELOCITY, ARROW_INACCURACY);
         level.addFreshEntity(arrow);
+    }
+
+    protected final Vec3 muzzlePosition(BlockPos pos, Direction facing) {
+        return new Vec3(
+                pos.getX() + 0.5D + facing.getStepX() * MUZZLE_OFFSET,
+                pos.getY() + 0.5D,
+                pos.getZ() + 0.5D + facing.getStepZ() * MUZZLE_OFFSET);
     }
 }

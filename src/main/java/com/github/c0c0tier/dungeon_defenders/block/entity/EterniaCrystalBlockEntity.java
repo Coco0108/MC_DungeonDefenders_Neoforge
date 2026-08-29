@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
+import com.github.c0c0tier.dungeon_defenders.Config;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import net.minecraft.ChatFormatting;
@@ -22,8 +23,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 // avec AbstractTowerBlockEntity (aucun coût en mana, aucune pose possible).
 public class EterniaCrystalBlockEntity extends BlockEntity implements AiAttackTarget {
 
-    public static final int DEFAULT_HEALTH = 100;
-    private int crystalHealth = DEFAULT_HEALTH;
+    private int crystalHealth = Config.DEFAULT_HEALTH.get();
 
     public EterniaCrystalBlockEntity(BlockPos pos, BlockState state) {
         super(DungeonDefendersMod.ETERNIA_CRYSTAL_BE.get(), pos, state);
@@ -103,6 +103,6 @@ public class EterniaCrystalBlockEntity extends BlockEntity implements AiAttackTa
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         // getIntOr renvoie la valeur sauvegardée, ou la valeur par défaut si absente
-        this.crystalHealth = input.getIntOr("CrystalHealth", DEFAULT_HEALTH);
+        this.crystalHealth = input.getIntOr("CrystalHealth", Config.DEFAULT_HEALTH.get());
     }
 }
