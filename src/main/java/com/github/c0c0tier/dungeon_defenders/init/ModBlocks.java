@@ -1,9 +1,13 @@
 package com.github.c0c0tier.dungeon_defenders.init;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.block.BouncerBlockadeBlock;
+import com.github.c0c0tier.dungeon_defenders.block.BowlingBallTurretBlock;
 import com.github.c0c0tier.dungeon_defenders.block.EterniaCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.block.HarpoonTurretBlock;
 import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
+import com.github.c0c0tier.dungeon_defenders.block.MortarTurretBlock;
+import com.github.c0c0tier.dungeon_defenders.block.SliceNDiceBlockadeBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpawnerBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpikeBlockadeBlock;
 import com.github.c0c0tier.dungeon_defenders.block.TavernCrystalBlock;
@@ -54,6 +58,36 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> HARPOON_TURRET_ITEM =
             ITEMS.registerItem("harpoon_turret", properties -> new TowerBlockItem(HARPOON_TURRET.get(), properties));
+
+    // 3ter. Reste du roster de l'Écuyer (2026-08-29), discuté et validé tour par tour avec le
+    // joueur avant d'être codé — voir doc/02-gameplay.md pour le détail de chacune.
+    public static final DeferredBlock<BouncerBlockadeBlock> BOUNCER_BLOCKADE = BLOCKS.registerBlock("bouncer_blockade",
+            BouncerBlockadeBlock::new,
+            properties -> properties.strength(2.0F));
+
+    public static final DeferredItem<BlockItem> BOUNCER_BLOCKADE_ITEM =
+            ITEMS.registerItem("bouncer_blockade", properties -> new TowerBlockItem(BOUNCER_BLOCKADE.get(), properties));
+
+    public static final DeferredBlock<SliceNDiceBlockadeBlock> SLICE_N_DICE_BLOCKADE = BLOCKS.registerBlock("slice_n_dice_blockade",
+            SliceNDiceBlockadeBlock::new,
+            properties -> properties.strength(2.0F));
+
+    public static final DeferredItem<BlockItem> SLICE_N_DICE_BLOCKADE_ITEM =
+            ITEMS.registerItem("slice_n_dice_blockade", properties -> new TowerBlockItem(SLICE_N_DICE_BLOCKADE.get(), properties));
+
+    public static final DeferredBlock<BowlingBallTurretBlock> BOWLING_BALL_TURRET = BLOCKS.registerBlock("bowling_ball_turret",
+            BowlingBallTurretBlock::new,
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> BOWLING_BALL_TURRET_ITEM =
+            ITEMS.registerItem("bowling_ball_turret", properties -> new TowerBlockItem(BOWLING_BALL_TURRET.get(), properties));
+
+    public static final DeferredBlock<MortarTurretBlock> MORTAR_TURRET = BLOCKS.registerBlock("mortar_turret",
+            MortarTurretBlock::new,
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> MORTAR_TURRET_ITEM =
+            ITEMS.registerItem("mortar_turret", properties -> new TowerBlockItem(MORTAR_TURRET.get(), properties));
 
     // 4. Baguette de test : retire 10 de mana au clic droit, pour vérifier le HUD (mana)
     public static final DeferredItem<ManaTestWandItem> MANA_TEST_WAND =

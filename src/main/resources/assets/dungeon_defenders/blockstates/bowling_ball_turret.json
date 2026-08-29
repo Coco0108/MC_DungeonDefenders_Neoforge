@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "dungeon_defenders:block/bowling_ball_turret"
+    },
+    "facing=east": {
+      "model": "dungeon_defenders:block/bowling_ball_turret",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "dungeon_defenders:block/bowling_ball_turret",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "dungeon_defenders:block/bowling_ball_turret",
+      "y": 270
+    }
+  }
+}

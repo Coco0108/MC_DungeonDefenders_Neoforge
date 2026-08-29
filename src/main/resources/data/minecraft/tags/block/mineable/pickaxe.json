@@ -6,6 +6,10 @@
     "dungeon_defenders:harpoon_turret",
     "dungeon_defenders:spawner",
     "dungeon_defenders:tavern_crystal",
-    "dungeon_defenders:mana_chest"
+    "dungeon_defenders:mana_chest",
+    "dungeon_defenders:bouncer_blockade",
+    "dungeon_defenders:slice_n_dice_blockade",
+    "dungeon_defenders:bowling_ball_turret",
+    "dungeon_defenders:mortar_turret"
   ]
 }

@@ -1,8 +1,12 @@
 package com.github.c0c0tier.dungeon_defenders;
 
+import com.github.c0c0tier.dungeon_defenders.block.entity.BouncerBlockadeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.BowlingBallTurretBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.HarpoonTurretBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MortarTurretBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.SliceNDiceBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpikeBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -61,6 +65,33 @@ public class DungeonDefendersMod {
             BLOCK_ENTITIES.register("mana_chest", () -> new BlockEntityType<>(
                     ManaChestBlockEntity::new,
                     ModBlocks.MANA_CHEST.get()
+            ));
+
+    // Reste du roster de tours de l'Écuyer (2026-08-29) : mêmes catégories que ci-dessus
+    // (Blockade pour Bouncer/Slice N Dice, Turret pour Bowling Ball/Mortar), voir chaque block
+    // entity pour le détail du comportement.
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BouncerBlockadeBlockEntity>> BOUNCER_BLOCKADE_BE =
+            BLOCK_ENTITIES.register("bouncer_blockade", () -> new BlockEntityType<>(
+                    BouncerBlockadeBlockEntity::new,
+                    ModBlocks.BOUNCER_BLOCKADE.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SliceNDiceBlockadeBlockEntity>> SLICE_N_DICE_BLOCKADE_BE =
+            BLOCK_ENTITIES.register("slice_n_dice_blockade", () -> new BlockEntityType<>(
+                    SliceNDiceBlockadeBlockEntity::new,
+                    ModBlocks.SLICE_N_DICE_BLOCKADE.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BowlingBallTurretBlockEntity>> BOWLING_BALL_TURRET_BE =
+            BLOCK_ENTITIES.register("bowling_ball_turret", () -> new BlockEntityType<>(
+                    BowlingBallTurretBlockEntity::new,
+                    ModBlocks.BOWLING_BALL_TURRET.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MortarTurretBlockEntity>> MORTAR_TURRET_BE =
+            BLOCK_ENTITIES.register("mortar_turret", () -> new BlockEntityType<>(
+                    MortarTurretBlockEntity::new,
+                    ModBlocks.MORTAR_TURRET.get()
             ));
 
     // 3. L'onglet Créatif

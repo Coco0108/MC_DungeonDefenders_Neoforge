@@ -22,6 +22,6 @@ public class SpikeBlockadeBlockEntity extends AbstractBlockadeBlockEntity {
 
     public SpikeBlockadeBlockEntity(BlockPos pos, BlockState state) {
         super(DungeonDefendersMod.SPIKE_BLOCKADE_BE.get(), pos, state,
-                MAX_HEALTH, MANA_COST, true, CONTACT_DAMAGE, CONTACT_DAMAGE_INTERVAL_TICKS, CONTACT_RANGE);
+                MAX_HEALTH, MANA_COST, true, CONTACT_DAMAGE, CONTACT_DAMAGE_INTERVAL_TICKS, CONTACT_RANGE, 0.0F);
     }
 }

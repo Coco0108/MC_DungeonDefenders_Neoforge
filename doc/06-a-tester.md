@@ -133,6 +133,54 @@ Nouveau (2026-08-27), jamais vérifié visuellement.
       relancer : l'option décochée dans l'écran de config reflète bien la valeur du fichier.
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ClientDisplayConfig`.
 
+## Le reste du roster de l'Écuyer (Bouncer/Slice N Dice Blockade, Bowling Ball/Mortar Turret)
+
+Nouveau (2026-08-29), jamais vérifié visuellement — design de chaque tour discuté et validé
+avec le joueur avant d'être codé, voir 02-gameplay.md pour le détail de chacune. Le Harpoon
+Turret et le Spike Blockade, eux, ont déjà été testés (voir l'intro de ce fichier) : c'est en
+reconstruisant leur base commune (`AbstractTurretBlockEntity`) pour ce roster que deux bugs
+déjà corrigés dans cette branche (cooldown de tir, origine de la flèche) ont été retrouvés puis
+réappliqués sans régression — pas la peine de re-tester le Harpoon Turret pour ça. Poser chaque
+tour via la roue (section dédiée plus bas).
+
+### Bouncer Blockade
+
+- [ ] Un monstre au contact perd des PV (1 toutes les 10 ticks) **et** se fait visiblement
+      repousser, dans la direction opposée au blockade (pas vers lui, pas latéralement au
+      hasard) — vérifie le sens du vecteur de `monster.knockback(...)`.
+- [ ] Un monstre juste hors de portée de contact (au-delà d'1 bloc) n'est ni endommagé ni
+      repoussé.
+- [ ] Plusieurs monstres au contact en même temps : chacun est repoussé indépendamment.
+
+### Slice N Dice Blockade
+
+- [ ] Plusieurs monstres à la fois dans son rayon de contact (1,5 bloc) perdent tous des PV en
+      continu, pas seulement le plus proche.
+- [ ] La cadence (1 PV toutes les 5 ticks) est visiblement plus rapide que Spike Blockade (2 PV
+      toutes les 20 ticks) — DPS continu plutôt que coups espacés.
+
+### Bowling Ball Turret
+
+- [ ] Un seul zombie dans le cône : la boule (visuellement une flèche, voir limite assumée en
+      02-gameplay.md) part et le touche, ~5 dégâts.
+- [ ] **Point le plus important** : plusieurs zombies alignés les uns derrière les autres dans
+      le cône — la boule doit blesser **chacun d'entre eux** en continuant sa trajectoire après
+      le premier impact, pas s'arrêter au premier touché. C'est la mécanique centrale demandée
+      par le joueur.
+- [ ] La boule finit par disparaître (`MAX_BALL_DISTANCE`) si elle ne touche personne, pas de
+      projectile qui vole indéfiniment.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `BowlingBallEntity` (notamment
+      autour de l'enchantement de Perforation appliqué à la fausse arme au moment du tir).
+
+### Mortar Turret
+
+- [ ] Plusieurs monstres groupés à portée d'un seul tir : **tous** ceux dans le rayon de
+      2 blocs autour du monstre visé perdent des PV (8 chacun), pas seulement la cible
+      initiale.
+- [ ] Aucun dégât de terrain à l'impact (pas de trou, pas de bloc détruit) — vérifie que
+      l'implémentation ne fait vraiment que des dégâts aux entités, rien côté monde.
+- [ ] Cadence visiblement plus lente que les trois autres tours à distance (60 ticks).
+
 ## HUD vanilla masqué, faim et hotbar désactivées
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar
