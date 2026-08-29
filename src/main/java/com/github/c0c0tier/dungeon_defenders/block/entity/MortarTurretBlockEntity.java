@@ -38,12 +38,19 @@ public class MortarTurretBlockEntity extends AbstractTurretBlockEntity {
     // jamais visiblement retomber, peu satisfaisant pour un impact censé être instantané (les
     // dégâts, eux, l'ont toujours été, jamais liés à l'arrivée réelle d'une flèche). Remplacée
     // par une particule d'explosion au point d'impact, jouée au même instant que les dégâts —
-    // seulement visuelle, ParticleTypes.EXPLOSION_EMITTER ne touche ni bloc ni terrain
-    // (contrairement à un vrai Explosion vanilla), cohérent avec "sans dégât de terrain".
+    // seulement visuelle, aucun risque de dégât de terrain (contrairement à une vraie
+    // Explosion vanilla), cohérent avec "sans dégât de terrain".
+    //
+    // ParticleTypes.EXPLOSION_EMITTER (le grand "poof" dramatique d'une explosion TNT/creeper)
+    // testé en jeu (2026-08-29) : bien trop imposant pour un impact de mortier répété toutes
+    // les 3s. Remplacé par plusieurs ParticleTypes.EXPLOSION (la petite particule dispersée en
+    // nombre dans le rayon d'une vraie explosion) légèrement éparpillées — un effet plus
+    // modeste, cohérent avec la fréquence du tir. Le vrai projectile (visuel de trajectoire
+    // avant l'impact) reste à faire plus tard, pas dans le scope de cette passe.
     @Override
     protected void fireAt(ServerLevel level, BlockPos pos, Monster target, Direction facing) {
         Vec3 impact = target.position();
-        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, impact.x, impact.y, impact.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
+        level.sendParticles(ParticleTypes.EXPLOSION, impact.x, impact.y, impact.z, 4, 0.3D, 0.3D, 0.3D, 0.0D);
 
         AABB splashArea = new AABB(target.blockPosition()).inflate(SPLASH_RADIUS);
         for (Monster monster : level.getEntitiesOfClass(Monster.class, splashArea)) {

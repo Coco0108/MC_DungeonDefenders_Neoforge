@@ -148,25 +148,29 @@ tour via la roue (section dédiée plus bas).
 
 ### Bouncer Blockade
 
-- [ ] Un monstre au contact perd des PV (1 toutes les 10 ticks) **et** se fait visiblement
-      repousser, dans la direction opposée au blockade (pas vers lui, pas latéralement au
-      hasard) — vérifie le sens du vecteur de `monster.knockback(...)`.
-- [ ] **Repasse par ici en particulier** : la force est passée de 0.8F (quasi imperceptible,
-      premier retour de test) à 1.6F — vérifier que le monstre est maintenant *visiblement*
-      repoussé d'une distance notable, pas juste un tremblement sur place. Si toujours trop
-      faible, la valeur est probablement encore à monter (voir `KNOCKBACK_STRENGTH` dans
-      `BouncerBlockadeBlockEntity`).
+**Deuxième passe de correction (2026-08-29)** : le premier retour ("force trop faible") a été
+corrigé (0.8F → 1.6F), mais le vrai bug était ailleurs — les monstres étaient **attirés** vers
+le blockade au lieu d'être repoussés (sens du vecteur inversé). Corrigé (voir 02-gameplay.md).
+**Point le plus important cette fois** : vérifier le sens, pas seulement l'intensité.
+
+- [ ] Un monstre au contact est visiblement repoussé **loin** du blockade (pas attiré vers lui,
+      pas latéralement au hasard) — c'est le point qui a échoué au tour précédent.
+- [ ] Avec la force à 1.6F, le monstre doit être clairement projeté, pas juste un tremblement
+      sur place — si toujours trop faible une fois le sens corrigé, la valeur est probablement
+      encore à monter (voir `KNOCKBACK_STRENGTH` dans `BouncerBlockadeBlockEntity`).
+- [ ] Un monstre au contact perd aussi des PV (1 toutes les 10 ticks), en plus d'être repoussé.
 - [ ] Un monstre juste hors de portée de contact (au-delà d'1 bloc) n'est ni endommagé ni
       repoussé.
 - [ ] Plusieurs monstres au contact en même temps : chacun est repoussé indépendamment.
 
 ### Bowling Ball Turret
 
+Le tir à l'horizontale (corrigé au tour précédent, ne partait plus vers le ciel) n'a pas été
+signalé comme cassé à ce deuxième tour — reste à confirmer explicitement, les points suivants
+n'ont jamais été spécifiquement cochés.
+
 - [ ] Un seul zombie dans le cône : la boule (visuellement une flèche, voir limite assumée en
-      02-gameplay.md) part et le touche, ~5 dégâts.
-- [ ] **Repasse par ici en particulier** : la boule doit maintenant partir bien à l'horizontale
-      (comme si elle roulait au sol), sans monter vers le ciel façon tir à l'arbalète — c'est ce
-      qui était cassé au premier test (elle visait la hauteur des yeux de la cible).
+      02-gameplay.md) part à l'horizontale, sans monter vers le ciel, et le touche (~5 dégâts).
 - [ ] **Point le plus important** : plusieurs zombies alignés les uns derrière les autres dans
       le cône — la boule doit blesser **chacun d'entre eux** en continuant sa trajectoire après
       le premier impact, pas s'arrêter au premier touché. C'est la mécanique centrale demandée
@@ -178,17 +182,19 @@ tour via la roue (section dédiée plus bas).
 
 ### Mortar Turret
 
+**Deuxième passe de correction (2026-08-29)** : le premier retour ("flèche qui ne redescend
+jamais") a été corrigé en remplaçant la flèche par une particule d'explosion, mais l'effet
+(`EXPLOSION_EMITTER`) s'est révélé trop imposant — remplacé par plusieurs `EXPLOSION` plus
+modestes, légèrement éparpillées. Le vrai visuel de projectile (trajectoire avant l'impact) est
+explicitement reporté à plus tard, pas à tester ici.
+
 - [ ] Plusieurs monstres groupés à portée d'un seul tir : **tous** ceux dans le rayon de
       2 blocs autour du monstre visé perdent des PV (8 chacun), pas seulement la cible
       initiale.
-- [ ] **Repasse par ici en particulier** : plus aucune flèche cosmétique n'est tirée — une
-      particule d'explosion (`ParticleTypes.EXPLOSION_EMITTER`) doit apparaître **au point
-      d'impact**, au même instant que les dégâts. C'est la correction du retour "les flèches
-      partent vers le ciel mais ne redescendent jamais".
-- [ ] Aucun dégât de terrain à l'impact (pas de trou, pas de bloc détruit) — vérifie que
-      l'implémentation ne fait vraiment que des dégâts aux entités, rien côté monde (important
-      à revérifier avec la nouvelle particule : `EXPLOSION_EMITTER` est purement visuel, mais à
-      confirmer qu'aucun effet secondaire vanilla ne s'y greffe).
+- [ ] **Repasse par ici en particulier** : l'effet visuel au point d'impact doit maintenant être
+      plus modeste (quelques particules d'explosion dispersées) qu'avant — pas le grand "poof"
+      dramatique façon TNT du tour précédent, ni redevenu une flèche.
+- [ ] Aucun dégât de terrain à l'impact (pas de trou, pas de bloc détruit).
 - [ ] Cadence visiblement plus lente que les trois autres tours à distance (60 ticks).
 
 ## HUD vanilla masqué, faim et hotbar désactivées
