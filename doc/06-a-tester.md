@@ -135,8 +135,11 @@ Nouveau (2026-08-27), jamais vérifié visuellement.
 
 ## Le reste du roster de l'Écuyer (Bouncer/Slice N Dice Blockade, Bowling Ball/Mortar Turret)
 
-Nouveau (2026-08-29), jamais vérifié visuellement — design de chaque tour discuté et validé
-avec le joueur avant d'être codé, voir 02-gameplay.md pour le détail de chacune. Le Harpoon
+**Premier tour de test effectué le 2026-08-29** (design discuté et validé avec le joueur avant
+d'être codé, voir 02-gameplay.md pour le détail) : trois retours corrigés depuis (repousse du
+Bouncer trop faible, Bowling Ball qui tirait vers le ciel, flèche du Mortar peu satisfaisante),
+Slice N Dice confirmée sans souci ("nickel", section retirée d'ici). **Les corrections
+ci-dessous restent à revérifier en jeu**, jamais confirmées visuellement depuis. Le Harpoon
 Turret et le Spike Blockade, eux, ont déjà été testés (voir l'intro de ce fichier) : c'est en
 reconstruisant leur base commune (`AbstractTurretBlockEntity`) pour ce roster que deux bugs
 déjà corrigés dans cette branche (cooldown de tir, origine de la flèche) ont été retrouvés puis
@@ -148,21 +151,22 @@ tour via la roue (section dédiée plus bas).
 - [ ] Un monstre au contact perd des PV (1 toutes les 10 ticks) **et** se fait visiblement
       repousser, dans la direction opposée au blockade (pas vers lui, pas latéralement au
       hasard) — vérifie le sens du vecteur de `monster.knockback(...)`.
+- [ ] **Repasse par ici en particulier** : la force est passée de 0.8F (quasi imperceptible,
+      premier retour de test) à 1.6F — vérifier que le monstre est maintenant *visiblement*
+      repoussé d'une distance notable, pas juste un tremblement sur place. Si toujours trop
+      faible, la valeur est probablement encore à monter (voir `KNOCKBACK_STRENGTH` dans
+      `BouncerBlockadeBlockEntity`).
 - [ ] Un monstre juste hors de portée de contact (au-delà d'1 bloc) n'est ni endommagé ni
       repoussé.
 - [ ] Plusieurs monstres au contact en même temps : chacun est repoussé indépendamment.
-
-### Slice N Dice Blockade
-
-- [ ] Plusieurs monstres à la fois dans son rayon de contact (1,5 bloc) perdent tous des PV en
-      continu, pas seulement le plus proche.
-- [ ] La cadence (1 PV toutes les 5 ticks) est visiblement plus rapide que Spike Blockade (2 PV
-      toutes les 20 ticks) — DPS continu plutôt que coups espacés.
 
 ### Bowling Ball Turret
 
 - [ ] Un seul zombie dans le cône : la boule (visuellement une flèche, voir limite assumée en
       02-gameplay.md) part et le touche, ~5 dégâts.
+- [ ] **Repasse par ici en particulier** : la boule doit maintenant partir bien à l'horizontale
+      (comme si elle roulait au sol), sans monter vers le ciel façon tir à l'arbalète — c'est ce
+      qui était cassé au premier test (elle visait la hauteur des yeux de la cible).
 - [ ] **Point le plus important** : plusieurs zombies alignés les uns derrière les autres dans
       le cône — la boule doit blesser **chacun d'entre eux** en continuant sa trajectoire après
       le premier impact, pas s'arrêter au premier touché. C'est la mécanique centrale demandée
@@ -177,8 +181,14 @@ tour via la roue (section dédiée plus bas).
 - [ ] Plusieurs monstres groupés à portée d'un seul tir : **tous** ceux dans le rayon de
       2 blocs autour du monstre visé perdent des PV (8 chacun), pas seulement la cible
       initiale.
+- [ ] **Repasse par ici en particulier** : plus aucune flèche cosmétique n'est tirée — une
+      particule d'explosion (`ParticleTypes.EXPLOSION_EMITTER`) doit apparaître **au point
+      d'impact**, au même instant que les dégâts. C'est la correction du retour "les flèches
+      partent vers le ciel mais ne redescendent jamais".
 - [ ] Aucun dégât de terrain à l'impact (pas de trou, pas de bloc détruit) — vérifie que
-      l'implémentation ne fait vraiment que des dégâts aux entités, rien côté monde.
+      l'implémentation ne fait vraiment que des dégâts aux entités, rien côté monde (important
+      à revérifier avec la nouvelle particule : `EXPLOSION_EMITTER` est purement visuel, mais à
+      confirmer qu'aucun effet secondaire vanilla ne s'y greffe).
 - [ ] Cadence visiblement plus lente que les trois autres tours à distance (60 ticks).
 
 ## HUD vanilla masqué, faim et hotbar désactivées

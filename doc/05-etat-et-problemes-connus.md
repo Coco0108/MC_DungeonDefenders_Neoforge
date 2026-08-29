@@ -76,11 +76,13 @@ vérifie la CI.
     de contact **et** repousse (`AbstractBlockadeBlockEntity` gagne un `knockbackStrength`,
     0 pour Spike Blockade) sur les monstres déjà dans sa portée de contact — décidé avec le
     joueur, les deux effets ensemble, pas l'un à la place de l'autre. 25 PV, 25 mana, 1 PV
-    toutes les 10 ticks.
+    toutes les 10 ticks. **Testé en jeu (2026-08-29)** : la repousse (0.8F) était quasi
+    imperceptible, remontée à **1.6F**.
   - **Slice N Dice Blockade** (`SliceNDiceBlockadeBlockEntity`) : troisième membre de
     "Blockade", **aucun nouveau code** — `AbstractBlockadeBlockEntity#serverTick` inflige déjà
     ses dégâts à tous les monstres dans `contactRange`, pas seulement au premier ; juste un
     deuxième jeu de valeurs (cadence rapide/dégâts faibles, rayon 1,5 bloc, 35 PV, 40 mana).
+    **Testé en jeu (2026-08-29) et confirmé** ("nickel"), rien à corriger.
   - **Bowling Ball Turret** (`BowlingBallTurretBlockEntity`, `entity/BowlingBallEntity.java`) :
     deuxième membre de "Turret", tire une vraie `BowlingBallEntity` (`extends Arrow`) plutôt
     qu'une flèche cosmétique — décidé avec le joueur : "continue même après avoir touché un
@@ -88,12 +90,21 @@ vérifie la CI.
     enchantée de Perforation, seul point d'entrée public puisque `setPierceLevel` est privé),
     sans gravité, auto-détruite après une distance max. Reste sur `EntityType.ARROW` (pas de
     nouveau type/renderer) : apparence d'une flèche vanilla en vol, limite assumée. 20 PV,
-    55 mana, 5 dégâts/tir.
+    55 mana, 5 dégâts/tir. **Testé en jeu (2026-08-29)** : la direction visait la hauteur des
+    yeux de la cible, la boule partait vers le ciel façon tir à l'arbalète — corrigé en visant
+    uniquement à l'horizontale (`BowlingBallTurretBlockEntity.fireAt`), elle roule maintenant
+    droit devant elle à hauteur fixe.
   - **Mortar Turret** (`MortarTurretBlockEntity`) : troisième membre de "Turret", dégâts de zone
     façon explosion à l'impact (sans dégât de terrain, décidé avec le joueur) plutôt qu'une
-    seule cible — réutilise le tir cosmétique de la base, applique juste les dégâts à tous les
-    monstres dans un rayon autour de la cible. Cadence la plus lente et coût le plus élevé du
-    roster (compense les dégâts de zone). 20 PV, 70 mana, 8 dégâts/cible touchée.
+    seule cible, appliqués à tous les monstres dans un rayon autour de la cible. Cadence la plus
+    lente et coût le plus élevé du roster (compense les dégâts de zone). 20 PV, 70 mana,
+    8 dégâts/cible touchée. **Testé en jeu (2026-08-29)** : réutilisait au départ la flèche
+    cosmétique de la base (gravité, comme Harpoon Turret) — signalée comme partant vers le ciel
+    sans jamais visiblement redescendre, peu satisfaisant pour un impact censé être instantané.
+    Remplacée par une particule `ParticleTypes.EXPLOSION_EMITTER` au point d'impact, jouée au
+    même instant que les dégâts — demande explicite du joueur ("ajoute un effet visuel
+    d'explosion"), purement visuelle (`ServerLevel#sendParticles`), aucun risque de dégât de
+    terrain.
   - `AbstractTurretBlockEntity.fireAt`/`spawnArrow`/`muzzlePosition` passés de `private` à
     `protected` pour permettre ces deux redéfinitions (Bowling Ball, Mortar) — même principe que
     l'extraction d'`AbstractTowerBlockEntity` en son temps : généralisé seulement une fois un
@@ -105,7 +116,10 @@ vérifie la CI.
     ni une redécouverte indépendante, juste la fusion de deux branches qui avaient corrigé la
     même chose chacune de leur côté.
   - Détail complet de chaque tour dans
-    [02-gameplay.md](02-gameplay.md#le-reste-du-roster-de-lécuyer). **Jamais testé en jeu.**
+    [02-gameplay.md](02-gameplay.md#le-reste-du-roster-de-lécuyer). **Premier tour de test en
+    jeu effectué (2026-08-29)** : trois retours corrigés (repousse du Bouncer, direction du
+    Bowling Ball, effet du Mortar — voir ci-dessus), Slice N Dice confirmée sans souci. Les
+    corrections elles-mêmes n'ont pas encore été revérifiées en jeu.
 - ✅ Système de priorité IA unifié (`block/entity/AiAttackTarget.java`,
   `entity/ai/AttackPriorityTargetGoal.java`, voir "Système de priorité IA" plus bas) :
   remplace les deux anciens goals séparés (`AttackBlockadeGoal`/`AttackEterniaCrystalGoal`,

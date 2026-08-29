@@ -19,9 +19,11 @@ public class BouncerBlockadeBlockEntity extends AbstractBlockadeBlockEntity {
     private static final float CONTACT_DAMAGE = 1.0F;
     private static final long CONTACT_DAMAGE_INTERVAL_TICKS = 10L;
     private static final double CONTACT_RANGE = 1.0D;
-    // Valeur de test : à ajuster en jeu pour un "coup de pouce" satisfaisant, pas un chiffre
-    // qu'on peut deviner sans essayer (voir LivingEntity#knockback pour l'échelle de la force).
-    private static final float KNOCKBACK_STRENGTH = 0.8F;
+    // 0.8F testé en jeu (2026-08-29) : quasi imperceptible, le zombie ne bouge presque pas —
+    // remonté à 1.6F (échelle proche d'un enchantement Sustentation/Recul II vanilla, ~1.6,
+    // nettement plus franc). Reste une valeur de test, à raffiner encore si besoin après ce
+    // deuxième essai.
+    private static final float KNOCKBACK_STRENGTH = 1.6F;
 
     public BouncerBlockadeBlockEntity(BlockPos pos, BlockState state) {
         super(DungeonDefendersMod.BOUNCER_BLOCKADE_BE.get(), pos, state,
