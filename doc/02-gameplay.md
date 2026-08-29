@@ -722,8 +722,11 @@ Le vecteur passé (position du monstre moins position de la source) suit la mêm
 `LivingEntity#blockedByItem` (repousse un attaquant hors d'un bouclier) — vérifié dans les
 sources vanilla plutôt que deviné : cette classe de bug (sens de rotation/direction inversé)
 avait déjà été rencontrée une fois dans ce mod (la convention de rotation `Axis.YP` de la roue
-des tours, voir plus haut). 25 PV, 25 mana (moins cher que Spike Blockade, l'intérêt n'étant pas
-les dégâts), 1 PV toutes les 10 ticks — valeurs de test, pas encore équilibrées.
+des tours, voir plus haut) — le sens s'est avéré correct au premier test en jeu. 25 PV, 25 mana
+(moins cher que Spike Blockade, l'intérêt n'étant pas les dégâts), 1 PV toutes les 10 ticks —
+valeurs de test, pas encore équilibrées. `KNOCKBACK_STRENGTH` : 0.8F au premier essai s'est
+révélé quasi imperceptible en jeu (le monstre ne bougeait presque pas), remonté à **1.6F**
+(2026-08-29) — échelle proche d'un enchantement de Recul II vanilla, nettement plus franc.
 
 ### Slice N Dice Blockade — `block/SliceNDiceBlockadeBlock.java`
 
@@ -775,6 +778,24 @@ boule roule en ligne droite plutôt que de retomber en cloche ; `tick()` est sur
 `discard()` une fois `MAX_BALL_DISTANCE` parcourue, indépendamment du nombre d'ennemis
 traversés en chemin.
 
+**Direction du tir : uniquement horizontale, pas visée sur `target.getEyeY()`** — signalé au
+premier test en jeu (2026-08-29) : viser la hauteur des yeux de la cible faisait partir la boule
+vers le haut, façon tir à l'arbalète, alors qu'une boule qui roule doit garder une hauteur fixe.
+Corrigé dans `BowlingBallTurretBlockEntity.fireAt` (pas dans `BowlingBallEntity` lui-même — le
+calcul de direction reste la responsabilité de l'appelant, l'entité ne fait que voler droit une
+fois lancée) :
+
+```java
+Vec3 direction = new Vec3(
+        target.getX() - origin.x,
+        0.0D,
+        target.getZ() - origin.z
+).normalize();
+```
+
+Combiné à `setNoGravity(true)`, la boule part maintenant en ligne parfaitement horizontale, à la
+hauteur de tir de la tourelle (`muzzlePosition`, mi-hauteur du bloc).
+
 **`extends Arrow` plutôt qu'un nouvel `EntityType` custom** : le constructeur position d'`Arrow`
 force `EntityType.ARROW` en interne (voir `Arrow.java`) — la boule prend donc l'apparence d'une
 flèche vanilla en vol, pas une vraie boule. Limite assumée, même famille que les autres
@@ -786,13 +807,21 @@ lente (40 ticks).
 
 Troisième membre de "Turret" : confirmé avec le joueur — contrairement à Bowling Ball Turret,
 on veut ici de vrais **dégâts de zone façon explosion** à l'impact (sans dégât de terrain,
-décidé explicitement), pas une perforation en ligne. Réutilise le tir cosmétique hérité de la
-base (`spawnArrow`, inchangé) mais redéfinit entièrement l'application des dégâts :
+décidé explicitement), pas une perforation en ligne.
+
+**Version initiale (2026-08-29) : réutilisait le tir cosmétique de la base (`spawnArrow`,
+la même flèche vanilla à gravité que Harpoon Turret).** Signalé au premier test en jeu : la
+flèche partait vers le ciel et ne semblait jamais redescendre de façon satisfaisante pour un
+"impact" — les dégâts, eux, ont toujours été appliqués instantanément à l'envoi du tir (jamais
+liés à l'arrivée réelle d'une flèche), donc la flèche volante n'apportait ni information ni
+retour visuel cohérent avec ce qui se passait réellement. **Remplacée par une particule
+d'explosion au point d'impact**, jouée au même instant que les dégâts :
 
 ```java
 @Override
 protected void fireAt(ServerLevel level, BlockPos pos, Monster target, Direction facing) {
-    spawnArrow(level, pos, target, facing);
+    Vec3 impact = target.position();
+    level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, impact.x, impact.y, impact.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
 
     AABB splashArea = new AABB(target.blockPosition()).inflate(SPLASH_RADIUS);
     for (Monster monster : level.getEntitiesOfClass(Monster.class, splashArea)) {
@@ -801,13 +830,18 @@ protected void fireAt(ServerLevel level, BlockPos pos, Monster target, Direction
 }
 ```
 
-Même principe de scan par `AABB` que `AbstractBlockadeBlockEntity#serverTick`, mais appliqué
-**une fois** au point d'impact plutôt qu'en continu autour du bloc. **Limite assumée** : les
-dégâts de zone s'appliquent au moment de l'envoi du tir, pas à l'arrivée visuelle de la flèche
-cosmétique (qui met un instant à voler jusqu'à la cible) — décalage mineur, invisible en
-pratique à cette vitesse de flèche, mais pas une vraie synchronisation impact↔dégâts. Tour la
-plus chère et la plus lente du roster (20 PV, 70 mana, 8 dégâts par ennemi touché, rayon 2
-blocs, cadence 60 ticks) : compense la puissance des dégâts de zone.
+`ParticleTypes.EXPLOSION_EMITTER` est la particule que vanilla joue une seule fois au centre
+d'une explosion TNT/creeper (le "poof" dramatique, distinct de `ParticleTypes.EXPLOSION` — de
+nombreuses petites particules dispersées dans le rayon) : un seul appel, `count=1`, sans
+dispersion (`xDist`/`yDist`/`zDist`/`speed` à 0) pour qu'elle apparaisse pile au point d'impact.
+**Purement visuelle** : `ServerLevel#sendParticles` ne fait que diffuser l'information de rendu
+aux joueurs proches, aucun rapport avec une vraie `Explosion` vanilla — aucun risque de dégât de
+terrain, cohérent avec la demande explicite du joueur.
+
+Même principe de scan par `AABB` que `AbstractBlockadeBlockEntity#serverTick` pour les dégâts,
+mais appliqué **une fois** au point d'impact plutôt qu'en continu autour du bloc. Tour la plus
+chère et la plus lente du roster (20 PV, 70 mana, 8 dégâts par ennemi touché, rayon 2 blocs,
+cadence 60 ticks) : compense la puissance des dégâts de zone.
 
 ### Le refactor commun — `block/entity/AbstractTurretBlockEntity.java`
 

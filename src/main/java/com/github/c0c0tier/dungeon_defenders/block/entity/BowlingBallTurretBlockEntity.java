@@ -38,9 +38,14 @@ public class BowlingBallTurretBlockEntity extends AbstractTurretBlockEntity {
     @Override
     protected void fireAt(ServerLevel level, BlockPos pos, Monster target, Direction facing) {
         Vec3 origin = muzzlePosition(pos, facing);
+        // Uniquement horizontale (composante Y à 0), pas visée vers target.getEyeY() : ça
+        // faisait partir la boule vers le haut façon tir à l'arbalète (signalé en jeu,
+        // 2026-08-29). Une boule qui roule au sol garde la hauteur de tir fixe, elle ne monte
+        // ni ne descend pour viser — combiné à setNoGravity(true) dans BowlingBallEntity, elle
+        // file maintenant en ligne droite parfaitement horizontale.
         Vec3 direction = new Vec3(
                 target.getX() - origin.x,
-                target.getEyeY() - origin.y,
+                0.0D,
                 target.getZ() - origin.z
         ).normalize();
 
