@@ -239,13 +239,18 @@ catégorie de tour existante (mur à PV type "Blockade", ou tour à distance typ
 `05-etat-et-problemes-connus.md`), pas besoin de repartir de zéro :
 
 - **Blockade** : étendre `block/entity/AbstractBlockadeBlockEntity.java` (stats seulement, voir
-  `SpikeBlockadeBlockEntity` comme modèle) et ajouter le nouveau bloc au tag
-  `data/dungeon_defenders/tags/block/blockades.json` pour qu'`AttackBlockadeGoal` le vise
-  automatiquement.
+  `SpikeBlockadeBlockEntity`/`BouncerBlockadeBlockEntity`/`SliceNDiceBlockadeBlockEntity` comme
+  modèles). Aucun tag à tenir à jour : `AttackPriorityTargetGoal` vise génériquement tout
+  `AiAttackTarget` (donc tout `AbstractTowerBlockEntity`), pas une liste fermée — le tag
+  `dungeon_defenders:blockades` et l'ancien `AttackBlockadeGoal` qui le lisait ont tous les deux
+  été supprimés (voir 05-etat-et-problemes-connus.md, "Système de priorité IA").
 - **Turret** : étendre `block/entity/AbstractTurretBlockEntity.java` (stats seulement, voir
-  `HarpoonTurretBlockEntity` comme modèle) ; si la tour doit avoir une orientation, déclarer
-  `BlockStateProperties.HORIZONTAL_FACING` sur le bloc (voir `HarpoonTurretBlock` — la rotation
-  choisie dans la roue est déjà appliquée automatiquement par
+  `HarpoonTurretBlockEntity` comme modèle — ou surcharger `fireAt` pour un comportement de tir
+  différent d'"une flèche cosmétique + dégâts à une seule cible", voir
+  `BowlingBallTurretBlockEntity`/`MortarTurretBlockEntity` pour deux exemples concrets, l'un
+  avec une vraie collision perforante, l'autre avec des dégâts de zone) ; si la tour doit avoir
+  une orientation, déclarer `BlockStateProperties.HORIZONTAL_FACING` sur le bloc (voir
+  `HarpoonTurretBlock` — la rotation choisie dans la roue est déjà appliquée automatiquement par
   `ModNetworking.handlePlaceTower`, rien à faire côté réseau).
 - Dans tous les cas, ajouter un membre à `init/TowerDefinition.java` pour que la tour
   apparaisse dans la roue (`TowerWheelScreen`) — c'est l'unique façon de la poser, voir

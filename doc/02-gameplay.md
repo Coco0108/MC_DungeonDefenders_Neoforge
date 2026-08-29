@@ -693,6 +693,155 @@ se drope lui-même via `data/dungeon_defenders/loot_table/blocks/harpoon_turret.
   ci-dessous) n'a été vérifiée visuellement que pour `NORTH` (rotation identité, à l'abri de
   toute inversion de sens) — **pas** pour `EAST`/`SOUTH`/`WEST`, jamais lancé en jeu.
 
+## Le reste du roster de l'Écuyer
+
+Décidé avec le joueur (2026-08-29) : les quatre tours suivantes complètent le roster de
+l'Écuyer (Spike Blockade et Harpoon Turret existaient déjà). Chaque design a été discuté et
+validé un par un avec le joueur avant d'être codé — les questions d'architecture (fallait-il un
+nouveau mécanisme, ou les catégories existantes suffisaient-elles ?) ont été tranchées au même
+moment, pas devinées après coup.
+
+### Bouncer Blockade — `block/BouncerBlockadeBlock.java`
+
+Deuxième membre de "Blockade" : au contact, inflige des dégâts **et** repousse — décidé avec le
+joueur, les deux effets ensemble, pas l'un à la place de l'autre, et seulement les monstres déjà
+dans sa portée de contact (même `AABB` que les dégâts, pas un rayon séparé).
+
+`AbstractBlockadeBlockEntity` gagne un nouveau paramètre, `knockbackStrength` (0 pour Spike
+Blockade et Slice N Dice Blockade, > 0 pour Bouncer) :
+
+```java
+if (blockEntity.knockbackStrength > 0.0F) {
+    double dx = monster.getX() - (pos.getX() + 0.5D);
+    double dz = monster.getZ() - (pos.getZ() + 0.5D);
+    monster.knockback(blockEntity.knockbackStrength, dx, dz);
+}
+```
+
+Le vecteur passé (position du monstre moins position de la source) suit la même convention que
+`LivingEntity#blockedByItem` (repousse un attaquant hors d'un bouclier) — vérifié dans les
+sources vanilla plutôt que deviné : cette classe de bug (sens de rotation/direction inversé)
+avait déjà été rencontrée une fois dans ce mod (la convention de rotation `Axis.YP` de la roue
+des tours, voir plus haut). 25 PV, 25 mana (moins cher que Spike Blockade, l'intérêt n'étant pas
+les dégâts), 1 PV toutes les 10 ticks — valeurs de test, pas encore équilibrées.
+
+### Slice N Dice Blockade — `block/SliceNDiceBlockadeBlock.java`
+
+Troisième membre de "Blockade" : confirmé avec le joueur ("tout est correct") — **aucun nouveau
+comportement**. `AbstractBlockadeBlockEntity#serverTick` inflige déjà ses dégâts à **tous** les
+monstres présents dans `contactRange`, pas seulement le premier ; Spike Blockade ne l'exploite
+juste pas vraiment avec son rayon d'1 bloc. Se différencie par une cadence bien plus rapide et
+des dégâts plus faibles par coup (DPS continu façon lames tournantes plutôt que coups espacés
+façon pics) et un rayon légèrement plus large (1,5 bloc). 35 PV, 40 mana, 1 PV toutes les
+5 ticks.
+
+### Bowling Ball Turret — `block/BowlingBallTurretBlock.java`, `entity/BowlingBallEntity.java`
+
+Deuxième membre de "Turret" : demandé explicitement par le joueur — "on veut vraiment que la
+boule continue sur une certaine longueur même si elle touche un ennemi, elle continue". Contrairement
+à Harpoon Turret (flèche purement visuelle, dégâts appliqués directement par le code appelant à
+une seule cible), Bowling Ball Turret lance une vraie `BowlingBallEntity` avec une vraie
+collision — c'est **elle** qui applique les dégâts, pas `fireAt`.
+
+**`BowlingBallEntity extends Arrow`** plutôt qu'une nouvelle entité construite de zéro :
+`AbstractArrow` a déjà tout ce qu'il faut pour "traverse plusieurs ennemis sans s'arrêter au
+premier" — c'est exactement le mécanisme vanilla d'une flèche enchantée **Perforation**
+(`piercingIgnoreEntityIds`, qui retient les entités déjà touchées pour ne jamais les re-toucher,
+et empêche l'arrêt tant que le nombre de perforations n'est pas dépassé). Problème : le niveau
+de perforation se règle via `setPierceLevel(byte)`, **privé** dans `AbstractArrow` — inaccessible
+depuis une sous-classe. Le seul point d'entrée public est le constructeur qui accepte un
+`firedFromWeapon` réellement enchanté :
+
+```java
+private static ItemStack fakePiercingWeapon(ServerLevel level) {
+    Holder<Enchantment> piercing = level.registryAccess().getOrThrow(Enchantments.PIERCING);
+    ItemStack weapon = new ItemStack(Items.CROSSBOW);
+    weapon.enchant(piercing, PIERCE_LEVEL);
+    return weapon;
+}
+```
+
+Cette fausse arme (jamais donnée à personne, jamais visible) est passée au constructeur
+`Arrow(level, x, y, z, pickupItemStack, firedFromWeapon)` — en interne, `AbstractArrow` lit
+l'enchantement via `EnchantmentHelper.getPiercingCount(...)` et appelle lui-même son propre
+`setPierceLevel` privé. Pas de réflexion sur un champ privé vanilla, juste le chemin public
+prévu pour ce cas — vérifié dans les sources plutôt que deviné.
+
+Le reste vient gratuitement d'`AbstractArrow#onHitEntity` (déjà appelé par le `tick()` hérité,
+rien à réimplémenter) : dégâts (`setBaseDamage`, nuance à noter — proportionnels à la vitesse au
+moment de l'impact, comme une vraie flèche vanilla, donc légèrement décroissants avec la
+distance déjà parcourue), son au contact, léger recul de la cible. `setNoGravity(true)` : la
+boule roule en ligne droite plutôt que de retomber en cloche ; `tick()` est surchargé pour se
+`discard()` une fois `MAX_BALL_DISTANCE` parcourue, indépendamment du nombre d'ennemis
+traversés en chemin.
+
+**`extends Arrow` plutôt qu'un nouvel `EntityType` custom** : le constructeur position d'`Arrow`
+force `EntityType.ARROW` en interne (voir `Arrow.java`) — la boule prend donc l'apparence d'une
+flèche vanilla en vol, pas une vraie boule. Limite assumée, même famille que les autres
+placeholders visuels du mod (le cristal de mana a l'air d'une orbe d'XP vanilla, etc.) : évite
+d'enregistrer un `EntityType`/renderer dédié pour un MVP. 20 PV, 55 mana, 5 dégâts/tir, cadence
+lente (40 ticks).
+
+### Mortar Turret — `block/MortarTurretBlock.java`
+
+Troisième membre de "Turret" : confirmé avec le joueur — contrairement à Bowling Ball Turret,
+on veut ici de vrais **dégâts de zone façon explosion** à l'impact (sans dégât de terrain,
+décidé explicitement), pas une perforation en ligne. Réutilise le tir cosmétique hérité de la
+base (`spawnArrow`, inchangé) mais redéfinit entièrement l'application des dégâts :
+
+```java
+@Override
+protected void fireAt(ServerLevel level, BlockPos pos, Monster target, Direction facing) {
+    spawnArrow(level, pos, target, facing);
+
+    AABB splashArea = new AABB(target.blockPosition()).inflate(SPLASH_RADIUS);
+    for (Monster monster : level.getEntitiesOfClass(Monster.class, splashArea)) {
+        monster.hurt(level.damageSources().generic(), getDamage());
+    }
+}
+```
+
+Même principe de scan par `AABB` que `AbstractBlockadeBlockEntity#serverTick`, mais appliqué
+**une fois** au point d'impact plutôt qu'en continu autour du bloc. **Limite assumée** : les
+dégâts de zone s'appliquent au moment de l'envoi du tir, pas à l'arrivée visuelle de la flèche
+cosmétique (qui met un instant à voler jusqu'à la cible) — décalage mineur, invisible en
+pratique à cette vitesse de flèche, mais pas une vraie synchronisation impact↔dégâts. Tour la
+plus chère et la plus lente du roster (20 PV, 70 mana, 8 dégâts par ennemi touché, rayon 2
+blocs, cadence 60 ticks) : compense la puissance des dégâts de zone.
+
+### Le refactor commun — `block/entity/AbstractTurretBlockEntity.java`
+
+`fireAt`, `spawnArrow` et le nouveau `muzzlePosition` sont passés de `private` à `protected`
+pour permettre à Bowling Ball Turret et Mortar Turret de redéfinir `fireAt` — même principe que
+l'extraction d'`AbstractTowerBlockEntity` en son temps (voir plus haut) : généralisé seulement
+une fois un vrai deuxième besoin concret constaté (ici, deux tours qui ont chacune besoin d'un
+comportement de tir différent de celui de Harpoon), pas une généralisation devinée à l'avance.
+
+**Deux bugs trouvés en touchant cette classe** (donc déjà présents sur Harpoon Turret, pas
+seulement les deux nouvelles tours à distance) :
+
+- `lastFireTick` était initialisé à `Long.MIN_VALUE`. `now - lastFireTick` déborde alors vers un
+  nombre toujours négatif (overflow de `long`), donc `now - lastFireTick < attackIntervalTicks`
+  était **toujours vrai** — le tir ne se déclenchait jamais, pour aucune tourelle. Remplacé par
+  `-attackIntervalTicks`, qui permet un premier tir immédiat sans provoquer le même débordement.
+- L'origine du tir n'était pas décalée hors du cube plein du bloc — sans effet visible pour
+  Harpoon Turret (flèche purement cosmétique, les dégâts sont appliqués directement, la flèche
+  peut bien se figer sans que ça ne change rien au gameplay), mais **bloquant** pour
+  `BowlingBallEntity`, qui a besoin d'une vraie collision : une flèche qui apparaît dans la
+  géométrie de collision du bloc sous elle se fige au premier tick
+  (`AbstractArrow#tick`). `muzzlePosition` centralise maintenant ce décalage de 0,6 bloc, la
+  même valeur déjà utilisée par `spawnArrow`.
+
+### Assets
+
+Les quatre nouveaux blocs réutilisent des textures vanilla thématiquement proches, en attendant
+de vraies textures dédiées (même principe que Spike Blockade/dripstone, Harpoon Turret/furnace) :
+Bouncer Blockade → `slime_block` (rebondissant), Slice N Dice Blockade → `iron_block`
+(métallique, lames), Bowling Ball Turret → `dispenser`/`furnace` (éjecte quelque chose),
+Mortar Turret → `blast_furnace` (arme lourde). Modèle directionnel (`orientable`) pour les deux
+tours, `cube_all` pour les deux blockades — mêmes conventions que Harpoon Turret/Spike Blockade
+respectivement.
+
 ## La roue de sélection des tours et la pose — `client/gui/screen/TowerWheelScreen.java`
 
 **Unique façon de poser une tour** (voir "L'item ne pose plus rien" plus haut) : une **roue

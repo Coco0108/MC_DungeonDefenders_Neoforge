@@ -22,24 +22,32 @@ import java.util.WeakHashMap;
 // dealsContactDamage détermine aussi la priorité IA (voir AiAttackTarget) : "block" pur
 // (false) est priorité 10, "corps à corps" (true, le cas de Spike Blockade) est priorité 20 —
 // aucun nouveau champ, décidé avec le joueur pour réutiliser ce qui existait déjà.
+//
+// knockbackStrength (Bouncer Blockade, 2026-08-29) : 0 = aucun effet (Spike Blockade, Slice N
+// Dice), > 0 = repousse en plus des dégâts, dans le même tick et sur les mêmes monstres que
+// contactDamage (même AABB, même intervalle) — décidé avec le joueur : "fait aussi des dégâts",
+// pas un mode exclusif l'un de l'autre.
 public abstract class AbstractBlockadeBlockEntity extends AbstractTowerBlockEntity {
 
     private final boolean dealsContactDamage;
     private final float contactDamage;
     private final long contactDamageIntervalTicks;
     private final double contactRange;
+    private final float knockbackStrength;
 
     // WeakHashMap : ne retient pas les entités mortes/déchargées, évite une fuite mémoire.
     private final Map<Monster, Long> lastContactDamageTick = new WeakHashMap<>();
 
     protected AbstractBlockadeBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state,
             int maxHealth, int manaCost, boolean dealsContactDamage,
-            float contactDamage, long contactDamageIntervalTicks, double contactRange) {
+            float contactDamage, long contactDamageIntervalTicks, double contactRange,
+            float knockbackStrength) {
         super(type, pos, state, maxHealth, manaCost);
         this.dealsContactDamage = dealsContactDamage;
         this.contactDamage = contactDamage;
         this.contactDamageIntervalTicks = contactDamageIntervalTicks;
         this.contactRange = contactRange;
+        this.knockbackStrength = knockbackStrength;
     }
 
     @Override
@@ -67,6 +75,17 @@ public abstract class AbstractBlockadeBlockEntity extends AbstractTowerBlockEnti
 
             blockEntity.lastContactDamageTick.put(monster, now);
             monster.hurt(serverLevel.damageSources().stalagmite(), blockEntity.contactDamage);
+
+            if (blockEntity.knockbackStrength > 0.0F) {
+                // Même convention que LivingEntity#blockedByItem (repousse un attaquant hors
+                // du bouclier) : le vecteur passé est "position du monstre moins position de
+                // la source", pas l'inverse — vérifié dans les sources vanilla plutôt que
+                // deviné, cette classe de bug (sens inversé) a déjà été rencontrée une fois
+                // dans ce mod (rotation de la roue des tours, voir doc/05).
+                double dx = monster.getX() - (pos.getX() + 0.5D);
+                double dz = monster.getZ() - (pos.getZ() + 0.5D);
+                monster.knockback(blockEntity.knockbackStrength, dx, dz);
+            }
         }
     }
 }

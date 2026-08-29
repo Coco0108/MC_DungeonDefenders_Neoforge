@@ -48,6 +48,43 @@ vérifie la CI.
   `BlockState` (`HORIZONTAL_FACING`), et premier vrai consommateur de la rotation choisie dans
   la roue (`ModNetworking.handlePlaceTower` l'appliquait déjà par anticipation). Détail dans
   [02-gameplay.md](02-gameplay.md#le-harpoon-turret--blockharpoonturretblockjava).
+- ✅ Reste du roster de tours de l'Écuyer (2026-08-29, noms repris du plan Excel du joueur) :
+  design de chaque tour discuté et validé une par une avec le joueur avant d'être codé.
+  - **Bouncer Blockade** (`BouncerBlockadeBlockEntity`) : deuxième membre de "Blockade", dégâts
+    de contact **et** repousse (`AbstractBlockadeBlockEntity` gagne un `knockbackStrength`,
+    0 pour Spike Blockade) sur les monstres déjà dans sa portée de contact — décidé avec le
+    joueur, les deux effets ensemble, pas l'un à la place de l'autre. 25 PV, 25 mana, 1 PV
+    toutes les 10 ticks.
+  - **Slice N Dice Blockade** (`SliceNDiceBlockadeBlockEntity`) : troisième membre de
+    "Blockade", **aucun nouveau code** — `AbstractBlockadeBlockEntity#serverTick` inflige déjà
+    ses dégâts à tous les monstres dans `contactRange`, pas seulement au premier ; juste un
+    deuxième jeu de valeurs (cadence rapide/dégâts faibles, rayon 1,5 bloc, 35 PV, 40 mana).
+  - **Bowling Ball Turret** (`BowlingBallTurretBlockEntity`, `entity/BowlingBallEntity.java`) :
+    deuxième membre de "Turret", tire une vraie `BowlingBallEntity` (`extends Arrow`) plutôt
+    qu'une flèche cosmétique — décidé avec le joueur : "continue même après avoir touché un
+    ennemi". Utilise la vraie perforation d'`AbstractArrow` (niveau appliqué via une fausse arme
+    enchantée de Perforation, seul point d'entrée public puisque `setPierceLevel` est privé),
+    sans gravité, auto-détruite après une distance max. Reste sur `EntityType.ARROW` (pas de
+    nouveau type/renderer) : apparence d'une flèche vanilla en vol, limite assumée. 20 PV,
+    55 mana, 5 dégâts/tir.
+  - **Mortar Turret** (`MortarTurretBlockEntity`) : troisième membre de "Turret", dégâts de zone
+    façon explosion à l'impact (sans dégât de terrain, décidé avec le joueur) plutôt qu'une
+    seule cible — réutilise le tir cosmétique de la base, applique juste les dégâts à tous les
+    monstres dans un rayon autour de la cible. Cadence la plus lente et coût le plus élevé du
+    roster (compense les dégâts de zone). 20 PV, 70 mana, 8 dégâts/cible touchée.
+  - `AbstractTurretBlockEntity.fireAt`/`spawnArrow`/`muzzlePosition` passés de `private` à
+    `protected` pour permettre ces deux redéfinitions (Bowling Ball, Mortar) — même principe que
+    l'extraction d'`AbstractTowerBlockEntity` en son temps : généralisé seulement une fois un
+    vrai deuxième besoin concret constaté, pas deviné à l'avance.
+  - **Deux bugs trouvés en construisant sur cette base** (donc présents aussi sur Harpoon
+    Turret, pas seulement les nouvelles tours) : `lastFireTick` initialisé à `Long.MIN_VALUE`
+    faisait déborder `now - lastFireTick` vers un nombre toujours négatif — **aucune tourelle ne
+    tirait jamais**, remplacé par `-attackIntervalTicks` ; et l'origine du tir n'était pas
+    décalée hors du cube du bloc, ce qui aurait figé toute vraie flèche à collision (comme
+    `BowlingBallEntity`) dès son premier tick — décalage de 0,6 bloc dans `muzzlePosition`,
+    même valeur que celle déjà utilisée ailleurs dans le mod pour ce problème.
+  - Détail complet de chaque tour dans
+    [02-gameplay.md](02-gameplay.md#le-reste-du-roster-de-lécuyer). **Jamais testé en jeu.**
 - ✅ Système de priorité IA unifié (`block/entity/AiAttackTarget.java`,
   `entity/ai/AttackPriorityTargetGoal.java`, voir "Système de priorité IA" plus bas) :
   remplace les deux anciens goals séparés (`AttackBlockadeGoal`/`AttackEterniaCrystalGoal`,
@@ -279,12 +316,12 @@ il envisage au moins 5 catégories, chacune avec ses propres règles :
 
 1. **Blocks passifs** et **corps à corps** — **unifiées en une seule catégorie de code,
    "Blockade"** (décision explicite du joueur) : bloquent le passage, avec un booléen optionnel
-   pour infliger des dégâts au contact. Un block passif n'est qu'une Blockade avec ce booléen à
-   `false`. **Spike Blockade en fait partie (booléen à `true`), et c'est le seul membre concret
-   pour l'instant** (voir "Ce qui est implémenté" plus haut et
+   pour infliger des dégâts au contact (et, depuis Bouncer Blockade, une force de repousse
+   optionnelle en plus). **Roster complet pour l'Écuyer** : Spike Blockade, Bouncer Blockade,
+   Slice N Dice Blockade (voir "Ce qui est implémenté" plus haut et
    [02-gameplay.md](02-gameplay.md#la-catégorie-blockade--blockentityabstractblockadeblockentityjava-tag-dungeon_defendersblockades)).
-2. **Tours à distance** — catégorie de code **"Turret"**, démarrée avec le **Harpoon Turret**
-   (voir "Ce qui est implémenté" plus haut et
+2. **Tours à distance** — catégorie de code **"Turret"**, **roster complet pour l'Écuyer** :
+   Harpoon Turret, Bowling Ball Turret, Mortar Turret (voir "Ce qui est implémenté" plus haut et
    [02-gameplay.md](02-gameplay.md#le-harpoon-turret--blockharpoonturretblockjava)) : scanne et
    tire elle-même toute seule à chaque tick, dans un cône orienté (angle fixe) — ça, c'est
    toujours la tour qui agit, pas un `Goal` porté par un monstre. Un monstre peut en revanche

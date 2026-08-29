@@ -64,10 +64,16 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal (un seul sous-classeur : la version à distance)
     │   │   ├── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal (archers, ignorent Blockade/Turret)
     │   │   └── AttackPriorityTargetGoal.java         # Goal unique des monstres de mêlée : choisit Block > Corps à corps > Cristal > Tourelle selon AiAttackTarget
+    │   ├── entity/
+    │   │   └── BowlingBallEntity.java        # extends Arrow : perforation réelle (Bowling Ball Turret), voir 02-gameplay.md
     │   └── block/
     │       ├── EterniaCrystalBlock.java      # Le bloc : hitbox, interaction, codec
-    │       ├── SpikeBlockadeBlock.java       # Premier tower "Blockade" : mur à PV qui pique au contact
-    │       ├── HarpoonTurretBlock.java       # Premier tower "Turret" : HORIZONTAL_FACING + tir en cône
+    │       ├── SpikeBlockadeBlock.java       # Tower "Blockade" : mur à PV qui pique au contact
+    │       ├── BouncerBlockadeBlock.java     # Tower "Blockade" : dégâts + repousse au contact
+    │       ├── SliceNDiceBlockadeBlock.java  # Tower "Blockade" : dégâts rapides à tous les monstres en portée
+    │       ├── HarpoonTurretBlock.java       # Tower "Turret" : HORIZONTAL_FACING + tir en cône, cible unique
+    │       ├── BowlingBallTurretBlock.java   # Tower "Turret" : tir perforant (BowlingBallEntity)
+    │       ├── MortarTurretBlock.java        # Tower "Turret" : dégâts de zone à l'impact
     │       ├── TowerBlockItem.java           # Item commun à toute tour (Blockade, Turret...) : useOn() ne pose plus rien (roue uniquement)
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
@@ -77,23 +83,27 @@ MC_DungeonDefenders_Neoforge/
     │           ├── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D (client)
     │           ├── AiAttackTarget.java                     # Interface : contrat + paliers de priorité IA (Block/Corps à corps/Cristal/Tourelle)
     │           ├── AbstractTowerBlockEntity.java           # Base commune à TOUTE catégorie de tour : PV, coût mana, persistance, sync, AiAttackTarget (voir 02-gameplay.md)
-    │           ├── AbstractBlockadeBlockEntity.java        # Catégorie "Blockade" : dégâts de contact optionnels, priorité selon dealsContactDamage
+    │           ├── AbstractBlockadeBlockEntity.java        # Catégorie "Blockade" : dégâts de contact + repousse optionnels, priorité selon dealsContactDamage
     │           ├── SpikeBlockadeBlockEntity.java           # Sous-classe : fixe les stats du Spike Blockade (voir 02-gameplay.md)
-    │           ├── AbstractTurretBlockEntity.java          # Catégorie "Turret" : portée + cône + tir (scan/tir par tick, pas de Goal)
+    │           ├── BouncerBlockadeBlockEntity.java         # Sous-classe : dégâts + repousse (knockbackStrength > 0)
+    │           ├── SliceNDiceBlockadeBlockEntity.java      # Sous-classe : mêmes mécanismes que Spike, cadence/rayon différents
+    │           ├── AbstractTurretBlockEntity.java          # Catégorie "Turret" : portée + cône + tir (scan/tir par tick, pas de Goal) ; fireAt/spawnArrow/muzzlePosition protected, surchargeables
     │           ├── HarpoonTurretBlockEntity.java           # Sous-classe : fixe les stats du Harpoon Turret (voir 02-gameplay.md)
+    │           ├── BowlingBallTurretBlockEntity.java       # Sous-classe : fireAt surchargé, lance une BowlingBallEntity
+    │           ├── MortarTurretBlockEntity.java            # Sous-classe : fireAt surchargé, dégâts de zone via AABB
     │           ├── SpawnerBlockEntity.java                 # Algorithme de spawn pondéré (voir 02-gameplay.md)
     │           ├── SpawnerRenderState.java                 # Instantané pour le rendu (client)
     │           └── SpawnerBlockEntityRenderer.java         # Aperçu de composition en phase Construction, à travers les murs (client)
     ├── resources/
     │   ├── assets/dungeon_defenders/
     │   │   ├── lang/{en_us,fr_fr}.json                     # Traductions
-    │   │   ├── blockstates/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json   # Variante unique par bloc
-    │   │   ├── blockstates/harpoon_turret.json             # 4 variantes facing=north/east/south/west (comme la furnace vanilla)
-    │   │   ├── models/block/{eternia_crystal,spike_blockade,spawner,tavern_crystal}.json  # Modèles (texture vanilla provisoire)
-    │   │   ├── models/block/harpoon_turret.json             # parent minecraft:block/orientable, textures furnace (placeholder directionnel)
-    │   │   ├── items/{eternia_crystal,spike_blockade,spawner,tavern_crystal,harpoon_turret}.json # Modèles d'item
+    │   │   ├── blockstates/{eternia_crystal,spike_blockade,bouncer_blockade,slice_n_dice_blockade,spawner,tavern_crystal}.json   # Variante unique par bloc
+    │   │   ├── blockstates/{harpoon_turret,bowling_ball_turret,mortar_turret}.json  # 4 variantes facing=north/east/south/west (comme la furnace vanilla)
+    │   │   ├── models/block/{eternia_crystal,spike_blockade,bouncer_blockade,slice_n_dice_blockade,spawner,tavern_crystal}.json  # Modèles (texture vanilla provisoire)
+    │   │   ├── models/block/{harpoon_turret,bowling_ball_turret,mortar_turret}.json  # parent minecraft:block/orientable, textures vanilla (placeholder directionnel)
+    │   │   ├── items/*.json                                # Un modèle d'item par bloc (même liste que ci-dessus)
     │   │   └── textures/gui/maps/<id>.png                  # Aperçu de chaque GameMap (une image par map)
-    │   ├── data/dungeon_defenders/loot_table/blocks/{eternia_crystal,spike_blockade,spawner,tavern_crystal,harpoon_turret}.json
+    │   ├── data/dungeon_defenders/loot_table/blocks/*.json  # Un par bloc (drop de lui-même)
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
     │   ├── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
     │   └── META-INF/accesstransformer.cfg         # Access Transformers
@@ -110,8 +120,9 @@ NeoForge autorise plusieurs classes `@Mod` pour le même `modId`, différenciée
 - Possède deux `DeferredRegister` :
   - `BLOCK_ENTITIES` (`Registries.BLOCK_ENTITY_TYPE`)
   - `CREATIVE_MODE_TABS` (`Registries.CREATIVE_MODE_TAB`)
-- Enregistre les `BlockEntityType` `eternia_crystal`, `spawner` et `spike_blockade`, liés à
-  `ModBlocks.ETERNIA_CRYSTAL`/`ModBlocks.SPAWNER`/`ModBlocks.SPIKE_BLOCKADE`.
+- Enregistre tous les `BlockEntityType` du mod (`eternia_crystal`, `spawner`, et chaque tour du
+  roster — `spike_blockade`, `bouncer_blockade`, `slice_n_dice_blockade`, `harpoon_turret`,
+  `bowling_ball_turret`, `mortar_turret`), chacun lié à son bloc dans `ModBlocks`.
 - Enregistre l'onglet créatif `dungeon_defenders_tab`, dont l'icône et le seul contenu
   sont l'item du cristal.
 - Le constructeur `DungeonDefendersMod(IEventBus modEventBus)` branche les cinq registres

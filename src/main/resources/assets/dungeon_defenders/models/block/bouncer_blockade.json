@@ -1,0 +1,7 @@
+{
+  "comment": "Placeholder : réutilise une texture vanilla (thématiquement proche, un bloc qui rebondit) en attendant une texture dédiée.",
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "minecraft:block/slime_block"
+  }
+}
