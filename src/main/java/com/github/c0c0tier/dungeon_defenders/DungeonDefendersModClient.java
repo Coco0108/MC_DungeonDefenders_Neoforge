@@ -3,6 +3,7 @@ package com.github.c0c0tier.dungeon_defenders;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntityRenderer;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntityRenderer;
 import com.github.c0c0tier.dungeon_defenders.block.entity.TowerHealthBarRenderer;
+import com.github.c0c0tier.dungeon_defenders.client.ClientDisplayConfig;
 import com.github.c0c0tier.dungeon_defenders.client.ModKeyMappings;
 import com.github.c0c0tier.dungeon_defenders.client.gui.AbilitySlotsOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.CharacterOverlay;
@@ -10,6 +11,7 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.ExperienceOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.HealthOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ManaOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.PhaseOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreGainOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveOverlay;
@@ -19,7 +21,10 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScre
 import com.github.c0c0tier.dungeon_defenders.entity.MobHealthBarRenderer;
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
+import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
+import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.network.GameOverPayload;
+import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
 import com.google.common.reflect.TypeToken;
 
 import net.minecraft.client.KeyMapping;
@@ -35,6 +40,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
@@ -47,6 +53,7 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.client.network.event.RegisterClientPayloadHandlersEvent;
 import net.neoforged.neoforge.client.renderstate.RegisterRenderStateModifiersEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 // This class will not load on dedicated servers. Accessing client side code from here is safe.
 @Mod(value = DungeonDefendersMod.MODID, dist = Dist.CLIENT)
@@ -62,6 +69,11 @@ public class DungeonDefendersModClient {
         // The config screen is accessed by going to the Mods screen > clicking on your mod > clicking on config.
         // Do not forget to add translations for your config options to the en_us.json file.
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
+
+        // Type CLIENT (pas COMMON comme Config.SPEC dans DungeonDefendersMod) : préférences
+        // d'affichage HUD, propres à ce joueur, jamais lues côté serveur — voir
+        // ClientDisplayConfig pour le pourquoi et le patron pour en ajouter d'autres.
+        container.registerConfig(ModConfig.Type.CLIENT, ClientDisplayConfig.SPEC);
     }
 
     @SubscribeEvent
@@ -136,6 +148,9 @@ public class DungeonDefendersModClient {
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "score_overlay"),
                 new ScoreOverlay());
         event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "score_gain_overlay"),
+                ScoreGainOverlay.INSTANCE);
+        event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "character_overlay"),
                 new CharacterOverlay());
         event.registerAboveAll(
@@ -172,6 +187,31 @@ public class DungeonDefendersModClient {
         event.register(ModMenus.MANA_CHEST_CONFIG.get(), ManaChestConfigScreen::new);
     }
 
+    // Handlers des paquets clientbound du mod (voir ModNetworking, qui n'enregistre que les
+    // TYPE/STREAM_CODEC, sans handler) : ne peuvent vivre qu'ici, une classe strictement
+    // cliente — GameOverPayload ouvre GameOverScreen, ScoreGainPayload alimente
+    // ScoreGainOverlay, ni l'une ni l'autre ne doit jamais être chargée sur un serveur dédié.
+    @SubscribeEvent
+    static void onRegisterClientPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
+        event.register(ScoreGainPayload.TYPE, DungeonDefendersModClient::handleScoreGain);
+        event.register(GameOverPayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> Minecraft.getInstance().setScreen(new GameOverScreen(payload.victory()))));
+    }
+
+    private static void handleScoreGain(ScoreGainPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            // Pas de borne-check sur les ordinaux ici, contrairement à ModNetworking : ce
+            // paquet vient du serveur (autoritaire dans ce mod co-op), pas d'un client — même
+            // confiance que les autres ordinaux d'enum synchronisés par attachment (GamePhase,
+            // GameDifficulty...), jamais revérifiés côté client non plus. NO_ENEMY (-1) reste un
+            // cas à part : ce n'est pas un ordinal invalide, juste "aucun ennemi associé".
+            SpawnableEnemy enemy = payload.enemyOrdinal() == ScoreGainPayload.NO_ENEMY
+                    ? null
+                    : SpawnableEnemy.values()[payload.enemyOrdinal()];
+            ScoreGainOverlay.INSTANCE.addPopup(payload.amount(), ScoreSource.values()[payload.sourceOrdinal()], enemy);
+        });
+    }
+
     @SubscribeEvent
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         ModKeyMappings.register(event);
@@ -206,15 +246,5 @@ public class DungeonDefendersModClient {
     private static boolean isSurvivalPlayer() {
         LocalPlayer player = Minecraft.getInstance().player;
         return player != null && !player.isCreative();
-    }
-
-    // Handler du seul paquet clientbound du mod (voir ModNetworking, qui n'enregistre que le
-    // TYPE/STREAM_CODEC de GameOverPayload, sans handler) : ouvre GameOverScreen sur le thread
-    // principal. Vit ici (classe client-only) plutôt que dans ModNetworking pour ne jamais
-    // charger Minecraft/Screen sur un serveur dédié.
-    @SubscribeEvent
-    static void onRegisterClientPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
-        event.register(GameOverPayload.TYPE, (payload, context) ->
-                context.enqueueWork(() -> Minecraft.getInstance().setScreen(new GameOverScreen(payload.victory()))));
     }
 }

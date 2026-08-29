@@ -1412,8 +1412,8 @@ avec 100 PV ils s'étaleraient sur plusieurs rangées de cœurs (le rendu vanill
 ## L'expérience custom du joueur
 
 **Rien à voir avec l'XP vanilla** (`EXPERIENCE_LEVEL`/`getExperienceLevel()`) : c'est une
-ressource propre au mod, pensée pour un futur système de progression/niveaux (pas encore
-défini — rien ne la fait varier pour l'instant, elle démarre à 0).
+ressource propre au mod. Gagnée en tuant des monstres (voir "Expérience, score et niveau —
+`ModEvents.awardExperienceAndScore`" plus bas), elle fait monter `ModAttachments.LEVEL`.
 
 ### L'état — `init/ModAttachments.java`
 
@@ -1431,16 +1431,15 @@ public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> E
                 .build());
 ```
 
-`MAX_EXPERIENCE = 100` est une valeur provisoire : sans système de niveaux défini, il n'y a
-pas encore de vraie notion de "maximum", c'est surtout ce qui donne son échelle à la jauge.
+`MAX_EXPERIENCE = 100` est un plafond **fixe par niveau** (pas de barème croissant du type
+"niveau N demande N×100") : valeur de test, pas encore équilibrée, comme les coûts de pose des
+tours.
 
 ### L'affichage — `client/gui/ExperienceOverlay.java`
 
 Contrairement à `ManaOverlay`/`HealthOverlay`, reste une **barre horizontale** classique
 (jauge + texte `Experience: X/Y` à sa droite, clé `dungeon_defenders.hud.experience`), en
-vert, tout en bas de l'écran, sous les deux losanges. Comme rien ne fait encore varier
-l'attachment, elle s'affiche `0/100` en permanence tant qu'aucun mécanisme n'alimente
-`ModAttachments.EXPERIENCE`.
+vert, tout en bas de l'écran, sous les deux losanges.
 
 ## Le groupe bas-gauche — mana, vie, expérience
 
@@ -2023,18 +2022,123 @@ la barre d'expérience, qui elle est en bas à gauche) :
 ### Le score — `client/gui/ScoreOverlay.java`
 
 `ModAttachments.SCORE` est conceptuellement l'expérience gagnée **sur la carte en cours**,
-par opposition à `ModAttachments.EXPERIENCE` qui est censée persister au-delà d'une carte.
-C'est pourquoi ce n'est pas le même attachment, même si les deux valeurs pourraient un jour
-augmenter ensemble (une capacité tuant un ennemi donnerait de l'XP *et* du score, un peu comme
-la vue et le score au sens jeu vidéo classique). Comme `current_wave`, c'est un état de la
-`Level` : "notre score" est partagé par la partie, pas individuel par joueur. Démarre à `0`,
-rien ne l'alimente encore.
+par opposition à `ModAttachments.EXPERIENCE` qui persiste au-delà d'une carte. Comme
+`current_wave`, c'est un état de la `Level` : "notre score" est partagé par la partie, pas
+individuel par joueur. Démarre à `0`, remis à `0` à chaque nouvelle partie
+(`PhaseTransitions.resetGameState`, appelé à la victoire/défaite — voir "Victoire et défaite"
+plus bas), alimenté par chaque monstre tué (voir "Expérience, score et niveau" ci-dessous).
 
 Affiché en texte seul (pas de jauge, un score n'a pas de maximum), clé
 `dungeon_defenders.hud.score`, centré via `guiGraphics.centeredText(...)`. Expose
 `rowY(guiGraphics)`, une méthode package-visible que `CharacterOverlay` utilise pour se
 positionner juste au-dessus (même principe que `WaveOverlay.waveText(...)` ou
 `ExperienceOverlay.barTop(...)`).
+
+### Le gain de score flottant — `client/gui/ScoreGainOverlay.java`, `network/ScoreGainPayload.java`
+
+Décidé avec le joueur (2026-08-27) : un "+X \<source\>" apparaît en bas à **droite** de l'écran
+à chaque gain de score (ex. "+10 Ennemi tué"), monte de 20px et s'estompe sur 1,5 seconde,
+indépendamment pour chaque popup.
+
+**Pourquoi un paquet dédié plutôt que de lire `ModAttachments.SCORE` ?** Une première version
+détectait le gain en comparant le total synchronisé d'une frame à l'autre — ça marchait, mais
+`SCORE` n'est qu'un total : impossible d'en déduire la **source** du gain (kill ? fin de vague ?
+multiplicateur ?). Comme plusieurs sources de score sont prévues (voir "Feuille de route du
+score" plus bas) et que le joueur voulait cette information affichée, `ModEvents.grantScore`
+diffuse maintenant un `ScoreGainPayload(amount, sourceOrdinal, enemyOrdinal)` **en plus** de la
+sync d'attachment habituelle :
+
+```java
+private static void grantScore(Level level, int amount, ScoreSource source, int enemyOrdinal) {
+    int score = level.getData(ModAttachments.SCORE) + amount;
+    level.setData(ModAttachments.SCORE, score);
+    level.syncData(ModAttachments.SCORE);
+
+    for (Player player : level.players()) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            serverPlayer.connection.send(
+                    new ScoreGainPayload(amount, source.ordinal(), enemyOrdinal).toVanillaClientbound());
+        }
+    }
+}
+```
+
+Toute future source de score (fin de vague, fin de map, multiplicateurs) devra passer par
+`grantScore` plutôt que toucher `SCORE` directement, pour ne jamais dupliquer cette double mise
+à jour (attachment + paquet), avec `ScoreGainPayload.NO_ENEMY` (`-1`) comme `enemyOrdinal` tant
+qu'elle n'a pas d'ennemi précis à associer (voir "L'icône de l'ennemi tué" plus bas).
+`init/ScoreSource.java` est l'enum de la source, transmise par ordinal comme le reste des enums
+réseau du mod (`GamePhase`, `GameDifficulty`...) — un seul membre pour l'instant
+(`MONSTER_KILLED`), les futures sources ajouteront le leur le moment venu.
+
+**Premier paquet clientbound de cette branche** (même principe que celui décrit pour
+`GameOverScreen` sur une autre branche, pas encore mergée ici) : le type/codec est enregistré
+côté partagé (`ModNetworking.onRegisterPayloadHandlers`, `registrar.playToClient(...)` **sans**
+handler), mais le handler lui-même — qui touche `ScoreGainOverlay`, une classe strictement
+cliente — n'est enregistré que dans `DungeonDefendersModClient`, via
+`RegisterClientPayloadHandlersEvent`. Pas de borne-check sur l'ordinal reçu côté client
+(contrairement à `ModNetworking`, qui valide tout ordinal reçu d'un **client**) : ce paquet
+vient du serveur, autoritaire dans ce mod co-op — même confiance que les autres ordinaux
+synchronisés par attachment (`GamePhase`, `GameDifficulty`), jamais revérifiés côté client non
+plus.
+
+**`ScoreGainOverlay` devient un pur récepteur d'événements**, plus une lecture de `SCORE` :
+
+```java
+public class ScoreGainOverlay implements GuiLayer {
+    public static final ScoreGainOverlay INSTANCE = new ScoreGainOverlay();
+    ...
+    public void addPopup(int amount, ScoreSource source, SpawnableEnemy enemy) {
+        this.popups.add(new Popup(amount, source, enemy, Util.getMillis()));
+    }
+}
+```
+
+Instance unique exposée en statique (constructeur privé) : `RegisterGuiLayersEvent` enregistre
+`ScoreGainOverlay.INSTANCE` pour le rendu, et le handler du paquet pousse dans cette même
+instance — les deux se rejoignent là plutôt que par un paquet réseau interne au client. Plus
+besoin de gérer "premier tick observé" ou "score qui redescend" : sans paquet, pas de popup,
+ces cas se résolvent d'eux-mêmes.
+
+**Animation inchangée** : même source de temps que `HealthLerp` (`Util.getMillis()`, temps réel
+plutôt que `partialTicks`). Chaque `Popup` (record `amount`/`source`/`spawnTimeMs`) calcule sa
+propre progression 0→1 sur `DURATION_MS` (1500 ms), utilisée à la fois pour la montée
+(`RISE_PIXELS`) et le fondu (canal alpha du texte, `(alpha << 24) | RGB`) — même vert que
+`ExperienceOverlay` (`0x22C55E`). Les popups simultanés se superposent simplement (pas de
+logique d'empilement) — volontairement simple.
+
+**Limite assumée, inchangée par ce changement** : si le serveur appelle `grantScore` plusieurs
+fois dans le même tick (plusieurs morts simultanées), chaque appel envoie son propre paquet —
+contrairement à l'ancienne version basée sur la sync d'attachment, ce n'est **plus** une
+limite : chaque kill produit bien son propre popup, même simultané. La seule limite restante est
+visuelle (superposition à l'écran, pas de décalage automatique).
+
+#### L'icône de l'ennemi tué
+
+Décidé avec le joueur (2026-08-27), juste après le paquet dédié ci-dessus : l'œuf d'invocation
+de l'ennemi apparaît à gauche du texte (ex. œuf de zombie + "+10 Ennemi tué"), même principe que
+l'aperçu de composition du Spawner (`SpawnerBlockEntityRenderer`, qui réutilise déjà les œufs
+comme icônes reconnaissables — mais celui-là dessine en 3D dans le monde, celui-ci en 2D dans le
+HUD).
+
+**Transport** : `ScoreGainPayload` porte un troisième champ, `enemyOrdinal` — l'ordinal du
+`SpawnableEnemy` tué, transmis comme `sourceOrdinal`, ou `ScoreGainPayload.NO_ENEMY` (`-1`) si
+ce gain n'a pas d'ennemi associé (toute future source hors kill). Pas d'`Optional<Integer>` sur
+le réseau : ce mod n'utilise ce patron nulle part ailleurs, une sentinelle entière suffit et
+reste lisible. Résolu côté serveur dans `ModEvents.awardExperienceAndScore` via
+`SpawnableEnemy.find(EntityType<?>)` (rendue publique à cette occasion — auparavant un détail
+privé de `xpValueFor`), avec le même repli `NO_ENEMY` que `DEFAULT_XP_VALUE` si jamais le
+monstre tué n'est pas dans la liste fermée du Spawner.
+
+**Rendu** : `guiGraphics.item(ItemStack, x, y)` — la même méthode que la hotbar vanilla, pas une
+API spéciale à découvrir. Positionnée à gauche du texte (`ICON_GAP` = 2px d'écart), centrée
+verticalement sur la ligne de texte (icône 16px, texte ~9px de haut). **Limite assumée** :
+contrairement au texte, l'icône ne s'estompe pas progressivement — `GuiGraphicsExtractor#item`
+n'a pas de paramètre de teinte/alpha exploité ici, elle reste pleinement opaque tant que le
+popup est affiché puis disparaît d'un coup avec lui, pas de fondu. Coût jugé négligeable :
+l'icône vient de l'atlas de textures des items déjà chargé en mémoire (même atlas que la
+hotbar/l'inventaire vanilla), aucun nouvel asset, et il n'y a jamais plus qu'une poignée de
+popups vivants à la fois (durée de vie 1,5s).
 
 ### Le personnage — `client/gui/CharacterOverlay.java`
 
@@ -2050,8 +2154,76 @@ Affiche `Nom - niv X` (clé `dungeon_defenders.hud.character`), juste au-dessus 
   d'écran de création de personnage) : voir
   [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 - **Le niveau** (`ModAttachments.LEVEL`) est un attachment joueur (contrairement au score),
-  démarre à `1`, persistant, synchronisé. Rien ne le fait encore monter — pas de formule
-  d'XP → niveau, pas de notion de "monter de niveau".
+  démarre à `1`, persistant, synchronisé. Monte via l'expérience gagnée en tuant des monstres
+  (voir ci-dessous).
+
+### Expérience, score et niveau — `ModEvents.awardExperienceAndScore`/`grantExperience`
+
+Décidé avec le joueur (2026-08-27) : tuer un monstre (toute phase, comme le drop de cristal de
+mana ci-dessus) donne à la fois du score (carte) et de l'expérience (joueur), branché dans le
+même `onMonsterDeath` que le cristal de mana.
+
+**Valeur par monstre** — `init/SpawnableEnemy.xpValue()`, un champ de plus sur l'enum déjà
+utilisé par le Spawner (zombie = 10, squelette = 15, valeurs de test pas encore équilibrées,
+le squelette rapportant plus car il attaque à distance). `SpawnableEnemy.xpValueFor(EntityType)`
+fait la correspondance depuis le monstre tué ; 5 en repli si jamais un monstre hors de cette
+liste venait à mourir (défensif, ne devrait pas arriver tant que le Spawner reste l'unique
+source de monstres).
+
+**Le score** est incrémenté sans conditions : `level.getData(SCORE) + xpValue`.
+
+**L'expérience est partagée entre tous les joueurs présents**, pas seulement celui qui a porté
+le coup fatal — décidé avec le joueur : ce sont surtout les tours qui tuent dans ce mod
+(`AbstractTurretBlockEntity`, dégâts directs sans lien avec un joueur), et rien ne capte
+aujourd'hui "quel joueur a tué quoi". Même logique co-op que le ramassage des cristaux de mana,
+ouvert à n'importe qui plutôt qu'à un seul joueur :
+
+```java
+for (Player player : level.players()) {
+    grantExperience(player, xpValue);
+}
+```
+
+`grantExperience` ajoute la valeur à `EXPERIENCE`, puis boucle tant que `experience >=
+MAX_EXPERIENCE` (100, plafond fixe par niveau, pas de barème croissant pour l'instant) :
+chaque passage décrémente `experience` de `MAX_EXPERIENCE` et incrémente `LEVEL` — une boucle
+plutôt qu'un seul `if`, pour rester correct si un futur monstre à forte valeur d'XP fait
+franchir plusieurs paliers d'un coup. Un message système (`dungeon_defenders.level.up`) est
+envoyé au joueur concerné à chaque passage de niveau — pas redondant avec le HUD, contrairement
+aux anciens messages de victoire/défaite retirés (voir "Victoire et défaite" plus bas) : c'est
+un événement ponctuel, pas un état déjà affiché en permanence.
+
+`ModAttachments.SCORE` est remis à `0` par `PhaseTransitions.resetGameState` (victoire/défaite,
+donc à chaque nouvelle partie) — cohérent avec "score de la carte en cours". `EXPERIENCE`/
+`LEVEL`, eux, ne sont jamais remis à zéro : ils persistent au-delà d'une carte, comme prévu dès
+l'origine (voir "L'expérience custom du joueur" plus haut).
+
+**Pas encore fait** : aucun bonus de statistique (mana/vie max, etc.) lié au niveau — pour
+l'instant purement un compteur affiché, voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
+### Feuille de route du score (décidée avec le joueur, pas codée pour l'instant)
+
+Le kill est **une seule source de score parmi plusieurs prévues** — confirmé avec le joueur
+(2026-08-27) : "le score est officieusement l'XP gagnée sur ce niveau", donc toute future
+source de score suit la même logique (Level-scopée, remise à 0 à chaque partie), sans forcément
+donner de l'expérience joueur en parallèle (l'un n'implique pas l'autre, seul le kill fait
+aujourd'hui les deux à la fois). Prévu, mais **volontairement pas implémenté maintenant** —
+seul le kill (ci-dessus) est en place :
+
+- Bonus de score à la fin d'une vague nettoyée.
+- Bonus de score à la fin de la map (victoire).
+- Multiplicateurs par vague, cumulables (probablement) : aucun dégât pris par un joueur, aucun
+  dégât pris par le Cristal d'Eternia, aucune tour détruite par les ennemis — d'autres pourront
+  s'ajouter. Demande un suivi de dégâts par vague qui n'existe pas encore (ni pour le joueur, ni
+  pour le cristal, ni pour les tours).
+- Multiplicateur selon la difficulté choisie (`ModAttachments.DIFFICULTY`, existe déjà — juste
+  la table de multiplicateurs à définir).
+- Multiplicateur selon la difficulté de la map : un futur paramètre par map (`init/GameMap.java`
+  n'a pas encore ce champ), estimé par le créateur de la map au moment de sa conception.
+
+Formules, valeurs et ordre d'implémentation pas encore tranchés — voir
+[07-idées-et-backlog.md](07-idées-et-backlog.md) pour le suivi ligne par ligne.
 
 ## Les emplacements de compétences — `client/gui/AbilitySlotsOverlay.java`
 

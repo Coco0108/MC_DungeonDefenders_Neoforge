@@ -29,6 +29,7 @@
   "dungeon_defenders.block.break_disabled": "Impossible de casser des blocs dans ce monde.",
   "dungeon_defenders.tower.removal_mode_on": "Mode suppression de tour : ACTIVÉ. Clic gauche sur une tour pour la retirer.",
   "dungeon_defenders.tower.removal_mode_off": "Mode suppression de tour : DÉSACTIVÉ.",
+  "dungeon_defenders.level.up": "Niveau supérieur ! Vous êtes maintenant niveau %s.",
 
   "dungeon_defenders.hud.mana": "Mana : %s/%s",
   "dungeon_defenders.hud.health": "Vie : %s/%s",
@@ -39,6 +40,8 @@
   "dungeon_defenders.phase.build": "Construction",
   "dungeon_defenders.phase.combat": "Combat",
   "dungeon_defenders.hud.score": "Score : %s",
+  "dungeon_defenders.hud.score_gain": "+%s %s",
+  "dungeon_defenders.score_source.monster_killed": "Ennemi tué",
   "dungeon_defenders.hud.character": "%s - niv %s",
   "dungeon_defenders.mana_test_wand.used": "-%s mana (%s/%s)",
   "dungeon_defenders.mana_test_wand.empty": "Pas assez de mana !",
@@ -77,5 +80,8 @@
 
   "dungeon_defenders.configuration.title": "Configuration de Dungeon Defenders",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml": "Configuration de Dungeon Defenders",
-  "dungeon_defenders.configuration.section.dungeon_defenders.common.toml.title": "Configuration de Dungeon Defenders"
+  "dungeon_defenders.configuration.section.dungeon_defenders.common.toml.title": "Configuration de Dungeon Defenders",
+  "dungeon_defenders.configuration.section.dungeon_defenders.client.toml": "Affichage (HUD)",
+  "dungeon_defenders.configuration.section.dungeon_defenders.client.toml.title": "Affichage (HUD)",
+  "dungeon_defenders.configuration.showScoreGainPopup": "Afficher le popup de gain de score"
 }

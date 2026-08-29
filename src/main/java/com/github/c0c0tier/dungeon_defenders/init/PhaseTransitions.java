@@ -116,6 +116,13 @@ public final class PhaseTransitions {
         level.setData(ModAttachments.WAVE_ENEMIES_KILLED, 0);
         level.syncData(ModAttachments.WAVE_ENEMIES_KILLED);
 
+        // Le score est censé correspondre à l'expérience gagnée sur LA carte en cours (voir
+        // ModAttachments.SCORE) : remis à 0 à chaque nouvelle partie, même point que les
+        // compteurs de vague ci-dessus. L'expérience/niveau du joueur, eux, persistent au-delà
+        // d'une carte — pas touchés ici.
+        level.setData(ModAttachments.SCORE, 0);
+        level.syncData(ModAttachments.SCORE);
+
         recomputeWaveEnemiesTotal(level);
         ManaChestBlock.respawnAll(level);
     }

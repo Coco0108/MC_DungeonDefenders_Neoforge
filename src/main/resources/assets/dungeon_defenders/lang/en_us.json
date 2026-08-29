@@ -29,6 +29,7 @@
   "dungeon_defenders.block.break_disabled": "You can't break blocks in this world.",
   "dungeon_defenders.tower.removal_mode_on": "Tower removal mode: ON. Left-click a tower to remove it.",
   "dungeon_defenders.tower.removal_mode_off": "Tower removal mode: OFF.",
+  "dungeon_defenders.level.up": "Level up! You are now level %s.",
 
   "dungeon_defenders.hud.mana": "Mana: %s/%s",
   "dungeon_defenders.hud.health": "Health: %s/%s",
@@ -39,6 +40,8 @@
   "dungeon_defenders.phase.build": "Build",
   "dungeon_defenders.phase.combat": "Combat",
   "dungeon_defenders.hud.score": "Score: %s",
+  "dungeon_defenders.hud.score_gain": "+%s %s",
+  "dungeon_defenders.score_source.monster_killed": "Enemy killed",
   "dungeon_defenders.hud.character": "%s - lvl %s",
   "dungeon_defenders.mana_test_wand.used": "-%s mana (%s/%s)",
   "dungeon_defenders.mana_test_wand.empty": "Not enough mana!",
@@ -77,5 +80,8 @@
 
   "dungeon_defenders.configuration.title": "Dungeon Defenders Configs",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml": "Dungeon Defenders Configs",
-  "dungeon_defenders.configuration.section.dungeon_defenders.common.toml.title": "Dungeon Defenders Configs"
+  "dungeon_defenders.configuration.section.dungeon_defenders.common.toml.title": "Dungeon Defenders Configs",
+  "dungeon_defenders.configuration.section.dungeon_defenders.client.toml": "HUD Display",
+  "dungeon_defenders.configuration.section.dungeon_defenders.client.toml.title": "HUD Display",
+  "dungeon_defenders.configuration.showScoreGainPopup": "Show score gain popup"
 }

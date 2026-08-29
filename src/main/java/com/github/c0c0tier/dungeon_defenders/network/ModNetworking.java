@@ -82,13 +82,17 @@ public class ModNetworking {
                 RemoveTowerPayload.STREAM_CODEC,
                 ModNetworking::handleRemoveTower
         );
-        // Sans handler ici : premier paquet clientbound du mod, le handler vit côté client
+        // Sans handler ici : paquets clientbound du mod, le handler vit côté client
         // uniquement (DungeonDefendersModClient#onRegisterClientPayloadHandlers), pour ne
         // jamais charger de classe cliente (Minecraft, Screen...) sur un serveur dédié — cette
         // classe-ci est chargée des deux côtés (voir le commentaire de classe).
         registrar.playToClient(
                 GameOverPayload.TYPE,
                 GameOverPayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                ScoreGainPayload.TYPE,
+                ScoreGainPayload.STREAM_CODEC
         );
     }
 

@@ -58,6 +58,81 @@ vanilla) et la toute première fois que le mana remonte en jeu.
 > retiré dans cette fusion locale de test : il serait devenu exploitable une fois combiné à
 > "Casser un bloc est désactivé" (voir 05-etat-et-problemes-connus.md).
 
+## Expérience, score et niveau (`ModEvents.awardExperienceAndScore`/`grantExperience`)
+
+Nouveau (2026-08-27), jamais vérifié visuellement. Branché juste après le drop de cristal de
+mana dans `onMonsterDeath` — même monstre tué, deux effets à vérifier en même temps.
+
+- [ ] Tuer un zombie : le HUD **Score** (bas centre) augmente de **10**, et le HUD
+      **Expérience** (barre verte bas gauche) augmente aussi de **10**.
+- [ ] Tuer un squelette : les deux augmentent de **15** cette fois (zombie et squelette n'ont
+      pas la même valeur, vérifie `SpawnableEnemy.xpValue()`).
+- [ ] **En multijoueur (2 joueurs ou plus)** : tuer un monstre donne bien l'XP à **tous les
+      joueurs présents** en même temps, pas seulement à celui qui a porté le coup — décidé
+      volontairement, à vérifier que ce n'est pas juste un seul joueur qui progresse.
+- [ ] Faire monter l'expérience jusqu'à 100 (plusieurs kills) : au palier, la barre d'XP
+      revient à une valeur basse (pas juste bloquée à 100), le HUD **Nom - niv X** passe au
+      niveau supérieur, et un message système "Niveau supérieur !" apparaît **au joueur
+      concerné seulement**.
+- [ ] Faire un très gros kill d'un coup (si possible, ou vérifier par relecture) ne devrait pas
+      être nécessaire pour ce test — mais si l'XP dépasse 200 en un seul kill, vérifier que le
+      niveau peut monter de 2 d'un coup (boucle `while`, pas juste un `if`).
+- [ ] Aller jusqu'à la victoire ou la défaite (ou utiliser le harnais de test) : le **Score**
+      revient à **0** au redémarrage de la partie (`PhaseTransitions.resetGameState`), mais le
+      **Niveau** et l'**Expérience** du joueur restent inchangés (ils sont censés persister
+      au-delà d'une carte).
+- [ ] Se déconnecter/reconnecter après avoir gagné de l'expérience/un niveau : les deux valeurs
+      sont bien conservées (persistance de l'attachment joueur).
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `awardExperienceAndScore`,
+      `grantExperience` ou `SpawnableEnemy.xpValueFor`.
+
+## Gain de score flottant, avec sa source (`ScoreGainOverlay`, `ScoreGainPayload`)
+
+Nouveau (2026-08-27), jamais vérifié visuellement. Refait une fois pour passer d'un simple
+"+X" deviné côté client à un vrai paquet réseau portant la source — les deux versions sont à
+vérifier ensemble ici (le mécanisme a changé, le résultat visible attendu aussi).
+
+- [ ] Tuer un monstre : un "+10 Ennemi tué" (zombie) ou "+15 Ennemi tué" (squelette) apparaît en
+      bas à **droite** de l'écran (pas au même endroit que le Score en bas centre), monte
+      doucement puis s'estompe en environ 1,5 seconde.
+- [ ] L'œuf d'invocation correspondant (zombie ou squelette) apparaît à gauche du texte, bien
+      centré verticalement dessus, ni minuscule ni énorme (16px, comme dans la hotbar).
+- [ ] L'œuf **disparaît d'un coup** avec le popup à la fin des 1,5 secondes (pas de fondu
+      progressif sur l'icône, contrairement au texte qui s'estompe bien lui) — comportement
+      attendu, pas un bug (voir doc/05).
+- [ ] Tuer plusieurs monstres à quelques instants d'écart : chaque kill affiche son propre
+      popup (pas un seul cumulé) — cette fois, ça doit être vrai **même pour des kills
+      quasi simultanés** (contrairement à l'ancienne version basée sur la sync d'attachment,
+      chaque `grantScore` envoie désormais son propre paquet).
+- [ ] Se connecter en cours de partie (score déjà > 0, ex. rejoindre après quelques kills) :
+      **aucun** popup ne doit apparaître au premier affichage du HUD (plus aucun mécanisme de
+      "diff" qui pourrait en générer un par erreur).
+- [ ] Aller jusqu'à la victoire/défaite : le score revient à 0 (voir section précédente) sans
+      qu'un popup n'apparaisse à ce moment-là (`resetGameState` ne passe pas par `grantScore`).
+- [ ] **En multijoueur** : chaque joueur présent reçoit bien son propre popup au même kill (le
+      paquet est envoyé à tous les joueurs de la `Level`, comme l'XP).
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ScoreGainOverlay`,
+      `ScoreGainPayload` ou `handleScoreGain`.
+
+## Config CLIENT — options d'affichage HUD (`ClientDisplayConfig`)
+
+Nouveau (2026-08-27), jamais vérifié visuellement.
+
+- [ ] Au premier lancement, un fichier `config/dungeon_defenders-client.toml` apparaît, avec
+      `showScoreGainPopup=true` dedans.
+- [ ] Menu Mods > Dungeon Defenders > Config : un écran distinct "HUD Display"/"Affichage
+      (HUD)" apparaît (en plus de celui déjà existant pour la config de gameplay), avec une
+      case à cocher "Show score gain popup"/"Afficher le popup de gain de score".
+- [ ] Décocher l'option, valider : tuer un monstre n'affiche plus le popup "+X" en bas à
+      droite — le reste du HUD (Score en bas centre, HUD général) continue de fonctionner
+      normalement.
+- [ ] Recocher l'option : le popup réapparaît au kill suivant.
+- [ ] L'option ne touche que **ce client** : en multijoueur, un autre joueur qui n'a pas
+      décoché la sienne continue de voir ses propres popups normalement.
+- [ ] Modifier directement `showScoreGainPopup=false` dans le fichier `.toml` (jeu fermé) puis
+      relancer : l'option décochée dans l'écran de config reflète bien la valeur du fichier.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ClientDisplayConfig`.
+
 ## HUD vanilla masqué, faim et hotbar désactivées
 
 - [ ] La faim (icônes en bas à droite), l'expérience (barre verte + niveau) et la hotbar
