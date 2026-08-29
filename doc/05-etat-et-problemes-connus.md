@@ -54,10 +54,14 @@ vérifie la CI.
     de contact **et** repousse (`AbstractBlockadeBlockEntity` gagne un `knockbackStrength`,
     0 pour Spike Blockade) sur les monstres déjà dans sa portée de contact — décidé avec le
     joueur, les deux effets ensemble, pas l'un à la place de l'autre. 25 PV, 25 mana, 1 PV
-    toutes les 10 ticks. **Testé en jeu (2026-08-29), deux passes** : la repousse (0.8F) était
-    quasi imperceptible, remontée à **1.6F** — puis le sens du vecteur s'est révélé inversé (les
-    monstres étaient **attirés** vers le blockade au lieu d'être repoussés), corrigé en passant
-    "position de la source moins position du monstre" plutôt que l'inverse (voir 02-gameplay.md
+    toutes les 10 ticks — même cooldown que les dégâts, une seule fois par intervalle par
+    monstre, jamais en continu (répond à la question du joueur "a-t-il une vitesse d'attaque ?" :
+    oui, `contactDamageIntervalTicks`, partagée avec les dégâts). **Testé en jeu (2026-08-29),
+    trois passes** : la repousse (0.8F) était quasi imperceptible, remontée à **1.6F** — puis le
+    sens du vecteur s'est révélé inversé (les monstres étaient **attirés** vers le blockade au
+    lieu d'être repoussés), corrigé en passant "position de la source moins position du monstre"
+    plutôt que l'inverse — une fois le sens corrigé, 1.6F s'est avérée trop forte, **remise à
+    0.8F** (sa valeur d'origine, désormais fiable une fois le sens réglé) (voir 02-gameplay.md
     pour le détail de l'erreur d'interprétation initiale).
   - **Slice N Dice Blockade** (`SliceNDiceBlockadeBlockEntity`) : troisième membre de
     "Blockade", **aucun nouveau code** — `AbstractBlockadeBlockEntity#serverTick` inflige déjà

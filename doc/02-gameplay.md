@@ -731,11 +731,21 @@ que la convention de rotation `Axis.YP` de la roue des tours (voir plus haut) : 
 vecteur/rotation mal interprété malgré une vérification dans les sources — matérialisé cette
 fois par un test en jeu plutôt qu'un rendu visuel.
 
+**"Vitesse d'attaque" (question du joueur, 2026-08-29)** : oui, c'est déjà géré —
+`contactDamageIntervalTicks` (10 ticks pour Bouncer, soit 0,5s) est le même cooldown pour les
+dégâts **et** la repousse, par monstre (`AbstractBlockadeBlockEntity#serverTick`,
+`lastContactDamageTick`). Un monstre au contact ne se fait donc pousser qu'une fois par
+intervalle, jamais en continu tant qu'il reste collé au blockade — c'est ce qui empêche déjà la
+repousse d'être "trop forte" par répétition ; `knockbackStrength` ne règle que l'intensité d'une
+poussée isolée, pas sa fréquence.
+
 25 PV, 25 mana (moins cher que Spike Blockade, l'intérêt n'étant pas les dégâts), 1 PV toutes
-les 10 ticks — valeurs de test, pas encore équilibrées. `KNOCKBACK_STRENGTH` : 0.8F au premier
-essai s'est révélé quasi imperceptible en jeu (le monstre ne bougeait presque pas), remonté à
-**1.6F** (2026-08-29) — échelle proche d'un enchantement de Recul II vanilla, nettement plus
-franc.
+les 10 ticks — valeurs de test, pas encore équilibrées. `KNOCKBACK_STRENGTH` a fait un aller-
+retour en jeu (2026-08-29) : 0.8F d'abord jugée imperceptible — mais le sens du vecteur était
+encore inversé à ce moment-là (voir ci-dessus), donc cette impression n'était pas fiable ;
+remontée à 1.6F dans la foulée, puis le sens corrigé séparément. Une fois la repousse
+effectivement fonctionnelle dans le bon sens, 1.6F s'est avérée trop forte — **remise à 0.8F**,
+sa valeur d'origine.
 
 ### Slice N Dice Blockade — `block/SliceNDiceBlockadeBlock.java`
 

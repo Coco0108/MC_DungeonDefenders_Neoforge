@@ -534,27 +534,35 @@ corrigés en construisant le reste du roster (voir 05-etat-et-problemes-connus.m
 Harpoon Turret. Si les points ci-dessus n'ont encore jamais été cochés, c'est potentiellement
 la cause : à re-tester avec le correctif.
 
-## Le reste du roster de l'Écuyer (Bouncer/Slice N Dice Blockade, Bowling Ball/Mortar Turret)
+## Le reste du roster de l'Écuyer (Bouncer Blockade, Bowling Ball Turret)
 
-**Premier tour de test effectué le 2026-08-29** (design discuté et validé avec le joueur avant
-d'être codé, voir 02-gameplay.md pour le détail) : trois retours corrigés depuis (repousse du
-Bouncer trop faible, Bowling Ball qui tirait vers le ciel, flèche du Mortar peu satisfaisante),
-Slice N Dice confirmée sans souci ("nickel", section retirée d'ici). **Les corrections
-ci-dessous restent à revérifier en jeu**, jamais confirmées visuellement depuis. Poser chaque
-tour via la roue (section dédiée plus bas).
+(Bouncer/Slice N Dice Blockade, Bowling Ball/Mortar Turret) — design discuté et validé avec le
+joueur avant d'être codé, voir 02-gameplay.md pour le détail. **Trois tours de test effectués
+(2026-08-29)** : Slice N Dice confirmée sans souci dès le premier ; Mortar Turret confirmée
+bonne au troisième, après deux passes de correction (flèche → explosion trop grosse →
+explosion réduite) ; Bowling Ball corrigée en une passe (tir horizontal), pas resignalée depuis.
+Sections retirées d'ici une fois confirmées. **Seul le Bouncer reste actif** : sens du
+knockback corrigé, puis force ajustée deux fois (1.6F trop faible dans le mauvais sens → trop
+fort une fois corrigé → 0.8F). Poser chaque tour via la roue (section dédiée plus bas).
 
 ### Bouncer Blockade
 
-**Deuxième passe de correction (2026-08-29)** : le premier retour ("force trop faible") a été
-corrigé (0.8F → 1.6F), mais le vrai bug était ailleurs — les monstres étaient **attirés** vers
-le blockade au lieu d'être repoussés (sens du vecteur inversé). Corrigé (voir 02-gameplay.md).
-**Point le plus important cette fois** : vérifier le sens, pas seulement l'intensité.
+**Troisième passe de correction (2026-08-29)** : le sens du vecteur (les monstres étaient
+attirés au lieu d'être repoussés) a été corrigé au tour précédent. Une fois ce sens validé
+comme correct, la force à 1.6F s'est avérée trop forte — remise à **0.8F** (sa valeur
+d'origine). Le joueur a aussi demandé si le Bouncer avait une "vitesse d'attaque" : oui, déjà —
+`contactDamageIntervalTicks` (10 ticks/0,5s) est le même cooldown par monstre que les dégâts,
+partagé, pas une repousse à chaque tick.
 
-- [ ] Un monstre au contact est visiblement repoussé **loin** du blockade (pas attiré vers lui,
-      pas latéralement au hasard) — c'est le point qui a échoué au tour précédent.
-- [ ] Avec la force à 1.6F, le monstre doit être clairement projeté, pas juste un tremblement
-      sur place — si toujours trop faible une fois le sens corrigé, la valeur est probablement
-      encore à monter (voir `KNOCKBACK_STRENGTH` dans `BouncerBlockadeBlockEntity`).
+- [ ] Un monstre au contact est visiblement repoussé **loin** du blockade (pas attiré vers lui).
+- [ ] Avec la force revenue à 0.8F, le monstre doit être poussé de façon nette mais pas
+      excessive — ni un tremblement imperceptible (le souci d'origine), ni une projection
+      disproportionnée (le souci de 1.6F). Si le réglage ne convient toujours pas, la valeur
+      est probablement à affiner encore (voir `KNOCKBACK_STRENGTH` dans
+      `BouncerBlockadeBlockEntity`).
+- [ ] Un monstre déjà repoussé et qui revient au contact n'est repoussé à nouveau qu'après le
+      cooldown (10 ticks/0,5s), pas immédiatement en boucle — vérifie la "vitesse d'attaque"
+      partagée avec les dégâts.
 - [ ] Un monstre au contact perd aussi des PV (1 toutes les 10 ticks), en plus d'être repoussé.
 - [ ] Un monstre juste hors de portée de contact (au-delà d'1 bloc) n'est ni endommagé ni
       repoussé.
@@ -562,9 +570,9 @@ le blockade au lieu d'être repoussés (sens du vecteur inversé). Corrigé (voi
 
 ### Bowling Ball Turret
 
-Le tir à l'horizontale (corrigé au tour précédent, ne partait plus vers le ciel) n'a pas été
-signalé comme cassé à ce deuxième tour — reste à confirmer explicitement, les points suivants
-n'ont jamais été spécifiquement cochés.
+Le tir à l'horizontale (corrigé au deuxième tour, ne partait plus vers le ciel) n'a pas été
+resignalé comme cassé depuis — reste à confirmer explicitement, les points suivants n'ont
+jamais été spécifiquement cochés.
 
 - [ ] Un seul zombie dans le cône : la boule (visuellement une flèche, voir limite assumée en
       02-gameplay.md) part à l'horizontale, sans monter vers le ciel, et le touche (~5 dégâts).
@@ -577,22 +585,6 @@ n'ont jamais été spécifiquement cochés.
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `BowlingBallEntity` (notamment
       autour de l'enchantement de Perforation appliqué à la fausse arme au moment du tir).
 
-### Mortar Turret
-
-**Deuxième passe de correction (2026-08-29)** : le premier retour ("flèche qui ne redescend
-jamais") a été corrigé en remplaçant la flèche par une particule d'explosion, mais l'effet
-(`EXPLOSION_EMITTER`) s'est révélé trop imposant — remplacé par plusieurs `EXPLOSION` plus
-modestes, légèrement éparpillées. Le vrai visuel de projectile (trajectoire avant l'impact) est
-explicitement reporté à plus tard, pas à tester ici.
-
-- [ ] Plusieurs monstres groupés à portée d'un seul tir : **tous** ceux dans le rayon de
-      2 blocs autour du monstre visé perdent des PV (8 chacun), pas seulement la cible
-      initiale.
-- [ ] **Repasse par ici en particulier** : l'effet visuel au point d'impact doit maintenant être
-      plus modeste (quelques particules d'explosion dispersées) qu'avant — pas le grand "poof"
-      dramatique façon TNT du tour précédent, ni redevenu une flèche.
-- [ ] Aucun dégât de terrain à l'impact (pas de trou, pas de bloc détruit).
-- [ ] Cadence visiblement plus lente que les trois autres tours à distance (60 ticks).
 
 ## Système de priorité IA (`AttackPriorityTargetGoal`, `AiAttackTarget`)
 
