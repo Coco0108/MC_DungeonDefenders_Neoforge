@@ -143,8 +143,9 @@ ci-dessous, à vérifier au moins autant que le rendu.
       Bowling Ball/Mortar Turret) : **aucun contour noir**, à aucune hauteur de visée.
 - [ ] Viser le Cristal d'Eternia, puis le cristal de la taverne : **aucun contour noir** non
       plus (le cristal d'Eternia en avait un de 3 blocs de haut, très visible).
-- [ ] Viser un bloc quelconque à côté (terrain, coffre de mana, bloc de spawn joueur) : le
-      contour noir **est toujours là** — seuls les tours et cristaux sont concernés.
+- [ ] Viser un bloc quelconque à côté (terrain, coffre de mana) : le contour noir **est toujours
+      là** — seuls les tours et cristaux sont concernés. (Le bloc de spawn joueur n'a lui de
+      contour qu'en créatif, pour une autre raison — voir sa propre section.)
 - [ ] Clic droit sur le Cristal d'Eternia en Construction : le vote « prêt » fonctionne toujours
       (message de progression) — c'est la preuve que le ciblage n'a pas été cassé.
 - [ ] Clic droit sur le cristal de la taverne : `MapSelectionScreen` s'ouvre toujours.
@@ -470,9 +471,25 @@ fois qu'une vraie structure `.nbt` de map (avec un `PLAYER_SPAWN` posé dedans) 
 - [ ] **Corrigé (2026-08-26)** : l'item dans la main/l'inventaire doit maintenant afficher la
       texture de lodestone (auparavant cassée, `models/item/player_spawn.json` manquant) —
       identique à l'apparence du bloc posé, pas de texture manquante/magenta-noir.
-- [ ] Poser le bloc n'importe où (taverne, placeholder de map...) : doit avoir l'apparence
-      d'un bloc de lodestone (texture placeholder, voir doc/02-gameplay.md), pas de texture
-      manquante.
+- [ ] **Changé (2026-08-30)** : poser le bloc n'importe où (taverne, placeholder de map...) —
+      il ne doit **rien** apparaître à l'écran, le bloc est désormais invisible (`PlayerSpawnBlock`,
+      même traitement que le spawner). Pas de trou noir ni de face voisine qui disparaît autour
+      de la position : rien du tout, comme si l'air était resté.
+- [ ] **En créatif**, viser précisément l'endroit où il est posé : un **contour de sélection**
+      doit apparaître — c'est le seul moyen de le retrouver, exactement comme pour le spawner.
+      (Il n'est pas concerné par le masquage de contour des tours/cristaux, voir sa section.)
+- [ ] **En survie**, viser précisément l'endroit où il est posé : **aucun contour**, le rayon de
+      visée doit traverser comme s'il n'y avait rien.
+- [ ] Marcher sur la position du bloc, en survie comme en créatif : on doit **traverser** (pas
+      de collision), et ne pas rester "posé dessus" — attention à ne pas se faire piéger si le
+      bloc a été posé au-dessus d'un vide.
+- [ ] L'item reste bien **visible** dans l'onglet créatif et dans la main/l'inventaire (texture
+      de lodestone) : c'est le bloc **posé** qui est invisible, pas l'item.
+- [ ] Poser un bloc plein juste à côté d'un `PLAYER_SPAWN` : sa face tournée vers le marqueur
+      doit s'afficher normalement (pas de face manquante/noire — le marqueur ne doit rien
+      occlure).
+- [ ] Vérifier qu'il ne fait pas d'ombre / ne bloque pas la lumière : poser une torche d'un côté
+      du marqueur, l'éclairage de l'autre côté ne doit pas être coupé.
 - [ ] Cliquer sur "Jouer" dans la taverne avec un `PLAYER_SPAWN` posé quelque part dans le
       placeholder de map (par exemple posé juste avant de cliquer, en restant sur place) :
       comportement attendu **inchangé** pour l'instant (téléportation à `MAP_POS` comme avant),

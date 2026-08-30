@@ -95,6 +95,7 @@ MC_DungeonDefenders_Neoforge/
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
     │       ├── ManaChestBlock.java           # Meuble de map : donne du mana au clic droit (survie, 1x/vague) ou config (créatif)
+    │       ├── PlayerSpawnBlock.java         # Marqueur de spawn des joueurs : invisible, traversable, ciblable en créatif seulement
     │       └── entity/
     │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal)
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
