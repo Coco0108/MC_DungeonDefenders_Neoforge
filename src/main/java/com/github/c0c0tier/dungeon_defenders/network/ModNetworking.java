@@ -94,6 +94,10 @@ public class ModNetworking {
                 ScoreGainPayload.TYPE,
                 ScoreGainPayload.STREAM_CODEC
         );
+        registrar.playToClient(
+                OpenMapSelectionPayload.TYPE,
+                OpenMapSelectionPayload.STREAM_CODEC
+        );
     }
 
     private static void handlePlaceTower(PlaceTowerPayload payload, IPayloadContext context) {

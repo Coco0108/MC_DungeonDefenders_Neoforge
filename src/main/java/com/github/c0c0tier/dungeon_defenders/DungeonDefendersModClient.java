@@ -17,6 +17,7 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.GameOverScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.ManaChestConfigScreen;
+import com.github.c0c0tier.dungeon_defenders.client.gui.screen.MapSelectionScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScreen;
 import com.github.c0c0tier.dungeon_defenders.entity.MobHealthBarRenderer;
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
@@ -24,6 +25,7 @@ import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
 import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.network.GameOverPayload;
+import com.github.c0c0tier.dungeon_defenders.network.OpenMapSelectionPayload;
 import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
 import com.google.common.reflect.TypeToken;
 
@@ -196,6 +198,11 @@ public class DungeonDefendersModClient {
         event.register(ScoreGainPayload.TYPE, DungeonDefendersModClient::handleScoreGain);
         event.register(GameOverPayload.TYPE, (payload, context) ->
                 context.enqueueWork(() -> Minecraft.getInstance().setScreen(new GameOverScreen(payload.victory()))));
+        // L'écran de choix de map ne s'ouvre plus directement depuis TavernCrystalBlock : ce
+        // bloc est chargé aussi sur un serveur dédié, où nommer une classe cliente fait
+        // planter le chargement du mod — voir OpenMapSelectionPayload.
+        event.register(OpenMapSelectionPayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> Minecraft.getInstance().setScreen(new MapSelectionScreen())));
     }
 
     private static void handleScoreGain(ScoreGainPayload payload, IPayloadContext context) {

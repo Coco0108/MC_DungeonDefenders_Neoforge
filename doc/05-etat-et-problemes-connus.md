@@ -501,6 +501,36 @@ tours) — tous les points suivants ont été trouvés en jouant, pas en relisan
 | `StackOverflowError` au chargement/à la pose d'un spawner | le recalcul ci-dessus, appelé directement depuis `setLevel()`, récursait via `getBlockEntity` (appelé avant l'insertion du block entity dans le chunk) — différé via `serverLevel.getServer().execute(...)` |
 | Les monstres montaient sur les tours (Spike Blockade, Harpoon Turret) et continuaient leur chemin par-dessus | hitbox par défaut = cube plein de 1 bloc, sautable par n'importe quel monstre — `getCollisionShape`/`getShape` surchargés dans les deux blocs pour renvoyer une boîte de 1,5 bloc de haut (même principe que les murs/barrières vanilla) |
 
+### Le mod ne démarrait pas du tout sur un serveur dédié (2026-08-30)
+
+Premier déploiement du mod sur le vrai serveur dédié du joueur (homelab, NeoForge 26.1.2.100) :
+le serveur refusait de démarrer, avec
+
+```
+Dungeon Defenders (dungeon_defenders) has failed to load correctly
+java.lang.NoClassDefFoundError: net/minecraft/client/gui/screens/Screen
+```
+
+dès `ModLoader.constructMods` — donc avant tout enregistrement, mod totalement inutilisable en
+multijoueur (le solo, lui, n'a jamais rien montré : le client embarque les deux côtés).
+
+| Problème | Correction |
+|---|---|
+| `TavernCrystalBlock.useWithoutItem` ouvrait `MapSelectionScreen` via `Minecraft.getInstance().setScreen(...)` dans une branche `if (level.isClientSide())` | la branche ne s'exécutait jamais côté serveur, mais la classe la **nommait** : charger `TavernCrystalBlock` (ce que fait `ModBlocks`, donc `DungeonDefendersMod`) force la JVM à résoudre `MapSelectionScreen` → `Screen`, absent d'un serveur dédié. Remplacé par un paquet clientbound `OpenMapSelectionPayload`, dont le handler vit dans `DungeonDefendersModClient` — même patron que `GameOverPayload` |
+
+La règle générale qui en découle (« ne jamais *nommer* une classe cliente dans une classe
+chargée par le serveur ») et les deux bons patrons pour ouvrir un écran depuis un bloc sont
+décrits dans
+[01-architecture.md](01-architecture.md#la-règle-clientserveur--nommer-une-classe-cliente-suffit-à-casser-un-serveur-dédié).
+
+Ni le compilateur ni `./gradlew runServer` n'attrapent ce genre de bug : l'environnement de dev
+contient les classes des deux côtés. D'où `tools/verifier-dist.py`, qui analyse le *jar produit*
+et refait le raisonnement de la JVM d'un serveur dédié — voir
+[06-a-tester.md](06-a-tester.md#le-mod-sur-un-serveur-dédié). Passé sur la version d'avant
+correction, il retrouve bien la chaîne exacte du crash
+(`DungeonDefendersMod → ModBlocks → TavernCrystalBlock → Screen`) ; sur la version corrigée, le
+graphe serveur est propre.
+
 ## Ce qui reste
 
 ### Pas de texture dédiée
