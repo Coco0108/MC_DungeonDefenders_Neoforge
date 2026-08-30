@@ -180,12 +180,49 @@ besoin d'une grille de coordonnées puisqu'il n'y en a jamais deux en même temp
 prêtes, soit de remplacer `buildPlaceholderArena()` par un vrai chargement de structure
 `.nbt` — même logique que ce qui est prévu pour `TavernSpawn` (voir plus haut).
 
-### Le bloc de spawn joueur — `block PLAYER_SPAWN`, `MapInstance#findAndConsumeSpawnMarker`
+### Le bloc de spawn joueur — `block/PlayerSpawnBlock.java`, `MapInstance#findAndConsumeSpawnMarker`
 
 Décidé avec le joueur (2026-08-26), repris du plan Excel (feuille "Idées" > "CHOIX DE MAP") :
 plutôt qu'une téléportation vers `MAP_POS` codée en dur, le créateur d'une map peut poser un
-bloc `PLAYER_SPAWN` (bloc plein simple, aucun comportement au clic — `BLOCKS.registerSimpleBlock`,
-pas de classe dédiée) à l'endroit exact où les joueurs doivent apparaître.
+bloc `PLAYER_SPAWN` (aucun comportement au clic) à l'endroit exact où les joueurs doivent
+apparaître.
+
+#### Invisible et traversable, comme le spawner
+
+Demandé en jeu (2026-08-30) : c'est un **marqueur d'édition**, pas un élément de décor — il ne
+doit ni se voir ni gêner un déplacement pendant une partie. Traitement identique, méthode par
+méthode, à celui de `SpawnerBlock` (voir "Le spawner n'est plus jamais un obstacle physique"
+plus bas pour le raisonnement complet, valable tel quel ici) :
+
+| Méthode | Valeur | Effet |
+|---|---|---|
+| `getRenderShape` | `RenderShape.INVISIBLE` | jamais rendu, pour personne (même limite : pas de contexte joueur dans cette méthode, donc invisible même en créatif) |
+| `getCollisionShape` | `Shapes.empty()` | joueur et monstres traversent, quelle que soit la phase ou le mode |
+| `getShape` | `Shapes.block()` **si joueur créatif**, sinon `Shapes.empty()` | seul le créatif peut le viser (contour de sélection) — introuvable en survie |
+
+Le bloc était jusque-là enregistré via `BLOCKS.registerSimpleBlock`, sans classe dédiée : cette
+classe n'existe que pour ces trois overrides.
+
+**Pourquoi, alors qu'il s'auto-supprime au démarrage ?** Parce que ça ne couvrait qu'un cas :
+`findAndConsumeSpawnMarker` ne consomme que le **premier** marqueur trouvé (voir plus bas) —
+tous les autres restent posés et visibles — et le marqueur se voit de toute façon tant que la
+partie n'a pas démarré.
+
+**Pas besoin de `noOcclusion()` dans ses `Properties`** : l'occlusion est calculée à
+l'initialisation du `BlockState` à partir de `getShape` avec un `CollisionContext.empty()`
+(vérifié dans `BlockBehaviour$BlockStateBase#initCache` : `occlusionShape = getOcclusionShape(state)`,
+lui-même `state.getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)`). `getEntity()` y est `null`,
+donc le repli `Shapes.empty()` s'applique : le marqueur n'occlut rien et ne bloque pas la
+lumière, sans réglage supplémentaire. Un bloc invisible qui occlurait laisserait au contraire un
+trou noir visible (faces voisines cullées).
+
+Enfin, `getShape` **n'est pas mis en cache** par état (contrairement à `getCollisionShape`,
+vérifié dans `BlockStateBase#getShape`, qui délègue directement au bloc à chaque appel) — c'est
+ce qui permet à la forme de dépendre du joueur qui regarde.
+
+L'**item**, lui, reste visible normalement dans l'onglet créatif et en main : `RenderShape` ne
+concerne que le bloc posé, le rendu de l'item passe par `models/item/player_spawn.json`
+(voir "Texture cassée en main" plus bas).
 
 `findAndConsumeSpawnMarker(level)` parcourt le même volume que `clearZone`/
 `buildPlaceholderArena` (autour de `MAP_POS`), juste après que l'arène a été (re)posée : le
@@ -208,7 +245,9 @@ l'absence actuelle de structures réelles à charger.
 ### Texture cassée en main — `models/item/player_spawn.json`
 
 Signalé en jeu (2026-08-26) : l'item s'affichait avec une texture manquante dans la main/
-l'inventaire, alors que le bloc posé s'affichait correctement. Cause : contrairement au modèle
+l'inventaire, alors que le bloc posé s'affichait correctement (il était encore visible à
+l'époque — voir "Invisible et traversable" ci-dessus ; le modèle de bloc reste nécessaire, ne
+serait-ce que comme parent du modèle d'item). Cause : contrairement au modèle
 de **bloc** (`models/block/player_spawn.json`, ajouté dès le départ), aucun modèle d'**item**
 n'avait été créé — sans lui, rien n'indique au jeu quel modèle utiliser pour l'icône. Corrigé
 en ajoutant `models/item/player_spawn.json` avec `"parent":

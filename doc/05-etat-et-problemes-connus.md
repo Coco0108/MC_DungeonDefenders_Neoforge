@@ -436,11 +436,18 @@ vérifie la CI.
   mécanisme n'a rien à trouver tant que `buildPlaceholderArena()` ne pose qu'un sol générique.
   **Pas concrètement testable avant qu'une vraie structure `.nbt` de map n'existe** — voir
   "Système de maps/structures" plus bas et
-  [02-gameplay.md](02-gameplay.md#le-bloc-de-spawn-joueur--bloc-player_spawn-mapinstancefindandconsumespawnmarker).
+  [02-gameplay.md](02-gameplay.md#le-bloc-de-spawn-joueur--blockplayerspawnblockjava-mapinstancefindandconsumespawnmarker).
   **Corrigé le 2026-08-26** : la texture de l'item était cassée en main/inventaire (aucun
   `models/item/player_spawn.json`, seulement le modèle de bloc) — probablement le même souci
   sur d'autres blocs du mod, jamais vérifié pour eux, voir
   [02-gameplay.md](02-gameplay.md#texture-cassée-en-main--modelsitemplayer_spawnjson).
+  **Changé le 2026-08-30** (demandé en jeu) : le marqueur est désormais **invisible et
+  traversable**, ciblable en créatif uniquement — exactement le traitement déjà appliqué à
+  `SpawnerBlock`. D'où une classe dédiée `block/PlayerSpawnBlock.java`, là où c'était un
+  `registerSimpleBlock` sans classe. L'auto-suppression au démarrage ne suffisait pas :
+  `findAndConsumeSpawnMarker` ne consomme que le **premier** marqueur trouvé (les autres restent
+  posés et visibles), et le marqueur se voit de toute façon tant que la partie n'a pas démarré.
+  **Jamais vérifié visuellement.**
 - ✅ Écran de fin de partie (`client/gui/screen/GameOverScreen.java`,
   `network/GameOverPayload.java`) : décidé avec le joueur (2026-08-26), repris du plan Excel
   ("GUI avec rejouer ou taverne") — s'ouvre automatiquement sur chaque client à la victoire/
