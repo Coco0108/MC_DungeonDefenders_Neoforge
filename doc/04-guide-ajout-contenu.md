@@ -456,7 +456,10 @@ Pour une préférence propre à **ce joueur** (masquer un overlay, désactiver u
 pas la config de gameplay ci-dessus : [`client/ClientDisplayConfig.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/client/ClientDisplayConfig.java)
 est le spec dédié, type `CLIENT` plutôt que `COMMON` — un fichier **local**
 (`config/dungeon_defenders-client.toml`), jamais lu ni synchronisé côté serveur. Exemple
-existant : `showScoreGainPopup` (affichage du popup de `ScoreGainOverlay`).
+existants : `showScoreGainPopup` (affichage du popup de `ScoreGainOverlay`) et
+`showTowerBlockOutline` (contour de sélection sur les tours/cristaux, voir la recette « Masquer
+le contour de sélection d'un bloc » plus bas — l'étape 3 y est différente, ce n'est pas un
+`GuiLayer`).
 
 1. Déclarer le champ dans `ClientDisplayConfig.java` :
 
@@ -493,3 +496,21 @@ constructeur de `DungeonDefendersModClient`
 (`container.registerConfig(ModConfig.Type.CLIENT, ClientDisplayConfig.SPEC)`) — pas la peine d'y
 retoucher pour une nouvelle option, seulement pour la toute première fois que ce fichier a été
 créé.
+
+## Masquer le contour de sélection d'un bloc (sans casser son ciblage)
+
+Le contour noir filaire dessiné autour du bloc visé se supprime **au rendu**, dans
+[`client/BlockOutlineClientEvents.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/client/BlockOutlineClientEvents.java) :
+il suffit d'ajouter une condition à `hidesOutline(...)` (reconnaissance par block entity de
+préférence — générique à toute une famille de blocs — sinon par classe de bloc).
+
+> **Ne surtout pas passer par `getShape` → `Shapes.empty()`** pour ça. `getShape` est la forme
+> lue par le rayon de visée du joueur : la vider ne masque pas seulement le contour, elle rend
+> le bloc **impossible à viser et à cliquer** (`useWithoutItem` ne se déclenche plus, le mode
+> suppression de tour ne le reconnaît plus). C'est un choix délibéré et documenté pour
+> `SpawnerBlock` (introuvable en survie, voir [02-gameplay.md](02-gameplay.md)), mais c'est un
+> bug pour tout bloc avec lequel le joueur doit encore interagir.
+
+L'événement à utiliser est `ExtractBlockOutlineRenderStateEvent`, annulable — annulé, aucun
+render state de contour n'est soumis. **`RenderHighlightEvent` n'existe plus** dans cette
+version de NeoForge : les tutoriels qui le mentionnent sont périmés.

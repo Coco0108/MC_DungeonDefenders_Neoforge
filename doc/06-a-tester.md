@@ -133,6 +133,34 @@ Nouveau (2026-08-27), jamais vérifié visuellement.
       relancer : l'option décochée dans l'écran de config reflète bien la valeur du fichier.
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ClientDisplayConfig`.
 
+## Contour de sélection masqué sur les tours et cristaux (`BlockOutlineClientEvents`)
+
+Nouveau (2026-08-30), jamais vérifié visuellement. Le risque principal n'est pas que le contour
+reste affiché, c'est qu'il **emporte le ciblage avec lui** — d'où les points d'interaction
+ci-dessous, à vérifier au moins autant que le rendu.
+
+- [ ] Viser une tour posée (n'importe laquelle : Spike/Bouncer/Slice N Dice Blockade, Harpoon/
+      Bowling Ball/Mortar Turret) : **aucun contour noir**, à aucune hauteur de visée.
+- [ ] Viser le Cristal d'Eternia, puis le cristal de la taverne : **aucun contour noir** non
+      plus (le cristal d'Eternia en avait un de 3 blocs de haut, très visible).
+- [ ] Viser un bloc quelconque à côté (terrain, coffre de mana, bloc de spawn joueur) : le
+      contour noir **est toujours là** — seuls les tours et cristaux sont concernés.
+- [ ] Clic droit sur le Cristal d'Eternia en Construction : le vote « prêt » fonctionne toujours
+      (message de progression) — c'est la preuve que le ciblage n'a pas été cassé.
+- [ ] Clic droit sur le cristal de la taverne : `MapSelectionScreen` s'ouvre toujours.
+- [ ] Mode suppression de tour (`X`) : le contour **orange** apparaît toujours sur la tour visée
+      (et devrait être plus lisible qu'avant, sans la boîte noire par-dessus), et le clic gauche
+      retire bien la tour.
+- [ ] En créatif, casser une tour/un cristal reste possible (viser + clic gauche maintenu) même
+      sans contour — un peu moins confortable, à confirmer que c'est acceptable en usage réel.
+- [ ] La barre de vie des tours (`TowerHealthBarRenderer`) s'affiche toujours normalement.
+- [ ] Option `showTowerBlockOutline` : présente et **décochée par défaut** dans Menu Mods >
+      Dungeon Defenders > Config > "Affichage (HUD)". La cocher fait **revenir** le contour noir
+      sur les tours et cristaux (comportement d'avant), la décocher le fait repartir.
+- [ ] Sur le serveur dédié : le comportement est le même, et un autre joueur qui n'a pas touché
+      à son option voit la même chose (config purement locale, rien de synchronisé).
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `BlockOutlineClientEvents`.
+
 ## Le reste du roster de l'Écuyer (Bouncer Blockade, Bowling Ball Turret)
 
 (Bouncer/Slice N Dice Blockade, Bowling Ball/Mortar Turret) — design discuté et validé avec le
