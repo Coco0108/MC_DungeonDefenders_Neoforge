@@ -233,7 +233,7 @@ simples (ex. `minecraft:item/dirt`, qui référence directement `minecraft:block
 | Block entity | `newBlockEntity` → `new EterniaCrystalBlockEntity(pos, state)` |
 | Render shape | `RenderShape.MODEL` (modèle JSON classique) |
 | Collision | `Shapes.box(0, 0, 0, 1, 3, 1)` — 1×3×1, le cristal est infranchissable sur 3 blocs |
-| Sélection | même boîte 1×3×1 (contour de visée aligné sur la collision) |
+| Sélection | même boîte 1×3×1 — le ciblage reste sur 3 blocs de haut, mais le contour noir n'est **plus dessiné** (voir "Le contour de sélection masqué sur les tours et les cristaux") |
 
 Propriétés définies à l'enregistrement dans `ModBlocks` :
 
@@ -1326,6 +1326,63 @@ tour, sans avoir eu besoin de toucher à `strength()`/`getDestroyProgress()` par
 - Aucun retour visuel pendant que le mode est actif hors du contour orange sur la cible (pas de
   changement de curseur, pas d'indicateur HUD permanent) — seul le message système à
   l'activation/désactivation l'indique.
+
+## Le contour de sélection masqué sur les tours et les cristaux — `client/BlockOutlineClientEvents.java`
+
+Demandé en jeu (2026-08-30), pour l'immersion : le contour noir filaire que Minecraft dessine
+autour du bloc visé n'apparaît plus sur les tours ni sur les cristaux. Ces blocs ont des modèles
+custom rendus par un `BlockEntityRenderer`, et la boîte vanilla — alignée sur `getShape`, donc
+**1,5 bloc de haut** pour une tour (hitbox anti-escalade) et **3 blocs** pour le Cristal
+d'Eternia — flottait visiblement autour du modèle au lieu de l'épouser.
+
+### Comment — annuler l'extraction du render state, pas toucher aux formes
+
+`ExtractBlockOutlineRenderStateEvent` (`net.neoforged.neoforge.client.event`) est annulable ;
+sa javadoc est explicite : annulé, aucun render state de contour n'est soumis, donc rien n'est
+dessiné. **`RenderHighlightEvent` des versions précédentes n'existe plus** dans cette version de
+NeoForge — c'est cet événement-là (plus `CustomBlockOutlineRenderer` pour un rendu custom, non
+utilisé ici) qui l'a remplacé.
+
+```java
+@SubscribeEvent
+static void onExtractBlockOutline(ExtractBlockOutlineRenderStateEvent event) {
+    BlockEntity blockEntity = event.getLevel().getBlockEntity(event.getBlockPos());
+    if (hidesOutline(event.getBlockState(), blockEntity)) {
+        event.setCanceled(true);
+    }
+}
+```
+
+**Ceci ne touche que le rendu, jamais le ciblage** — c'est la différence essentielle avec
+l'approche `getShape` → `Shapes.empty()` utilisée par `SpawnerBlock` (voir plus haut) : là-bas
+le but était justement de rendre le bloc introuvable/incliquable en survie, ce qui ici casserait
+toute interaction avec les tours et les cristaux. `getShape` reste inchangé, donc viser, le clic
+droit (vote prêt sur le Cristal d'Eternia, choix de map sur celui de la taverne), le mode
+suppression de tour et la casse en créatif fonctionnent exactement comme avant : le bloc reste
+parfaitement cliquable, il n'est simplement plus souligné.
+
+### Quels blocs
+
+Reconnus par leur **block entity** : `AbstractTowerBlockEntity` (couvre Blockade et Turret, donc
+automatiquement toute nouvelle tour ajoutée plus tard, même logique générique que le ciblage du
+mode suppression) et `EterniaCrystalBlockEntity`. Le cristal de la taverne n'a pas de block
+entity (aucun état à stocker) : reconnu à sa classe de bloc, `TavernCrystalBlock`.
+
+Le spawner et le coffre de mana ne sont **pas** concernés (hors demande) — et le spawner ne
+dessine de toute façon déjà aucun contour en survie, puisque son `getShape` y est vide.
+
+### L'option de config
+
+`ClientDisplayConfig.SHOW_TOWER_BLOCK_OUTLINE` (`showTowerBlockOutline`), **par défaut `false`**
+— contrairement aux autres options d'affichage, activées par défaut : c'est bien l'absence de
+contour qui est le comportement voulu, l'option n'existe que pour le remettre. Config de type
+CLIENT, donc purement locale : un joueur qui la réactive ne change rien pour les autres.
+
+### Ce qui reste pour repérer une tour
+
+Le contour n'était pas le seul repère visuel : le mode suppression dessine son propre contour
+**orange** (`TowerRemovalClientEvents`, inchangé et désormais mieux lisible sans la boîte noire
+par-dessus) et les tours affichent leur barre de vie (`TowerHealthBarRenderer`).
 
 ## Le mana du joueur
 

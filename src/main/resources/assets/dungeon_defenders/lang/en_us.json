@@ -91,5 +91,6 @@
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml.title": "Dungeon Defenders Configs",
   "dungeon_defenders.configuration.section.dungeon_defenders.client.toml": "HUD Display",
   "dungeon_defenders.configuration.section.dungeon_defenders.client.toml.title": "HUD Display",
-  "dungeon_defenders.configuration.showScoreGainPopup": "Show score gain popup"
+  "dungeon_defenders.configuration.showScoreGainPopup": "Show score gain popup",
+  "dungeon_defenders.configuration.showTowerBlockOutline": "Show selection outline on towers and crystals"
 }

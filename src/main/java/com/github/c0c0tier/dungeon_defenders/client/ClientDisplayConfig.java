@@ -23,5 +23,12 @@ public class ClientDisplayConfig {
             .comment("Afficher le \"+X\" flottant en bas à droite de l'écran à chaque gain de score.")
             .define("showScoreGainPopup", true);
 
+    // Masqué par défaut (contrairement aux autres options, activées par défaut) : c'est bien
+    // l'absence de contour qui est le comportement voulu, l'option n'existe que pour le
+    // remettre — voir BlockOutlineClientEvents.
+    public static final ModConfigSpec.BooleanValue SHOW_TOWER_BLOCK_OUTLINE = BUILDER
+            .comment("Afficher le contour noir de sélection quand on vise une tour ou un cristal.")
+            .define("showTowerBlockOutline", false);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 }

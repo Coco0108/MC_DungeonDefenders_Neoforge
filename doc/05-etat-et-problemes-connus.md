@@ -458,6 +458,20 @@ vérifie la CI.
   système de victoire/défaite + le lien "Retour à la taverne" du chat ont été retirés
   (`PhaseTransitions.onVictory/onDefeat`), devenus redondants avec cet écran. Détail dans
   [02-gameplay.md](02-gameplay.md#lécran-de-fin-de-partie--clientguiscreengameoverscreenjava-networkgameoverpayloadjava).
+- ✅ Contour de sélection masqué sur les tours et les cristaux
+  (`client/BlockOutlineClientEvents.java`) : demandé en jeu le 2026-08-30 pour l'immersion — la
+  boîte filaire noire vanilla, alignée sur `getShape` (1,5 bloc de haut pour une tour, 3 pour le
+  Cristal d'Eternia), flottait visiblement autour des modèles custom au lieu de les épouser.
+  Passe par `ExtractBlockOutlineRenderStateEvent`, annulé (`RenderHighlightEvent` n'existe plus
+  dans cette version de NeoForge) : **seul le rendu du contour disparaît, `getShape` n'est pas
+  touché** — viser, cliquer, le vote « prêt », le choix de map et le mode suppression de tour
+  fonctionnent exactement comme avant. À l'opposé du choix fait pour `SpawnerBlock`, où vider
+  `getShape` sert justement à rendre le bloc introuvable en survie. Reconnaissance par block
+  entity (`AbstractTowerBlockEntity`, donc générique à toute tour future, et
+  `EterniaCrystalBlockEntity`) plus la classe `TavernCrystalBlock`, qui n'a pas de block entity.
+  Option CLIENT `showTowerBlockOutline` pour remettre le contour, **décochée par défaut**.
+  **Jamais vérifié visuellement.** Détail dans
+  [02-gameplay.md](02-gameplay.md#le-contour-de-sélection-masqué-sur-les-tours-et-les-cristaux--clientblockoutlineclienteventsjava).
 
 ## Corrections apportées
 
