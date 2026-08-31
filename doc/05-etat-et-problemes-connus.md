@@ -361,6 +361,27 @@ vérifie la CI.
   le jeu ne doit dépendre du terrain généré naturellement. Détail dans
   [02-gameplay.md](02-gameplay.md#le-monde-et-le-point-de-spawn). **Testé en jeu** (2026-08-23) :
   le monde se crée bien vide, la plateforme de la taverne apparaît et se repose correctement.
+- ✅ **Chargement de la vraie structure de la taverne** (`TavernSpawn#placeTavern`, 2026-08-31) :
+  la plateforme en dur est remplacée par le chargement de `dungeon_defenders:tavern`
+  (`data/dungeon_defenders/structure/tavern.nbt`) via le `StructureTemplateManager` vanilla —
+  **premier vrai chargement de structure du mod**, le même mécanisme servira pour les maps.
+  Nettoyage de zone calculé depuis `template.getSize()` (plus une marge de 4) avant de poser,
+  pour qu'une version précédente plus grande ne laisse pas de restes. **Repli sur l'ancienne
+  plateforme si le fichier est absent** — un monde vide sans sol serait injouable, et le fichier
+  n'est pas encore livré. Le point d'arrivée vient d'un marqueur `player_spawn` posé dans la
+  structure, **non consommé** contrairement à celui d'une map (on revient à la taverne en
+  permanence) ; `MapInstance.returnToTavern` et le point de respawn du monde l'utilisent tous
+  les deux. `clearZone` remet à zéro **les blocs puis les entités** (joueurs exceptés), dans cet
+  ordre précis : écrire les blocs force le chargement des chunks, sans quoi la recherche
+  d'entités pendant `LevelEvent.Load` ne trouverait rien et la structure en poserait un
+  exemplaire de plus à chaque démarrage. Les entités de la structure sont donc bien posées.
+  Décidé avec le joueur (2026-08-31) : la suppression d'entités est de toute façon nécessaire
+  pour le futur **mannequin d'entraînement** (PV infinis, immobile, cible des tours), qui ne
+  doit pas s'accumuler. **Jamais vérifié en jeu, et jamais essayé avec une vraie structure**
+  (aucune n'existe encore) — la partie « suppression des entités » est le point le plus incertain
+  faute de test réel. Détail dans
+  [02-gameplay.md](02-gameplay.md#le-chargement-de-la-structure--tavernspawnplacetavern), recette
+  de livraison dans [04-guide-ajout-contenu.md](04-guide-ajout-contenu.md).
 - ✅ Cristal de la taverne (`TavernCrystalBlock`, distinct d'`EterniaCrystalBlock` — pas de PV,
   pas de combat) : clic droit ouvre `MapSelectionScreen`, un carrousel de maps
   (`init/GameMap.java`, extensible, chaque entrée peut être masquée du carrousel tant qu'elle
@@ -850,9 +871,21 @@ Plan affiné au fil de plusieurs échanges avec le joueur, pas encore tout codé
   version du mod resterait invisible sur une sauvegarde existante — le joueur garderait la
   version posée lors de sa toute première visite, rien ne la reposant ensuite.
 
+**Décidé avec le joueur (2026-08-31) sur les zones de pose de tours** : plutôt qu'une liste
+blanche (« on ne peut poser que dans les zones marquées », comme le jeu de référence), ce sera
+une **liste noire** — le joueur peut poser partout **sauf** dans les zones que le créateur de
+map marque comme interdites. Raison donnée : c'est plus ouvert à la créativité du joueur, et si
+le mappeur oublie un endroit, le pire cas est une pose autorisée en trop, pas un endroit
+injouable. Rien de codé, voir le backlog dans
+[07-idees-et-backlog.md](07-idees-et-backlog.md).
+
 **Fait** :
-- Monde vide + point de spawn fixe, reposé (pour l'instant une plateforme provisoire) à chaque
-  chargement du monde plutôt qu'une seule fois — voir plus haut.
+- Monde vide + point de spawn fixe, reposé à chaque chargement du monde plutôt qu'une seule
+  fois — voir plus haut.
+- Le **chargement de la structure de la taverne** (`TavernSpawn#placeTavern`, 2026-08-31) : le
+  mécanisme complet (lecture du `.nbt`, nettoyage de zone dimensionné sur la structure, marqueur
+  d'arrivée non consommé, repli si le fichier manque). Voir "Ce qui est implémenté" plus haut.
+  Il ne manque plus que **le fichier lui-même**, que le joueur construit.
 - L'écran de choix de map/difficulté dans la taverne (`TavernCrystalBlock`/
   `MapSelectionScreen`, voir plus haut et
   [02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté)) — la difficulté
@@ -869,10 +902,15 @@ Plan affiné au fil de plusieurs échanges avec le joueur, pas encore tout codé
   `buildPlaceholderArena()` ne pose qu'un sol générique.
 
 **Reste à faire** : le choix de map précis dans le carrousel n'a toujours aucun effet (une
-seule map placeholder générique pour l'instant, quel que soit l'élément sélectionné) ; la
-vraie structure de la taverne (la plateforme actuelle est un placeholder) ; au moins une
-vraie map, et le vrai chargement de sa structure `.nbt` (remplacerait
-`buildPlaceholderArena()`) ; la réinitialisation tours/PV du cristal entre deux tentatives ;
+seule map placeholder générique pour l'instant, quel que soit l'élément sélectionné) ; le
+**fichier** de structure de la taverne (le mécanisme de chargement existe, il n'a rien à
+charger) ; le mannequin d'entraînement annoncé pour la taverne (voir le backlog) ; au
+moins une vraie map, et le vrai chargement de sa structure `.nbt` (remplacerait
+`buildPlaceholderArena()`, en réutilisant ce que fait déjà `TavernSpawn`) ; les zones où la
+pose de tours est interdite (décision ci-dessus) ; une phase/un état "taverne" distinct de
+Construction, pour que la roue des tours ne s'ouvre pas dans le hub (`GAME_PHASE` vaut `BUILD`
+par défaut, et rien ne distingue la taverne d'une map) ; la réinitialisation tours/PV du cristal
+entre deux tentatives ;
 le force-chargement pendant une partie ; une bordure/barrière anti-chute dans le vide en
 dehors des zones bâties ; un vrai point de sortie posé dans chaque map (`/dd_leave` reste une
 commande de harnais, utilisable à tout moment, pas seulement après victoire/défaite). C'est

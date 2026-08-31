@@ -459,6 +459,49 @@ seulement les tours.
 - [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
       `ModEvents.onBlockBreakAttempt` ou `BreakBlockEvent`.
 
+## Le chargement de la structure de la taverne (`TavernSpawn#placeTavern`)
+
+Nouveau (2026-08-31), jamais vérifié en jeu — et **jamais essayé avec une vraie structure**,
+puisqu'aucune n'existe encore. Les premiers points sont donc testables tout de suite (repli),
+les suivants seulement une fois `tavern.nbt` livré.
+
+Sans fichier de structure (état actuel du dépôt) :
+
+- [ ] Démarrer le monde/serveur : la plateforme 9x9 de pierre lisse apparait comme avant, on
+      arrive bien dessus, rien n'a changé pour le joueur.
+- [ ] Les logs contiennent l'avertissement `Structure de taverne introuvable ... repli sur la
+      plateforme provisoire.` (une fois par chargement du monde, pas en boucle).
+- [ ] `/dd_leave` depuis une map ramene toujours au meme endroit.
+
+Une fois `data/dungeon_defenders/structure/tavern.nbt` livre :
+
+- [ ] Au demarrage, la taverne apparait entierement, centree sur (0, 65, 0) en X/Z, son sol a
+      Y=64. Aucun bloc manquant sur les bords.
+- [ ] Plus aucune trace de l'ancienne plateforme de pierre lisse autour (c'est ce que doit
+      effacer le nettoyage de zone) — ni d'une version precedente de la taverne, a tester en
+      livrant une structure plus petite apres une plus grande.
+- [ ] Le `tavern_crystal` de la structure est bien la et son clic droit ouvre l'ecran de choix
+      de map (les block entities d'une structure gardent leurs donnees NBT).
+- [ ] Avec un `player_spawn` pose dans la structure : on arrive **a sa position**, pas au
+      centre. Sans marqueur : on arrive au centre (0, 65, 0).
+- [ ] Le marqueur **n'est pas consomme** : quitter la taverne, y revenir (`/dd_leave`), et
+      redemarrer le serveur — on doit arriver au meme endroit a chaque fois.
+- [ ] Mourir dans une map fait reapparaitre a la position d'arrivee de la taverne, pas a
+      (0, 65, 0) si le marqueur est ailleurs.
+- [ ] Les entites de la structure (cadres, supports a armure, tableaux) **sont bien posees**.
+- [ ] **Le point le plus incertain** : redemarrer le serveur trois ou quatre fois d'affilee et
+      recompter ces entites. Elles doivent rester au **meme nombre**, pas se dupliquer a chaque
+      demarrage — c'est ce que doit empecher la suppression d'entites de `clearZone`, et c'est
+      justement ce qui depend du fait que les chunks soient bien charges a ce moment-la.
+- [ ] Laisser tomber un objet au sol dans la taverne, redemarrer : il a disparu (nettoyage
+      volontaire).
+- [ ] Se tenir dans la taverne pendant un redemarrage (multijoueur, ou juste se reconnecter) :
+      le joueur n'est **jamais** supprime par le nettoyage.
+- [ ] Modifier un bloc de la taverne en creatif, redemarrer : la modification est ecrasee (la
+      structure est reposee a chaque chargement).
+- [ ] Aucune exception dans les logs liee a `TavernSpawn`, `StructureTemplate` ou
+      `StructureTemplateManager`.
+
 ## Le bloc de spawn joueur (`ModBlocks.PLAYER_SPAWN`, `MapInstance#findAndConsumeSpawnMarker`)
 
 Jamais testé en jeu. **Le mécanisme complet n'est pas testable pour l'instant** — voir

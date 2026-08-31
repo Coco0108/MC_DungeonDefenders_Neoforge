@@ -53,11 +53,11 @@ Un monde vide n'a nulle part où faire apparaître un joueur "normalement" (le j
 d'habitude un sol solide près de l'origine). `TavernSpawn`, sur `LevelEvent.Load` (une fois
 par chargement de l'Overworld) :
 
-1. Fixe le point de spawn du monde à **(0, 65, 0)** via `ServerLevel#setRespawnData(...)` —
-   remplace la recherche automatique de sol (qui échouerait dans le vide).
-2. **(Re)pose le contenu de la taverne** à cet emplacement — pour l'instant une plateforme
-   provisoire en dur (9×9, `smooth_stone`, un bloc sous le point de spawn), en attendant une
-   vraie structure `.nbt`.
+1. **(Re)pose la structure de la taverne** à cet emplacement (voir "Le chargement de la
+   structure" juste en dessous).
+2. Fixe le point de spawn du monde sur la **position d'arrivée réelle** de cette structure via
+   `ServerLevel#setRespawnData(...)` — remplace la recherche automatique de sol (qui échouerait
+   dans le vide). C'est donc aussi là que réapparaît un joueur mort en pleine map.
 
 **Pourquoi rejouer l'étape 2 à *chaque* chargement du monde**, plutôt qu'une seule fois : la
 taverne suit le même principe que les futures maps (voir 05-etat-et-problemes-connus.md,
@@ -67,13 +67,81 @@ de la taverne dans une future version du mod resterait invisible sur une sauvega
 existante : le joueur garderait la version posée lors de sa toute première connexion, le mod
 n'ayant plus aucune raison de la reposer ensuite. Recharger à chaque démarrage du monde est le
 déclencheur le plus simple qui garantit que ce qui est affiché correspond toujours à la
-version livrée avec le mod installé. Le remplacement de la plateforme provisoire par un vrai
-chargement de structure `.nbt` gardera ce même principe (voir le commentaire de
-`TavernSpawn#buildPlaceholderPlatform`).
+version livrée avec le mod installé.
 
 `LevelEvent.Load` se déclenche pour **toute** dimension qui se charge (l'Overworld, mais
 aussi le Nether/End vanilla si un joueur y va) — le handler sort immédiatement si ce n'est
 pas l'Overworld (`serverLevel.dimension() != Level.OVERWORLD`), pour ne rien changer ailleurs.
+
+### Le chargement de la structure — `TavernSpawn#placeTavern`
+
+Depuis le 2026-08-31, la taverne est une vraie structure Minecraft chargée depuis
+**`data/dungeon_defenders/structure/tavern.nbt`** (identifiant `dungeon_defenders:tavern`), et
+non plus une plateforme codée en dur. C'est le premier vrai chargement de structure du mod — le
+même mécanisme servira pour les maps (`MapInstance.buildPlaceholderArena`, pas encore remplacé).
+
+Déroulé de `placeTavern` :
+
+1. `level.getStructureManager().get(TAVERN_STRUCTURE)` — le gestionnaire vanilla, qui lit aussi
+   bien les structures livrées dans le jar du mod que celles d'un datapack.
+2. **Si le fichier est absent** : message d'avertissement dans les logs et **repli sur l'ancienne
+   plateforme** 9×9 en `smooth_stone`. Volontaire : dans un monde vide, un mod sans sol est
+   injouable — mieux vaut une plateforme moche qu'une chute infinie.
+3. **Nettoyage de la zone** avant de poser (`clearZone`), sur l'emprise exacte de la structure
+   plus `CLEAR_MARGIN = 4` de marge dans toutes les directions. Sans ça, une version précédente
+   plus grande (ou la plateforme de repli) laisserait ses restes flotter autour de la nouvelle
+   taverne. La marge se calcule à partir de `template.getSize()`, pas d'un rayon en dur : la
+   taverne peut grandir sans qu'on ait à toucher au code.
+4. `template.placeInWorld(...)` avec `Block.UPDATE_CLIENTS` (et **pas** `UPDATE_ALL`) : on ne
+   veut pas déclencher une cascade de mises à jour de voisinage sur chaque bloc posé, seulement
+   que les clients voient le résultat — même choix que le bloc de structure vanilla.
+
+#### Où la structure est posée
+
+Centrée **horizontalement** sur `SPAWN_POS` (0/0 en X/Z), sa couche la plus basse posée à
+`SPAWN_POS.y - 1` (soit Y=64) : le sol de la taverne est donc juste sous le point d'arrivée.
+
+#### La position d'arrivée — le marqueur `player_spawn`, non consommé
+
+`arrivalPos(level)` cherche un bloc `player_spawn` **dans la structure** et renvoie sa position ;
+sinon, repli sur `SPAWN_POS`. Le créateur de la taverne peut donc déplacer le point d'arrivée
+sans avoir à recaler toute la structure.
+
+Deux différences avec le marqueur d'une map (`MapInstance#findAndConsumeSpawnMarker`) :
+
+- **Il n'est pas consommé.** On revient à la taverne en permanence ; le supprimer à la première
+  arrivée casserait toutes les suivantes. C'est sans conséquence visuelle depuis que le bloc est
+  invisible et traversable (voir "Le bloc de spawn joueur" plus bas).
+- **La recherche se fait dans le template, pas dans le monde** : `StructureTemplate#filterBlocks`
+  renvoie directement les positions absolues du bloc demandé, pas besoin de balayer un volume
+  bloc par bloc comme le fait `MapInstance`.
+
+`arrivalPos` est recalculée à chaque appel plutôt que mémorisée dans un champ statique : le
+gestionnaire de structures garde déjà le template en cache, et elle n'est appelée que rarement
+(chargement du monde, retour à la taverne). `MapInstance.returnToTavern` l'utilise aussi, pour
+que `/dd_leave` et la fin de partie ramènent au même endroit que le spawn.
+
+#### Les entités aussi sont remises à zéro — `clearZone`
+
+`clearZone` fait deux passes : d'abord tous les blocs de la zone en air, **puis** la suppression
+de toutes les entités qui s'y trouvent, joueurs exceptés. C'est ce qui permet à la structure de
+contenir des entités (`StructurePlaceSettings` par défaut, pas de `setIgnoreEntities`) sans
+qu'elles se dupliquent à chaque rechargement : celles du chargement précédent sont supprimées,
+`placeInWorld` repose celles du fichier.
+
+**L'ordre des deux passes est délibéré.** Écrire un bloc force le chargement de son chunk ;
+balayer les blocs en premier garantit donc que tous les chunks de la zone sont chargés avant
+qu'on interroge leurs entités. Chercher les entités d'abord — pendant `LevelEvent.Load`, avant
+que quoi que ce soit ne soit chargé — n'en trouverait aucune, et la structure en poserait un
+exemplaire de plus à chaque démarrage du serveur.
+
+Ce que ça emporte, volontairement : les entités décoratives (reposées juste après), les objets
+au sol qu'un joueur aurait laissés dans la taverne, et le futur **mannequin d'entraînement** des
+tours. Chaque chargement du monde remet la taverne dans l'état livré avec le mod.
+
+> Décidé avec le joueur (2026-08-31) : la suppression d'entités est nécessaire de toute façon,
+> puisqu'un mannequin d'entraînement (PV infinis, immobile, cible des tours pour mesurer leurs
+> dégâts) viendra vivre dans la taverne et ne doit pas s'accumuler en plusieurs exemplaires.
 
 ## La taverne — choix de map et difficulté
 

@@ -14,7 +14,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── DungeonDefendersMod.java          # Point d'entrée @Mod (commun)
     │   ├── DungeonDefendersModClient.java    # Point d'entrée @Mod côté CLIENT uniquement
     │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA, vie max du joueur)
-    │   ├── TavernSpawn.java                  # Point de spawn fixe + plateforme provisoire (monde vide)
+    │   ├── TavernSpawn.java                  # Point de spawn fixe + chargement de la structure de la taverne (monde vide)
     │   ├── MapInstance.java                  # "La map active" : emplacement partagé, placeholder, téléportation
     │   ├── ModCommands.java                  # /dd_leave (retour à la taverne, harnais de test)
     │   ├── Config.java                       # Spec de config COMMON (PV cristal, dégâts, portée), branchée
@@ -297,7 +297,8 @@ Bus de jeu (NeoForge.EVENT_BUS)
    │         PhaseTransitions.enterBuild(level) (vague suivante)
    │         ou PhaseTransitions.onVictory(level) si c'était déjà MAX_WAVE
    ├─ TavernSpawn.onLevelLoad(LevelEvent.Load)
-   │    └─ si Overworld : fixe le point de spawn (0,65,0) + pose la plateforme provisoire
+   │    └─ si Overworld : pose la structure dungeon_defenders:tavern (repli plateforme si absente)
+   │       + fixe le point de spawn sur son marqueur player_spawn (sinon (0,65,0))
    └─ ModCommands.onRegisterCommands(RegisterCommandsEvent)
         └─ enregistre /dd_leave -> MapInstance.returnToTavern(level)
 
