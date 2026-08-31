@@ -9,6 +9,8 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.MortarTurretBlockEntit
 import com.github.c0c0tier.dungeon_defenders.block.entity.SliceNDiceBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpikeBlockadeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.TrainingDummyBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
@@ -23,6 +25,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
@@ -94,6 +97,12 @@ public class DungeonDefendersMod {
                     ModBlocks.MORTAR_TURRET.get()
             ));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TrainingDummyBlockEntity>> TRAINING_DUMMY_BE =
+            BLOCK_ENTITIES.register("training_dummy", () -> new BlockEntityType<>(
+                    TrainingDummyBlockEntity::new,
+                    ModBlocks.TRAINING_DUMMY.get()
+            ));
+
     // 3. L'onglet Créatif
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> DUNGEON_DEFENDERS_TAB = CREATIVE_MODE_TABS.register("dungeon_defenders_tab",
             () -> CreativeModeTab.builder()
@@ -111,6 +120,7 @@ public class DungeonDefendersMod {
                         output.accept(ModBlocks.TAVERN_CRYSTAL_ITEM.get());
                         output.accept(ModBlocks.MANA_CHEST_ITEM.get());
                         output.accept(ModBlocks.PLAYER_SPAWN_ITEM.get());
+                        output.accept(ModBlocks.TRAINING_DUMMY_ITEM.get());
                     })
                     .build());
 
@@ -123,8 +133,17 @@ public class DungeonDefendersMod {
         BLOCK_ENTITIES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
 
+        // Tout Mob custom doit fournir ses attributs par défaut, sinon le jeu plante à la
+        // première invocation. Événement du bus MOD, d'où l'inscription ici plutôt qu'un
+        // @SubscribeEvent (cette classe n'est pas un @EventBusSubscriber).
+        modEventBus.addListener(DungeonDefendersMod::onEntityAttributeCreation);
+
         container.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
         LOGGER.info("Le mod Dungeon Defenders est initialisé proprement !");
+    }
+
+    private static void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
+        event.put(ModEntities.TRAINING_DUMMY.get(), TrainingDummyEntity.createAttributes().build());
     }
 }

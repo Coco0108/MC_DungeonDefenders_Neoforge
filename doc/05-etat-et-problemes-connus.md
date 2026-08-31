@@ -501,6 +501,21 @@ vérifie la CI.
   **Jamais vérifié visuellement.** Détail dans
   [02-gameplay.md](02-gameplay.md#le-contour-de-sélection-masqué-sur-les-tours-et-les-cristaux--clientblockoutlineclienteventsjava).
 
+- ✅ **Mannequin d'entraînement** (`entity/TrainingDummyEntity.java`,
+  `block/TrainingDummyBlock.java`, `block/entity/TrainingDummyBlockEntity.java`, 2026-08-31) :
+  cible immobile et indestructible attaquée par les tours, pour mesurer leurs dégâts sans monter
+  une vraie vague. Demandé par le joueur pour la taverne. Hérite de `Zombie` par nécessité —
+  les tourelles ne ciblent que des `Monster`, et ça permet de réutiliser `ZombieRenderer` sans
+  créer de modèle. Tout le reste est neutralisé : aucun goal, `setNoAi`, pas de combustion au
+  soleil, `KNOCKBACK_RESISTANCE` à 1.0, pas de despawn, et 1024 PV remis au maximum à chaque
+  coup. Le bloc support (invisible/traversable, comme le spawner) réinvoque le mannequin s'il a
+  disparu, une fois par seconde — choisi plutôt qu'une entité posée directement dans le `.nbt`
+  de la taverne pour qu'aucun doublon ne puisse s'accumuler même si le nettoyage d'entités
+  ratait l'ancien. **Deux limites assumées** : le mannequin **ressemble à un zombie** (pas de
+  modèle de mannequin de paille), et l'absence de barre de vie tient au filtre par type de
+  `MobHealthBarRenderer`, pas à une exclusion explicite. **Jamais vérifié en jeu.** Détail dans
+  [02-gameplay.md](02-gameplay.md#le-mannequin-dentraînement--entitytrainingdummyentityjava-blocktrainingdummyblockjava).
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.

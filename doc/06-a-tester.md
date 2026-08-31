@@ -459,6 +459,49 @@ seulement les tours.
 - [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
       `ModEvents.onBlockBreakAttempt` ou `BreakBlockEvent`.
 
+## Le mannequin d'entrainement (`TrainingDummyEntity`, `TrainingDummyBlock`)
+
+Nouveau (2026-08-31), jamais verifie en jeu. Deuxieme `Entity` custom du mod, et le premier a
+etre un `Mob` (attributs, IA, rendu) — plusieurs points peuvent casser independamment.
+
+Le bloc et l'invocation :
+
+- [ ] En creatif, l'item "Support de mannequin" apparait dans l'onglet du mod et se pose sans
+      crash. Le bloc pose est **invisible** ; en creatif on le retrouve au contour de visee, en
+      survie il est traversable et introuvable (meme comportement que le spawner).
+- [ ] Dans la seconde qui suit la pose, un mannequin apparait **juste au-dessus** du bloc.
+- [ ] Le tuer n'est pas possible, mais le supprimer a la main (`/kill @e[type=dungeon_defenders:training_dummy]`)
+      doit le faire **reapparaitre** en moins d'une seconde.
+- [ ] Casser le bloc en creatif : le mannequin **disparait avec lui**
+      (`affectNeighborsAfterRemoval`), pas d'entite orpheline laissee derriere.
+- [ ] Poser deux blocs cote a cote : deux mannequins distincts, un par bloc. Poser deux blocs
+      l'un sur l'autre est un cas limite (le rayon de recherche fait 1,5 bloc) : verifier qu'il
+      n'en manque pas un.
+- [ ] Redemarrer le serveur plusieurs fois : il ne doit **jamais** y avoir deux mannequins
+      empiles au meme endroit.
+
+Le mannequin lui-meme :
+
+- [ ] Il ressemble a un **zombie immobile** — comportement attendu (placeholder, pas de modele
+      de mannequin dedie), pas un bug.
+- [ ] Il ne bouge **jamais** : pas de marche, pas de rotation vers le joueur, pas de chute meme
+      sans bloc solide sous lui.
+- [ ] Il ne **brule pas** au soleil (un zombie normal, lui, prend feu).
+- [ ] **Aucune barre de vie** ne s'affiche au-dessus de lui, meme apres l'avoir frappe.
+- [ ] Le frapper a l'epee : l'animation de degat joue, mais il ne meurt jamais et sa vie ne
+      descend pas durablement.
+- [ ] Poser une **Harpoon Turret** (ou n'importe quelle tourelle) a portee : elle doit **lui
+      tirer dessus** — c'est le point central de toute la fonctionnalite, et ce qui verifie que
+      le ciblage `Monster` fonctionne pour un type custom.
+- [ ] Poser un **Bouncer Blockade** contre lui : il encaisse les coups **sans etre repousse**
+      (`KNOCKBACK_RESISTANCE`).
+- [ ] Il n'attaque **personne** et ne se dirige jamais vers le Cristal d'Eternia (verifie que
+      `ModEvents.onMonsterSpawn` l'ignore bien).
+- [ ] Le tuer etant impossible, verifier qu'il ne donne **ni cristal de mana, ni XP, ni score**,
+      et qu'il ne compte **pas** dans les ennemis d'une vague (`WAVE_ENEMIES_TOTAL/KILLED`).
+- [ ] Aucune exception dans les logs liee a `TrainingDummyEntity`, `TrainingDummyBlockEntity` ou
+      `EntityAttributeCreationEvent` (un Mob custom sans attributs plante a l'invocation).
+
 ## Le chargement de la structure de la taverne (`TavernSpawn#placeTavern`)
 
 Nouveau (2026-08-31), jamais vérifié en jeu — et **jamais essayé avec une vraie structure**,

@@ -30,7 +30,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── GameMap.java                  # Liste des maps proposées dans l'écran de choix (visible = false pour masquer une map en cours de conception)
     │   │   ├── TowerDefinition.java          # Catalogue des tours posables via la roue (voir client/gui/screen/TowerWheelScreen.java)
     │   │   ├── ManaCrystalType.java           # Paliers de cristaux de mana (un seul pour l'instant, extensible)
-    │   │   └── ModEntities.java               # DeferredRegister.Entities (premier Entity custom du mod : le cristal de mana)
+    │   │   └── ModEntities.java               # DeferredRegister.Entities (cristal de mana, mannequin d'entraînement)
     │   ├── menu/
     │   │   ├── SpawnerConfigMenu.java        # AbstractContainerMenu sans slot, transmet juste le BlockPos
     │   │   ├── SpawnerConfigMenuProvider.java # MenuProvider ouvert par SpawnerBlock au clic droit
@@ -74,6 +74,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── AbilitySlotsOverlay.java      # 4 emplacements de compétences, bas gauche, à côté des losanges (client uniquement)
     │   ├── entity/
     │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
+    │   │   ├── TrainingDummyEntity.java       # extends Zombie : cible immobile à vie infinie, pour mesurer les dégâts des tours
     │   │   ├── MobHealthBarRenderer.java      # RenderLivingEvent.Post : barre de vie zombie/squelette, cachée à PV pleins/hors portée (client)
     │   │   ├── BowlingBallEntity.java         # extends Arrow : perforation réelle (Bowling Ball Turret), voir 02-gameplay.md
     │   │   └── ai/
@@ -95,6 +96,7 @@ MC_DungeonDefenders_Neoforge/
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
     │       ├── ManaChestBlock.java           # Meuble de map : donne du mana au clic droit (survie, 1x/vague) ou config (créatif)
+    │       ├── TrainingDummyBlock.java       # Support de mannequin : invisible, garantit qu'un TrainingDummyEntity existe juste au-dessus
     │       ├── PlayerSpawnBlock.java         # Marqueur de spawn des joueurs : invisible, traversable, ciblable en créatif seulement
     │       └── entity/
     │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal)
@@ -117,7 +119,8 @@ MC_DungeonDefenders_Neoforge/
     │           ├── SpawnerBlockEntity.java                 # Algorithme de spawn pondéré (voir 02-gameplay.md)
     │           ├── SpawnerRenderState.java                 # Instantané pour le rendu (client)
     │           ├── SpawnerBlockEntityRenderer.java         # Aperçu de composition en phase Construction, à travers les murs (client)
-    │           └── ManaChestBlockEntity.java               # PV: aucun ; manaAmount configurable, lastOpenedWave (1x/vague, recharge auto)
+    │           ├── ManaChestBlockEntity.java               # PV: aucun ; manaAmount configurable, lastOpenedWave (1x/vague, recharge auto)
+    │           └── TrainingDummyBlockEntity.java           # Aucun état : un tick serveur qui réinvoque le mannequin s'il a disparu
     ├── resources/
     │   ├── assets/dungeon_defenders/
     │   │   ├── lang/{en_us,fr_fr}.json                     # Traductions
