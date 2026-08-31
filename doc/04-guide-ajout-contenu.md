@@ -533,13 +533,11 @@ Côté **dépôt** : déposer le fichier en
 `TavernSpawn.TAVERN_STRUCTURE` (`dungeon_defenders:tavern`) résout. Rien d'autre à changer :
 si le fichier est là il est chargé, sinon le mod retombe sur sa plateforme de repli.
 
-Trois contraintes à respecter à la construction :
+Deux contraintes à respecter à la construction :
 
-- **Décorer en blocs, pas en entités.** Cadres, supports à armure et tableaux ne sont pas
-  posés (`setIgnoreEntities(true)`) — la structure est reposée à chaque chargement du monde,
-  les poser les dupliquerait à l'infini. Voir [02-gameplay.md](02-gameplay.md).
 - **Prévoir des murs ou un garde-corps** : le monde est vide, rien ne retient dans le vide en
   dehors de la structure.
 - **La taille est libre**, la zone nettoyée avant de poser se calcule depuis
-  `template.getSize()` — mais elle est reposée **entièrement** à chaque chargement du monde :
-  tout ce qu'un joueur y aurait modifié en créatif est écrasé au redémarrage.
+  `template.getSize()` — mais elle est reposée **entièrement** à chaque chargement du monde,
+  blocs **et entités** : tout ce qu'un joueur y aurait modifié ou laissé traîner est écrasé au
+  redémarrage. Les entités décoratives (cadres, supports à armure, tableaux) sont bien posées.

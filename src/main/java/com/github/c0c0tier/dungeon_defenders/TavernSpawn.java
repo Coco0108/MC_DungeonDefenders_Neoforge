@@ -7,6 +7,8 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -14,6 +16,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.level.storage.LevelData;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.level.LevelEvent;
@@ -39,6 +42,10 @@ import java.util.Optional;
 // (data/dungeon_defenders/structure/tavern.nbt) et non plus une plateforme en dur. La
 // plateforme reste comme **repli** si le fichier est absent : le mod doit rester jouable même
 // sans structure livrée, sinon un monde vide sans sol rend le jeu injouable.
+//
+// Le nettoyage de zone remet à zéro les blocs ET les entités (voir clearZone) : la structure
+// peut donc contenir des entités (décor, et à terme le mannequin d'entraînement des tours) sans
+// qu'elles se dupliquent à chaque redémarrage.
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class TavernSpawn {
 
@@ -145,13 +152,12 @@ public class TavernSpawn {
                 SPAWN_POS.getZ() - size.getZ() / 2);
     }
 
-    // Entités ignorées volontairement (cadres, supports à armure, tableaux...) : la structure
-    // étant reposée à CHAQUE chargement du monde, les poser dupliquerait ces entités à chaque
-    // redémarrage — le nettoyage de zone ne remet que des blocs, pas les entités. Limite assumée
-    // et documentée (doc/05-etat-et-problemes-connus.md) : la décoration de la taverne doit être
-    // faite en blocs, pas en entités.
+    // Réglages par défaut : les entités de la structure (cadres, supports à armure, futur
+    // mannequin d'entraînement...) SONT posées. C'est `clearZone` qui empêche leur duplication à
+    // chaque rechargement, en supprimant les entités de la zone juste avant — voir son
+    // commentaire.
     private static StructurePlaceSettings placeSettings() {
-        return new StructurePlaceSettings().setIgnoreEntities(true);
+        return new StructurePlaceSettings();
     }
 
     // Cherche le marqueur dans le TEMPLATE plutôt que dans le monde : filterBlocks renvoie déjà
@@ -164,6 +170,20 @@ public class TavernSpawn {
         return markers.isEmpty() ? null : markers.getFirst().pos();
     }
 
+    /**
+     * Remet la zone à zéro : d'abord les blocs (tout en air), puis les entités.
+     *
+     * <p><b>Cet ordre est délibéré.</b> Écrire un bloc force le chunk correspondant à être
+     * chargé ; balayer les blocs en premier garantit donc que tous les chunks de la zone sont
+     * chargés avant qu'on interroge leurs entités. À l'inverse, chercher les entités d'abord —
+     * pendant {@code LevelEvent.Load}, avant que quoi que ce soit ne soit chargé — n'en
+     * trouverait aucune, et la structure en poserait un exemplaire de plus à chaque démarrage.
+     *
+     * <p>Les joueurs sont évidemment épargnés. Tout le reste part : entités décoratives de la
+     * structure (reposées juste après par {@code placeInWorld}), objets au sol qu'un joueur
+     * aurait laissés, et le futur mannequin d'entraînement — c'est exactement ce qu'on veut,
+     * chaque chargement du monde remet la taverne dans l'état livré avec le mod.
+     */
     private static void clearZone(ServerLevel level, BlockPos from, Vec3i size) {
         BlockState air = Blocks.AIR.defaultBlockState();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
@@ -174,6 +194,13 @@ public class TavernSpawn {
                     level.setBlockAndUpdate(pos, air);
                 }
             }
+        }
+
+        AABB zone = new AABB(
+                from.getX(), from.getY(), from.getZ(),
+                from.getX() + size.getX(), from.getY() + size.getY(), from.getZ() + size.getZ());
+        for (Entity entity : level.getEntitiesOfClass(Entity.class, zone, e -> !(e instanceof Player))) {
+            entity.discard();
         }
     }
 

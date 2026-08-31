@@ -488,9 +488,15 @@ Une fois `data/dungeon_defenders/structure/tavern.nbt` livre :
       redemarrer le serveur — on doit arriver au meme endroit a chaque fois.
 - [ ] Mourir dans une map fait reapparaitre a la position d'arrivee de la taverne, pas a
       (0, 65, 0) si le marqueur est ailleurs.
-- [ ] Les entites decoratives (cadres, supports a armure, tableaux) presentes dans la structure
-      **ne sont pas posees** — limite assumee, a confirmer que c'est bien ce qui se produit et
-      non une duplication.
+- [ ] Les entites de la structure (cadres, supports a armure, tableaux) **sont bien posees**.
+- [ ] **Le point le plus incertain** : redemarrer le serveur trois ou quatre fois d'affilee et
+      recompter ces entites. Elles doivent rester au **meme nombre**, pas se dupliquer a chaque
+      demarrage — c'est ce que doit empecher la suppression d'entites de `clearZone`, et c'est
+      justement ce qui depend du fait que les chunks soient bien charges a ce moment-la.
+- [ ] Laisser tomber un objet au sol dans la taverne, redemarrer : il a disparu (nettoyage
+      volontaire).
+- [ ] Se tenir dans la taverne pendant un redemarrage (multijoueur, ou juste se reconnecter) :
+      le joueur n'est **jamais** supprime par le nettoyage.
 - [ ] Modifier un bloc de la taverne en creatif, redemarrer : la modification est ecrasee (la
       structure est reposee a chaque chargement).
 - [ ] Aucune exception dans les logs liee a `TavernSpawn`, `StructureTemplate` ou

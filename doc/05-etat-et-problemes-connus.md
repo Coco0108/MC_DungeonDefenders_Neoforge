@@ -371,11 +371,15 @@ vérifie la CI.
   n'est pas encore livré. Le point d'arrivée vient d'un marqueur `player_spawn` posé dans la
   structure, **non consommé** contrairement à celui d'une map (on revient à la taverne en
   permanence) ; `MapInstance.returnToTavern` et le point de respawn du monde l'utilisent tous
-  les deux. **Limite assumée : les entités décoratives (cadres, supports à armure, tableaux) ne
-  sont pas posées** (`setIgnoreEntities(true)`) — la structure étant reposée à chaque chargement
-  du monde, les poser les dupliquerait à chaque redémarrage ; la décoration doit se faire en
-  blocs. **Jamais vérifié en jeu, et jamais essayé avec une vraie structure** (aucune n'existe
-  encore). Détail dans
+  les deux. `clearZone` remet à zéro **les blocs puis les entités** (joueurs exceptés), dans cet
+  ordre précis : écrire les blocs force le chargement des chunks, sans quoi la recherche
+  d'entités pendant `LevelEvent.Load` ne trouverait rien et la structure en poserait un
+  exemplaire de plus à chaque démarrage. Les entités de la structure sont donc bien posées.
+  Décidé avec le joueur (2026-08-31) : la suppression d'entités est de toute façon nécessaire
+  pour le futur **mannequin d'entraînement** (PV infinis, immobile, cible des tours), qui ne
+  doit pas s'accumuler. **Jamais vérifié en jeu, et jamais essayé avec une vraie structure**
+  (aucune n'existe encore) — la partie « suppression des entités » est le point le plus incertain
+  faute de test réel. Détail dans
   [02-gameplay.md](02-gameplay.md#le-chargement-de-la-structure--tavernspawnplacetavern), recette
   de livraison dans [04-guide-ajout-contenu.md](04-guide-ajout-contenu.md).
 - ✅ Cristal de la taverne (`TavernCrystalBlock`, distinct d'`EterniaCrystalBlock` — pas de PV,
@@ -900,7 +904,7 @@ injouable. Rien de codé, voir le backlog dans
 **Reste à faire** : le choix de map précis dans le carrousel n'a toujours aucun effet (une
 seule map placeholder générique pour l'instant, quel que soit l'élément sélectionné) ; le
 **fichier** de structure de la taverne (le mécanisme de chargement existe, il n'a rien à
-charger) ; les entités décoratives dans une structure (limite assumée, voir plus haut) ; au
+charger) ; le mannequin d'entraînement annoncé pour la taverne (voir le backlog) ; au
 moins une vraie map, et le vrai chargement de sa structure `.nbt` (remplacerait
 `buildPlaceholderArena()`, en réutilisant ce que fait déjà `TavernSpawn`) ; les zones où la
 pose de tours est interdite (décision ci-dessus) ; une phase/un état "taverne" distinct de

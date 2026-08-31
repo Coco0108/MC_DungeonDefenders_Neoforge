@@ -121,14 +121,27 @@ gestionnaire de structures garde déjà le template en cache, et elle n'est appe
 (chargement du monde, retour à la taverne). `MapInstance.returnToTavern` l'utilise aussi, pour
 que `/dd_leave` et la fin de partie ramènent au même endroit que le spawn.
 
-#### Limite assumée : pas d'entités dans la structure
+#### Les entités aussi sont remises à zéro — `clearZone`
 
-`StructurePlaceSettings#setIgnoreEntities(true)` : les cadres, supports à armure, tableaux et
-autres entités décoratives d'une structure **ne sont pas posés**. La structure étant reposée à
-*chaque* chargement du monde et `clearZone` ne remettant que des blocs, les poser dupliquerait
-ces entités à chaque redémarrage du serveur. **La décoration de la taverne doit donc se faire en
-blocs.** Lever cette limite demanderait de nettoyer aussi les entités de la zone avant de poser,
-ce qui n'est pas fait (voir 05-etat-et-problemes-connus.md).
+`clearZone` fait deux passes : d'abord tous les blocs de la zone en air, **puis** la suppression
+de toutes les entités qui s'y trouvent, joueurs exceptés. C'est ce qui permet à la structure de
+contenir des entités (`StructurePlaceSettings` par défaut, pas de `setIgnoreEntities`) sans
+qu'elles se dupliquent à chaque rechargement : celles du chargement précédent sont supprimées,
+`placeInWorld` repose celles du fichier.
+
+**L'ordre des deux passes est délibéré.** Écrire un bloc force le chargement de son chunk ;
+balayer les blocs en premier garantit donc que tous les chunks de la zone sont chargés avant
+qu'on interroge leurs entités. Chercher les entités d'abord — pendant `LevelEvent.Load`, avant
+que quoi que ce soit ne soit chargé — n'en trouverait aucune, et la structure en poserait un
+exemplaire de plus à chaque démarrage du serveur.
+
+Ce que ça emporte, volontairement : les entités décoratives (reposées juste après), les objets
+au sol qu'un joueur aurait laissés dans la taverne, et le futur **mannequin d'entraînement** des
+tours. Chaque chargement du monde remet la taverne dans l'état livré avec le mod.
+
+> Décidé avec le joueur (2026-08-31) : la suppression d'entités est nécessaire de toute façon,
+> puisqu'un mannequin d'entraînement (PV infinis, immobile, cible des tours pour mesurer leurs
+> dégâts) viendra vivre dans la taverne et ne doit pas s'accumuler en plusieurs exemplaires.
 
 ## La taverne — choix de map et difficulté
 
