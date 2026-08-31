@@ -51,7 +51,9 @@ public final class MapInstance {
     /** Nettoie l'emplacement (plus besoin d'y rester) et ramène tout le monde à la taverne. */
     public static void returnToTavern(ServerLevel level) {
         clearZone(level);
-        teleportAllPlayers(level, TavernSpawn.SPAWN_POS);
+        // Pas TavernSpawn.SPAWN_POS en dur : si la structure de la taverne pose son propre
+        // marqueur player_spawn, c'est lui qui fait foi (voir TavernSpawn#arrivalPos).
+        teleportAllPlayers(level, TavernSpawn.arrivalPos(level));
     }
 
     private static void clearZone(ServerLevel level) {

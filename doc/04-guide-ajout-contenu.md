@@ -514,3 +514,32 @@ préférence — générique à toute une famille de blocs — sinon par classe 
 L'événement à utiliser est `ExtractBlockOutlineRenderStateEvent`, annulable — annulé, aucun
 render state de contour n'est soumis. **`RenderHighlightEvent` n'existe plus** dans cette
 version de NeoForge : les tutoriels qui le mentionnent sont périmés.
+
+## Livrer la structure de la taverne (ou d'une map)
+
+Côté **constructeur** (dans le jeu, en créatif) :
+
+1. Construire la taverne **n'importe où sauf** autour de `MapInstance.MAP_POS`
+   (10000, 65, 0) : cette zone est rasée à chaque démarrage de partie.
+2. Poser le `tavern_crystal` dedans — sans lui, aucun accès à l'écran de choix de map.
+3. Poser (optionnel) **un seul** `player_spawn` à l'endroit exact où les joueurs doivent
+   arriver. Sans marqueur, l'arrivée retombe sur `TavernSpawn.SPAWN_POS`, c'est-à-dire le
+   centre horizontal de la structure, un bloc au-dessus de sa couche la plus basse.
+4. Encadrer le tout avec un **bloc de structure** vanilla en mode « Sauvegarder », puis
+   récupérer le fichier écrit dans `<monde>/generated/minecraft/structures/<nom>.nbt`.
+
+Côté **dépôt** : déposer le fichier en
+`src/main/resources/data/dungeon_defenders/structure/tavern.nbt` — c'est le chemin que
+`TavernSpawn.TAVERN_STRUCTURE` (`dungeon_defenders:tavern`) résout. Rien d'autre à changer :
+si le fichier est là il est chargé, sinon le mod retombe sur sa plateforme de repli.
+
+Trois contraintes à respecter à la construction :
+
+- **Décorer en blocs, pas en entités.** Cadres, supports à armure et tableaux ne sont pas
+  posés (`setIgnoreEntities(true)`) — la structure est reposée à chaque chargement du monde,
+  les poser les dupliquerait à l'infini. Voir [02-gameplay.md](02-gameplay.md).
+- **Prévoir des murs ou un garde-corps** : le monde est vide, rien ne retient dans le vide en
+  dehors de la structure.
+- **La taille est libre**, la zone nettoyée avant de poser se calcule depuis
+  `template.getSize()` — mais elle est reposée **entièrement** à chaque chargement du monde :
+  tout ce qu'un joueur y aurait modifié en créatif est écrasé au redémarrage.
