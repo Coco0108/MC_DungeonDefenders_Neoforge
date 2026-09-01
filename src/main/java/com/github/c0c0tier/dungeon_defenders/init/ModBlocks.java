@@ -13,6 +13,7 @@ import com.github.c0c0tier.dungeon_defenders.block.SpawnerBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpikeBlockadeBlock;
 import com.github.c0c0tier.dungeon_defenders.block.TavernCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.block.TowerBlockItem;
+import com.github.c0c0tier.dungeon_defenders.block.TrainingDummyBlock;
 import com.github.c0c0tier.dungeon_defenders.item.ManaFillWandItem;
 import com.github.c0c0tier.dungeon_defenders.item.ManaTestWandItem;
 import net.minecraft.world.item.BlockItem;
@@ -141,6 +142,16 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> PLAYER_SPAWN_ITEM =
             ITEMS.registerSimpleBlockItem("player_spawn", PLAYER_SPAWN);
+
+    // 9. Support de mannequin d'entraînement : garantit qu'un TrainingDummyEntity existe juste
+    // au-dessus (cible immobile et indestructible pour mesurer les dégâts des tours). Invisible
+    // et traversable comme le spawner — toute la logique vit dans TrainingDummyBlockEntity.
+    public static final DeferredBlock<TrainingDummyBlock> TRAINING_DUMMY = BLOCKS.registerBlock("training_dummy",
+            TrainingDummyBlock::new,
+            properties -> properties.strength(2.0F));
+
+    public static final DeferredItem<BlockItem> TRAINING_DUMMY_ITEM =
+            ITEMS.registerSimpleBlockItem("training_dummy", TRAINING_DUMMY);
 
     // Connexion au bus d'événements
     public static void register(IEventBus modEventBus) {

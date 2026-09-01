@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ManaCrystalEntity;
+import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackPriorityTargetGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
@@ -48,6 +49,13 @@ public class ModEvents {
         // Généralisé de Zombie à Monster (les deux goals n'exigent qu'un PathfinderMob, que
         // Monster étend) pour couvrir tout futur ennemi sans avoir à énumérer chaque type.
         if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Monster monster)) {
+            return;
+        }
+
+        // Le mannequin d'entraînement est un Monster (obligatoire pour que les tourelles le
+        // ciblent, voir TrainingDummyEntity) mais ne doit surtout pas recevoir de goal : il est
+        // censé rester planté là, pas partir attaquer le Cristal d'Eternia.
+        if (monster instanceof TrainingDummyEntity) {
             return;
         }
 

@@ -1491,6 +1491,72 @@ Le contour n'était pas le seul repère visuel : le mode suppression dessine son
 **orange** (`TowerRemovalClientEvents`, inchangé et désormais mieux lisible sans la boîte noire
 par-dessus) et les tours affichent leur barre de vie (`TowerHealthBarRenderer`).
 
+## Le mannequin d'entraînement — `entity/TrainingDummyEntity.java`, `block/TrainingDummyBlock.java`
+
+Demandé par le joueur (2026-08-31) pour la taverne : une **cible immobile et indestructible**,
+attaquée par les tours, pour mesurer leurs dégâts sans avoir à monter une vraie vague.
+
+### L'entité — pourquoi elle hérite de `Zombie`
+
+Deux contraintes de l'existant, pas un choix esthétique :
+
+1. **Les tourelles ne ciblent que des `Monster`** (`AbstractTurretBlockEntity#findTarget` fait un
+   `getEntitiesOfClass(Monster.class, ...)`). Le mannequin doit donc en être un, sinon aucune
+   tour ne lui tire dessus et il ne sert à rien.
+2. Passer par `Zombie` permet de **réutiliser tel quel le `ZombieRenderer` vanilla** (typé sur
+   `Zombie`, donc valide pour une sous-classe), sans créer ni modèle ni texture — exactement le
+   même procédé que `ManaCrystalEntity extends ExperienceOrb` + `ExperienceOrbRenderer`.
+
+> **Limite assumée** : le mannequin ressemble donc à un zombie planté là, pas à un mannequin de
+> paille. Placeholder, comme les textures vanilla réutilisées ailleurs dans le mod.
+
+Tout ce qui fait d'un zombie un zombie est ensuite neutralisé :
+
+| Aspect | Comment |
+|---|---|
+| Ne bouge pas | `setNoAi(true)` — coupe `isEffectiveAi()`, qui conditionne à la fois le tick des goals et la simulation de déplacement. Il ne subit même pas la gravité, ce qui va bien avec un bloc support invisible et traversable |
+| Aucun comportement | `registerGoals()` vide (ni les goals de déplacement/attaque du zombie, ni ses goals de ciblage) |
+| Pas de goal du mod | `ModEvents.onMonsterSpawn` ignore explicitement cette classe — sans ça, tout `Monster` qui rejoint le monde reçoit le goal d'attaque du Cristal d'Eternia et le mannequin partirait en promenade |
+| Ne brûle pas au soleil | `isSunSensitive()` → `false` (la taverne est à ciel ouvert) |
+| Pas repoussé | `KNOCKBACK_RESISTANCE` à `1.0` — annule tout le calcul de `LivingEntity#knockback` (`power *= 1.0 - résistance`), donc le Bouncer Blockade peut le frapper sans le déplacer |
+| Ni poussé ni poussant | `isPushable()` → `false`, `doPush(...)` vide |
+| Ne disparaît jamais | `removeWhenFarAway(...)` → `false`, plus `setPersistenceRequired()` |
+| Vie infinie | `MAX_HEALTH` à **1024**, remise au maximum dans `hurtServer` après le coup, et re-vérifiée à chaque `tick()` |
+
+**Pourquoi 1024 PV et une remise à niveau, plutôt qu'une vraie invulnérabilité** : les dégâts
+sont réellement appliqués, donc les événements de dégâts se déclenchent normalement — ce qui
+laisse la porte ouverte à un futur compteur de DPS. La marge sert à ce qu'aucun coup unique ne
+puisse atteindre 0 avant la remise à niveau ; la source la plus violente du mod en est très
+loin.
+
+**Pas de barre de vie** : `MobHealthBarRenderer` filtre sur `EntityType.ZOMBIE` et
+`EntityType.SKELETON` exactement. Un type custom ne correspond pas, donc rien n'est dessiné —
+c'est bien ce qui est voulu, mais c'est un effet de bord du filtre, pas une exclusion explicite :
+si ce filtre est un jour élargi, il faudra penser à en exclure le mannequin.
+
+### Le bloc — un "spawner de mannequin"
+
+`TrainingDummyBlock` n'a aucun comportement propre : son block entity vérifie une fois par
+seconde qu'un `TrainingDummyEntity` existe **juste au-dessus** de lui, et en invoque un sinon.
+Invisible, traversable, ciblable en créatif seulement — même traitement que `SpawnerBlock` et
+`PlayerSpawnBlock`, c'est un marqueur d'édition.
+
+**Pourquoi un bloc plutôt qu'un mannequin posé directement dans le `.nbt` de la taverne**
+(décidé avec le joueur) : le bloc fait partie de la structure et se repose donc proprement à
+chaque chargement du monde, alors qu'une entité dépend du nettoyage d'entités de la zone
+(`TavernSpawn#clearZone`) pour ne pas se dupliquer. Comme le bloc vérifie l'existence du
+mannequin avant d'en invoquer un, deux exemplaires ne peuvent pas s'accumuler **même si ce
+nettoyage ratait l'ancien**. Bonus : le mannequin se déplace en créatif en déplaçant son bloc,
+sans retoucher au fichier de structure.
+
+Retirer le bloc emporte son mannequin (`affectNeighborsAfterRemoval` →
+`TrainingDummyBlockEntity#discardDummy`) : sans ça, casser le support en créatif laisserait une
+entité orpheline que plus rien ne gère — le nettoyage de zone de la taverne ne passe qu'au
+chargement du monde, et une map n'en a pas du tout.
+
+`TrainingDummyBlockEntity` ne persiste **aucun état** — contrairement à `SpawnerBlockEntity`, il
+n'y a rien à configurer ; il n'existe que pour avoir un tick serveur.
+
 ## Le mana du joueur
 
 Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore) **et** la

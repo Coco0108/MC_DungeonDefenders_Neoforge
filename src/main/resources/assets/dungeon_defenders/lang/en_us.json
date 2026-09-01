@@ -17,13 +17,14 @@
   "block.dungeon_defenders.tavern_crystal": "Tavern Crystal",
   "block.dungeon_defenders.mana_chest": "Mana Chest",
   "block.dungeon_defenders.player_spawn": "Player Spawn",
+  "block.dungeon_defenders.training_dummy": "Training Dummy Stand",
+  "entity.dungeon_defenders.training_dummy": "Training Dummy",
   "item.dungeon_defenders.mana_test_wand": "Mana Test Wand",
   "item.dungeon_defenders.mana_fill_wand": "Mana Fill Wand",
   "key.category.dungeon_defenders.keys": "Dungeon Defenders",
   "key.dungeon_defenders.tower_wheel": "Open tower wheel",
   "key.dungeon_defenders.rotate_tower": "Rotate tower (placement)",
   "key.dungeon_defenders.remove_tower_mode": "Toggle tower removal mode",
-
   "dungeon_defenders.eternia_crystal.destroyed": "The Eternia Crystal has been destroyed! Game Over!",
   "dungeon_defenders.eternia_crystal.ready_progress": "Ready: %s/%s",
   "dungeon_defenders.game.victory": "Victory! All waves cleared.",
@@ -38,7 +39,6 @@
   "dungeon_defenders.tower.removal_mode_on": "Tower removal mode: ON. Left-click a tower to remove it.",
   "dungeon_defenders.tower.removal_mode_off": "Tower removal mode: OFF.",
   "dungeon_defenders.level.up": "Level up! You are now level %s.",
-
   "dungeon_defenders.hud.mana": "Mana: %s/%s",
   "dungeon_defenders.hud.health": "Health: %s/%s",
   "dungeon_defenders.hud.experience": "Experience: %s/%s",
@@ -79,13 +79,11 @@
   "dungeon_defenders.map.test_map": "Test Map",
   "dungeon_defenders.tower_wheel.title": "Choose a tower",
   "dungeon_defenders.tower_wheel.mana_cost": "Cost: %s mana",
-
   "dungeon_defenders.mana_chest.opened": "+%s mana from the chest (%s/%s)",
   "dungeon_defenders.mana_chest.already_opened": "This chest is empty, come back next wave.",
   "dungeon_defenders.mana_chest.config_title": "Mana chest configuration",
   "dungeon_defenders.mana_chest.config_amount": "Mana amount",
   "dungeon_defenders.mana_chest.config_confirm": "Confirm",
-
   "dungeon_defenders.configuration.title": "Dungeon Defenders Configs",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml": "Dungeon Defenders Configs",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml.title": "Dungeon Defenders Configs",
