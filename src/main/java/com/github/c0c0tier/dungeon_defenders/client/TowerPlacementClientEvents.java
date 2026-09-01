@@ -74,7 +74,7 @@ public class TowerPlacementClientEvents {
             // (TowerPlacementClientEvents) ET une suppression de la tour visée
             // (TowerRemovalClientEvents), les deux handlers traitant le même événement.
             if (minecraft.level != null && minecraft.player != null
-                    && minecraft.level.getData(ModAttachments.GAME_PHASE) == GamePhase.BUILD.ordinal()) {
+                    && GamePhase.of(minecraft.level).allowsTowerBuilding()) {
                 minecraft.setScreen(new TowerWheelScreen());
             } else if (minecraft.player != null) {
                 minecraft.player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.build_phase_only"));

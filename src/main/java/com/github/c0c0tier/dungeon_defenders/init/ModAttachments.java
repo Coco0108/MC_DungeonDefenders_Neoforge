@@ -88,10 +88,14 @@ public class ModAttachments {
     // le nom de la constante plutôt que son ordinal : contrairement à l'ordinal, il reste
     // correct même si l'ordre des valeurs de GamePhase change un jour (insertion d'une phase
     // avant COMBAT, par exemple) — sans ça une sauvegarde existante se retrouverait avec la
-    // mauvaise phase au chargement. Démarre en phase de construction.
+    // mauvaise phase au chargement.
+    //
+    // Démarre à la TAVERNE (et plus en Construction depuis le 2026-09-01) : c'est là que tout
+    // joueur apparaît, et TavernSpawn force de toute façon cette phase à chaque chargement du
+    // monde — autant que la valeur par défaut dise la vérité.
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> GAME_PHASE = ATTACHMENT_TYPES.register(
             "game_phase",
-            () -> AttachmentType.builder(() -> GamePhase.BUILD.ordinal())
+            () -> AttachmentType.builder(() -> GamePhase.TAVERN.ordinal())
                     .serialize(Codec.STRING.xmap(
                             name -> GamePhase.valueOf(name).ordinal(),
                             ordinal -> GamePhase.values()[ordinal].name()
