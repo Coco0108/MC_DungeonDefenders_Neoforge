@@ -80,7 +80,7 @@ public class TowerRemovalClientEvents {
         // Même raisonnement que pour l'ouverture de la roue (TowerPlacementClientEvents) :
         // les tours ne se retirent qu'en phase Construction, autant sortir du mode dès que la
         // phase change plutôt que laisser le joueur cliquer pour rien jusqu'au refus serveur.
-        if (level.getData(ModAttachments.GAME_PHASE) != GamePhase.BUILD.ordinal()) {
+        if (!GamePhase.of(level).allowsTowerBuilding()) {
             TowerRemovalState.cancel();
             player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.build_phase_only"));
             return;

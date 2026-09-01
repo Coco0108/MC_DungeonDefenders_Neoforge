@@ -76,7 +76,7 @@ public final class PhaseTransitions {
      * boutons "Rejouer"/"Retour à la taverne") — voir doc/02-gameplay.md.
      */
     public static void onVictory(Level level) {
-        resetGameState(level);
+        resetGameState(level, GamePhase.BUILD);
         for (Player player : level.players()) {
             sendGameOverScreen(player, true);
         }
@@ -89,10 +89,36 @@ public final class PhaseTransitions {
      * lui-même n'est pas replacé automatiquement — même remarque que pour {@link #onVictory}.
      */
     public static void onDefeat(Level level) {
-        resetGameState(level);
+        resetGameState(level, GamePhase.BUILD);
         for (Player player : level.players()) {
             sendGameOverScreen(player, false);
         }
+    }
+
+    /**
+     * Entre (ou revient) à la Taverne : remet toute la partie à zéro — vague 1, compteurs,
+     * score — et pose la phase {@code TAVERN}. Appelée au chargement du monde
+     * ({@code TavernSpawn}) et au retour de map ({@code MapInstance#returnToTavern}).
+     *
+     * <p>La Taverne n'est pas une phase de partie : aucun spawner ne tourne, aucune vague ne
+     * progresse, mais les tours s'y posent librement pour les essais (voir
+     * doc/02-gameplay.md).
+     */
+    public static void enterTavern(Level level) {
+        resetGameState(level, GamePhase.TAVERN);
+    }
+
+    /**
+     * Démarre une partie sur une map : vague 1, phase Construction, compteurs et score à zéro.
+     * Appelée par {@code MapInstance#startGame}.
+     *
+     * <p>Volontairement distincte d'{@link #enterBuild} : celle-ci fait <b>avancer</b> la vague
+     * (elle sert au retour en Construction entre deux vagues), ce qui démarrerait une partie à
+     * la vague 2. Cette remise à zéro explicite était implicite tant que la phase par défaut
+     * était {@code BUILD} ; elle ne l'est plus depuis que c'est {@code TAVERN}.
+     */
+    public static void startNewGame(Level level) {
+        resetGameState(level, GamePhase.BUILD);
     }
 
     // level.players() est statiquement typé Player (Level est commun client/serveur), mais
@@ -106,11 +132,11 @@ public final class PhaseTransitions {
         }
     }
 
-    private static void resetGameState(Level level) {
+    private static void resetGameState(Level level, GamePhase phase) {
         level.setData(ModAttachments.CURRENT_WAVE, 1);
         level.syncData(ModAttachments.CURRENT_WAVE);
 
-        level.setData(ModAttachments.GAME_PHASE, GamePhase.BUILD.ordinal());
+        level.setData(ModAttachments.GAME_PHASE, phase.ordinal());
         level.syncData(ModAttachments.GAME_PHASE);
 
         level.setData(ModAttachments.WAVE_ENEMIES_KILLED, 0);

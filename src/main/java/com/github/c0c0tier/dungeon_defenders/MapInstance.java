@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
+import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -42,6 +43,15 @@ public final class MapInstance {
      * {@link #findAndConsumeSpawnMarker}), sinon à {@link #MAP_POS} comme avant.
      */
     public static void startGame(ServerLevel level) {
+        // La Taverne sert de zone d'essai libre pour les tours : celles qui y traînent n'ont
+        // rien à faire là pendant la partie, et sans ce ménage elles resteraient plantées
+        // jusqu'au prochain chargement du monde.
+        TavernSpawn.clearTestTowers(level);
+        // Vague 1, phase Construction, compteurs et score à zéro. Explicite depuis que la
+        // phase par défaut est TAVERN et non plus BUILD — sans ça, on arriverait sur la map
+        // en phase Taverne, avec les tours gratuites et aucune vague.
+        PhaseTransitions.startNewGame(level);
+
         clearZone(level);
         buildPlaceholderArena(level);
         BlockPos spawnPos = findAndConsumeSpawnMarker(level);
@@ -51,6 +61,7 @@ public final class MapInstance {
     /** Nettoie l'emplacement (plus besoin d'y rester) et ramène tout le monde à la taverne. */
     public static void returnToTavern(ServerLevel level) {
         clearZone(level);
+        PhaseTransitions.enterTavern(level);
         // Pas TavernSpawn.SPAWN_POS en dur : si la structure de la taverne pose son propre
         // marqueur player_spawn, c'est lui qui fait foi (voir TavernSpawn#arrivalPos).
         teleportAllPlayers(level, TavernSpawn.arrivalPos(level));

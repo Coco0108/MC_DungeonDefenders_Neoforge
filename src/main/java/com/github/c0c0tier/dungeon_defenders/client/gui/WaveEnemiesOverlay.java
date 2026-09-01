@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.client.gui;
 
+import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -28,6 +29,11 @@ public class WaveEnemiesOverlay implements GuiLayer {
         Minecraft minecraft = Minecraft.getInstance();
         Level level = minecraft.level;
         if (level == null || minecraft.options.hideGui) {
+            return;
+        }
+
+        // Rien à afficher à la Taverne : il n'y a pas de partie en cours, donc pas de vague.
+        if (!GamePhase.of(level).isInGame()) {
             return;
         }
 

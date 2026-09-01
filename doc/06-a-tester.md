@@ -459,6 +459,54 @@ seulement les tours.
 - [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
       `ModEvents.onBlockBreakAttempt` ou `BreakBlockEvent`.
 
+## La phase Taverne (`GamePhase.TAVERN`)
+
+Nouveau (2026-09-01), jamais verifie en jeu. Touche 11 points de decision dans le code : le
+risque n'est pas tant la taverne elle-meme que les **regressions sur une vraie partie**, la
+phase par defaut ayant change.
+
+A la taverne :
+
+- [ ] Le HUD affiche "Phase : Taverne". Les compteurs **Vague** (haut droite) et **Ennemis**
+      (barre haut centre) sont **absents**.
+- [ ] La roue des tours (`R`) s'ouvre, et poser une tour marche — **sans rien couter en mana**
+      (le HUD mana ne bouge pas, aucun message "-X mana").
+- [ ] En poser cinq ou six d'affilee avec 0 mana : toutes doivent passer.
+- [ ] Le mode suppression (`X`) fonctionne, et retirer une tour **ne rembourse rien** (pas de
+      message "+X mana remboursé", HUD mana inchange).
+- [ ] Poser une tourelle a portee du mannequin : elle lui tire dessus (c'est tout l'interet).
+
+Le passage taverne -> map :
+
+- [ ] Poser deux ou trois tours d'essai dans la taverne, puis cliquer "Jouer" : elles ont
+      **disparu** de la taverne au retour (`clearTestTowers`).
+- [ ] Une fois sur la map, le HUD passe en "Phase : Construction", affiche **Vague 1/5** et la
+      barre d'ennemis revient.
+- [ ] Sur la map, poser une tour **coute bien du mana** a nouveau, et la retirer **rembourse**
+      50 %.
+- [ ] Enchainer une vague complete : Construction -> Combat -> Construction, la vague avance
+      normalement (verifie que `startNewGame` n'a pas casse la progression).
+- [ ] Deux parties d'affilee : "Jouer", quitter avec `/dd_leave`, "Jouer" de nouveau — la
+      seconde doit repartir **vague 1**, pas vague 2 (c'est le piege que `startNewGame` evite).
+
+Le retour map -> taverne :
+
+- [ ] `/dd_leave` depuis une map : retour a la taverne ET le HUD repasse en "Phase : Taverne",
+      compteurs de vague masques.
+- [ ] Meme chose via le bouton "Retour a la taverne" de l'ecran de fin de partie.
+- [ ] Redemarrer le serveur alors que la sauvegarde etait en pleine partie (quitter le serveur
+      en phase Combat sur une map) : au redemarrage on doit etre a la **Taverne**, pas coince en
+      Combat.
+
+Cas limites :
+
+- [ ] En Combat, la roue des tours refuse toujours de s'ouvrir (message "phase de Construction")
+      — la phase Taverne ne doit pas avoir ouvert une breche.
+- [ ] Maj + clic droit sur un spawner depuis la taverne : bascule en Construction. Sans interet,
+      mais ne doit rien casser.
+- [ ] Aucune exception dans les logs liee a `PhaseTransitions`, `GamePhase` ou
+      `TavernSpawn.clearTestTowers`.
+
 ## Le mannequin d'entrainement (`TrainingDummyEntity`, `TrainingDummyBlock`)
 
 Nouveau (2026-08-31), jamais verifie en jeu. Deuxieme `Entity` custom du mod, et le premier a

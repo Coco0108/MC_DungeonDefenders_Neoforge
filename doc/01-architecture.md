@@ -22,11 +22,11 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
     │   │   ├── ModAttachments.java           # DeferredRegister des data attachments (mana, vagues, phase...)
     │   │   ├── ModMenus.java                 # DeferredRegister des MenuType (GUI de config)
-    │   │   ├── GamePhase.java                # Enum des phases de partie (BUILD, COMBAT)
+    │   │   ├── GamePhase.java                # Enum des phases (BUILD, COMBAT, TAVERN) + allowsTowerBuilding()/isInGame()
     │   │   ├── GameDifficulty.java           # Enum de difficulté (EASY, NORMAL, HARD)
     │   │   ├── DifficultyScaling.java        # Multiplicateur difficulté x vague, pour les spawners
     │   │   ├── SpawnableEnemy.java           # Liste fermée des ennemis choisissables dans un spawner
-    │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild : transitions de phase centralisées
+    │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild/enterTavern/startNewGame : transitions centralisées
     │   │   ├── GameMap.java                  # Liste des maps proposées dans l'écran de choix (visible = false pour masquer une map en cours de conception)
     │   │   ├── TowerDefinition.java          # Catalogue des tours posables via la roue (voir client/gui/screen/TowerWheelScreen.java)
     │   │   ├── ManaCrystalType.java           # Paliers de cristaux de mana (un seul pour l'instant, extensible)
@@ -300,8 +300,8 @@ Bus de jeu (NeoForge.EVENT_BUS)
    │         PhaseTransitions.enterBuild(level) (vague suivante)
    │         ou PhaseTransitions.onVictory(level) si c'était déjà MAX_WAVE
    ├─ TavernSpawn.onLevelLoad(LevelEvent.Load)
-   │    └─ si Overworld : pose la structure dungeon_defenders:tavern (repli plateforme si absente)
-   │       + fixe le point de spawn sur son marqueur player_spawn (sinon (0,65,0))
+   │    └─ si Overworld : pose la structure dungeon_defenders:tavern (repli plateforme si absente),
+   │       force la phase TAVERN, et fixe le point de spawn sur son marqueur player_spawn
    └─ ModCommands.onRegisterCommands(RegisterCommandsEvent)
         └─ enregistre /dd_leave -> MapInstance.returnToTavern(level)
 

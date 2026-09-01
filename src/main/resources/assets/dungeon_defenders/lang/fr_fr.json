@@ -47,6 +47,7 @@
   "dungeon_defenders.hud.phase": "Phase : %s",
   "dungeon_defenders.phase.build": "Construction",
   "dungeon_defenders.phase.combat": "Combat",
+  "dungeon_defenders.phase.tavern": "Taverne",
   "dungeon_defenders.hud.score": "Score : %s",
   "dungeon_defenders.hud.score_gain": "+%s %s",
   "dungeon_defenders.score_source.monster_killed": "Ennemi tué",

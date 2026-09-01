@@ -1,6 +1,8 @@
 package com.github.c0c0tier.dungeon_defenders;
 
+import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
+import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
@@ -79,6 +81,10 @@ public class TavernSpawn {
 
         BlockPos arrival = placeTavern(serverLevel);
 
+        // Tout le monde apparaît ici : le monde démarre donc à la Taverne, jamais au milieu
+        // d'une partie qu'une sauvegarde aurait figée en Construction ou en Combat.
+        PhaseTransitions.enterTavern(serverLevel);
+
         // Remplace le point de spawn "trouvé" par le jeu (qui chercherait un sol solide —
         // inexistant dans un monde vide) par la position d'arrivée réelle de la taverne : c'est
         // aussi là que réapparaît un joueur mort en pleine map.
@@ -118,18 +124,17 @@ public class TavernSpawn {
         if (loaded.isEmpty()) {
             LOGGER.warn(
                     "Structure de taverne introuvable ({}) : repli sur la plateforme provisoire.", TAVERN_STRUCTURE);
-            clearZone(level, SPAWN_POS.offset(-PLATFORM_RADIUS - CLEAR_MARGIN, -CLEAR_MARGIN, -PLATFORM_RADIUS - CLEAR_MARGIN),
-                    new Vec3i(2 * (PLATFORM_RADIUS + CLEAR_MARGIN) + 1, 2 * CLEAR_MARGIN + 1, 2 * (PLATFORM_RADIUS + CLEAR_MARGIN) + 1));
+            Zone zone = zoneOf(level);
+            clearZone(level, zone.from(), zone.size());
             buildPlaceholderPlatform(level);
             return SPAWN_POS;
         }
 
         StructureTemplate template = loaded.get();
         BlockPos origin = originOf(template);
-        Vec3i size = template.getSize();
 
-        clearZone(level, origin.offset(-CLEAR_MARGIN, -CLEAR_MARGIN, -CLEAR_MARGIN),
-                size.offset(2 * CLEAR_MARGIN, 2 * CLEAR_MARGIN, 2 * CLEAR_MARGIN));
+        Zone zone = zoneOf(level);
+        clearZone(level, zone.from(), zone.size());
 
         // UPDATE_CLIENTS (et pas UPDATE_ALL) : on ne veut pas déclencher une cascade de mises à
         // jour de voisinage sur chaque bloc posé, seulement que les clients voient le résultat —
@@ -138,6 +143,55 @@ public class TavernSpawn {
 
         BlockPos marker = findSpawnMarker(template, origin);
         return marker != null ? marker : SPAWN_POS;
+    }
+
+    /** L'emprise occupée par la taverne dans le monde, marge de nettoyage comprise. */
+    private record Zone(BlockPos from, Vec3i size) {
+    }
+
+    // Une seule définition de "la zone de la taverne", partagée par le nettoyage avant pose et
+    // par la suppression des tours d'essai : les deux doivent couvrir exactement le même volume,
+    // sinon une tour posée dans un coin échapperait au ménage.
+    private static Zone zoneOf(ServerLevel level) {
+        Optional<StructureTemplate> template = level.getStructureManager().get(TAVERN_STRUCTURE);
+        if (template.isEmpty()) {
+            int radius = PLATFORM_RADIUS + CLEAR_MARGIN;
+            return new Zone(
+                    SPAWN_POS.offset(-radius, -CLEAR_MARGIN, -radius),
+                    new Vec3i(2 * radius + 1, 2 * CLEAR_MARGIN + 1, 2 * radius + 1));
+        }
+        BlockPos origin = originOf(template.get());
+        Vec3i size = template.get().getSize();
+        return new Zone(
+                origin.offset(-CLEAR_MARGIN, -CLEAR_MARGIN, -CLEAR_MARGIN),
+                size.offset(2 * CLEAR_MARGIN, 2 * CLEAR_MARGIN, 2 * CLEAR_MARGIN));
+    }
+
+    /**
+     * Retire les tours posées dans la taverne. Appelée au lancement d'une partie
+     * ({@code MapInstance#startGame}) : la Taverne sert de zone d'essai libre, mais ces tours
+     * n'ont rien à faire là pendant qu'on joue, et sans ça elles resteraient plantées jusqu'au
+     * prochain chargement du monde.
+     *
+     * <p>Balaye la zone bloc par bloc faute de registre de tours (contrairement aux spawners et
+     * aux coffres de mana, qui ont le leur) : c'est un coût ponctuel, payé une fois au clic sur
+     * "Jouer", pas à chaque tick.
+     */
+    public static void clearTestTowers(ServerLevel level) {
+        Zone zone = zoneOf(level);
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        for (int x = 0; x < zone.size().getX(); x++) {
+            for (int y = 0; y < zone.size().getY(); y++) {
+                for (int z = 0; z < zone.size().getZ(); z++) {
+                    pos.set(zone.from().getX() + x, zone.from().getY() + y, zone.from().getZ() + z);
+                    if (level.getBlockEntity(pos) instanceof AbstractTowerBlockEntity) {
+                        // false : pas de drop d'item, même convention que la suppression via la
+                        // touche dédiée et que la destruction au combat.
+                        level.destroyBlock(pos, false);
+                    }
+                }
+            }
+        }
     }
 
     // La structure est centrée horizontalement sur SPAWN_POS, et sa couche la plus basse est

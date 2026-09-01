@@ -165,9 +165,9 @@ public class ModNetworking {
                 return;
             }
 
-            // Symétrique à la pose (ModEvents.onTowerPlace) : les tours ne se retirent qu'en
-            // phase Construction.
-            if (level.getData(ModAttachments.GAME_PHASE) != GamePhase.BUILD.ordinal()) {
+            // Symétrique à la pose (ModEvents.onTowerPlace) : Construction ou Taverne.
+            GamePhase phase = GamePhase.of(level);
+            if (!phase.allowsTowerBuilding()) {
                 player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.build_phase_only"));
                 return;
             }
@@ -181,7 +181,11 @@ public class ModNetworking {
                 return;
             }
 
-            int refund = Math.round(tower.getManaCost() * TOWER_MANA_REFUND_RATIO);
+            // Aucun remboursement à la Taverne : la pose y est déjà gratuite, rembourser
+            // reviendrait à imprimer du mana à volonté.
+            int refund = phase == GamePhase.TAVERN
+                    ? 0
+                    : Math.round(tower.getManaCost() * TOWER_MANA_REFUND_RATIO);
 
             // false : pas de drop d'item, comme une tour détruite au combat (setHealth) — la
             // touche dédiée est l'unique façon "propre" de retirer une tour, symétrique à la

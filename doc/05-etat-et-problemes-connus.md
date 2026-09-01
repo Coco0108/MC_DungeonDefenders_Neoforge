@@ -516,6 +516,21 @@ vérifie la CI.
   `MobHealthBarRenderer`, pas à une exclusion explicite. **Jamais vérifié en jeu.** Détail dans
   [02-gameplay.md](02-gameplay.md#le-mannequin-dentraînement--entitytrainingdummyentityjava-blocktrainingdummyblockjava).
 
+- ✅ **Phase Taverne** (`GamePhase.TAVERN`, 2026-09-01) : troisième phase, à côté de
+  Construction et Combat. Décidée avec le joueur — plutôt qu'**interdire** la construction dans
+  le hub (l'approche que j'avais proposée), elle la rend **délibérée** : la taverne devient une
+  zone d'essai libre, ce qui va de pair avec le mannequin d'entraînement qui y vit. Pose et
+  suppression de tours autorisées, **gratuites et sans remboursement** (aucun monstre à tuer
+  dans le hub, donc aucun mana n'y rentre) ; spawners, vagues, score et XP inactifs ; HUD Vague
+  et Ennemis masqués. `GamePhase#allowsTowerBuilding()`/`isInGame()` centralisent les deux tests
+  au lieu de les répéter. La valeur par défaut de l'attachment passe de `BUILD` à `TAVERN`, et
+  `TavernSpawn` force cette phase à chaque chargement du monde. Nouvelle
+  `PhaseTransitions.startNewGame` appelée par `MapInstance.startGame` — distincte d'`enterBuild`,
+  qui fait *avancer* la vague et démarrerait donc une partie à la vague 2 ; cette remise à zéro
+  était implicite tant que la phase par défaut valait `BUILD`. Les tours d'essai de la taverne
+  sont effacées au lancement d'une partie (`TavernSpawn.clearTestTowers`). **Jamais vérifié en
+  jeu.** Détail dans [02-gameplay.md](02-gameplay.md#la-phase-taverne--gamephasetavern).
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.
@@ -922,9 +937,7 @@ seule map placeholder générique pour l'instant, quel que soit l'élément sél
 charger) ; le mannequin d'entraînement annoncé pour la taverne (voir le backlog) ; au
 moins une vraie map, et le vrai chargement de sa structure `.nbt` (remplacerait
 `buildPlaceholderArena()`, en réutilisant ce que fait déjà `TavernSpawn`) ; les zones où la
-pose de tours est interdite (décision ci-dessus) ; une phase/un état "taverne" distinct de
-Construction, pour que la roue des tours ne s'ouvre pas dans le hub (`GAME_PHASE` vaut `BUILD`
-par défaut, et rien ne distingue la taverne d'une map) ; la réinitialisation tours/PV du cristal
+pose de tours est interdite (décision ci-dessus) ; la réinitialisation tours/PV du cristal
 entre deux tentatives ;
 le force-chargement pendant une partie ; une bordure/barrière anti-chute dans le vide en
 dehors des zones bâties ; un vrai point de sortie posé dans chaque map (`/dd_leave` reste une

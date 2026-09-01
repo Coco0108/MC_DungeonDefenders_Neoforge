@@ -778,10 +778,11 @@ AbstractTowerBlockEntity` en tout début de handler, générique à toutes les c
 avoir besoin d'un tag séparé (le block entity venant d'être créé au moment où l'événement se
 déclenche).
 
-Logique : d'abord la phase — `level.getData(ModAttachments.GAME_PHASE) ==
-GamePhase.BUILD.ordinal()`, sinon placement annulé et message dédié
+Logique : d'abord la phase — `GamePhase.of(level).allowsTowerBuilding()`, vrai en
+**Construction** et à la **Taverne**, faux en Combat ; sinon placement annulé et message dédié
 (`dungeon_defenders.tower.build_phase_only`), vérifié **avant** le mana pour ne pas laisser
-croire à un problème de mana alors que c'est la phase qui bloque. Puis le mana : si
+croire à un problème de mana alors que c'est la phase qui bloque. À la Taverne, le handler
+s'arrête là : **la pose y est gratuite** (voir "La phase Taverne" plus bas). Puis le mana : si
 `player.getData(ModAttachments.MANA) < tower.getManaCost()`, l'événement est annulé
 (`event.setCanceled(true)`) — NeoForge restaure alors le `BlockSnapshot` précédent **et** rend
 l'item au joueur automatiquement (le bloc n'est jamais réellement resté posé), pas besoin de le
@@ -1490,6 +1491,73 @@ CLIENT, donc purement locale : un joueur qui la réactive ne change rien pour le
 Le contour n'était pas le seul repère visuel : le mode suppression dessine son propre contour
 **orange** (`TowerRemovalClientEvents`, inchangé et désormais mieux lisible sans la boîte noire
 par-dessus) et les tours affichent leur barre de vie (`TowerHealthBarRenderer`).
+
+## La phase Taverne — `GamePhase.TAVERN`
+
+Décidée avec le joueur (2026-09-01). Le problème de départ : `GAME_PHASE` valait `BUILD` par
+défaut et rien ne distinguait le hub d'une map — la roue des tours s'ouvrait donc dans la
+taverne, la pose y était acceptée, et le HUD y affichait « Vague 1/5 ». Plutôt que d'y
+**interdire** la construction, une troisième phase la rend **délibérée** : la taverne devient
+une zone d'essai libre, ce qui va de pair avec le mannequin d'entraînement qui y vit (voir plus
+bas).
+
+### Pourquoi une phase globale suffit
+
+`GAME_PHASE` est un attachment de `Level`, donc partagé par tout le monde — a priori mauvais
+signe pour une phase censée décrire *où l'on est*. Ça marche quand même parce que
+`MapInstance.startGame` et `returnToTavern` téléportent **tous** les joueurs ensemble : le mod
+est bâti autour d'une seule session partagée (voir 05-etat-et-problemes-connus.md, "Système de
+maps/structures"). « Tout le monde est à la taverne » est donc un vrai état du monde, pas une
+approximation.
+
+### Ce que la phase change
+
+| Comportement | Taverne |
+|---|---|
+| Roue des tours, pose | **autorisée** — `GamePhase#allowsTowerBuilding()`, vrai en `BUILD` et `TAVERN` |
+| Coût en mana de la pose | **gratuit** (`ModEvents.onTowerPlace` sort avant le débit) |
+| Mode suppression de tour | **autorisé**, même garde — sinon impossible de nettoyer ses essais |
+| Remboursement à la suppression | **aucun** (`ModNetworking.handleRemoveTower`) |
+| Spawners | inactifs — déjà `COMBAT` uniquement, rien à changer |
+| Vote « prêt » du Cristal d'Eternia | inactif — déjà `BUILD` uniquement |
+| Comptage de vague, score, XP | inactifs |
+| HUD Vague / Ennemis | masqués — `GamePhase#isInGame()` |
+
+**Gratuité et absence de remboursement vont ensemble** : aucun monstre ne meurt dans le hub,
+donc aucun mana n'y rentre — faire payer les essais les rendrait impossibles au bout de deux ou
+trois tours. Et rembourser une pose gratuite reviendrait à imprimer du mana à volonté.
+
+### Les transitions
+
+| Quand | Appel |
+|---|---|
+| Chargement du monde | `TavernSpawn.onLevelLoad` → `PhaseTransitions.enterTavern` |
+| Clic sur « Jouer » | `MapInstance.startGame` → `PhaseTransitions.startNewGame` (vague 1, `BUILD`) |
+| `/dd_leave`, « Retour à la taverne » | `MapInstance.returnToTavern` → `PhaseTransitions.enterTavern` |
+| Fin de vague, victoire, défaite | inchangé (`enterBuild`, `onVictory`, `onDefeat`) |
+
+`startNewGame` est volontairement distincte d'`enterBuild` : cette dernière fait **avancer** la
+vague (elle sert au retour en Construction entre deux vagues), donc démarrer une partie avec
+elle commencerait à la vague 2. Cette remise à zéro était implicite tant que la phase par
+défaut valait `BUILD` ; elle ne l'est plus.
+
+**Les tours d'essai sont effacées au lancement d'une partie** (`TavernSpawn.clearTestTowers`,
+appelée par `startGame`) : sans ça elles resteraient plantées dans la taverne jusqu'au prochain
+chargement du monde. Balayage de la zone bloc par bloc faute de registre de tours (contrairement
+aux spawners et aux coffres de mana, qui ont le leur) — coût ponctuel, payé une fois au clic sur
+« Jouer ».
+
+### Deux détails d'implémentation
+
+- **`TAVERN` est ajoutée à la fin de l'enum**, pas au début. La phase est persistée par nom
+  (donc les sauvegardes existantes s'en fichent), mais la valeur synchronisée vers le client est
+  un `ordinal()` — insérer la nouvelle valeur avant les autres les aurait décalées.
+- **La valeur par défaut de l'attachment est passée de `BUILD` à `TAVERN`** : c'est là que tout
+  joueur apparaît, et `TavernSpawn` force de toute façon cette phase à chaque chargement du
+  monde.
+
+> Le harnais de test (maj + clic droit sur un spawner) bascule Construction ↔ Combat. Depuis la
+> Taverne, il envoie en Construction — sans intérêt, mais sans dégât non plus.
 
 ## Le mannequin d'entraînement — `entity/TrainingDummyEntity.java`, `block/TrainingDummyBlock.java`
 

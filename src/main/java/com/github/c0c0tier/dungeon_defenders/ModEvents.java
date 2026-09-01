@@ -100,12 +100,21 @@ public class ModEvents {
             return;
         }
 
-        // Décidé avec le joueur : les tours ne se posent qu'en phase Construction, jamais
-        // pendant le Combat — vérifié avant même le mana, pour ne pas laisser croire qu'un
-        // refus vient d'un manque de mana alors que c'est la phase qui bloque.
-        if (level.getData(ModAttachments.GAME_PHASE) != GamePhase.BUILD.ordinal()) {
+        // Décidé avec le joueur : les tours ne se posent qu'en Construction (pendant une
+        // partie) ou à la Taverne (zone d'essai) — jamais pendant le Combat. Vérifié avant même
+        // le mana, pour ne pas laisser croire qu'un refus vient d'un manque de mana alors que
+        // c'est la phase qui bloque.
+        GamePhase phase = GamePhase.of(level);
+        if (!phase.allowsTowerBuilding()) {
             player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.build_phase_only"));
             event.setCanceled(true);
+            return;
+        }
+
+        // Gratuites à la Taverne (décidé avec le joueur, 2026-09-01) : il n'y a aucun monstre à
+        // tuer dans le hub, donc aucune façon d'y gagner du mana — faire payer les essais les
+        // rendrait impossibles au bout de deux ou trois tours.
+        if (phase == GamePhase.TAVERN) {
             return;
         }
 
