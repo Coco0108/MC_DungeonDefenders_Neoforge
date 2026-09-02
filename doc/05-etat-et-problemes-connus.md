@@ -531,6 +531,18 @@ vérifie la CI.
   sont effacées au lancement d'une partie (`TavernSpawn.clearTestTowers`). **Jamais vérifié en
   jeu.** Détail dans [02-gameplay.md](02-gameplay.md#la-phase-taverne--gamephasetavern).
 
+- ✅ **Zones interdites à la pose de tours** (`block/NoBuildZoneBlock.java`, 2026-09-02) :
+  marqueur de map, invisible/traversable/ciblable en créatif seulement, un bloc par case
+  interdite. **Liste noire** (interdit) et non liste blanche (autorisé), décidé avec le joueur —
+  un oubli du mappeur autorise une pose en trop plutôt que de rendre un endroit injouable.
+  Il bloque la pose simplement **en occupant la case** : un bloc normal n'est pas
+  `canBeReplaced()`, ce que testent déjà le ciblage client et l'autorité serveur. Les deux
+  ajoutent un test explicite du marqueur uniquement pour **expliquer** le refus
+  (`dungeon_defenders.tower.no_build_zone`) — sans lui, l'hologramme devient rouge sans cause
+  visible, le bloc étant invisible. Pas de marqueur de volume (deux coins), pas de surbrillance
+  de la zone : volontaire, voir 02-gameplay.md. **Jamais vérifié en jeu.** Détail dans
+  [02-gameplay.md](02-gameplay.md#les-zones-interdites-à-la-pose--blocknobuildzoneblockjava).
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.
@@ -936,8 +948,7 @@ seule map placeholder générique pour l'instant, quel que soit l'élément sél
 **fichier** de structure de la taverne (le mécanisme de chargement existe, il n'a rien à
 charger) ; le mannequin d'entraînement annoncé pour la taverne (voir le backlog) ; au
 moins une vraie map, et le vrai chargement de sa structure `.nbt` (remplacerait
-`buildPlaceholderArena()`, en réutilisant ce que fait déjà `TavernSpawn`) ; les zones où la
-pose de tours est interdite (décision ci-dessus) ; la réinitialisation tours/PV du cristal
+`buildPlaceholderArena()`, en réutilisant ce que fait déjà `TavernSpawn`) ; la réinitialisation tours/PV du cristal
 entre deux tentatives ;
 le force-chargement pendant une partie ; une bordure/barrière anti-chute dans le vide en
 dehors des zones bâties ; un vrai point de sortie posé dans chaque map (`/dd_leave` reste une

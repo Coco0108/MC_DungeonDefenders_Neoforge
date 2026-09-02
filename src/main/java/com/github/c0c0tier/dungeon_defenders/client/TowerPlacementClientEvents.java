@@ -4,6 +4,7 @@ import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.TowerWheelScreen;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
 import com.github.c0c0tier.dungeon_defenders.network.PlaceTowerPayload;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -139,6 +140,25 @@ public class TowerPlacementClientEvents {
 
         if (TowerPlacementState.isTargetValid() && TowerPlacementState.targetPos() != null) {
             confirmPlacement();
+            return;
+        }
+
+        // Cible refusée : si c'est à cause d'une zone interdite, le dire. Sans ça le joueur voit
+        // un hologramme rouge sans aucune raison apparente — le marqueur est invisible. Message
+        // local (le paquet n'est jamais envoyé pour une cible invalide) ; le serveur envoie le
+        // même s'il refuse de son côté, voir ModNetworking#handlePlaceTower.
+        warnIfNoBuildZone();
+    }
+
+    private static void warnIfNoBuildZone() {
+        Minecraft minecraft = Minecraft.getInstance();
+        BlockPos pos = TowerPlacementState.targetPos();
+        if (minecraft.level == null || minecraft.player == null || pos == null) {
+            return;
+        }
+        if (minecraft.level.getBlockState(pos).is(ModBlocks.NO_BUILD_ZONE.get())) {
+            minecraft.player.sendSystemMessage(
+                    Component.translatable("dungeon_defenders.tower.no_build_zone"));
         }
     }
 

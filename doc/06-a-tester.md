@@ -459,6 +459,33 @@ seulement les tours.
 - [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
       `ModEvents.onBlockBreakAttempt` ou `BreakBlockEvent`.
 
+## Les zones interdites a la pose (`NoBuildZoneBlock`)
+
+Nouveau (2026-09-02), jamais verifie en jeu.
+
+- [ ] En creatif, l'item "Marqueur de zone interdite" apparait dans l'onglet du mod et se pose
+      sans crash. Le bloc pose est **invisible** ; en creatif on le retrouve au contour de
+      visee, en survie il est traversable et introuvable.
+- [ ] Marcher a travers : aucune collision, ni pour le joueur ni pour un monstre (a verifier en
+      combat, un monstre doit traverser la zone normalement).
+- [ ] Poser un marqueur, ouvrir la roue des tours, viser la case du marqueur : l'hologramme doit
+      etre **rouge** (position refusee).
+- [ ] Clic droit pour confirmer quand meme : rien ne se pose, et le message "Impossible de poser
+      une tour ici." apparait. C'est le point important — sans ce message le refus serait
+      inexplicable.
+- [ ] Viser une case **voisine** libre : hologramme vert, la tour se pose normalement. Le
+      marqueur ne doit interdire que sa propre case.
+- [ ] `/fill` une zone de marqueurs (ex. un couloir 5x1x10) : toute la zone refuse la pose,
+      d'un bout a l'autre.
+- [ ] Le marqueur ne fait **ni ombre ni trou noir** : poser un bloc plein a cote, sa face
+      tournee vers le marqueur s'affiche normalement ; une torche d'un cote eclaire bien de
+      l'autre.
+- [ ] Sauvegarder une structure contenant des marqueurs avec un bloc de structure, la recharger
+      ailleurs : les marqueurs sont bien presents et interdisent toujours la pose.
+- [ ] A la Taverne (ou la pose est gratuite) : un marqueur interdit quand meme la pose — la
+      gratuite ne doit pas contourner l'interdiction.
+- [ ] Aucune exception dans les logs liee a `NoBuildZoneBlock`.
+
 ## La phase Taverne (`GamePhase.TAVERN`)
 
 Nouveau (2026-09-01), jamais verifie en jeu. Touche 11 points de decision dans le code : le

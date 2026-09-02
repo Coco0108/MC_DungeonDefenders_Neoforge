@@ -1,0 +1,7 @@
+{
+  "comment": "Placeholder : réutilise la texture vanilla du béton rouge (thème 'interdit') en attendant une texture dédiée. Le bloc posé est de toute façon invisible (RenderShape.INVISIBLE) — ce modèle ne sert qu'à l'icône de l'item.",
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "minecraft:block/red_concrete"
+  }
+}

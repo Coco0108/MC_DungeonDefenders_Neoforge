@@ -7,6 +7,7 @@ import com.github.c0c0tier.dungeon_defenders.block.EterniaCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.block.HarpoonTurretBlock;
 import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
 import com.github.c0c0tier.dungeon_defenders.block.MortarTurretBlock;
+import com.github.c0c0tier.dungeon_defenders.block.NoBuildZoneBlock;
 import com.github.c0c0tier.dungeon_defenders.block.PlayerSpawnBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SliceNDiceBlockadeBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpawnerBlock;
@@ -152,6 +153,16 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> TRAINING_DUMMY_ITEM =
             ITEMS.registerSimpleBlockItem("training_dummy", TRAINING_DUMMY);
+
+    // 10. Zone interdite à la pose de tours : marqueur posé par le créateur d'une map, une case
+    // par bloc (voir NoBuildZoneBlock). Invisible et traversable comme les autres marqueurs ;
+    // c'est le simple fait d'occuper la case qui interdit la pose.
+    public static final DeferredBlock<NoBuildZoneBlock> NO_BUILD_ZONE = BLOCKS.registerBlock("no_build_zone",
+            NoBuildZoneBlock::new,
+            properties -> properties.strength(2.0F));
+
+    public static final DeferredItem<BlockItem> NO_BUILD_ZONE_ITEM =
+            ITEMS.registerSimpleBlockItem("no_build_zone", NO_BUILD_ZONE);
 
     // Connexion au bus d'événements
     public static void register(IEventBus modEventBus) {

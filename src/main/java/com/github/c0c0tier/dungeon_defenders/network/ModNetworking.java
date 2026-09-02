@@ -8,6 +8,7 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
@@ -121,6 +122,15 @@ public class ModNetworking {
 
             BlockPos pos = payload.pos();
             if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > MAX_DISTANCE_SQ) {
+                return;
+            }
+
+            // Le marqueur de zone interdite occupe la case, donc le test canBeReplaced()
+            // ci-dessous suffirait déjà à refuser la pose — mais silencieusement. Testé à part
+            // pour pouvoir expliquer le refus : le bloc étant invisible, le joueur n'a aucun
+            // moyen de deviner pourquoi sa tour ne passe pas.
+            if (serverLevel.getBlockState(pos).is(ModBlocks.NO_BUILD_ZONE.get())) {
+                player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.no_build_zone"));
                 return;
             }
 

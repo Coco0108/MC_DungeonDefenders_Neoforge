@@ -121,6 +121,7 @@ public class DungeonDefendersMod {
                         output.accept(ModBlocks.MANA_CHEST_ITEM.get());
                         output.accept(ModBlocks.PLAYER_SPAWN_ITEM.get());
                         output.accept(ModBlocks.TRAINING_DUMMY_ITEM.get());
+                        output.accept(ModBlocks.NO_BUILD_ZONE_ITEM.get());
                     })
                     .build());
 
