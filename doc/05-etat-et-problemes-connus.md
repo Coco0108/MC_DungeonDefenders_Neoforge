@@ -543,6 +543,19 @@ vérifie la CI.
   de la zone : volontaire, voir 02-gameplay.md. **Jamais vérifié en jeu.** Détail dans
   [02-gameplay.md](02-gameplay.md#les-zones-interdites-à-la-pose--blocknobuildzoneblockjava).
 
+- ✅ **Bouton « Abandonner le niveau » dans le menu pause**
+  (`client/PauseMenuClientEvents.java`, `network/LeaveMapPayload.java`, 2026-09-02) : choisi avec
+  le joueur plutôt qu'un bloc de sortie à poser dans chaque map — ça marche sur toutes les maps
+  sans que le mappeur ait quoi que ce soit à placer, y compris celles où il aurait oublié une
+  sortie. Ajouté via `ScreenEvent.Init.Post`, affiché **uniquement pendant une partie**
+  (`GamePhase#isInGame()`), positionné sous le widget le plus bas déjà présent plutôt qu'à des
+  coordonnées en dur (la mise en page du menu pause change selon les versions, et d'autres mods
+  peuvent y ajouter des boutons). Confirmation par `ConfirmScreen` avant d'agir : le menu pause
+  s'ouvre par réflexe, un clic à côté ferait perdre la partie. Le message précise que **tous**
+  les joueurs sont ramenés. `/dd_leave` reste en parallèle comme harnais de test. **Jamais
+  vérifié en jeu.** Détail dans
+  [02-gameplay.md](02-gameplay.md#abandonner-un-niveau--clientpausemenuclienteventsjava-networkleavemappayloadjava).
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.
@@ -951,8 +964,10 @@ moins une vraie map, et le vrai chargement de sa structure `.nbt` (remplacerait
 `buildPlaceholderArena()`, en réutilisant ce que fait déjà `TavernSpawn`) ; la réinitialisation tours/PV du cristal
 entre deux tentatives ;
 le force-chargement pendant une partie ; une bordure/barrière anti-chute dans le vide en
-dehors des zones bâties ; un vrai point de sortie posé dans chaque map (`/dd_leave` reste une
-commande de harnais, utilisable à tout moment, pas seulement après victoire/défaite). C'est
+dehors des zones bâties ; les métadonnées par map (nombre de vagues, multiplicateur de
+difficulté — `MAX_WAVE` est encore global). Le point de sortie, lui, est réglé autrement que
+prévu : par le bouton « Abandonner le niveau » du menu pause plutôt qu'un bloc à poser (voir
+"Ce qui est implémenté"). C'est
 aussi le prérequis pour que le verrou créatif du GUI de config du spawner (voir plus haut) ait
 vraiment son plein effet : tant que ce système n'est pas fini, rien n'empêche techniquement de
 construire et tester une map "à la main" en créatif.

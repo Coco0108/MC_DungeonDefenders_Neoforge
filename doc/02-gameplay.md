@@ -1492,6 +1492,54 @@ Le contour n'était pas le seul repère visuel : le mode suppression dessine son
 **orange** (`TowerRemovalClientEvents`, inchangé et désormais mieux lisible sans la boîte noire
 par-dessus) et les tours affichent leur barre de vie (`TowerHealthBarRenderer`).
 
+## Abandonner un niveau — `client/PauseMenuClientEvents.java`, `network/LeaveMapPayload.java`
+
+Un bouton rouge **« Abandonner le niveau »** ajouté au bas du menu pause vanilla, qui ramène à
+la taverne après confirmation.
+
+### Pourquoi le menu pause plutôt qu'un bloc de sortie
+
+Les deux options ont été pesées avec le joueur (2026-09-02). Le bloc à poser dans chaque map
+perdait sur trois points : il faut y penser à la construction (une map où le mappeur l'oublie
+n'a pas de sortie), il faut aller le chercher physiquement, et ce n'est pas là qu'un joueur
+cherche à quitter. Le menu pause marche sur **toutes** les maps sans que le mappeur ait quoi que
+ce soit à placer.
+
+La commande `/dd_leave` reste en parallèle : c'est un harnais de test, utilisable à tout moment
+y compris pour déboguer.
+
+### Comment le bouton est ajouté
+
+`ScreenEvent.Init.Post` (NeoForge) permet d'ajouter des widgets à un écran vanilla déjà
+initialisé, via `addListener`. Le handler filtre sur `PauseScreen`.
+
+**Le bouton n'apparaît que pendant une partie** (`GamePhase#isInGame()`) : proposer d'abandonner
+depuis la taverne n'aurait aucun sens.
+
+**Sa position est calculée depuis les widgets déjà présents**, pas depuis la mise en page
+vanilla : le bouton se place sous le widget le plus bas de l'écran (`getY() + getHeight()`
+maximal), avec un repli et un plafond pour ne jamais déborder. La mise en page du menu pause
+change d'une version de Minecraft à l'autre, et d'autres mods peuvent aussi y avoir ajouté des
+boutons — se caler sur des coordonnées en dur aurait fini par superposer deux boutons.
+
+Le rouge est celui du **texte** (`ChatFormatting.RED`), pas du fond : un `Button` vanilla ne
+sait pas colorer son fond sans widget custom, et ça ne valait pas la peine ici.
+
+### La confirmation
+
+Demandée par le joueur, et justifiée : le menu pause s'ouvre par réflexe, et un clic à côté
+ferait perdre la partie en cours sans retour possible. `ConfirmScreen` (vanilla) affiche le
+titre et un message qui précise le vrai effet — **tous les joueurs** sont ramenés, pas seulement
+celui qui a cliqué. « Non » revient au menu pause (`setScreen` sur la même instance, dont
+`init()` est rejoué), pas au jeu.
+
+### Le paquet
+
+`LeaveMapPayload`, C2S sans champ — un simple signal, comme `StartGamePayload` à l'aller. Le
+serveur revérifie la phase avant d'agir (le client masque déjà le bouton hors partie, mais il
+n'est jamais l'autorité) puis appelle `MapInstance.returnToTavern`, qui nettoie la zone de map,
+repasse en phase Taverne et téléporte tout le monde.
+
 ## Les zones interdites à la pose — `block/NoBuildZoneBlock.java`
 
 Premier outil de *mappeur* du mod au sens strict (les autres marqueurs servent au fonctionnement

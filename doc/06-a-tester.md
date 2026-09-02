@@ -459,6 +459,29 @@ seulement les tours.
 - [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
       `ModEvents.onBlockBreakAttempt` ou `BreakBlockEvent`.
 
+## Le bouton "Abandonner le niveau" (menu pause)
+
+Nouveau (2026-09-02), jamais verifie en jeu. Premier ajout du mod a un ecran **vanilla** : le
+risque principal est un bouton mal place ou superpose a ceux de Minecraft.
+
+- [ ] **A la taverne**, ouvrir le menu pause (Echap) : **aucun** bouton "Abandonner le niveau".
+- [ ] **Dans une map** (apres avoir clique "Jouer"), ouvrir le menu pause : le bouton apparait,
+      en **rouge**, **sous** le bouton "Sauvegarder et quitter" — pas superpose, pas hors ecran.
+- [ ] Verifier a plusieurs tailles de fenetre et plusieurs valeurs de "GUI Scale" (surtout la
+      plus grande) : le bouton doit rester visible et ne jamais chevaucher un bouton vanilla.
+- [ ] Cliquer dessus : un ecran de confirmation s'ouvre, avec le titre et un message qui precise
+      que **tous les joueurs** sont ramenes.
+- [ ] Repondre **Non** : retour au **menu pause** (pas au jeu), la partie continue.
+- [ ] Repondre **Oui** : l'ecran se ferme, retour a la taverne, la souris est rendue au jeu (pas
+      de curseur bloque), et le HUD repasse en "Phase : Taverne" sans compteurs de vague.
+- [ ] Abandonner **en pleine phase de Combat** avec des monstres vivants : ca doit marcher aussi,
+      et les monstres de la map disparaitre avec la zone nettoyee.
+- [ ] **En multijoueur** : un joueur qui abandonne ramene **tout le monde** a la taverne. C'est
+      voulu (une seule partie active a la fois), a confirmer que ce n'est pas vecu comme un bug.
+- [ ] Relancer une partie juste apres un abandon : elle repart bien **vague 1**.
+- [ ] `/dd_leave` fonctionne toujours en parallele.
+- [ ] Aucune exception dans les logs liee a `PauseMenuClientEvents` ou `LeaveMapPayload`.
+
 ## Les zones interdites a la pose (`NoBuildZoneBlock`)
 
 Nouveau (2026-09-02), jamais verifie en jeu.
