@@ -459,6 +459,30 @@ seulement les tours.
 - [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
       `ModEvents.onBlockBreakAttempt` ou `BreakBlockEvent`.
 
+## L'export d'un pack de maps (`/dd_export`)
+
+Nouveau (2026-09-02). Le TOML et le JSON generes ont ete valides hors jeu (analyse syntaxique),
+et `lowcodefml` existe bien dans le loader de cette version — mais **le jar produit n'a jamais
+ete charge par Minecraft**, c'est tout l'objet de ce test.
+
+- [ ] Creer deux maps sous un meme namespace personnalise (ex. `test_pack:map/a` et
+      `test_pack:map/b`), puis lancer `/dd_export test_pack`.
+- [ ] Un message de succes indique le nombre de maps, d'apercus (0 pour l'instant) et le chemin.
+- [ ] Le fichier existe dans `<dossier du serveur>/dungeon_defenders_export/test_pack.jar`.
+      L'ouvrir avec un gestionnaire d'archives : il doit contenir `META-INF/neoforge.mods.toml`,
+      deux `.nbt` sous `data/test_pack/structure/map/`, et deux fichiers de langue.
+- [ ] **Le test qui compte** : deposer ce jar dans le dossier `mods` d'une installation
+      **propre** (un autre monde, ou apres avoir supprime les maps de la sauvegarde), demarrer,
+      et verifier que les deux maps apparaissent dans le carrousel sous un pack nomme
+      "Test Pack" — sans erreur au demarrage.
+- [ ] Verifier que les maps du jar sont bien **non supprimables** (bouton grise) : ce sont des
+      ressources en lecture seule.
+- [ ] `/dd_export` sur un namespace inexistant, ou avec des majuscules : message d'erreur clair,
+      pas de plantage, pas de jar vide cree.
+- [ ] `/dd_export dungeon_defenders` alors que la campagne vient du jar du mod : doit refuser
+      (aucune map creee en jeu sous ce namespace), sauf si tu as toi-meme cree des maps dedans.
+- [ ] La commande refuse bien en dessous du niveau de permission gamemaster.
+
 ## Le force-chargement de la zone de map (`ModChunkTickets`)
 
 Nouveau (2026-09-02), jamais verifie en jeu. Difficile a observer directement : le test consiste

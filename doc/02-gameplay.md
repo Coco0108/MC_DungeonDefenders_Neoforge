@@ -1627,6 +1627,35 @@ mon_pack.jar
 Un datapack seul fonctionne aussi pour la structure, mais ne peut pas embarquer l'image
 d'aperçu — d'où le jar comme format recommandé.
 
+#### `/dd_export <namespace>` — le jar est généré pour toi
+
+Recopier des fichiers aux bons endroits et écrire un `neoforge.mods.toml` correct, c'est
+exactement le genre d'étape qui décourage un auteur. La commande produit donc l'objet fini, dans
+`<dossier du serveur>/dungeon_defenders_export/<namespace>.jar` :
+
+- le `neoforge.mods.toml`, avec `modLoader = "lowcodefml"` (le chargeur des mods **sans code** —
+  vérifié présent dans le loader de cette version) et une dépendance requise à
+  `dungeon_defenders` ;
+- une entrée `data/<ns>/structure/map/<id>.nbt` par map du pack ;
+- son aperçu `assets/<ns>/textures/gui/maps/<id>.png` s'il existe ;
+- un fichier de langue de départ avec la clé `dungeon_defenders.map_pack.<ns>`.
+
+**Un jar par pack, pas par map** : un pack de cinq maps donne un seul fichier à publier. La
+commande prend donc un namespace.
+
+**Seules les maps créées en jeu sont exportées** (`MapDefinition#fromWorld`) : une map qui vient
+déjà d'un jar est une ressource en lecture seule, la ré-emballer n'aurait pas de sens.
+
+Le **nom du pack** n'est stocké nulle part — la commande écrit donc une valeur de départ dérivée
+du namespace (`cavernes_oubliees` → « Cavernes Oubliees ») que l'auteur corrige dans le fichier
+de langue. Mieux vaut un fichier à retoucher qu'une clé de traduction crue affichée aux joueurs.
+
+Les **aperçus** sont cherchés dans `<monde>/dungeon_defenders/previews/<ns>/<id>.png`. Rien ne
+les y écrit encore — c'est l'emplacement que remplira la capture en jeu (phase 2), prévu dès
+maintenant pour que cette commande n'ait pas à changer ensuite.
+
+Réservée au niveau de permission « gamemaster » : c'est un outil de créateur.
+
 **Attention au masquage** : une structure du monde est cherchée *avant* celle d'un jar. Une map
 publiée puis re-sauvegardée en jeu sous le même identifiant est donc remplacée par la version
 locale tant qu'on ne la supprime pas de la sauvegarde. Pratique pour itérer, déroutant si on

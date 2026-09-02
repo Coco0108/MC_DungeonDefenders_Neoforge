@@ -110,5 +110,9 @@
   "dungeon_defenders.map_pack.dungeon_defenders": "Campaign",
   "dungeon_defenders.map_selection.delete": "Delete this map",
   "dungeon_defenders.map_selection.delete_confirm_title": "Delete this map?",
-  "dungeon_defenders.map_selection.delete_confirm_message": "%s (%s) will be removed from this world. This cannot be undone."
+  "dungeon_defenders.map_selection.delete_confirm_message": "%s (%s) will be removed from this world. This cannot be undone.",
+  "dungeon_defenders.export.success": "Exported %s map(s) and %s preview(s) to %s",
+  "dungeon_defenders.export.namespace_invalid": "\"%s\" is not a valid namespace (lowercase letters, digits and underscores, starting with a letter).",
+  "dungeon_defenders.export.no_map": "No map created in this world under the namespace \"%s\".",
+  "dungeon_defenders.export.failed": "Export failed: %s"
 }

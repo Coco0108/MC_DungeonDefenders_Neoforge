@@ -580,6 +580,12 @@ affiché du pack peut venir d'un `assets/mon_pack/lang/fr_fr.json` contenant
 
 Un datapack seul fonctionne pour la structure mais ne peut pas embarquer l'image d'aperçu.
 
+**Tu n'as pas à construire ce jar à la main** : `/dd_export <namespace>` le génère dans
+`<dossier du serveur>/dungeon_defenders_export/<namespace>.jar`, avec le `mods.toml`, toutes les
+maps du pack, leurs aperçus s'ils existent, et un fichier de langue de départ à retoucher pour
+donner un vrai nom au pack. Un jar par **pack**, pas par map. Seules les maps créées en jeu sont
+exportées — celles qui viennent déjà d'un jar sont en lecture seule.
+
 > **Piège** : une structure du monde est cherchée **avant** celle d'un jar. Une map publiée puis
 > re-sauvegardée en jeu sous le même identifiant est remplacée par la version locale tant qu'on
 > ne la supprime pas de la sauvegarde.

@@ -581,6 +581,16 @@ vérifie la CI.
   **Jamais vérifié en jeu.** Détail dans
   [02-gameplay.md](02-gameplay.md#le-force-chargement-de-la-zone--initmodchunkticketsjava).
 
+- ✅ **`/dd_export <namespace>`** (`MapExporter.java`, 2026-09-02) : emballe les maps d'un pack
+  dans un jar d'extension prêt à publier — `mods.toml` généré (`modLoader = "lowcodefml"`,
+  dépendance requise à `dungeon_defenders`), structures, aperçus s'ils existent, fichier de
+  langue de départ. Un jar par **pack**, écrit dans
+  `<dossier du serveur>/dungeon_defenders_export/`. Réservé au niveau de permission gamemaster.
+  Seules les maps créées en jeu sont exportées. Le TOML et le JSON générés ont été validés hors
+  jeu (analyse syntaxique), et `lowcodefml` est bien présent dans le loader de cette version —
+  mais **le jar produit n'a jamais été chargé par Minecraft**. Détail dans
+  [02-gameplay.md](02-gameplay.md#dd_export-namespace--le-jar-est-généré-pour-toi).
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.
@@ -983,8 +993,7 @@ injouable. Rien de codé, voir le backlog dans
 
 **Reste à faire** : les **fichiers** eux-mêmes — la structure de la taverne et au moins une
 vraie map ; les deux mécanismes de chargement existent désormais, ils n'ont simplement rien à
-charger. Puis l'aperçu des maps capturé en jeu (phase 2), la commande d'export vers un jar
-publiable (phase 3), et la réinitialisation tours/PV du cristal entre deux tentatives ;
+charger. Puis l'aperçu des maps capturé en jeu (phase 2), et la réinitialisation tours/PV du cristal entre deux tentatives ;
 une bordure/barrière anti-chute dans le vide en
 dehors des zones bâties ; les métadonnées par map (nombre de vagues, multiplicateur de
 difficulté — `MAX_WAVE` est encore global). Le point de sortie, lui, est réglé autrement que

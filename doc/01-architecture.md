@@ -16,7 +16,8 @@ MC_DungeonDefenders_Neoforge/
     │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA, vie max du joueur)
     │   ├── TavernSpawn.java                  # Point de spawn fixe + chargement de la structure de la taverne (monde vide)
     │   ├── MapInstance.java                  # "La map active" : emplacement partagé, placeholder, téléportation
-    │   ├── ModCommands.java                  # /dd_leave (retour à la taverne, harnais de test)
+    │   ├── ModCommands.java                  # /dd_leave (harnais) et /dd_export (jar de pack de maps)
+    │   ├── MapExporter.java                  # Emballe les maps d'un pack dans un jar d'extension prêt à publier
     │   ├── Config.java                       # Spec de config COMMON (PV cristal, dégâts, portée), branchée
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items

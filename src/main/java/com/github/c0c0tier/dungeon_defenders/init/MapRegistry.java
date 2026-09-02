@@ -122,7 +122,7 @@ public final class MapRegistry {
 
     // createAndValidatePathToStructure ne fait que résoudre un chemin (vérifié : pas de création
     // de dossier), on peut donc l'appeler pour un simple test d'existence.
-    private static Path worldFile(StructureTemplateManager manager, Identifier structureId) {
+    public static Path worldFile(StructureTemplateManager manager, Identifier structureId) {
         return manager.worldTemplates().createAndValidatePathToStructure(
                 structureId, StructureTemplateManager.WORLD_STRUCTURE_LISTER);
     }
