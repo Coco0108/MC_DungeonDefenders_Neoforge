@@ -14,6 +14,7 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.TrainingDummyBlockEnti
 import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
+import com.github.c0c0tier.dungeon_defenders.init.ModChunkTickets;
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.mojang.logging.LogUtils;
@@ -139,6 +140,7 @@ public class DungeonDefendersMod {
         ModAttachments.register(modEventBus);
         ModMenus.register(modEventBus);
         ModEntities.register(modEventBus);
+        ModChunkTickets.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
 

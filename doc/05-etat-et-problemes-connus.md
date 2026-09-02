@@ -571,6 +571,16 @@ vérifie la CI.
   carrousel n'était que décoratif jusque-là. **Jamais vérifié en jeu.** Détail dans
   [02-gameplay.md](02-gameplay.md#créer-une-map-entièrement-en-jeu--initmapregistryjava-blockmapconfigblockjava).
 
+- ✅ **Force-chargement de la zone de map** (`init/ModChunkTickets.java`, 2026-09-02) : sans lui,
+  Minecraft ne fait tourner que les chunks proches du groupe, et un spawner éloigné cesse
+  simplement de fonctionner — sans erreur, avec pour seul symptôme « certains ennemis
+  n'apparaissent jamais ». Passe par le système de tickets de NeoForge (propriétaire, persistance,
+  revalidation au chargement du monde) plutôt que par `/forceload`. Forcé sur la même emprise que
+  le nettoyage à `startGame`, relâché à `returnToTavern`, et **tout est supprimé au chargement du
+  monde** : un serveur arrêté en pleine partie garderait sinon la zone chargée indéfiniment.
+  **Jamais vérifié en jeu.** Détail dans
+  [02-gameplay.md](02-gameplay.md#le-force-chargement-de-la-zone--initmodchunkticketsjava).
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.
@@ -975,7 +985,7 @@ injouable. Rien de codé, voir le backlog dans
 vraie map ; les deux mécanismes de chargement existent désormais, ils n'ont simplement rien à
 charger. Puis l'aperçu des maps capturé en jeu (phase 2), la commande d'export vers un jar
 publiable (phase 3), et la réinitialisation tours/PV du cristal entre deux tentatives ;
-le force-chargement pendant une partie ; une bordure/barrière anti-chute dans le vide en
+une bordure/barrière anti-chute dans le vide en
 dehors des zones bâties ; les métadonnées par map (nombre de vagues, multiplicateur de
 difficulté — `MAX_WAVE` est encore global). Le point de sortie, lui, est réglé autrement que
 prévu : par le bouton « Abandonner le niveau » du menu pause plutôt qu'un bloc à poser (voir

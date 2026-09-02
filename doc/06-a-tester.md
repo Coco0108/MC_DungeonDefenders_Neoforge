@@ -459,6 +459,27 @@ seulement les tours.
 - [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
       `ModEvents.onBlockBreakAttempt` ou `BreakBlockEvent`.
 
+## Le force-chargement de la zone de map (`ModChunkTickets`)
+
+Nouveau (2026-09-02), jamais verifie en jeu. Difficile a observer directement : le test consiste
+surtout a verifier qu'un spawner **loin** du groupe fonctionne quand meme.
+
+- [ ] Construire une map assez large pour que deux spawners soient a plus de ~150 blocs l'un de
+      l'autre (au-dela de la distance de rendu/simulation par defaut).
+- [ ] Lancer la partie, rester pres d'un seul spawner pendant toute une vague : les ennemis du
+      spawner **eloigne** doivent quand meme apparaitre et arriver. C'est le test central.
+- [ ] `/forceload query` dans la zone de map pendant une partie : des chunks doivent etre
+      signales comme forces.
+- [ ] Retourner a la taverne (`/dd_leave` ou bouton Abandonner) puis refaire `/forceload query` :
+      **plus aucun** chunk force dans la zone de map.
+- [ ] Quitter le serveur **en pleine partie**, le relancer, puis `/forceload query` : plus aucun
+      chunk force non plus — c'est le rappel de validation qui doit avoir fait le menage.
+- [ ] Enchainer deux parties de tailles de map differentes : aucun chunk de la premiere ne doit
+      rester force pendant la seconde.
+- [ ] Sur une tres grande map, verifier l'avertissement dans les logs au-dela de 1024 chunks (et
+      surveiller le TPS du serveur).
+- [ ] Aucune exception liee a `ModChunkTickets` ou au systeme de tickets.
+
 ## La creation de map en jeu (`MapRegistry`, `MapConfigBlock`, ecran a trois colonnes)
 
 Nouveau (2026-09-02), jamais verifie en jeu. **La plus grosse modification a ce jour** : l'enum

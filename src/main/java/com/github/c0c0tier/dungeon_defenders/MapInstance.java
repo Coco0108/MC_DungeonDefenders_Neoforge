@@ -3,6 +3,7 @@ package com.github.c0c0tier.dungeon_defenders;
 import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
+import com.github.c0c0tier.dungeon_defenders.init.ModChunkTickets;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
@@ -76,10 +77,17 @@ public final class MapInstance {
 
         BlockPos spawnPos = placeMap(level, map);
         teleportAllPlayers(level, spawnPos);
+
+        // Sans ça, Minecraft ne fait tourner que les chunks proches du groupe : un spawner à
+        // l'autre bout de la map cesserait simplement de fonctionner, sans erreur ni message.
+        Vec3i size = sizeOf(level, map);
+        ModChunkTickets.forceZone(level, zoneFrom(size), zoneSize(size));
     }
 
     /** Nettoie l'emplacement (plus besoin d'y rester) et ramène tout le monde à la taverne. */
     public static void returnToTavern(ServerLevel level) {
+        // Relâché avant le nettoyage : plus personne ne joue ici, rien ne doit rester chargé.
+        ModChunkTickets.releaseAll(level);
         clearZone(level, zoneFrom(null), zoneSize(null));
         level.setData(ModAttachments.CURRENT_MAP, "");
         level.syncData(ModAttachments.CURRENT_MAP);
@@ -121,6 +129,17 @@ public final class MapInstance {
 
         BlockPos marker = findAndConsumeSpawnMarker(level, zoneFrom(size), zoneSize(size));
         return marker != null ? marker : MAP_POS;
+    }
+
+    // Taille réelle de la structure posée, ou null si on est retombé sur l'arène provisoire —
+    // les deux zones (nettoyage, force-chargement) doivent couvrir exactement le même volume.
+    private static @Nullable Vec3i sizeOf(ServerLevel level, @Nullable MapDefinition map) {
+        if (map == null) {
+            return null;
+        }
+        return level.getStructureManager().get(map.structureId())
+                .map(StructureTemplate::getSize)
+                .orElse(null);
     }
 
     // La map est centrée horizontalement sur MAP_POS, sa couche la plus basse juste sous MAP_POS

@@ -1587,6 +1587,29 @@ Confirmation par `ConfirmScreen` avant d'agir. La map est aussi retirée de la l
 celle-ci vient du serveur à l'ouverture de l'écran et n'est pas rafraîchie, sans ça la map
 supprimée resterait affichée. Un pack vidé de sa dernière map disparaît avec elle.
 
+### Le force-chargement de la zone — `init/ModChunkTickets.java`
+
+**Pourquoi c'est indispensable et pas un détail** : Minecraft ne charge et ne fait tourner que
+les chunks proches d'un joueur. Une arène fixe où plusieurs spawners sont éloignés les uns des
+autres verrait donc ceux qui sont loin du groupe **cesser simplement de fonctionner**, sans
+erreur ni message. Le symptôme — « certains ennemis n'apparaissent jamais » — est
+particulièrement pénible à diagnostiquer, d'où le fait de le régler avant la première vraie map.
+
+Passe par le système de **tickets de NeoForge** plutôt que par le `/forceload` vanilla : les
+tickets ont un propriétaire (ici `MapInstance.MAP_POS`), sont persistés, et surtout **revalidés
+au chargement du monde**. Le rappel de validation supprime tout : le monde démarre toujours à la
+taverne, donc aucun chunk de map n'a de raison de rester chargé — sans ça, un serveur arrêté en
+pleine partie garderait la zone chargée indéfiniment au redémarrage.
+
+Le dernier argument de `forceChunk` est passé à `true` : on veut des chunks qui **tickent**
+réellement, pas seulement chargés — sans ça les spawners ne tourneraient toujours pas.
+
+Forcé par `MapInstance.startGame` sur exactement la même emprise que le nettoyage, relâché par
+`returnToTavern`. La liste de ce qui est réellement forcé est gardée en mémoire pour pouvoir
+relâcher les **mêmes** chunks : la taille d'une map peut changer entre-temps si son créateur la
+re-sauvegarde. Un avertissement est loggé au-delà de 1024 chunks (environ 512×512 blocs) — un
+garde-fou d'alerte, pas une limite de conception.
+
 ### Publier une map
 
 Une map créée en jeu vit dans la sauvegarde du monde, pas dans le mod : elle ne part pas avec

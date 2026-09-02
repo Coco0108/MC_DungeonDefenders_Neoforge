@@ -29,6 +29,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild/enterTavern/startNewGame : transitions centralisées
     │   │   ├── MapDefinition.java            # Une map jouable (structure + nom + ordre + vagues + multiplicateur) ; le namespace fait office de pack
     │   │   ├── MapRegistry.java              # Découverte des maps parmi TOUTES les structures disponibles (monde, datapacks, jars)
+    │   │   ├── ModChunkTickets.java          # Force-chargement (et tick) de la zone de map pendant une partie
     │   │   ├── TowerDefinition.java          # Catalogue des tours posables via la roue (voir client/gui/screen/TowerWheelScreen.java)
     │   │   ├── ManaCrystalType.java           # Paliers de cristaux de mana (un seul pour l'instant, extensible)
     │   │   └── ModEntities.java               # DeferredRegister.Entities (cristal de mana, mannequin d'entraînement)
