@@ -556,6 +556,21 @@ vérifie la CI.
   vérifié en jeu.** Détail dans
   [02-gameplay.md](02-gameplay.md#abandonner-un-niveau--clientpausemenuclienteventsjava-networkleavemappayloadjava).
 
+- ✅ **Création de map entièrement en jeu** (`init/MapRegistry.java`, `init/MapDefinition.java`,
+  `block/MapConfigBlock.java`, 2026-09-02) : les maps ne sont plus une liste fermée écrite en dur
+  (l'enum `GameMap` est supprimé) mais **découvertes à l'exécution** parmi les structures
+  disponibles. Le gestionnaire de structures cherchant à la fois dans le dossier `generated/` de
+  la sauvegarde et dans toutes les ressources chargées (datapacks et jars de mods, tous
+  namespaces confondus), une map sauvegardée en jeu avec un bloc de structure est chargeable
+  immédiatement, et **un pack tiers est découvert sans une ligne de code de sa part**. Le
+  namespace fait office de pack. Les réglages (nom, ordre, nombre de vagues, multiplicateur de
+  score) vivent dans un bloc posé DANS la map, voyagent donc dans le `.nbt`, et se lisent sans
+  poser la structure. `MAX_WAVE` n'est plus qu'un repli : le nombre de vagues vient de la map
+  (`ModAttachments.MAP_WAVE_COUNT`). L'écran de choix passe à trois colonnes (packs / map /
+  difficulté) et reçoit sa liste du serveur. `StartGamePayload` porte enfin la map choisie — le
+  carrousel n'était que décoratif jusque-là. **Jamais vérifié en jeu.** Détail dans
+  [02-gameplay.md](02-gameplay.md#créer-une-map-entièrement-en-jeu--initmapregistryjava-blockmapconfigblockjava).
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.
@@ -956,13 +971,10 @@ injouable. Rien de codé, voir le backlog dans
   repli sur `MAP_POS` dès qu'une vraie structure en pose un, mais rien à trouver tant que
   `buildPlaceholderArena()` ne pose qu'un sol générique.
 
-**Reste à faire** : le choix de map précis dans le carrousel n'a toujours aucun effet (une
-seule map placeholder générique pour l'instant, quel que soit l'élément sélectionné) ; le
-**fichier** de structure de la taverne (le mécanisme de chargement existe, il n'a rien à
-charger) ; le mannequin d'entraînement annoncé pour la taverne (voir le backlog) ; au
-moins une vraie map, et le vrai chargement de sa structure `.nbt` (remplacerait
-`buildPlaceholderArena()`, en réutilisant ce que fait déjà `TavernSpawn`) ; la réinitialisation tours/PV du cristal
-entre deux tentatives ;
+**Reste à faire** : les **fichiers** eux-mêmes — la structure de la taverne et au moins une
+vraie map ; les deux mécanismes de chargement existent désormais, ils n'ont simplement rien à
+charger. Puis l'aperçu des maps capturé en jeu (phase 2), la commande d'export vers un jar
+publiable (phase 3), et la réinitialisation tours/PV du cristal entre deux tentatives ;
 le force-chargement pendant une partie ; une bordure/barrière anti-chute dans le vide en
 dehors des zones bâties ; les métadonnées par map (nombre de vagues, multiplicateur de
 difficulté — `MAX_WAVE` est encore global). Le point de sortie, lui, est réglé autrement que

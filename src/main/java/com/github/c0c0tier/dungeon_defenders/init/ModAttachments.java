@@ -63,6 +63,26 @@ public class ModAttachments {
                     .sync(ByteBufCodecs.VAR_INT)
                     .build());
 
+    // Nombre de vagues de la map en cours. Vient du bloc de configuration de la map (voir
+    // MapDefinition), posé à startGame ; MAX_WAVE n'en est plus que le repli, pour une map qui
+    // ne le précise pas et pour la taverne. État de la Level, comme la vague courante.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> MAP_WAVE_COUNT = ATTACHMENT_TYPES.register(
+            "map_wave_count",
+            () -> AttachmentType.builder(() -> MAX_WAVE)
+                    .serialize(Codec.INT.fieldOf("MapWaveCount"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Identifiant de structure de la map en cours ("" à la taverne). Synchronisé parce que le
+    // bouton "Rejouer" de l'écran de fin de partie doit savoir QUELLE map relancer : le client
+    // n'a plus la liste sous la main à ce moment-là, l'écran de choix est fermé depuis longtemps.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<String>> CURRENT_MAP = ATTACHMENT_TYPES.register(
+            "current_map",
+            () -> AttachmentType.<String>builder(() -> "")
+                    .serialize(Codec.STRING.fieldOf("CurrentMap"))
+                    .sync(ByteBufCodecs.STRING_UTF8)
+                    .build());
+
     // Nombre total d'ennemis de la vague en cours et nombre d'ennemis déjà tués. Même
     // logique que current_wave : état de la Level, pas du joueur. Le total est réinitialisé
     // à sa valeur par défaut au premier chargement du monde ; les tués repartent de 0, comme
@@ -190,6 +210,14 @@ public class ModAttachments {
             () -> AttachmentType.builder(() -> Boolean.FALSE)
                     .sync(ByteBufCodecs.BOOL)
                     .build());
+
+    /**
+     * Nombre de vagues de la partie en cours — celui de la map jouée, ou {@link #MAX_WAVE} par
+     * défaut. À préférer à MAX_WAVE partout où il s'agit de "la dernière vague de CETTE partie".
+     */
+    public static int waveCount(net.minecraft.world.level.Level level) {
+        return level.getData(MAP_WAVE_COUNT);
+    }
 
     public static void register(IEventBus modEventBus) {
         ATTACHMENT_TYPES.register(modEventBus);

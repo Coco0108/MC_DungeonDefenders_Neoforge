@@ -459,6 +459,78 @@ seulement les tours.
 - [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
       `ModEvents.onBlockBreakAttempt` ou `BreakBlockEvent`.
 
+## La creation de map en jeu (`MapRegistry`, `MapConfigBlock`, ecran a trois colonnes)
+
+Nouveau (2026-09-02), jamais verifie en jeu. **La plus grosse modification a ce jour** : l'enum
+GameMap disparait, le carrousel devient dynamique, StartGamePayload change de forme, et le
+nombre de vagues n'est plus une constante. Beaucoup de regressions possibles sur l'existant.
+
+Sans aucune map (etat actuel du depot) :
+
+- [ ] Clic droit sur le cristal de la taverne : l'ecran s'ouvre, colonne des packs vide, message
+      "Aucune map disponible" a la place de l'apercu, bouton "Jouer" **grise**.
+- [ ] Aucune exception dans les logs.
+
+Creer une map de bout en bout :
+
+- [ ] En creatif, construire une petite arene **loin de (0,65,0) et de (10000,65,0)**, avec un
+      `eternia_crystal`, un `spawner` configure, un `player_spawn`, et un bloc
+      **Configuration de map**.
+- [ ] Clic droit sur le bloc de config : l'ecran s'ouvre (creatif seulement — verifier qu'en
+      survie il est introuvable et que le message apparait si on force). Renseigner nom, ordre,
+      nombre de vagues (mettre **3**, pas 5, pour verifier que ce n'est plus une constante) et
+      multiplicateur. Valider.
+- [ ] Rouvrir l'ecran : les valeurs saisies sont bien la (persistance + synchro du block entity).
+- [ ] Sauvegarder la zone avec un bloc de structure vanilla, nommee
+      `dungeon_defenders:map/ma_map`.
+- [ ] **Sans redemarrer**, retourner a la taverne, clic droit sur le cristal : la map apparait,
+      dans le pack "Campagne", avec le nom saisi. C'est le point central de toute la
+      fonctionnalite.
+- [ ] L'apercu affiche la texture "manquante" (aucun PNG fourni) — comportement attendu, pas un
+      bug.
+- [ ] Cliquer "Jouer" : la **vraie structure** est posee a (10000,65,0), pas la plateforme de
+      pierre lisse. On arrive sur le `player_spawn`, qui a disparu.
+- [ ] Le HUD affiche **Vague 1/3**, pas 1/5 — c'est ce qui verifie que le nombre de vagues vient
+      bien de la map.
+- [ ] Enchainer les 3 vagues jusqu'a la victoire : l'ecran de fin s'ouvre bien a la 3e.
+- [ ] Bouton "Rejouer" de l'ecran de fin : relance **la meme map** (et pas la plateforme
+      placeholder) — c'est ce que verifie l'attachment CURRENT_MAP.
+
+Les packs et le regroupement :
+
+- [ ] Creer une deuxieme map dans le meme namespace : les deux apparaissent sous "Campagne", et
+      les fleches du carrousel passent de l'une a l'autre avec le compteur "1 / 2".
+- [ ] Donner des ordres differents dans leurs blocs de config, resauvegarder : l'ordre du
+      carrousel suit.
+- [ ] Sauvegarder une map sous un **autre namespace** (ex. `test_pack:map/essai`) : un deuxieme
+      pack apparait dans la colonne de gauche, sous "Campagne", et son carrousel ne contient que
+      ses maps. Son nom affiche est `test_pack` (pas de traduction fournie).
+- [ ] Selectionner un pack puis l'autre : le carrousel repart bien a la premiere map du pack.
+
+La suppression :
+
+- [ ] Dans l'ecran de config d'une map, saisir son identifiant complet
+      (`dungeon_defenders:map/ma_map`) dans le champ prevu, cliquer "Supprimer cette map" :
+      une confirmation apparait.
+- [ ] Repondre Non : rien n'est supprime, retour a l'ecran de config.
+- [ ] Repondre Oui : message de confirmation en chat, et la map a disparu du carrousel a la
+      prochaine ouverture.
+- [ ] Essayer de supprimer une map qui n'existe pas dans ce monde : message d'echec explicite,
+      pas de plantage.
+
+Regressions a surveiller :
+
+- [ ] Les spawners fonctionnent toujours : leur ecran de config s'ouvre, la borne "derniere
+      vague active" propose par defaut le nombre de vagues de la map en cours (et non plus 5).
+- [ ] `/dd_leave` et le bouton "Abandonner le niveau" ramenent toujours a la taverne, et le HUD
+      repasse en phase Taverne.
+- [ ] Le HUD Vague reaffiche bien la bonne borne apres un retour a la taverne puis une nouvelle
+      partie sur une map a nombre de vagues different.
+- [ ] Aucune exception liee a `MapRegistry`, `MapConfigBlockEntity`, `StartGamePayload` ou
+      `OpenMapSelectionPayload` — ce dernier a change de forme (il portait zero champ, il porte
+      maintenant une liste), donc un client et un serveur de versions differentes ne peuvent pas
+      se parler : verifier que les deux sont bien a jour.
+
 ## Le bouton "Abandonner le niveau" (menu pause)
 
 Nouveau (2026-09-02), jamais verifie en jeu. Premier ajout du mod a un ecran **vanilla** : le

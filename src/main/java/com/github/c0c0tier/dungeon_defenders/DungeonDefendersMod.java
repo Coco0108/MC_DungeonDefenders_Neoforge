@@ -5,6 +5,7 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.BowlingBallTurretBlock
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.HarpoonTurretBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MapConfigBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.MortarTurretBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SliceNDiceBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
@@ -103,6 +104,12 @@ public class DungeonDefendersMod {
                     ModBlocks.TRAINING_DUMMY.get()
             ));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MapConfigBlockEntity>> MAP_CONFIG_BE =
+            BLOCK_ENTITIES.register("map_config", () -> new BlockEntityType<>(
+                    MapConfigBlockEntity::new,
+                    ModBlocks.MAP_CONFIG.get()
+            ));
+
     // 3. L'onglet Créatif
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> DUNGEON_DEFENDERS_TAB = CREATIVE_MODE_TABS.register("dungeon_defenders_tab",
             () -> CreativeModeTab.builder()
@@ -122,6 +129,7 @@ public class DungeonDefendersMod {
                         output.accept(ModBlocks.PLAYER_SPAWN_ITEM.get());
                         output.accept(ModBlocks.TRAINING_DUMMY_ITEM.get());
                         output.accept(ModBlocks.NO_BUILD_ZONE_ITEM.get());
+                        output.accept(ModBlocks.MAP_CONFIG_ITEM.get());
                     })
                     .build());
 

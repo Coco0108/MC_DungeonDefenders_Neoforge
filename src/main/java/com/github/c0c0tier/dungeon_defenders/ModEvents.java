@@ -228,7 +228,7 @@ public class ModEvents {
             // Capturé avant enterBuild/onVictory, qui font tous les deux avancer/réinitialiser
             // current_wave : c'est la vague qu'on vient de nettoyer qui détermine la victoire,
             // pas celle qui suit.
-            boolean wasLastWave = level.getData(ModAttachments.CURRENT_WAVE) >= ModAttachments.MAX_WAVE;
+            boolean wasLastWave = level.getData(ModAttachments.CURRENT_WAVE) >= ModAttachments.waveCount(level);
             if (wasLastWave) {
                 PhaseTransitions.onVictory(level);
             } else {

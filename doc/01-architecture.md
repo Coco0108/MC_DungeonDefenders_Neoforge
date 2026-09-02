@@ -27,7 +27,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── DifficultyScaling.java        # Multiplicateur difficulté x vague, pour les spawners
     │   │   ├── SpawnableEnemy.java           # Liste fermée des ennemis choisissables dans un spawner
     │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild/enterTavern/startNewGame : transitions centralisées
-    │   │   ├── GameMap.java                  # Liste des maps proposées dans l'écran de choix (visible = false pour masquer une map en cours de conception)
+    │   │   ├── MapDefinition.java            # Une map jouable (structure + nom + ordre + vagues + multiplicateur) ; le namespace fait office de pack
+    │   │   ├── MapRegistry.java              # Découverte des maps parmi TOUTES les structures disponibles (monde, datapacks, jars)
     │   │   ├── TowerDefinition.java          # Catalogue des tours posables via la roue (voir client/gui/screen/TowerWheelScreen.java)
     │   │   ├── ManaCrystalType.java           # Paliers de cristaux de mana (un seul pour l'instant, extensible)
     │   │   └── ModEntities.java               # DeferredRegister.Entities (cristal de mana, mannequin d'entraînement)
@@ -44,6 +45,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── ManaChestConfigPayload.java   # Paquet C2S (BlockPos + quantité de mana du coffre)
     │   │   ├── RemoveTowerPayload.java       # Paquet C2S (BlockPos de la tour à retirer, mode suppression)
     │   │   ├── LeaveMapPayload.java          # Paquet C2S sans champ (abandon du niveau depuis le menu pause)
+    │   │   ├── MapConfigPayload.java         # Paquet C2S (BlockPos + réglages d'une map)
+    │   │   ├── DeleteMapPayload.java         # Paquet C2S (id de structure à supprimer de la sauvegarde)
     │   │   ├── GameOverPayload.java          # Paquet S2C (victoire/défaite, ouvre GameOverScreen)
     │   │   ├── ScoreGainPayload.java         # Paquet S2C (montant + source du gain, alimente ScoreGainOverlay)
     │   │   ├── OpenMapSelectionPayload.java  # Paquet S2C sans champ (ouvre MapSelectionScreen depuis TavernCrystalBlock)
@@ -59,7 +62,8 @@ MC_DungeonDefenders_Neoforge/
     │   ├── client/gui/screen/
     │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
     │   │   ├── ManaChestConfigScreen.java    # Écran de config du coffre de mana, un seul champ (client uniquement)
-    │   │   ├── MapSelectionScreen.java       # Écran de choix de map + difficulté (client uniquement, pas de Menu)
+    │   │   ├── MapSelectionScreen.java       # Écran de choix : packs / map / difficulté (liste reçue du serveur)
+    │   │   ├── MapConfigScreen.java          # Écran de configuration d'une map (créatif uniquement)
     │   │   └── TowerWheelScreen.java         # Roue radiale de sélection des tours (client uniquement, pas de Menu)
     │   ├── client/gui/
     │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)
@@ -100,6 +104,7 @@ MC_DungeonDefenders_Neoforge/
     │       ├── ManaChestBlock.java           # Meuble de map : donne du mana au clic droit (survie, 1x/vague) ou config (créatif)
     │       ├── TrainingDummyBlock.java       # Support de mannequin : invisible, garantit qu'un TrainingDummyEntity existe juste au-dessus
     │       ├── NoBuildZoneBlock.java         # Marqueur de zone interdite à la pose de tours : invisible, occupe la case
+    │       ├── MapConfigBlock.java           # Réglages d'une map, posé DANS la map : voyagent dans le .nbt de la structure
     │       ├── PlayerSpawnBlock.java         # Marqueur de spawn des joueurs : invisible, traversable, ciblable en créatif seulement
     │       └── entity/
     │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal)
@@ -123,7 +128,8 @@ MC_DungeonDefenders_Neoforge/
     │           ├── SpawnerRenderState.java                 # Instantané pour le rendu (client)
     │           ├── SpawnerBlockEntityRenderer.java         # Aperçu de composition en phase Construction, à travers les murs (client)
     │           ├── ManaChestBlockEntity.java               # PV: aucun ; manaAmount configurable, lastOpenedWave (1x/vague, recharge auto)
-    │           └── TrainingDummyBlockEntity.java           # Aucun état : un tick serveur qui réinvoque le mannequin s'il a disparu
+    │           ├── TrainingDummyBlockEntity.java           # Aucun état : un tick serveur qui réinvoque le mannequin s'il a disparu
+    │           └── MapConfigBlockEntity.java               # Nom/ordre/vagues/multiplicateur d'une map, relus sans poser la structure
     ├── resources/
     │   ├── assets/dungeon_defenders/
     │   │   ├── lang/{en_us,fr_fr}.json                     # Traductions
