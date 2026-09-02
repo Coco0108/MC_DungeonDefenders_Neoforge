@@ -50,7 +50,7 @@ public final class PhaseTransitions {
      * précédente.
      */
     public static void enterBuild(Level level) {
-        int nextWave = Math.min(level.getData(ModAttachments.CURRENT_WAVE) + 1, ModAttachments.MAX_WAVE);
+        int nextWave = Math.min(level.getData(ModAttachments.CURRENT_WAVE) + 1, ModAttachments.waveCount(level));
         level.setData(ModAttachments.CURRENT_WAVE, nextWave);
         level.syncData(ModAttachments.CURRENT_WAVE);
 
@@ -105,6 +105,10 @@ public final class PhaseTransitions {
      * doc/02-gameplay.md).
      */
     public static void enterTavern(Level level) {
+        // Le nombre de vagues repart au défaut : la taverne n'est la map de personne, et une
+        // valeur héritée de la partie précédente n'aurait aucun sens dans le HUD.
+        level.setData(ModAttachments.MAP_WAVE_COUNT, ModAttachments.MAX_WAVE);
+        level.syncData(ModAttachments.MAP_WAVE_COUNT);
         resetGameState(level, GamePhase.TAVERN);
     }
 
@@ -117,7 +121,9 @@ public final class PhaseTransitions {
      * la vague 2. Cette remise à zéro explicite était implicite tant que la phase par défaut
      * était {@code BUILD} ; elle ne l'est plus depuis que c'est {@code TAVERN}.
      */
-    public static void startNewGame(Level level) {
+    public static void startNewGame(Level level, int waveCount) {
+        level.setData(ModAttachments.MAP_WAVE_COUNT, Math.max(1, waveCount));
+        level.syncData(ModAttachments.MAP_WAVE_COUNT);
         resetGameState(level, GamePhase.BUILD);
     }
 

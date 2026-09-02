@@ -459,6 +459,142 @@ seulement les tours.
 - [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
       `ModEvents.onBlockBreakAttempt` ou `BreakBlockEvent`.
 
+## L'export d'un pack de maps (`/dd_export`)
+
+Nouveau (2026-09-02). Le TOML et le JSON generes ont ete valides hors jeu (analyse syntaxique),
+et `lowcodefml` existe bien dans le loader de cette version — mais **le jar produit n'a jamais
+ete charge par Minecraft**, c'est tout l'objet de ce test.
+
+- [ ] Creer deux maps sous un meme namespace personnalise (ex. `test_pack:map/a` et
+      `test_pack:map/b`), puis lancer `/dd_export test_pack`.
+- [ ] Un message de succes indique le nombre de maps, d'apercus (0 pour l'instant) et le chemin.
+- [ ] Le fichier existe dans `<dossier du serveur>/dungeon_defenders_export/test_pack.jar`.
+      L'ouvrir avec un gestionnaire d'archives : il doit contenir `META-INF/neoforge.mods.toml`,
+      deux `.nbt` sous `data/test_pack/structure/map/`, et deux fichiers de langue.
+- [ ] **Le test qui compte** : deposer ce jar dans le dossier `mods` d'une installation
+      **propre** (un autre monde, ou apres avoir supprime les maps de la sauvegarde), demarrer,
+      et verifier que les deux maps apparaissent dans le carrousel sous un pack nomme
+      "Test Pack" — sans erreur au demarrage.
+- [ ] Verifier que les maps du jar sont bien **non supprimables** (bouton grise) : ce sont des
+      ressources en lecture seule.
+- [ ] `/dd_export` sur un namespace inexistant, ou avec des majuscules : message d'erreur clair,
+      pas de plantage, pas de jar vide cree.
+- [ ] `/dd_export dungeon_defenders` alors que la campagne vient du jar du mod : doit refuser
+      (aucune map creee en jeu sous ce namespace), sauf si tu as toi-meme cree des maps dedans.
+- [ ] La commande refuse bien en dessous du niveau de permission gamemaster.
+
+## Le force-chargement de la zone de map (`ModChunkTickets`)
+
+Nouveau (2026-09-02), jamais verifie en jeu. Difficile a observer directement : le test consiste
+surtout a verifier qu'un spawner **loin** du groupe fonctionne quand meme.
+
+- [ ] Construire une map assez large pour que deux spawners soient a plus de ~150 blocs l'un de
+      l'autre (au-dela de la distance de rendu/simulation par defaut).
+- [ ] Lancer la partie, rester pres d'un seul spawner pendant toute une vague : les ennemis du
+      spawner **eloigne** doivent quand meme apparaitre et arriver. C'est le test central.
+- [ ] `/forceload query` dans la zone de map pendant une partie : des chunks doivent etre
+      signales comme forces.
+- [ ] Retourner a la taverne (`/dd_leave` ou bouton Abandonner) puis refaire `/forceload query` :
+      **plus aucun** chunk force dans la zone de map.
+- [ ] Quitter le serveur **en pleine partie**, le relancer, puis `/forceload query` : plus aucun
+      chunk force non plus — c'est le rappel de validation qui doit avoir fait le menage.
+- [ ] Enchainer deux parties de tailles de map differentes : aucun chunk de la premiere ne doit
+      rester force pendant la seconde.
+- [ ] Sur une tres grande map, verifier l'avertissement dans les logs au-dela de 1024 chunks (et
+      surveiller le TPS du serveur).
+- [ ] Aucune exception liee a `ModChunkTickets` ou au systeme de tickets.
+
+## La creation de map en jeu (`MapRegistry`, `MapConfigBlock`, ecran a trois colonnes)
+
+Nouveau (2026-09-02), jamais verifie en jeu. **La plus grosse modification a ce jour** : l'enum
+GameMap disparait, le carrousel devient dynamique, StartGamePayload change de forme, et le
+nombre de vagues n'est plus une constante. Beaucoup de regressions possibles sur l'existant.
+
+> Une **map de test est desormais livree** dans le mod (`dungeon_defenders:map/test_arena`) :
+> l'essentiel de cette section se teste donc sans rien construire. Elle s'appelle "Arene de
+> test", tient en 3 vagues, et contient deja cristal, spawner, coffre de mana, marqueur de spawn
+> et zones interdites.
+
+- [ ] Clic droit sur le cristal de la taverne : "Arene de test" apparait dans le pack
+      "Campagne". L'apercu affiche la texture manquante (aucun PNG) — attendu.
+- [ ] Cliquer "Jouer" : l'arene se pose a (10000, 65, 0), murs compris. On arrive devant le
+      cristal, pas au milieu du vide.
+- [ ] Le HUD affiche **Vague 1/3**, pas 1/5 — la preuve que le nombre de vagues vient de la map.
+- [ ] Le spawner fait bien apparaitre 8 zombies et 4 squelettes en combat.
+- [ ] Le coffre de mana s'ouvre et donne 50 mana.
+- [ ] Poser une tour pres du spawner (dans la zone rouge) est refuse avec le message ; quelques
+      blocs plus loin, ca passe.
+- [ ] Enchainer les 3 vagues jusqu'a la victoire, puis "Rejouer" : l'arene est reposee a neuf,
+      cristal a 100 PV, tours effacees.
+
+Sans aucune map (retirer temporairement test_arena du jar, ou tester avant de l'ajouter) :
+
+- [ ] Clic droit sur le cristal de la taverne : l'ecran s'ouvre, colonne des packs vide, message
+      "Aucune map disponible" a la place de l'apercu, bouton "Jouer" **grise**.
+- [ ] Aucune exception dans les logs.
+
+Creer une map de bout en bout :
+
+- [ ] En creatif, construire une petite arene **loin de (0,65,0) et de (10000,65,0)**, avec un
+      `eternia_crystal`, un `spawner` configure, un `player_spawn`, et un bloc
+      **Configuration de map**.
+- [ ] Clic droit sur le bloc de config : l'ecran s'ouvre (creatif seulement — verifier qu'en
+      survie il est introuvable et que le message apparait si on force). Renseigner nom, ordre,
+      nombre de vagues (mettre **3**, pas 5, pour verifier que ce n'est plus une constante) et
+      multiplicateur. Valider.
+- [ ] Rouvrir l'ecran : les valeurs saisies sont bien la (persistance + synchro du block entity).
+- [ ] Sauvegarder la zone avec un bloc de structure vanilla, nommee
+      `dungeon_defenders:map/ma_map`.
+- [ ] **Sans redemarrer**, retourner a la taverne, clic droit sur le cristal : la map apparait,
+      dans le pack "Campagne", avec le nom saisi. C'est le point central de toute la
+      fonctionnalite.
+- [ ] L'apercu affiche la texture "manquante" (aucun PNG fourni) — comportement attendu, pas un
+      bug.
+- [ ] Cliquer "Jouer" : la **vraie structure** est posee a (10000,65,0), pas la plateforme de
+      pierre lisse. On arrive sur le `player_spawn`, qui a disparu.
+- [ ] Le HUD affiche **Vague 1/3**, pas 1/5 — c'est ce qui verifie que le nombre de vagues vient
+      bien de la map.
+- [ ] Enchainer les 3 vagues jusqu'a la victoire : l'ecran de fin s'ouvre bien a la 3e.
+- [ ] Bouton "Rejouer" de l'ecran de fin : relance **la meme map** (et pas la plateforme
+      placeholder) — c'est ce que verifie l'attachment CURRENT_MAP.
+
+Les packs et le regroupement :
+
+- [ ] Creer une deuxieme map dans le meme namespace : les deux apparaissent sous "Campagne", et
+      les fleches du carrousel passent de l'une a l'autre avec le compteur "1 / 2".
+- [ ] Donner des ordres differents dans leurs blocs de config, resauvegarder : l'ordre du
+      carrousel suit.
+- [ ] Sauvegarder une map sous un **autre namespace** (ex. `test_pack:map/essai`) : un deuxieme
+      pack apparait dans la colonne de gauche, sous "Campagne", et son carrousel ne contient que
+      ses maps. Son nom affiche est `test_pack` (pas de traduction fournie).
+- [ ] Selectionner un pack puis l'autre : le carrousel repart bien a la premiere map du pack.
+
+La suppression :
+
+- [ ] **En survie**, ouvrir l'ecran de choix : **aucun** bouton "Supprimer cette map".
+- [ ] **En creatif**, le bouton apparait sous "Jouer", en rouge.
+- [ ] Sur une map creee en jeu : le bouton est **actif**. Cliquer -> confirmation.
+- [ ] Repondre Non : rien n'est supprime, retour a l'ecran de choix.
+- [ ] Repondre Oui : message en chat, et la map disparait **immediatement** du carrousel (pas
+      besoin de rouvrir l'ecran).
+- [ ] Supprimer la derniere map d'un pack : le pack disparait aussi de la colonne de gauche, et
+      la selection retombe sur un pack valide sans planter.
+- [ ] Sur une map livree dans le jar du mod (quand la campagne existera) : le bouton est
+      **grise** — c'est une ressource en lecture seule.
+
+Regressions a surveiller :
+
+- [ ] Les spawners fonctionnent toujours : leur ecran de config s'ouvre, la borne "derniere
+      vague active" propose par defaut le nombre de vagues de la map en cours (et non plus 5).
+- [ ] `/dd_leave` et le bouton "Abandonner le niveau" ramenent toujours a la taverne, et le HUD
+      repasse en phase Taverne.
+- [ ] Le HUD Vague reaffiche bien la bonne borne apres un retour a la taverne puis une nouvelle
+      partie sur une map a nombre de vagues different.
+- [ ] Aucune exception liee a `MapRegistry`, `MapConfigBlockEntity`, `StartGamePayload` ou
+      `OpenMapSelectionPayload` — ce dernier a change de forme (il portait zero champ, il porte
+      maintenant une liste), donc un client et un serveur de versions differentes ne peuvent pas
+      se parler : verifier que les deux sont bien a jour.
+
 ## Le bouton "Abandonner le niveau" (menu pause)
 
 Nouveau (2026-09-02), jamais verifie en jeu. Premier ajout du mod a un ecran **vanilla** : le

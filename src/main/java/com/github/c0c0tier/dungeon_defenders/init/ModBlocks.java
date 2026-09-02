@@ -6,6 +6,7 @@ import com.github.c0c0tier.dungeon_defenders.block.BowlingBallTurretBlock;
 import com.github.c0c0tier.dungeon_defenders.block.EterniaCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.block.HarpoonTurretBlock;
 import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
+import com.github.c0c0tier.dungeon_defenders.block.MapConfigBlock;
 import com.github.c0c0tier.dungeon_defenders.block.MortarTurretBlock;
 import com.github.c0c0tier.dungeon_defenders.block.NoBuildZoneBlock;
 import com.github.c0c0tier.dungeon_defenders.block.PlayerSpawnBlock;
@@ -163,6 +164,16 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> NO_BUILD_ZONE_ITEM =
             ITEMS.registerSimpleBlockItem("no_build_zone", NO_BUILD_ZONE);
+
+    // 11. Bloc de configuration de map : nom, ordre, nombre de vagues, multiplicateur de score.
+    // Posé DANS la map, ses réglages voyagent donc dans le .nbt de la structure — c'est ce qui
+    // permet de créer une map entièrement en jeu (voir MapConfigBlock et MapRegistry).
+    public static final DeferredBlock<MapConfigBlock> MAP_CONFIG = BLOCKS.registerBlock("map_config",
+            MapConfigBlock::new,
+            properties -> properties.strength(2.0F));
+
+    public static final DeferredItem<BlockItem> MAP_CONFIG_ITEM =
+            ITEMS.registerSimpleBlockItem("map_config", MAP_CONFIG);
 
     // Connexion au bus d'événements
     public static void register(IEventBus modEventBus) {

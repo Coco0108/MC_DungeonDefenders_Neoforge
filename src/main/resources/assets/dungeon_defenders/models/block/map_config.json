@@ -1,0 +1,7 @@
+{
+  "comment": "Placeholder : réutilise la texture vanilla de la table de cartographie (thème 'configuration de map') en attendant une texture dédiée. Le bloc posé est invisible (RenderShape.INVISIBLE) — ce modèle ne sert qu'à l'icône de l'item.",
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "minecraft:block/cartography_table_top"
+  }
+}

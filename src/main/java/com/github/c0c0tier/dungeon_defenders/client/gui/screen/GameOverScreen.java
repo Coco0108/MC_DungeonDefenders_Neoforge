@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.client.gui.screen;
 
 import com.github.c0c0tier.dungeon_defenders.MapInstance;
+import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.network.StartGamePayload;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -8,6 +9,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 
 // Ouvert côté client par GameOverPayload (voir PhaseTransitions.onVictory/onDefeat,
 // ModNetworking, DungeonDefendersModClient#onRegisterClientPayloadHandlers) à la fin d'une
@@ -67,10 +69,17 @@ public class GameOverScreen extends Screen {
                 this.victory ? TITLE_COLOR_VICTORY : TITLE_COLOR_DEFEAT);
     }
 
+    // Relance LA MÊME map : son identifiant vient de l'attachment ModAttachments.CURRENT_MAP,
+    // posé par MapInstance.startGame et synchronisé — l'écran de choix est fermé depuis
+    // longtemps, le client n'a plus la liste des maps sous la main.
     private void onReplay() {
-        ClientPacketListener connection = Minecraft.getInstance().getConnection();
-        if (connection != null) {
-            connection.send(new StartGamePayload().toVanillaServerbound());
+        Minecraft minecraft = Minecraft.getInstance();
+        ClientPacketListener connection = minecraft.getConnection();
+        Identifier currentMap = minecraft.level == null
+                ? null
+                : Identifier.tryParse(minecraft.level.getData(ModAttachments.CURRENT_MAP));
+        if (connection != null && currentMap != null) {
+            connection.send(new StartGamePayload(currentMap).toVanillaServerbound());
         }
         this.onClose();
     }
