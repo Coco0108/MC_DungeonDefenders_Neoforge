@@ -83,6 +83,11 @@ public class ModNetworking {
                 RemoveTowerPayload.STREAM_CODEC,
                 ModNetworking::handleRemoveTower
         );
+        registrar.playToServer(
+                LeaveMapPayload.TYPE,
+                LeaveMapPayload.STREAM_CODEC,
+                ModNetworking::handleLeaveMap
+        );
         // Sans handler ici : paquets clientbound du mod, le handler vit côté client
         // uniquement (DungeonDefendersModClient#onRegisterClientPayloadHandlers), pour ne
         // jamais charger de classe cliente (Minecraft, Screen...) sur un serveur dédié — cette
@@ -221,6 +226,29 @@ public class ModNetworking {
                 return;
             }
             MapInstance.startGame(serverLevel);
+        });
+    }
+
+    // Bouton "Abandonner le niveau" du menu pause (voir client/PauseMenuClientEvents), après
+    // confirmation côté client. Ramène TOUT LE MONDE à la taverne, pas seulement celui qui a
+    // cliqué : une seule partie active à la fois sur tout le serveur, les joueurs vont et
+    // viennent ensemble (même comportement que /dd_leave et que le bouton de GameOverScreen).
+    private static void handleLeaveMap(LeaveMapPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (!(level instanceof ServerLevel serverLevel)) {
+                return;
+            }
+
+            // Revérifié ici comme tout paquet : le client masque déjà le bouton hors partie,
+            // mais il n'est jamais l'autorité. Abandonner depuis la taverne n'aurait aucun sens
+            // (et relancerait un nettoyage de la zone de map pour rien).
+            if (!GamePhase.of(level).isInGame()) {
+                return;
+            }
+
+            MapInstance.returnToTavern(serverLevel);
         });
     }
 

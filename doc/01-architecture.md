@@ -43,6 +43,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── PlaceTowerPayload.java        # Paquet C2S (tour + position + rotation, confirmation finale de la roue)
     │   │   ├── ManaChestConfigPayload.java   # Paquet C2S (BlockPos + quantité de mana du coffre)
     │   │   ├── RemoveTowerPayload.java       # Paquet C2S (BlockPos de la tour à retirer, mode suppression)
+    │   │   ├── LeaveMapPayload.java          # Paquet C2S sans champ (abandon du niveau depuis le menu pause)
     │   │   ├── GameOverPayload.java          # Paquet S2C (victoire/défaite, ouvre GameOverScreen)
     │   │   ├── ScoreGainPayload.java         # Paquet S2C (montant + source du gain, alimente ScoreGainOverlay)
     │   │   ├── OpenMapSelectionPayload.java  # Paquet S2C sans champ (ouvre MapSelectionScreen depuis TavernCrystalBlock)
@@ -53,6 +54,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── TowerPlacementRenderState.java # Instantané pour le rendu de l'hologramme (ContextKey sur LevelRenderState)
     │   │   ├── TowerPlacementClientEvents.java # Ouverture roue, rayon de visée, rotation, confirmation, rendu hologramme/portée
     │   │   ├── BlockOutlineClientEvents.java # Masque le contour noir de sélection sur les tours et cristaux (ExtractBlockOutlineRenderStateEvent)
+    │   │   ├── PauseMenuClientEvents.java   # Bouton "Abandonner le niveau" ajouté au menu pause (ScreenEvent.Init.Post)
     │   │   └── ClientDisplayConfig.java      # Spec de config CLIENT (options d'affichage HUD facultatives), branchée dans DungeonDefendersModClient
     │   ├── client/gui/screen/
     │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
