@@ -510,7 +510,24 @@ Nouveau (2026-09-02), jamais verifie en jeu. **La plus grosse modification a ce 
 GameMap disparait, le carrousel devient dynamique, StartGamePayload change de forme, et le
 nombre de vagues n'est plus une constante. Beaucoup de regressions possibles sur l'existant.
 
-Sans aucune map (etat actuel du depot) :
+> Une **map de test est desormais livree** dans le mod (`dungeon_defenders:map/test_arena`) :
+> l'essentiel de cette section se teste donc sans rien construire. Elle s'appelle "Arene de
+> test", tient en 3 vagues, et contient deja cristal, spawner, coffre de mana, marqueur de spawn
+> et zones interdites.
+
+- [ ] Clic droit sur le cristal de la taverne : "Arene de test" apparait dans le pack
+      "Campagne". L'apercu affiche la texture manquante (aucun PNG) — attendu.
+- [ ] Cliquer "Jouer" : l'arene se pose a (10000, 65, 0), murs compris. On arrive devant le
+      cristal, pas au milieu du vide.
+- [ ] Le HUD affiche **Vague 1/3**, pas 1/5 — la preuve que le nombre de vagues vient de la map.
+- [ ] Le spawner fait bien apparaitre 8 zombies et 4 squelettes en combat.
+- [ ] Le coffre de mana s'ouvre et donne 50 mana.
+- [ ] Poser une tour pres du spawner (dans la zone rouge) est refuse avec le message ; quelques
+      blocs plus loin, ca passe.
+- [ ] Enchainer les 3 vagues jusqu'a la victoire, puis "Rejouer" : l'arene est reposee a neuf,
+      cristal a 100 PV, tours effacees.
+
+Sans aucune map (retirer temporairement test_arena du jar, ou tester avant de l'ajouter) :
 
 - [ ] Clic droit sur le cristal de la taverne : l'ecran s'ouvre, colonne des packs vide, message
       "Aucune map disponible" a la place de l'apercu, bouton "Jouer" **grise**.

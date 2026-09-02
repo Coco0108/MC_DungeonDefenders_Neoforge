@@ -1587,6 +1587,29 @@ Confirmation par `ConfirmScreen` avant d'agir. La map est aussi retirée de la l
 celle-ci vient du serveur à l'ouverture de l'écran et n'est pas rafraîchie, sans ça la map
 supprimée resterait affichée. Un pack vidé de sa dernière map disparaît avec elle.
 
+### La map de test livrée — `map/test_arena.nbt`
+
+Une arène de 49×6×49 livrée dans le jar (`dungeon_defenders:map/test_arena`), pour que la chaîne
+complète soit exerçable **avant** qu'une vraie map existe. Contenu : sol et murs d'enceinte (le
+monde est vide, sans murs on tombe), un couloir visible entre les deux bouts, un Cristal
+d'Eternia, un spawner configuré (8 zombies + 4 squelettes, vagues 1 à 3), un `player_spawn`, un
+coffre de mana, des `no_build_zone` autour du spawner, et un `map_config` réglé sur **3 vagues** —
+volontairement différent du défaut de 5, pour qu'un simple coup d'œil au HUD confirme que le
+nombre de vagues vient bien de la map.
+
+Elle a été **générée sans passer par le jeu**, avec `tools/generer-map-de-test.py` : un `.nbt` de
+structure n'est qu'un fichier NBT gzippé au format relu dans `StructureTemplate`. Le script écrit
+le NBT, et le fichier produit a été relu et vérifié tag par tag.
+
+> **Le piège du format, à connaître si tu génères une structure à la main** : `size` et `pos`
+> s'écrivent en **`TAG_List` d'entiers**, pas en `TAG_Int_Array`. `StructureTemplate#load` les lit
+> avec `getListOrEmpty` — un `TAG_Int_Array` y serait lu comme une liste vide, donnant une
+> structure de taille 0 avec tous les blocs empilés à l'origine, **sans le moindre message
+> d'erreur**.
+
+C'est une map de **test**, pas de contenu : elle apparaît dans le pack « Campagne » et devra en
+être retirée quand de vraies maps existeront.
+
 ### Le force-chargement de la zone — `init/ModChunkTickets.java`
 
 **Pourquoi c'est indispensable et pas un détail** : Minecraft ne charge et ne fait tourner que

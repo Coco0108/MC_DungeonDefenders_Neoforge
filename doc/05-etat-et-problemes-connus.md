@@ -591,6 +591,15 @@ vérifie la CI.
   mais **le jar produit n'a jamais été chargé par Minecraft**. Détail dans
   [02-gameplay.md](02-gameplay.md#dd_export-namespace--le-jar-est-généré-pour-toi).
 
+- ✅ **Map de test livrée** (`data/dungeon_defenders/structure/map/test_arena.nbt`, 2026-09-02) :
+  arène 49×6×49 générée hors du jeu par `tools/generer-map-de-test.py`, pour rendre la chaîne
+  complète (découverte, chargement, config, vagues, force-chargement) exerçable avant qu'une
+  vraie map existe. Contient cristal, spawner configuré, coffre de mana, marqueur de spawn, zones
+  interdites et un bloc de config réglé sur **3 vagues** — différent du défaut de 5 exprès.
+  Le fichier a été relu tag par tag après génération. Map de **test**, à retirer du pack
+  « Campagne » quand du vrai contenu existera. **Jamais chargée par Minecraft.** Détail dans
+  [02-gameplay.md](02-gameplay.md#la-map-de-test-livrée--maptest_arenanbt).
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.
