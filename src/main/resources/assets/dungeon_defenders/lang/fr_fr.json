@@ -103,13 +103,12 @@
   "dungeon_defenders.map_config.order": "Ordre dans le pack",
   "dungeon_defenders.map_config.wave_count": "Nombre de vagues",
   "dungeon_defenders.map_config.score_multiplier": "Multiplicateur de score",
-  "dungeon_defenders.map_config.structure_id": "Id de structure (suppression uniquement)",
   "dungeon_defenders.map_config.confirm": "Valider",
-  "dungeon_defenders.map_config.delete": "Supprimer cette map",
-  "dungeon_defenders.map_config.delete_confirm_title": "Supprimer cette map ?",
-  "dungeon_defenders.map_config.delete_confirm_message": "La structure %s sera retirée de ce monde. C'est irréversible.",
   "dungeon_defenders.map_config.deleted": "Map %s supprimée.",
   "dungeon_defenders.map_config.delete_failed": "Impossible de supprimer %s : ce n'est pas une map enregistrée dans ce monde.",
   "dungeon_defenders.map_selection.position": "%s / %s",
-  "dungeon_defenders.map_pack.dungeon_defenders": "Campagne"
+  "dungeon_defenders.map_pack.dungeon_defenders": "Campagne",
+  "dungeon_defenders.map_selection.delete": "Supprimer cette map",
+  "dungeon_defenders.map_selection.delete_confirm_title": "Supprimer cette map ?",
+  "dungeon_defenders.map_selection.delete_confirm_message": "%s (%s) sera retirée de ce monde. C'est irréversible."
 }

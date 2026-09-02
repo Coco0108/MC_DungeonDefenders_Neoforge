@@ -103,13 +103,12 @@
   "dungeon_defenders.map_config.order": "Order in the pack",
   "dungeon_defenders.map_config.wave_count": "Number of waves",
   "dungeon_defenders.map_config.score_multiplier": "Score multiplier",
-  "dungeon_defenders.map_config.structure_id": "Structure id (deletion only)",
   "dungeon_defenders.map_config.confirm": "Confirm",
-  "dungeon_defenders.map_config.delete": "Delete this map",
-  "dungeon_defenders.map_config.delete_confirm_title": "Delete this map?",
-  "dungeon_defenders.map_config.delete_confirm_message": "The structure %s will be removed from this world. This cannot be undone.",
   "dungeon_defenders.map_config.deleted": "Map %s deleted.",
   "dungeon_defenders.map_config.delete_failed": "Could not delete %s: it isn't a map saved in this world.",
   "dungeon_defenders.map_selection.position": "%s / %s",
-  "dungeon_defenders.map_pack.dungeon_defenders": "Campaign"
+  "dungeon_defenders.map_pack.dungeon_defenders": "Campaign",
+  "dungeon_defenders.map_selection.delete": "Delete this map",
+  "dungeon_defenders.map_selection.delete_confirm_title": "Delete this map?",
+  "dungeon_defenders.map_selection.delete_confirm_message": "%s (%s) will be removed from this world. This cannot be undone."
 }

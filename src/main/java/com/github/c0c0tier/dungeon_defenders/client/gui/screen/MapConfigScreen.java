@@ -4,18 +4,14 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.MapConfigBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
 import com.github.c0c0tier.dungeon_defenders.menu.MapConfigMenu;
 import com.github.c0c0tier.dungeon_defenders.network.MapConfigPayload;
-import com.github.c0c0tier.dungeon_defenders.network.DeleteMapPayload;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.MenuAccess;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import org.jspecify.annotations.Nullable;
 
@@ -25,10 +21,11 @@ import java.util.function.Predicate;
 // que SpawnerConfigScreen : pré-rempli depuis la copie cliente du block entity, déjà
 // synchronisée, et un paquet part au clic sur "Valider".
 //
-// Le champ "identifiant de la structure" n'est PAS éditable ici : il vient du nom sous lequel le
-// créateur sauvegarde sa map avec un bloc de structure vanilla (`<namespace>:map/<id>`). C'est
-// volontaire — deux endroits pour nommer la même chose finiraient forcément par diverger. Ce
-// champ ne sert qu'à la suppression, qui a besoin de savoir quel fichier retirer.
+// Cet écran ne contient PAS de suppression : le bloc de configuration ne connaît pas
+// l'identifiant de sa propre structure (celui-ci est choisi bien plus tard, au moment de
+// sauvegarder avec un bloc de structure), il faudrait donc le retaper à la main. La suppression
+// vit dans l'écran de CHOIX de map, où l'identifiant est connu et où l'on voit ce qu'on efface —
+// déplacée là sur décision du joueur (2026-09-02).
 public class MapConfigScreen extends Screen implements MenuAccess<MapConfigMenu> {
 
     private static final int FIELD_WIDTH = 140;
@@ -43,14 +40,12 @@ public class MapConfigScreen extends Screen implements MenuAccess<MapConfigMenu>
     private String orderText = String.valueOf(MapDefinition.DEFAULT_ORDER);
     private String waveCountText = String.valueOf(MapDefinition.DEFAULT_WAVE_COUNT);
     private String multiplierText = String.valueOf(MapDefinition.DEFAULT_SCORE_MULTIPLIER);
-    private String structureIdText = "";
     private boolean loadedFromBlock;
 
     private EditBox nameField;
     private EditBox orderField;
     private EditBox waveCountField;
     private EditBox multiplierField;
-    private EditBox structureIdField;
 
     public MapConfigScreen(MapConfigMenu menu, Inventory playerInventory, Component title) {
         super(title);
@@ -71,7 +66,7 @@ public class MapConfigScreen extends Screen implements MenuAccess<MapConfigMenu>
         }
 
         int centerX = this.width / 2;
-        int top = Math.max(24, this.height / 2 - (6 * ROW_HEIGHT) / 2);
+        int top = Math.max(24, this.height / 2 - (5 * ROW_HEIGHT) / 2);
         int y = top;
 
         this.nameField = addField(centerX, y, this.nameText, 48, null);
@@ -82,18 +77,10 @@ public class MapConfigScreen extends Screen implements MenuAccess<MapConfigMenu>
         y += ROW_HEIGHT;
         this.multiplierField = addField(centerX, y, this.multiplierText, 6, MapConfigScreen::isDecimal);
         y += ROW_HEIGHT;
-        this.structureIdField = addField(centerX, y, this.structureIdText, 64, null);
-        y += ROW_HEIGHT;
 
         this.addRenderableWidget(Button.builder(
                         Component.translatable("dungeon_defenders.map_config.confirm"), button -> onConfirm())
                 .bounds(centerX - BUTTON_WIDTH / 2, y + 6, BUTTON_WIDTH, FIELD_HEIGHT)
-                .build());
-
-        this.addRenderableWidget(Button.builder(
-                        Component.translatable("dungeon_defenders.map_config.delete").withStyle(ChatFormatting.RED),
-                        button -> confirmDelete())
-                .bounds(centerX - BUTTON_WIDTH / 2, y + 6 + FIELD_HEIGHT + 4, BUTTON_WIDTH, FIELD_HEIGHT)
                 .build());
     }
 
@@ -147,35 +134,6 @@ public class MapConfigScreen extends Screen implements MenuAccess<MapConfigMenu>
         this.onClose();
     }
 
-    // Confirmation demandée par le joueur (2026-09-02) : la suppression efface un fichier de la
-    // sauvegarde, elle est irréversible, et le bouton vit dans un écran qu'on ouvre pour éditer.
-    private void confirmDelete() {
-        String rawId = this.structureIdField.getValue().trim();
-        if (rawId.isEmpty()) {
-            return;
-        }
-        Minecraft minecraft = Minecraft.getInstance();
-        minecraft.setScreen(new ConfirmScreen(
-                confirmed -> {
-                    if (!confirmed) {
-                        minecraft.setScreen(this);
-                        return;
-                    }
-                    sendDelete(rawId);
-                },
-                Component.translatable("dungeon_defenders.map_config.delete_confirm_title"),
-                Component.translatable("dungeon_defenders.map_config.delete_confirm_message", rawId)));
-    }
-
-    private void sendDelete(String rawId) {
-        Identifier structureId = Identifier.tryParse(rawId);
-        ClientPacketListener connection = Minecraft.getInstance().getConnection();
-        if (structureId != null && connection != null) {
-            connection.send(new DeleteMapPayload(structureId).toVanillaServerbound());
-        }
-        Minecraft.getInstance().setScreen(null);
-    }
-
     private static int parseInt(String text, int fallback) {
         try {
             return Integer.parseInt(text);
@@ -196,12 +154,11 @@ public class MapConfigScreen extends Screen implements MenuAccess<MapConfigMenu>
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
         int centerX = this.width / 2;
-        guiGraphics.centeredText(this.font, this.title, centerX, Math.max(8, this.height / 2 - (6 * ROW_HEIGHT) / 2 - 16), TEXT_COLOR);
+        guiGraphics.centeredText(this.font, this.title, centerX, Math.max(8, this.height / 2 - (5 * ROW_HEIGHT) / 2 - 16), TEXT_COLOR);
         label(guiGraphics, centerX, this.nameField, "dungeon_defenders.map_config.name");
         label(guiGraphics, centerX, this.orderField, "dungeon_defenders.map_config.order");
         label(guiGraphics, centerX, this.waveCountField, "dungeon_defenders.map_config.wave_count");
         label(guiGraphics, centerX, this.multiplierField, "dungeon_defenders.map_config.score_multiplier");
-        label(guiGraphics, centerX, this.structureIdField, "dungeon_defenders.map_config.structure_id");
     }
 
     private void label(GuiGraphicsExtractor guiGraphics, int centerX, EditBox field, String key) {

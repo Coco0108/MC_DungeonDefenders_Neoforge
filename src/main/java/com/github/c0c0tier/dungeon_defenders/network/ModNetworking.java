@@ -288,20 +288,7 @@ public class ModNetworking {
                 return;
             }
 
-            StructureTemplateManager manager = serverLevel.getStructureManager();
-            boolean deleted;
-            try {
-                Path file = manager.worldTemplates().createAndValidatePathToStructure(
-                        payload.structureId(), StructureTemplateManager.WORLD_STRUCTURE_LISTER);
-                deleted = Files.deleteIfExists(file);
-            } catch (Exception exception) {
-                LOGGER.warn("Suppression de la map {} impossible", payload.structureId(), exception);
-                deleted = false;
-            }
-
-            // Vide le cache dans tous les cas : sans ça la map supprimée resterait listée
-            // jusqu'au prochain rechargement du monde.
-            manager.remove(payload.structureId());
+            boolean deleted = MapRegistry.delete(serverLevel.getStructureManager(), payload.structureId());
             player.sendSystemMessage(Component.translatable(deleted
                     ? "dungeon_defenders.map_config.deleted"
                     : "dungeon_defenders.map_config.delete_failed", payload.structureId().toString()));

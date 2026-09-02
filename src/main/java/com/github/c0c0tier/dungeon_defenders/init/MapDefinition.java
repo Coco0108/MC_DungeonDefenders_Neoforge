@@ -21,7 +21,8 @@ public record MapDefinition(
         String displayName,
         int order,
         int waveCount,
-        float scoreMultiplier) {
+        float scoreMultiplier,
+        boolean fromWorld) {
 
     /**
      * Version du format des données écrites par le bloc de configuration. Incrémenter en cas de
@@ -44,7 +45,20 @@ public record MapDefinition(
                     ByteBufCodecs.VAR_INT, MapDefinition::order,
                     ByteBufCodecs.VAR_INT, MapDefinition::waveCount,
                     ByteBufCodecs.FLOAT, MapDefinition::scoreMultiplier,
+                    ByteBufCodecs.BOOL, MapDefinition::fromWorld,
                     MapDefinition::new);
+
+    /**
+     * Vrai si cette map vient du dossier {@code generated/} de la sauvegarde, c'est-à-dire
+     * qu'elle a été créée en jeu. Faux pour une map livrée dans un jar (la campagne, un pack
+     * tiers) : c'est une ressource en lecture seule.
+     *
+     * <p>Envoyé au client pour que l'écran de choix n'active le bouton de suppression que sur ce
+     * qui est réellement supprimable, au lieu de laisser cliquer puis d'échouer.
+     */
+    public boolean isDeletable() {
+        return this.fromWorld;
+    }
 
     /** @return vrai si cet identifiant ressemble à une structure de map (`<ns>:map/<id>`). */
     public static boolean isMapStructure(Identifier id) {

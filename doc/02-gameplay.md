@@ -1571,6 +1571,22 @@ n'était que décoratif. `ModAttachments.CURRENT_MAP` mémorise la map en cours 
 « Rejouer » de l'écran de fin de partie relance **la même**, alors que l'écran de choix est
 fermé depuis longtemps côté client.
 
+### Supprimer une map — dans l'écran de choix, en créatif
+
+Le bouton vit dans l'écran de **choix**, pas dans celui de configuration. Raison : le bloc de
+configuration ne connaît pas l'identifiant de sa propre structure — celui-ci est choisi bien plus
+tard, au moment de sauvegarder avec un bloc de structure. Il aurait donc fallu le retaper à la
+main. Dans l'écran de choix, l'identifiant est connu et on voit ce qu'on efface.
+
+Le bouton **n'existe pas en survie** (outil de mappeur), et n'est **actif que sur une map
+réellement supprimable** : `MapDefinition#fromWorld`, calculé côté serveur en vérifiant si le
+fichier existe dans le dossier `generated/` de la sauvegarde. Une map livrée dans un jar est une
+ressource en lecture seule — autant griser le bouton que laisser cliquer pour échouer ensuite.
+
+Confirmation par `ConfirmScreen` avant d'agir. La map est aussi retirée de la liste **locale** :
+celle-ci vient du serveur à l'ouverture de l'écran et n'est pas rafraîchie, sans ça la map
+supprimée resterait affichée. Un pack vidé de sa dernière map disparaît avec elle.
+
 ### Publier une map
 
 Une map créée en jeu vit dans la sauvegarde du monde, pas dans le mod : elle ne part pas avec

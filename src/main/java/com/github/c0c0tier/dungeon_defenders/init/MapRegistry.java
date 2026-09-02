@@ -8,6 +8,11 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlac
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 
+import com.mojang.logging.LogUtils;
+import org.slf4j.Logger;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -28,6 +33,8 @@ import java.util.Optional;
 //
 // Le namespace fait office de pack (voir MapDefinition#packId).
 public final class MapRegistry {
+
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     // Campagne d'abord, puis les autres packs par ordre alphabétique de namespace ; à
     // l'intérieur d'un pack, l'ordre choisi par le créateur, puis l'identifiant pour départager.
@@ -80,6 +87,43 @@ public final class MapRegistry {
 
         return Optional.of(MapConfigBlockEntity.toDefinition(
                 structureId,
-                configBlocks.isEmpty() ? null : configBlocks.getFirst().nbt()));
+                configBlocks.isEmpty() ? null : configBlocks.getFirst().nbt(),
+                isFromWorld(manager, structureId)));
+    }
+
+    /**
+     * Vrai si la map existe comme fichier dans le dossier {@code generated/} de la sauvegarde
+     * (créée en jeu), faux si elle ne vient que d'un jar ou d'un datapack (lecture seule).
+     *
+     * <p>Sert à n'activer le bouton de suppression que sur ce qui est réellement supprimable :
+     * autant griser le bouton que laisser cliquer pour échouer ensuite.
+     */
+    public static boolean isFromWorld(StructureTemplateManager manager, Identifier structureId) {
+        return Files.isRegularFile(worldFile(manager, structureId));
+    }
+
+    /**
+     * Supprime le fichier d'une map créée en jeu, et vide l'entrée correspondante du cache du
+     * gestionnaire — sans ça elle resterait listée jusqu'au prochain rechargement du monde.
+     *
+     * @return vrai si un fichier a bien été supprimé.
+     */
+    public static boolean delete(StructureTemplateManager manager, Identifier structureId) {
+        boolean deleted;
+        try {
+            deleted = Files.deleteIfExists(worldFile(manager, structureId));
+        } catch (Exception exception) {
+            LOGGER.warn("Suppression de la map {} impossible", structureId, exception);
+            deleted = false;
+        }
+        manager.remove(structureId);
+        return deleted;
+    }
+
+    // createAndValidatePathToStructure ne fait que résoudre un chemin (vérifié : pas de création
+    // de dossier), on peut donc l'appeler pour un simple test d'existence.
+    private static Path worldFile(StructureTemplateManager manager, Identifier structureId) {
+        return manager.worldTemplates().createAndValidatePathToStructure(
+                structureId, StructureTemplateManager.WORLD_STRUCTURE_LISTER);
     }
 }

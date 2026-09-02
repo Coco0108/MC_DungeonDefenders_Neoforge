@@ -3,13 +3,17 @@ package com.github.c0c0tier.dungeon_defenders.client.gui.screen;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.network.DeleteMapPayload;
 import com.github.c0c0tier.dungeon_defenders.network.SetDifficultyPayload;
 import com.github.c0c0tier.dungeon_defenders.network.StartGamePayload;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
 
@@ -56,6 +60,8 @@ public class MapSelectionScreen extends Screen {
     private final List<String> packIds = new ArrayList<>();
     private final Map<GameDifficulty, Button> difficultyButtons = new EnumMap<>(GameDifficulty.class);
     private final List<Button> packButtons = new ArrayList<>();
+
+    private Button deleteButton;
 
     private int selectedPackIndex;
     private int selectedMapIndex;
@@ -136,6 +142,73 @@ public class MapSelectionScreen extends Screen {
                 .bounds(centerX - PLAY_BUTTON_WIDTH / 2, playY, PLAY_BUTTON_WIDTH, PLAY_BUTTON_HEIGHT)
                 .build());
         playButton.active = !this.packIds.isEmpty();
+
+        // Suppression réservée au créatif : c'est un outil de mappeur, pas une action de joueur.
+        // Le bouton n'existe donc simplement pas en survie, plutôt que d'être grisé.
+        if (isCreative()) {
+            this.deleteButton = this.addRenderableWidget(Button.builder(
+                            Component.translatable("dungeon_defenders.map_selection.delete").withStyle(ChatFormatting.RED),
+                            button -> confirmDelete())
+                    .bounds(centerX - PLAY_BUTTON_WIDTH / 2, playY + PLAY_BUTTON_HEIGHT + 4, PLAY_BUTTON_WIDTH, PLAY_BUTTON_HEIGHT)
+                    .build());
+            updateDeleteButton();
+        }
+    }
+
+    private static boolean isCreative() {
+        LocalPlayer player = Minecraft.getInstance().player;
+        return player != null && player.isCreative();
+    }
+
+    // Actif seulement sur une map réellement supprimable, c'est-à-dire créée en jeu : une map
+    // livrée dans un jar (la campagne, un pack tiers) est une ressource en lecture seule. Le
+    // serveur le calcule et l'envoie avec la liste — autant griser le bouton que laisser cliquer
+    // pour échouer ensuite.
+    private void updateDeleteButton() {
+        if (this.deleteButton != null) {
+            List<MapDefinition> maps = currentPackMaps();
+            this.deleteButton.active = !maps.isEmpty() && currentMap().isDeletable();
+        }
+    }
+
+    private void confirmDelete() {
+        List<MapDefinition> maps = currentPackMaps();
+        if (maps.isEmpty()) {
+            return;
+        }
+        MapDefinition map = currentMap();
+        Minecraft minecraft = Minecraft.getInstance();
+        minecraft.setScreen(new ConfirmScreen(
+                confirmed -> {
+                    if (confirmed) {
+                        sendDelete(map);
+                    }
+                    minecraft.setScreen(this);
+                },
+                Component.translatable("dungeon_defenders.map_selection.delete_confirm_title"),
+                Component.translatable("dungeon_defenders.map_selection.delete_confirm_message",
+                        map.mapDisplayName(), map.structureId().toString())));
+    }
+
+    // Retire la map de la liste locale en plus d'envoyer le paquet : la liste vient du serveur à
+    // l'ouverture de l'écran et n'est pas rafraîchie, sans ça la map supprimée resterait affichée
+    // jusqu'à la prochaine ouverture. Un pack vidé de sa dernière map disparaît avec elle.
+    private void sendDelete(MapDefinition map) {
+        ClientPacketListener connection = Minecraft.getInstance().getConnection();
+        if (connection != null) {
+            connection.send(new DeleteMapPayload(map.structureId()).toVanillaServerbound());
+        }
+
+        List<MapDefinition> maps = this.packs.get(map.packId());
+        maps.remove(map);
+        if (maps.isEmpty()) {
+            this.packs.remove(map.packId());
+            this.packIds.remove(map.packId());
+            this.selectedPackIndex = Math.clamp(this.selectedPackIndex, 0, Math.max(0, this.packIds.size() - 1));
+            this.packScroll = 0;
+        }
+        this.selectedMapIndex = 0;
+        this.rebuildWidgets();
     }
 
     private void buildPackButtons(int columnCenterX, int top) {
@@ -212,6 +285,7 @@ public class MapSelectionScreen extends Screen {
             return;
         }
         this.selectedMapIndex = (this.selectedMapIndex - 1 + maps.size()) % maps.size();
+        updateDeleteButton();
     }
 
     private void onNextMap() {
@@ -220,6 +294,7 @@ public class MapSelectionScreen extends Screen {
             return;
         }
         this.selectedMapIndex = (this.selectedMapIndex + 1) % maps.size();
+        updateDeleteButton();
     }
 
     @Override

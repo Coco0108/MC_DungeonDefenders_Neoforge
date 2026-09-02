@@ -47,10 +47,10 @@ public class MapConfigBlockEntity extends BlockEntity {
      * par défaut : décidé avec le joueur (2026-09-02), une map sans configuration reste jouable
      * plutôt que d'être masquée — on peut ainsi tester une map avant de l'avoir renseignée.
      */
-    public static MapDefinition toDefinition(Identifier structureId, @Nullable CompoundTag tag) {
+    public static MapDefinition toDefinition(Identifier structureId, @Nullable CompoundTag tag, boolean fromWorld) {
         if (tag == null) {
             return new MapDefinition(structureId, "", MapDefinition.DEFAULT_ORDER,
-                    MapDefinition.DEFAULT_WAVE_COUNT, MapDefinition.DEFAULT_SCORE_MULTIPLIER);
+                    MapDefinition.DEFAULT_WAVE_COUNT, MapDefinition.DEFAULT_SCORE_MULTIPLIER, fromWorld);
         }
         // Chaque champ a son propre repli : un pack publié avec une version de format plus
         // ancienne n'a simplement pas les clés ajoutées depuis, et reste lisible.
@@ -59,7 +59,8 @@ public class MapConfigBlockEntity extends BlockEntity {
                 tag.getStringOr(KEY_NAME, ""),
                 tag.getIntOr(KEY_ORDER, MapDefinition.DEFAULT_ORDER),
                 Math.max(1, tag.getIntOr(KEY_WAVE_COUNT, MapDefinition.DEFAULT_WAVE_COUNT)),
-                tag.getFloatOr(KEY_SCORE_MULTIPLIER, MapDefinition.DEFAULT_SCORE_MULTIPLIER));
+                tag.getFloatOr(KEY_SCORE_MULTIPLIER, MapDefinition.DEFAULT_SCORE_MULTIPLIER),
+                fromWorld);
     }
 
     public String getDisplayName() {

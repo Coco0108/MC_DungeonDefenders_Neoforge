@@ -509,14 +509,16 @@ Les packs et le regroupement :
 
 La suppression :
 
-- [ ] Dans l'ecran de config d'une map, saisir son identifiant complet
-      (`dungeon_defenders:map/ma_map`) dans le champ prevu, cliquer "Supprimer cette map" :
-      une confirmation apparait.
-- [ ] Repondre Non : rien n'est supprime, retour a l'ecran de config.
-- [ ] Repondre Oui : message de confirmation en chat, et la map a disparu du carrousel a la
-      prochaine ouverture.
-- [ ] Essayer de supprimer une map qui n'existe pas dans ce monde : message d'echec explicite,
-      pas de plantage.
+- [ ] **En survie**, ouvrir l'ecran de choix : **aucun** bouton "Supprimer cette map".
+- [ ] **En creatif**, le bouton apparait sous "Jouer", en rouge.
+- [ ] Sur une map creee en jeu : le bouton est **actif**. Cliquer -> confirmation.
+- [ ] Repondre Non : rien n'est supprime, retour a l'ecran de choix.
+- [ ] Repondre Oui : message en chat, et la map disparait **immediatement** du carrousel (pas
+      besoin de rouvrir l'ecran).
+- [ ] Supprimer la derniere map d'un pack : le pack disparait aussi de la colonne de gauche, et
+      la selection retombe sur un pack valide sans planter.
+- [ ] Sur une map livree dans le jar du mod (quand la campagne existera) : le bouton est
+      **grise** — c'est une ressource en lecture seule.
 
 Regressions a surveiller :
 
