@@ -97,6 +97,7 @@ MC_DungeonDefenders_Neoforge/
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
     │       ├── ManaChestBlock.java           # Meuble de map : donne du mana au clic droit (survie, 1x/vague) ou config (créatif)
     │       ├── TrainingDummyBlock.java       # Support de mannequin : invisible, garantit qu'un TrainingDummyEntity existe juste au-dessus
+    │       ├── NoBuildZoneBlock.java         # Marqueur de zone interdite à la pose de tours : invisible, occupe la case
     │       ├── PlayerSpawnBlock.java         # Marqueur de spawn des joueurs : invisible, traversable, ciblable en créatif seulement
     │       └── entity/
     │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal)

@@ -1492,6 +1492,52 @@ Le contour n'était pas le seul repère visuel : le mode suppression dessine son
 **orange** (`TowerRemovalClientEvents`, inchangé et désormais mieux lisible sans la boîte noire
 par-dessus) et les tours affichent leur barre de vie (`TowerHealthBarRenderer`).
 
+## Les zones interdites à la pose — `block/NoBuildZoneBlock.java`
+
+Premier outil de *mappeur* du mod au sens strict (les autres marqueurs servent au fonctionnement
+de la map ; celui-ci sert à la régler). Posé par le créateur d'une map pour délimiter où les
+joueurs **ne peuvent pas** construire.
+
+### Liste noire, pas liste blanche
+
+Décidé avec le joueur (2026-08-31), à l'inverse du jeu de référence qui définit des zones
+*autorisées*. Raison donnée : c'est plus ouvert à la créativité du joueur, et surtout **un oubli
+du mappeur autorise une pose en trop plutôt que de rendre un endroit injouable**. Le pire cas
+d'une liste noire est bénin ; celui d'une liste blanche ne l'est pas.
+
+Un marqueur = une position interdite. On "peint" donc la zone, typiquement au `/fill` en
+créatif ; le format structure les sauvegarde comme n'importe quel bloc.
+
+### Comment il bloque réellement la pose
+
+**Il occupe la case, et ça suffit.** Un bloc normal n'est pas `canBeReplaced()`, et c'est
+exactement ce que testent le ciblage côté client (`TowerPlacementClientEvents`) et l'autorité
+serveur (`ModNetworking#handlePlaceTower`) pour décider si une position est libre. Aucune
+logique de zone, aucun volume à calculer, aucun registre à tenir.
+
+Les deux endroits ajoutent quand même un **test explicite du marqueur**, pour une seule raison :
+pouvoir *expliquer* le refus. Sans lui, le joueur voit un hologramme rouge sans cause visible —
+le bloc est invisible. Le message `dungeon_defenders.tower.no_build_zone` est envoyé côté client
+au moment où il tente de confirmer une pose refusée, et côté serveur s'il refuse de son côté
+(le paquet n'arrive normalement jamais, le client filtrant déjà — c'est de la défense en
+profondeur, comme partout ailleurs dans le mod).
+
+### Le bloc
+
+Invisible, traversable, ciblable en créatif seulement — même traitement que `SpawnerBlock`,
+`PlayerSpawnBlock` et `TrainingDummyBlock` (voir "Le spawner n'est plus jamais un obstacle
+physique" pour le raisonnement détaillé, identique ici). Traversable est important : une zone
+simplement interdite à la construction ne doit gêner ni un monstre ni un joueur.
+
+### Ce qui n'est PAS fait, volontairement
+
+- **Pas de marqueur de volume** (deux coins définissant une boîte) : un bloc par case, quitte à
+  en poser beaucoup. Le `/fill` rend ça indolore, et ça évite toute une gestion de volumes qui
+  se chevauchent, de coins orphelins et de sauvegarde de leur appairage.
+- **Aucun retour visuel de la zone** en dehors du contour de visée en créatif : pas de
+  surbrillance des cases interdites pendant le mode pose. À reconsidérer si ça se révèle
+  pénible à l'usage.
+
 ## La phase Taverne — `GamePhase.TAVERN`
 
 Décidée avec le joueur (2026-09-01). Le problème de départ : `GAME_PHASE` valait `BUILD` par
