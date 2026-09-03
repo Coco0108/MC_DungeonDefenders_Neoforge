@@ -1,9 +1,13 @@
 package com.github.c0c0tier.dungeon_defenders;
 
+import com.github.c0c0tier.dungeon_defenders.ability.AbilityRegistry;
+import com.github.c0c0tier.dungeon_defenders.ability.ChannelAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.PlayerAbilityChannels;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ManaCrystalEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackPriorityTargetGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
+import com.github.c0c0tier.dungeon_defenders.init.AbilitySlot;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ManaCrystalType;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -11,6 +15,7 @@ import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
 import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -23,6 +28,7 @@ import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -42,6 +48,10 @@ public class ModEvents {
     // que d'essayer d'annuler chaque source d'exhaustion une par une.
     private static final int FULL_FOOD_LEVEL = 20;
     private static final float FULL_SATURATION = 20.0F;
+
+    // Fréquence de synchronisation du mana pendant une canalisation (voir tickAbilityChannel) —
+    // toutes les 4 ticks, assez réactif pour un HUD sans envoyer vingt paquets par seconde.
+    private static final long MANA_SYNC_INTERVAL_TICKS = 4L;
 
     @SubscribeEvent
     public static void onMonsterSpawn(EntityJoinLevelEvent event) {
@@ -175,6 +185,51 @@ public class ModEvents {
 
         player.getFoodData().setFoodLevel(FULL_FOOD_LEVEL);
         player.getFoodData().setSaturation(FULL_SATURATION);
+
+        if (player instanceof ServerPlayer serverPlayer) {
+            tickAbilityChannel(serverPlayer);
+        }
+    }
+
+    // Fait avancer la canalisation en cours du joueur, s'il y en a une — voir
+    // PlayerAbilityChannels/ChannelAbility pour le raisonnement complet (pourquoi le serveur
+    // est seul juge de quand ça s'arrête).
+    private static void tickAbilityChannel(ServerPlayer player) {
+        AbilitySlot slot = PlayerAbilityChannels.activeSlot(player.getUUID());
+        if (slot == null) {
+            return;
+        }
+
+        ChannelAbility ability = AbilityRegistry.resolveChannel(player, slot);
+        BlockPos target = PlayerAbilityChannels.activeTarget(player.getUUID());
+
+        if (ability == null || !ability.canContinue(player, target)) {
+            PlayerAbilityChannels.stop(player.getUUID());
+            return;
+        }
+
+        ability.applyTick(player, target);
+
+        // Synchroniser le mana à chaque tick de canalisation serait vingt paquets par seconde
+        // pour rien — un intervalle de quelques ticks reste largement assez réactif pour un
+        // HUD.
+        if (player.level().getGameTime() % MANA_SYNC_INTERVAL_TICKS == 0) {
+            player.syncData(ModAttachments.MANA);
+        }
+    }
+
+    // Interrompt le soin dès qu'un coup est encaissé — comportement confirmé pour Heal Self
+    // dans le jeu de référence (voir HealAbility), volontairement PAS étendu à Repair ni Blood
+    // Rage, qu'aucune source ne documente comme interrompues par des dégâts.
+    @SubscribeEvent
+    public static void onPlayerDamaged(LivingDamageEvent.Post event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || event.getHealthDamage() <= 0.0F) {
+            return;
+        }
+        if (PlayerAbilityChannels.activeSlot(player.getUUID()) == AbilitySlot.HEAL) {
+            PlayerAbilityChannels.stop(player.getUUID());
+            player.sendSystemMessage(Component.translatable("dungeon_defenders.ability.heal_interrupted"));
+        }
     }
 
     @SubscribeEvent

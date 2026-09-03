@@ -2,9 +2,15 @@ package com.github.c0c0tier.dungeon_defenders.network;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.MapInstance;
+import com.github.c0c0tier.dungeon_defenders.ability.AbilityCooldowns;
+import com.github.c0c0tier.dungeon_defenders.ability.AbilityRegistry;
+import com.github.c0c0tier.dungeon_defenders.ability.BurstAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.ChannelAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.PlayerAbilityChannels;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.AbilitySlot;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
@@ -16,6 +22,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -87,6 +94,21 @@ public class ModNetworking {
                 SelectHeroPayload.TYPE,
                 SelectHeroPayload.STREAM_CODEC,
                 ModNetworking::handleSelectHero
+        );
+        registrar.playToServer(
+                StartChannelAbilityPayload.TYPE,
+                StartChannelAbilityPayload.STREAM_CODEC,
+                ModNetworking::handleStartChannelAbility
+        );
+        registrar.playToServer(
+                StopChannelAbilityPayload.TYPE,
+                StopChannelAbilityPayload.STREAM_CODEC,
+                ModNetworking::handleStopChannelAbility
+        );
+        registrar.playToServer(
+                ActivateBurstAbilityPayload.TYPE,
+                ActivateBurstAbilityPayload.STREAM_CODEC,
+                ModNetworking::handleActivateBurstAbility
         );
         // Sans handler ici : paquets clientbound du mod, le handler vit côté client
         // uniquement (DungeonDefendersModClient#onRegisterClientPayloadHandlers), pour ne
@@ -249,6 +271,94 @@ public class ModNetworking {
             player.syncData(ModAttachments.HERO);
             player.sendSystemMessage(Component.translatable(
                     "dungeon_defenders.hero.selected", heroes[payload.heroOrdinal()].displayName()));
+        });
+    }
+
+    // Démarre une canalisation (Heal, Repair, ou le sort 2 du héros — jamais le sort 1, une
+    // salve, voir handleActivateBurstAbility). Le serveur ne fait que ENREGISTRER l'intention :
+    // c'est ModEvents.onPlayerTick, à chaque tick suivant, qui appelle réellement
+    // ChannelAbility#canContinue/applyTick — cette séparation est ce qui permet au serveur
+    // d'arrêter une canalisation de son propre chef (mana épuisé, PV pleins, coup reçu) sans
+    // dépendre d'un nouveau paquet du client.
+    private static void handleStartChannelAbility(StartChannelAbilityPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            if (!(player instanceof ServerPlayer serverPlayer)) {
+                return;
+            }
+
+            AbilitySlot[] slots = AbilitySlot.values();
+            if (payload.slotOrdinal() < 0 || payload.slotOrdinal() >= slots.length) {
+                return;
+            }
+            AbilitySlot slot = slots[payload.slotOrdinal()];
+
+            ChannelAbility ability = AbilityRegistry.resolveChannel(serverPlayer, slot);
+            if (ability == null) {
+                return;
+            }
+
+            BlockPos target = payload.target().orElse(null);
+            if (ability.requiresTarget()) {
+                if (target == null) {
+                    return;
+                }
+                // Portée revérifiée ici : le client a déjà raycasté au moment du clic, mais il
+                // n'est jamais l'autorité — un paquet forgé pourrait viser n'importe où.
+                if (serverPlayer.distanceToSqr(target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5) > MAX_DISTANCE_SQ) {
+                    return;
+                }
+            }
+
+            PlayerAbilityChannels.start(serverPlayer.getUUID(), slot, target);
+        });
+    }
+
+    private static void handleStopChannelAbility(StopChannelAbilityPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (context.player() instanceof ServerPlayer serverPlayer) {
+                PlayerAbilityChannels.stop(serverPlayer.getUUID());
+            }
+        });
+    }
+
+    // La compétence en salve (Circular Slice pour l'Écuyer aujourd'hui) : mana et recharge
+    // vérifiés ici, l'effet lui-même délégué à BurstAbility#activate.
+    private static void handleActivateBurstAbility(ActivateBurstAbilityPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            if (!(player instanceof ServerPlayer serverPlayer) || !(player.level() instanceof ServerLevel level)) {
+                return;
+            }
+
+            AbilitySlot[] slots = AbilitySlot.values();
+            if (payload.slotOrdinal() < 0 || payload.slotOrdinal() >= slots.length) {
+                return;
+            }
+            AbilitySlot slot = slots[payload.slotOrdinal()];
+            // Seul emplacement en salve pour l'instant (voir HeroDefinition) ; toute autre
+            // valeur reçue par le réseau est ignorée plutôt que de deviner quoi faire.
+            if (slot != AbilitySlot.SPELL_1) {
+                return;
+            }
+
+            BurstAbility ability = HeroDefinition.of(serverPlayer).spell1();
+            long now = level.getGameTime();
+            if (!AbilityCooldowns.isReady(serverPlayer.getUUID(), slot, now, ability.cooldownTicks())) {
+                return;
+            }
+
+            int currentMana = serverPlayer.getData(ModAttachments.MANA);
+            if (currentMana < ability.manaCost()) {
+                serverPlayer.sendSystemMessage(Component.translatable(
+                        "dungeon_defenders.ability.not_enough_mana", ability.manaCost(), currentMana));
+                return;
+            }
+
+            serverPlayer.setData(ModAttachments.MANA, currentMana - ability.manaCost());
+            serverPlayer.syncData(ModAttachments.MANA);
+            AbilityCooldowns.markUsed(serverPlayer.getUUID(), slot, now);
+            ability.activate(serverPlayer);
         });
     }
 

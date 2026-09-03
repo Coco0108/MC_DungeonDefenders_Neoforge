@@ -96,5 +96,15 @@
   "dungeon_defenders.hero_selection.towers": "Towers:",
   "dungeon_defenders.hero.selected": "You are now playing the %s.",
   "dungeon_defenders.hero.not_in_combat": "You can't change hero during Combat.",
-  "dungeon_defenders.hero.wrong_tower": "Your hero can't place that tower."
+  "dungeon_defenders.hero.wrong_tower": "Your hero can't place that tower.",
+  "key.dungeon_defenders.ability_heal": "Ability: Heal",
+  "key.dungeon_defenders.ability_spell_1": "Ability: Spell 1",
+  "key.dungeon_defenders.ability_spell_2": "Ability: Spell 2",
+  "key.dungeon_defenders.ability_repair": "Ability: Repair tower",
+  "dungeon_defenders.ability.heal": "Heal Self",
+  "dungeon_defenders.ability.repair": "Repair Defense",
+  "dungeon_defenders.ability.circular_slice": "Circular Slice",
+  "dungeon_defenders.ability.blood_rage": "Blood Rage",
+  "dungeon_defenders.ability.not_enough_mana": "Not enough mana! (%s required, %s available)",
+  "dungeon_defenders.ability.heal_interrupted": "Healing interrupted!"
 }

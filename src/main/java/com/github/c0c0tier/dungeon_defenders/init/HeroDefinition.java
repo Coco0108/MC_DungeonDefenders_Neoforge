@@ -1,5 +1,9 @@
 package com.github.c0c0tier.dungeon_defenders.init;
 
+import com.github.c0c0tier.dungeon_defenders.ability.BloodRageAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.BurstAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.ChannelAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.CircularSliceAbility;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -22,23 +26,31 @@ import java.util.Locale;
 // synchro, filtrage) sur un cas simple, avant que trois héros de plus ne s'y ajoutent.
 public enum HeroDefinition {
 
+    // Circular Slice et Blood Rage : les deux sorts de l'Écuyer confirmés dans le jeu de
+    // référence (2026-09-03, voir doc/02-gameplay.md) — pas des sorts inventés. Heal et Repair
+    // ne sont PAS ici : génériques à tout héros, voir HealAbility/RepairAbility.
     SQUIRE("squire", List.of(
             TowerDefinition.SPIKE_BLOCKADE,
             TowerDefinition.BOUNCER_BLOCKADE,
             TowerDefinition.SLICE_N_DICE_BLOCKADE,
             TowerDefinition.HARPOON_TURRET,
             TowerDefinition.BOWLING_BALL_TURRET,
-            TowerDefinition.MORTAR_TURRET));
+            TowerDefinition.MORTAR_TURRET),
+            CircularSliceAbility.INSTANCE, BloodRageAbility.INSTANCE);
 
     /** Héros attribué à un joueur qui n'a jamais choisi — voir ModAttachments.HERO. */
     public static final HeroDefinition DEFAULT = SQUIRE;
 
     private final String id;
     private final List<TowerDefinition> towers;
+    private final BurstAbility spell1;
+    private final ChannelAbility spell2;
 
-    HeroDefinition(String id, List<TowerDefinition> towers) {
+    HeroDefinition(String id, List<TowerDefinition> towers, BurstAbility spell1, ChannelAbility spell2) {
         this.id = id;
         this.towers = towers;
+        this.spell1 = spell1;
+        this.spell2 = spell2;
     }
 
     public String id() {
@@ -48,6 +60,16 @@ public enum HeroDefinition {
     /** Les tours que ce héros peut poser, dans l'ordre où la roue les présente. */
     public List<TowerDefinition> towers() {
         return this.towers;
+    }
+
+    /** Sort de l'emplacement SPELL_1 — toujours une compétence en salve, voir BurstAbility. */
+    public BurstAbility spell1() {
+        return this.spell1;
+    }
+
+    /** Sort de l'emplacement SPELL_2 — toujours une compétence maintenue, voir ChannelAbility. */
+    public ChannelAbility spell2() {
+        return this.spell2;
     }
 
     public Component displayName() {
