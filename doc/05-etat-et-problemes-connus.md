@@ -459,6 +459,20 @@ vérifie la CI.
   (`PhaseTransitions.onVictory/onDefeat`), devenus redondants avec cet écran. Détail dans
   [02-gameplay.md](02-gameplay.md#lécran-de-fin-de-partie--clientguiscreengameoverscreenjava-networkgameoverpayloadjava).
 
+- ✅ **Système de héros — identité et filtrage des tours** (`init/HeroDefinition.java`,
+  `client/gui/screen/HeroSelectionScreen.java`, 2026-09-03) : décidé avec le joueur de construire
+  **un héros complet** plutôt que les tours des quatre — la classe de base une fois, les
+  différences ensuite. Un `HeroDefinition` (même rôle que `TowerDefinition`) porte l'identifiant,
+  le libellé et la liste des tours du héros ; un attachment joueur `HERO`, persisté par nom, dit
+  qui l'on est ; la roue ne montre plus que les tours du héros, et `handlePlaceTower` refuse
+  côté serveur une tour d'une autre classe. Choix par la touche **H**, refusé en Combat. Le HUD
+  affiche le héros à côté du nom et du niveau. Un seul héros (Écuyer) pour l'instant : l'écran
+  n'a donc qu'une option, assumé — ça valide la plomberie avant que trois héros s'y ajoutent.
+  **Ne couvre PAS** les compétences (les 4 emplacements du HUD restent vides), l'arme, ni les
+  stats propres au héros : toutes demandent des décisions de conception non prises. **Jamais
+  vérifié en jeu.** Détail dans
+  [02-gameplay.md](02-gameplay.md#le-système-de-héros--initherodefinitionjava).
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.

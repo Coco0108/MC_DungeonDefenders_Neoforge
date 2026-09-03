@@ -1327,6 +1327,70 @@ tour, sans avoir eu besoin de toucher à `strength()`/`getDestroyProgress()` par
   changement de curseur, pas d'indicateur HUD permanent) — seul le message système à
   l'activation/désactivation l'indique.
 
+## Le système de héros — `init/HeroDefinition.java`
+
+Décidé avec le joueur (2026-09-03). La question posée était : faire les tours des quatre héros,
+ou finir l'Écuyer à 100 % ? Réponse retenue : **un héros complet d'abord**, la classe de base une
+fois, les différences ensuite — le principe déjà appliqué aux tours, où
+`AbstractTowerBlockEntity` porte le commun et chaque tour concrète ne fixe que ses stats.
+
+Trois arguments ont tranché :
+
+- Aujourd'hui le joueur **ne fait rien en combat**, il regarde ses tours. Ajouter dix-huit tours
+  de plus enrichit un simulateur de contemplation.
+- Valider le système sur 6 tours coûte moins cher que sur 24, et un premier jet de système de
+  classes se révèle rarement juste du premier coup.
+- Une fois le système là, les trois autres héros deviennent du **contenu** : des entrées d'enum
+  et des blocs, sans risque de conception.
+
+### Ce que cette étape couvre — et ce qu'elle ne couvre pas
+
+**Faite** : l'identité (quel héros on est, choisi, persisté, synchronisé) et le **filtrage des
+tours**. C'est la partie qui ne demandait aucune décision de conception.
+
+**Pas faite** : les compétences (les 4 emplacements du HUD restent quatre ronds vides dessinés en
+dur), l'arme et l'attaque de base, et les stats propres au héros. Toutes demandent des décisions
+que le joueur n'a pas encore prises — comment on déclenche une compétence, ce qu'elle coûte, ce
+qu'elle fait.
+
+### Le catalogue
+
+`HeroDefinition` est à l'Écuyer ce que `TowerDefinition` est aux tours : un membre par héros,
+portant son identifiant, son libellé et **la liste des tours qu'il peut poser**. Ajouter un héros
+sera une entrée ici plus ses tours.
+
+Un seul membre pour l'instant, comme `ManaCrystalType` à ses débuts. L'écran de choix n'a donc
+qu'une option — c'est assumé : ça valide toute la plomberie (choix, paquet, persistance, synchro,
+filtrage) sur un cas simple, avant que trois héros ne s'y ajoutent.
+
+### Où le héros est stocké
+
+`ModAttachments.HERO`, un attachment **joueur** (chacun son héros, contrairement à la phase ou à
+la vague qui sont des états du monde). Persisté **par nom** et non par ordinal, comme
+`GAME_PHASE` : l'ordre des membres changera forcément quand les autres héros arriveront, et une
+sauvegarde existante ne doit pas se retrouver avec le mauvais héros.
+
+### Le filtrage des tours, et l'autorité
+
+`TowerWheelScreen` ne liste plus `TowerDefinition.values()` mais les tours du héros du joueur.
+C'est ce qui donne un sens au choix de classe.
+
+Le serveur revérifie : `ModNetworking#handlePlaceTower` refuse une tour qui n'appartient pas au
+héros du joueur, avec son propre message. Le client ne montre déjà que les bonnes, mais il n'est
+jamais l'autorité — un paquet forgé demanderait sinon la tour d'une autre classe.
+
+### Changer de héros
+
+Touche **H**, qui ouvre `HeroSelectionScreen`. Une touche plutôt qu'un bloc de taverne : le
+système doit être testable tout de suite, sans dépendre d'une structure. Le choix depuis la
+taverne viendra quand elle existera.
+
+**Refusé pendant le Combat** (revérifié côté serveur) : changer de classe au milieu d'une vague
+laisserait des tours posées qu'on ne peut plus poser, et viderait le choix de sa substance.
+
+Le HUD affiche désormais le héros à côté du nom et du niveau — c'est l'information qui dit au
+joueur quelles tours il peut poser, elle vaut mieux qu'un pseudo affiché en permanence.
+
 ## Le mana du joueur
 
 Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore) **et** la

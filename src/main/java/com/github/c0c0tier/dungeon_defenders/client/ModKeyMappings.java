@@ -44,10 +44,20 @@ public class ModKeyMappings {
             GLFW.GLFW_KEY_X,
             CATEGORY);
 
+    // Ouvre l'écran de choix de héros. H libre côté vanilla ; à terme ce choix se fera aussi
+    // depuis la taverne, mais une touche évite de dépendre d'un bloc pour un système qui doit
+    // être testable tout de suite.
+    public static final KeyMapping HERO_SELECTION = new KeyMapping(
+            "key.dungeon_defenders.hero_selection",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_H,
+            CATEGORY);
+
     public static void register(RegisterKeyMappingsEvent event) {
         event.registerCategory(CATEGORY);
         event.register(TOWER_WHEEL);
         event.register(ROTATE_TOWER);
         event.register(REMOVE_TOWER_MODE);
+        event.register(HERO_SELECTION);
     }
 }

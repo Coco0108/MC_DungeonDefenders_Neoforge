@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.client.gui;
 
+import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -27,7 +28,10 @@ public class CharacterOverlay implements GuiLayer {
 
         String characterName = player.getData(ModAttachments.CHARACTER_NAME);
         int level = player.getData(ModAttachments.LEVEL);
-        Component text = Component.translatable("dungeon_defenders.hud.character", Component.literal(characterName), level);
+        // Le héros s'ajoute au nom et au niveau : c'est l'information qui dit au joueur quelles
+        // tours il peut poser, elle a plus de valeur affichée en permanence qu'un pseudo.
+        Component text = Component.translatable("dungeon_defenders.hud.character",
+                Component.literal(characterName), HeroDefinition.of(player).displayName(), level);
         int centerX = guiGraphics.guiWidth() / 2;
         int y = ScoreOverlay.rowY(guiGraphics) - minecraft.font.lineHeight - GAP;
         guiGraphics.centeredText(minecraft.font, text, centerX, y, TEXT_COLOR);

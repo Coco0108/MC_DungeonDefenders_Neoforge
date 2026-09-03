@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.client;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.client.gui.screen.HeroSelectionScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.TowerWheelScreen;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -61,6 +62,11 @@ public class TowerPlacementClientEvents {
     @SubscribeEvent
     static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
+
+        if (ModKeyMappings.HERO_SELECTION.consumeClick() && minecraft.screen == null
+                && !TowerPlacementState.isActive() && !TowerRemovalState.isActive()) {
+            minecraft.setScreen(new HeroSelectionScreen());
+        }
 
         if (ModKeyMappings.TOWER_WHEEL.consumeClick() && minecraft.screen == null
                 && !TowerRemovalState.isActive()) {

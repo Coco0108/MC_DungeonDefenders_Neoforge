@@ -2,7 +2,10 @@ package com.github.c0c0tier.dungeon_defenders.client.gui.screen;
 
 import com.github.c0c0tier.dungeon_defenders.client.ModKeyMappings;
 import com.github.c0c0tier.dungeon_defenders.client.TowerPlacementState;
+import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -28,11 +31,21 @@ public class TowerWheelScreen extends Screen {
     private static final int HIGHLIGHT_COLOR = 0x80FFFF55;
     private static final int TEXT_COLOR = 0xFFFFFFFF;
 
-    private final List<TowerDefinition> towers = List.of(TowerDefinition.values());
+    // Seulement les tours du héros du joueur, et non tout le catalogue : c'est ce qui donne un
+    // sens au choix de classe. L'autorité reste côté serveur (ModNetworking#handlePlaceTower
+    // revérifie), ce filtre n'est que l'affichage.
+    private final List<TowerDefinition> towers = resolveTowers();
     private int hoveredIndex = -1;
 
     public TowerWheelScreen() {
         super(Component.translatable("dungeon_defenders.tower_wheel.title"));
+    }
+
+    private static List<TowerDefinition> resolveTowers() {
+        LocalPlayer player = Minecraft.getInstance().player;
+        return player == null
+                ? HeroDefinition.DEFAULT.towers()
+                : HeroDefinition.of(player).towers();
     }
 
     private int computeHoveredIndex(double mouseX, double mouseY) {

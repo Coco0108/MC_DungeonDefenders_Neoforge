@@ -29,6 +29,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild : transitions de phase centralisées
     │   │   ├── GameMap.java                  # Liste des maps proposées dans l'écran de choix (visible = false pour masquer une map en cours de conception)
     │   │   ├── TowerDefinition.java          # Catalogue des tours posables via la roue (voir client/gui/screen/TowerWheelScreen.java)
+    │   │   ├── HeroDefinition.java           # Catalogue des héros : ses tours, son libellé — la roue et le serveur s'y réfèrent
     │   │   ├── ManaCrystalType.java           # Paliers de cristaux de mana (un seul pour l'instant, extensible)
     │   │   └── ModEntities.java               # DeferredRegister.Entities (premier Entity custom du mod : le cristal de mana)
     │   ├── menu/
@@ -43,6 +44,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── PlaceTowerPayload.java        # Paquet C2S (tour + position + rotation, confirmation finale de la roue)
     │   │   ├── ManaChestConfigPayload.java   # Paquet C2S (BlockPos + quantité de mana du coffre)
     │   │   ├── RemoveTowerPayload.java       # Paquet C2S (BlockPos de la tour à retirer, mode suppression)
+    │   │   ├── SelectHeroPayload.java        # Paquet C2S (héros choisi dans HeroSelectionScreen)
     │   │   ├── GameOverPayload.java          # Paquet S2C (victoire/défaite, ouvre GameOverScreen)
     │   │   ├── ScoreGainPayload.java         # Paquet S2C (montant + source du gain, alimente ScoreGainOverlay)
     │   │   ├── OpenMapSelectionPayload.java  # Paquet S2C sans champ (ouvre MapSelectionScreen depuis TavernCrystalBlock)
@@ -57,6 +59,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
     │   │   ├── ManaChestConfigScreen.java    # Écran de config du coffre de mana, un seul champ (client uniquement)
     │   │   ├── MapSelectionScreen.java       # Écran de choix de map + difficulté (client uniquement, pas de Menu)
+    │   │   ├── HeroSelectionScreen.java      # Écran de choix de héros (touche H, client uniquement, pas de Menu)
     │   │   └── TowerWheelScreen.java         # Roue radiale de sélection des tours (client uniquement, pas de Menu)
     │   ├── client/gui/
     │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)

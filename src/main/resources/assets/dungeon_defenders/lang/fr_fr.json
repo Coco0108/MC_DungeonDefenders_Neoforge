@@ -23,7 +23,6 @@
   "key.dungeon_defenders.tower_wheel": "Ouvrir la roue des tours",
   "key.dungeon_defenders.rotate_tower": "Faire pivoter la tour (pose)",
   "key.dungeon_defenders.remove_tower_mode": "Basculer le mode suppression de tour",
-
   "dungeon_defenders.eternia_crystal.destroyed": "Le cristal a été détruit !! Game Over !",
   "dungeon_defenders.eternia_crystal.ready_progress": "Prêt : %s/%s",
   "dungeon_defenders.game.victory": "Victoire ! Toutes les vagues sont nettoyées.",
@@ -38,7 +37,6 @@
   "dungeon_defenders.tower.removal_mode_on": "Mode suppression de tour : ACTIVÉ. Clic gauche sur une tour pour la retirer.",
   "dungeon_defenders.tower.removal_mode_off": "Mode suppression de tour : DÉSACTIVÉ.",
   "dungeon_defenders.level.up": "Niveau supérieur ! Vous êtes maintenant niveau %s.",
-
   "dungeon_defenders.hud.mana": "Mana : %s/%s",
   "dungeon_defenders.hud.health": "Vie : %s/%s",
   "dungeon_defenders.hud.experience": "Expérience : %s/%s",
@@ -50,7 +48,7 @@
   "dungeon_defenders.hud.score": "Score : %s",
   "dungeon_defenders.hud.score_gain": "+%s %s",
   "dungeon_defenders.score_source.monster_killed": "Ennemi tué",
-  "dungeon_defenders.hud.character": "%s - niv %s",
+  "dungeon_defenders.hud.character": "%s (%s) - niv %s",
   "dungeon_defenders.mana_test_wand.used": "-%s mana (%s/%s)",
   "dungeon_defenders.mana_test_wand.empty": "Pas assez de mana !",
   "dungeon_defenders.mana_fill_wand.used": "Mana rempli (%s/%s)",
@@ -79,17 +77,24 @@
   "dungeon_defenders.map.test_map": "Map de test",
   "dungeon_defenders.tower_wheel.title": "Choisir une tour",
   "dungeon_defenders.tower_wheel.mana_cost": "Coût : %s mana",
-
   "dungeon_defenders.mana_chest.opened": "+%s mana grâce au coffre (%s/%s)",
   "dungeon_defenders.mana_chest.already_opened": "Ce coffre est vide, reviens à la prochaine vague.",
   "dungeon_defenders.mana_chest.config_title": "Configuration du coffre de mana",
   "dungeon_defenders.mana_chest.config_amount": "Quantité de mana",
   "dungeon_defenders.mana_chest.config_confirm": "Valider",
-
   "dungeon_defenders.configuration.title": "Configuration de Dungeon Defenders",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml": "Configuration de Dungeon Defenders",
   "dungeon_defenders.configuration.section.dungeon_defenders.common.toml.title": "Configuration de Dungeon Defenders",
   "dungeon_defenders.configuration.section.dungeon_defenders.client.toml": "Affichage (HUD)",
   "dungeon_defenders.configuration.section.dungeon_defenders.client.toml.title": "Affichage (HUD)",
-  "dungeon_defenders.configuration.showScoreGainPopup": "Afficher le popup de gain de score"
+  "dungeon_defenders.configuration.showScoreGainPopup": "Afficher le popup de gain de score",
+  "key.dungeon_defenders.hero_selection": "Ouvrir le choix de héros",
+  "dungeon_defenders.hero.squire": "Écuyer",
+  "dungeon_defenders.hero.squire.description": "Défenseur de mêlée. Des murs et des tourelles, faits pour tenir un couloir.",
+  "dungeon_defenders.hero_selection.title": "Choisir un héros",
+  "dungeon_defenders.hero_selection.confirm": "Choisir",
+  "dungeon_defenders.hero_selection.towers": "Tours :",
+  "dungeon_defenders.hero.selected": "Tu joues maintenant l'%s.",
+  "dungeon_defenders.hero.not_in_combat": "Impossible de changer de héros pendant le Combat.",
+  "dungeon_defenders.hero.wrong_tower": "Ton héros ne peut pas poser cette tour."
 }

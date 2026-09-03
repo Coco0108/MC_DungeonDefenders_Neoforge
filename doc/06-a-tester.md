@@ -488,6 +488,31 @@ reconfirmer avec ces deux changements.
       signerait que le handler client a fini par se charger côté serveur malgré la séparation
       voulue.
 
+## Le systeme de heros (`HeroDefinition`, `HeroSelectionScreen`)
+
+Nouveau (2026-09-03), jamais verifie en jeu. Un seul heros existe, donc l'ecran de choix n'a
+qu'une option — c'est attendu, pas un bug.
+
+- [ ] Appuyer sur **H** : l'ecran "Choisir un heros" s'ouvre, avec l'Ecuyer marque d'un ✔
+      (c'est deja le tien par defaut), sa description, et la liste de ses 6 tours.
+- [ ] Cliquer "Choisir" : message de confirmation en chat, l'ecran se ferme.
+- [ ] Le HUD en bas centre affiche maintenant **"Pseudo (Écuyer) - niv 1"** au lieu de
+      "Pseudo - niv 1".
+- [ ] Ouvrir la roue des tours (`R`) : elle contient bien les **6 tours de l'Ecuyer**, et rien
+      d'autre. Comme il n'y a qu'un heros, c'est le meme contenu qu'avant — ce qui compte, c'est
+      qu'aucune tour ne manque.
+- [ ] Poser une tour depuis la roue : ca marche exactement comme avant.
+- [ ] **En phase Combat**, appuyer sur H et confirmer : refuse avec le message "Impossible de
+      changer de heros pendant le Combat".
+- [ ] Appuyer sur H **pendant le mode pose ou le mode suppression** : l'ecran ne doit pas
+      s'ouvrir (garde symetrique a celui de la roue).
+- [ ] Se deconnecter/reconnecter : le heros choisi est conserve (attachment persiste).
+- [ ] **En multijoueur** : deux joueurs peuvent avoir des heros differents, chacun voit sa
+      propre roue. (Un seul heros existant, ce test n'aura de sens qu'avec le deuxieme.)
+- [ ] Verifier dans Options > Controles que la touche H apparait sous la categorie
+      "Dungeon Defenders" et se rebinde.
+- [ ] Aucune exception liee a `HeroDefinition`, `HeroSelectionScreen` ou `SelectHeroPayload`.
+
 ## Le mod sur un serveur dédié
 
 Le mod a été déployé pour la première fois sur le serveur dédié du joueur le 2026-08-30 : il ne
