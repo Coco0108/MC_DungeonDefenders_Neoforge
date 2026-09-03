@@ -488,6 +488,108 @@ reconfirmer avec ces deux changements.
       signerait que le handler client a fini par se charger côté serveur malgré la séparation
       voulue.
 
+## Le systeme de heros (`HeroDefinition`, `HeroSelectionScreen`)
+
+Nouveau (2026-09-03), jamais verifie en jeu. Un seul heros existe, donc l'ecran de choix n'a
+qu'une option — c'est attendu, pas un bug.
+
+- [ ] Appuyer sur **H** : l'ecran "Choisir un heros" s'ouvre, avec l'Ecuyer marque d'un ✔
+      (c'est deja le tien par defaut), sa description, et la liste de ses 6 tours.
+- [ ] Cliquer "Choisir" : message de confirmation en chat, l'ecran se ferme.
+- [ ] Le HUD en bas centre affiche maintenant **"Pseudo (Écuyer) - niv 1"** au lieu de
+      "Pseudo - niv 1".
+- [ ] Ouvrir la roue des tours (`R`) : elle contient bien les **6 tours de l'Ecuyer**, et rien
+      d'autre. Comme il n'y a qu'un heros, c'est le meme contenu qu'avant — ce qui compte, c'est
+      qu'aucune tour ne manque.
+- [ ] Poser une tour depuis la roue : ca marche exactement comme avant.
+- [ ] **En phase Combat**, appuyer sur H et confirmer : refuse avec le message "Impossible de
+      changer de heros pendant le Combat".
+- [ ] Appuyer sur H **pendant le mode pose ou le mode suppression** : l'ecran ne doit pas
+      s'ouvrir (garde symetrique a celui de la roue).
+- [ ] Se deconnecter/reconnecter : le heros choisi est conserve (attachment persiste).
+- [ ] **En multijoueur** : deux joueurs peuvent avoir des heros differents, chacun voit sa
+      propre roue. (Un seul heros existant, ce test n'aura de sens qu'avec le deuxieme.)
+- [ ] Verifier dans Options > Controles que la touche H apparait sous la categorie
+      "Dungeon Defenders" et se rebinde.
+- [ ] Aucune exception liee a `HeroDefinition`, `HeroSelectionScreen` ou `SelectHeroPayload`.
+
+## Les competences (`ability/`, touches 1-4)
+
+Nouveau (2026-09-03), jamais verifie en jeu. Trois mecanismes distincts a valider separement :
+soin (maintenu, self), reparation (maintenu, cible), sort 1 (salve+recharge), sort 2 (maintenu,
+buff). C'est aussi le tout premier usage d'une touche *maintenue* dans le mod (pas juste un
+appui) — a surveiller particulierement.
+
+Heal Self (touche 1) :
+
+- [ ] A PV non pleins, maintenir 1 : la vie remonte progressivement, le mana descend en meme
+      temps (1 pour 1, visible au HUD).
+- [ ] Relacher 1 avant PV pleins : le soin s'arrete immediatement.
+- [ ] Maintenir jusqu'a PV pleins : s'arrete tout seul des que la vie plafonne, meme sans
+      relacher la touche.
+- [ ] Maintenir jusqu'a mana epuise : s'arrete tout seul a 0 mana.
+- [ ] **Se faire toucher par un monstre pendant qu'on se soigne** : le soin s'interrompt
+      immediatement, message "Soin interrompu !" en chat — c'est le point le plus important de
+      cette section, verifie le comportement confirme du jeu de reference.
+- [ ] Ouvrir un ecran (menu pause) en maintenant 1 : le soin s'arrete des l'ouverture.
+
+Repair Defense (touche 4) :
+
+- [ ] Endommager une tour (laisser un monstre la taper en combat, ou tout autre moyen), viser
+      dessus et maintenir 4 : ses PV remontent, le mana descend en meme temps.
+- [ ] Viser dans le vide (aucune tour) et maintenir 4 : rien ne se passe, aucune erreur.
+- [ ] Commencer a maintenir 4 en visant une tour, puis bouger la camera pour viser autre chose
+      **sans relacher** : la reparation continue sur la PREMIERE tour visee (cible fixee a
+      l'appui, pas de re-visee en cours de canalisation — comportement attendu, pas un bug).
+- [ ] Maintenir sur une tour deja a PV pleins : s'arrete tout de suite (ou ne demarre pas),
+      sans message, sans consommer de mana.
+- [ ] Reparer une tour jusqu'a PV pleins alors qu'elle en avait moins : s'arrete pile au
+      maximum, jamais au-dela (verifie que `setHealth` est bien plafonne cote reparation).
+
+Circular Slice (touche 2, sort 1 — salve) :
+
+- [ ] Avec au moins 60 mana, appuyer sur 2 pres de plusieurs monstres : tous les monstres a
+      environ 4 blocs autour du joueur prennent des degats et sont repousses **loin** du
+      joueur (pas attires).
+- [ ] Le mana descend de 60 d'un coup a l'appui, pas progressivement.
+- [ ] Reappuyer immediatement sur 2 : rien ne se passe (en recharge). Attendre ~3 secondes :
+      ca fonctionne de nouveau.
+- [ ] Avec moins de 60 mana : message "Pas assez de mana !", rien ne se declenche, la recharge
+      n'est pas non plus enclenchee (un echec par manque de mana ne doit pas bloquer le
+      prochain essai une fois assez de mana regagne).
+- [ ] Maintenir la touche 2 (au lieu d'un simple appui) : un seul coup part, pas une rafale —
+      confirme que c'est bien une salve et pas une canalisation.
+
+Blood Rage (touche 3, sort 2 — maintenue) :
+
+- [ ] Maintenir 3 : le joueur devient visiblement plus rapide, et ses coups au corps a corps
+      infligent plus de degats (Speed + Strength vanilla, verifiable aux icones d'effets en
+      haut a droite de l'ecran).
+- [ ] Le mana descend plus vite que pendant Heal Self (2/tick contre 1/tick).
+- [ ] Relacher 3 : le buff disparait en une fraction de seconde (pas instantanement du fait de
+      la duree courte rafraichie a chaque tick), pas de buff qui reste colle indefiniment.
+- [ ] Maintenir jusqu'a mana epuise : le buff s'arrete tout seul, meme touche encore enfoncee.
+
+HUD et cas transverses :
+
+- [ ] Les 4 emplacements affichent chacun une icone (pomme doree, epee, poudre de blaze,
+      enclume) au lieu des ronds vides d'avant.
+- [ ] Deux competences a la fois : maintenir 1 (soin) puis appuyer sur 4 (reparation) sans
+      relacher 1 — un joueur ne peut canaliser qu'UNE seule competence a la fois, verifier ce
+      qui se passe reellement (la deuxieme devrait remplacer la premiere, a confirmer que le
+      comportement observe est sain et pas un etat incoherent).
+- [ ] Ouvrir la roue des tours (R) en maintenant une competence : elle s'arrete.
+- [ ] Se deconnecter en pleine canalisation puis reconnecter : aucune erreur au demarrage,
+      aucun effet fantome qui continue.
+- [ ] Verifier dans Options > Controles que les 4 touches ("Compétence : Soin/Sort 1/Sort
+      2/Réparer une tour") apparaissent sous "Dungeon Defenders" et se rebindent.
+- [ ] En creatif, appuyer sur 1-4 : la competence se declenche ET le slot de hotbar change
+      (effet de bord assume, voir doc/02-gameplay.md) — a confirmer que ce n'est pas genant en
+      pratique.
+- [ ] Aucune exception liee a `ability.*`, `ModEvents.tickAbilityChannel`,
+      `ModEvents.onPlayerDamaged`, ou aux 3 nouveaux paquets (`StartChannelAbilityPayload`,
+      `StopChannelAbilityPayload`, `ActivateBurstAbilityPayload`).
+
 ## Le mod sur un serveur dédié
 
 Le mod a été déployé pour la première fois sur le serveur dédié du joueur le 2026-08-30 : il ne

@@ -459,6 +459,33 @@ vérifie la CI.
   (`PhaseTransitions.onVictory/onDefeat`), devenus redondants avec cet écran. Détail dans
   [02-gameplay.md](02-gameplay.md#lécran-de-fin-de-partie--clientguiscreengameoverscreenjava-networkgameoverpayloadjava).
 
+- ✅ **Système de héros — identité et filtrage des tours** (`init/HeroDefinition.java`,
+  `client/gui/screen/HeroSelectionScreen.java`, 2026-09-03) : décidé avec le joueur de construire
+  **un héros complet** plutôt que les tours des quatre — la classe de base une fois, les
+  différences ensuite. Un `HeroDefinition` (même rôle que `TowerDefinition`) porte l'identifiant,
+  le libellé et la liste des tours du héros ; un attachment joueur `HERO`, persisté par nom, dit
+  qui l'on est ; la roue ne montre plus que les tours du héros, et `handlePlaceTower` refuse
+  côté serveur une tour d'une autre classe. Choix par la touche **H**, refusé en Combat. Le HUD
+  affiche le héros à côté du nom et du niveau. Un seul héros (Écuyer) pour l'instant : l'écran
+  n'a donc qu'une option, assumé — ça valide la plomberie avant que trois héros s'y ajoutent.
+  **Ne couvre PAS** les compétences (les 4 emplacements du HUD restent vides), l'arme, ni les
+  stats propres au héros : toutes demandent des décisions de conception non prises. **Jamais
+  vérifié en jeu.** Détail dans
+  [02-gameplay.md](02-gameplay.md#le-système-de-héros--initherodefinitionjava).
+- ✅ **Les compétences** (`ability/`, 2026-09-03) : les 4 emplacements du HUD sont désormais
+  fonctionnels — Heal Self et Repair Defense (génériques, maintenues, 1 mana = 1 PV/tick), plus
+  les deux sorts de l'Écuyer, Circular Slice (salve, **60 mana et 3s de recharge — valeurs
+  réelles du jeu de référence**, confirmées par recherche) et Blood Rage (maintenue, buff
+  Speed+Strength). Décidé avec le joueur : « on fait comme le jeu de base » plutôt que
+  d'inventer — les mécaniques (maintenue vs salve, interruption du soin par un coup reçu) sont
+  celles du jeu de référence, vérifiées, pas reconstruites de mémoire. Le serveur est seul juge
+  de la durée d'une canalisation (`ModEvents.onPlayerTick` + `ChannelAbility#canContinue`),
+  jamais le client. Touches **1-4**, premier usage de `KeyMapping#isDown()` (maintenue) dans le
+  mod plutôt que `consumeClick()`. **Simplifications assumées** : Circular Slice touche une
+  fois au lieu de deux, la cible de Repair est fixée à l'appui (pas de re-visée en cours de
+  canalisation), aucun retour visuel de recharge/canalisation sur le HUD. **Jamais vérifié en
+  jeu.** Détail dans [02-gameplay.md](02-gameplay.md#les-compétences--ability-initabilityslotjava).
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.

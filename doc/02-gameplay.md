@@ -1327,6 +1327,193 @@ tour, sans avoir eu besoin de toucher à `strength()`/`getDestroyProgress()` par
   changement de curseur, pas d'indicateur HUD permanent) — seul le message système à
   l'activation/désactivation l'indique.
 
+## Le système de héros — `init/HeroDefinition.java`
+
+Décidé avec le joueur (2026-09-03). La question posée était : faire les tours des quatre héros,
+ou finir l'Écuyer à 100 % ? Réponse retenue : **un héros complet d'abord**, la classe de base une
+fois, les différences ensuite — le principe déjà appliqué aux tours, où
+`AbstractTowerBlockEntity` porte le commun et chaque tour concrète ne fixe que ses stats.
+
+Trois arguments ont tranché :
+
+- Aujourd'hui le joueur **ne fait rien en combat**, il regarde ses tours. Ajouter dix-huit tours
+  de plus enrichit un simulateur de contemplation.
+- Valider le système sur 6 tours coûte moins cher que sur 24, et un premier jet de système de
+  classes se révèle rarement juste du premier coup.
+- Une fois le système là, les trois autres héros deviennent du **contenu** : des entrées d'enum
+  et des blocs, sans risque de conception.
+
+### Ce que cette étape couvre — et ce qu'elle ne couvre pas
+
+**Faite** : l'identité (quel héros on est, choisi, persisté, synchronisé) et le **filtrage des
+tours**. C'est la partie qui ne demandait aucune décision de conception.
+
+**Pas faite** : les compétences (les 4 emplacements du HUD restent quatre ronds vides dessinés en
+dur), l'arme et l'attaque de base, et les stats propres au héros. Toutes demandent des décisions
+que le joueur n'a pas encore prises — comment on déclenche une compétence, ce qu'elle coûte, ce
+qu'elle fait.
+
+### Le catalogue
+
+`HeroDefinition` est à l'Écuyer ce que `TowerDefinition` est aux tours : un membre par héros,
+portant son identifiant, son libellé et **la liste des tours qu'il peut poser**. Ajouter un héros
+sera une entrée ici plus ses tours.
+
+Un seul membre pour l'instant, comme `ManaCrystalType` à ses débuts. L'écran de choix n'a donc
+qu'une option — c'est assumé : ça valide toute la plomberie (choix, paquet, persistance, synchro,
+filtrage) sur un cas simple, avant que trois héros ne s'y ajoutent.
+
+### Où le héros est stocké
+
+`ModAttachments.HERO`, un attachment **joueur** (chacun son héros, contrairement à la phase ou à
+la vague qui sont des états du monde). Persisté **par nom** et non par ordinal, comme
+`GAME_PHASE` : l'ordre des membres changera forcément quand les autres héros arriveront, et une
+sauvegarde existante ne doit pas se retrouver avec le mauvais héros.
+
+### Le filtrage des tours, et l'autorité
+
+`TowerWheelScreen` ne liste plus `TowerDefinition.values()` mais les tours du héros du joueur.
+C'est ce qui donne un sens au choix de classe.
+
+Le serveur revérifie : `ModNetworking#handlePlaceTower` refuse une tour qui n'appartient pas au
+héros du joueur, avec son propre message. Le client ne montre déjà que les bonnes, mais il n'est
+jamais l'autorité — un paquet forgé demanderait sinon la tour d'une autre classe.
+
+### Changer de héros
+
+Touche **H**, qui ouvre `HeroSelectionScreen`. Une touche plutôt qu'un bloc de taverne : le
+système doit être testable tout de suite, sans dépendre d'une structure. Le choix depuis la
+taverne viendra quand elle existera.
+
+**Refusé pendant le Combat** (revérifié côté serveur) : changer de classe au milieu d'une vague
+laisserait des tours posées qu'on ne peut plus poser, et viderait le choix de sa substance.
+
+Le HUD affiche désormais le héros à côté du nom et du niveau — c'est l'information qui dit au
+joueur quelles tours il peut poser, elle vaut mieux qu'un pseudo affiché en permanence.
+
+## Les compétences — `ability/`, `init/AbilitySlot.java`
+
+Décidé avec le joueur (2026-09-03) : « on fait comme le jeu de base ». Les quatre emplacements
+du HUD (voir `AbilitySlotsOverlay`, jusqu'ici quatre ronds vides) sont désormais fonctionnels,
+avec les **vraies** valeurs et mécaniques du jeu de référence — vérifiées par recherche plutôt
+que reconstruites de mémoire (voir plus bas pour la nuance sur ce qui est confirmé et ce qui ne
+l'est pas).
+
+### Quatre emplacements, deux mécanismes différents
+
+| Emplacement | Compétence | Générique/héros | Déclenchement |
+|---|---|---|---|
+| HEAL | Heal Self | générique (`HealAbility`) | maintenue |
+| SPELL_1 | Circular Slice (Écuyer) | par héros (`HeroDefinition#spell1`) | **salve + recharge** |
+| SPELL_2 | Blood Rage (Écuyer) | par héros (`HeroDefinition#spell2`) | maintenue |
+| REPAIR | Repair Defense | générique (`RepairAbility`) | maintenue, avec cible |
+
+Trois emplacements sur quatre sont des **canalisations** (`ChannelAbility`) : la touche
+correspondante est maintenue, le mana se vide en continu tant qu'elle reste enfoncée. Le
+quatrième (Circular Slice) est une **salve** (`BurstAbility`) : un appui, un coût payé d'un
+coup, puis une recharge. C'est le mécanisme du jeu de référence lui-même, pas une simplification
+du mod — la tentation aurait été de tout uniformiser en canalisation pour un seul code, mais ça
+aurait trahi la consigne « on fait comme le jeu de base ».
+
+### Qui décide de la durée d'une canalisation — le serveur, jamais le client
+
+Le client n'annonce que deux choses : « je commence » (`StartChannelAbilityPayload`, avec la
+cible pour Repair) et « j'arrête » (`StopChannelAbilityPayload`). C'est
+`ModEvents.onPlayerTick` qui fait réellement avancer la canalisation, à chaque tick serveur :
+il appelle `ChannelAbility#canContinue` puis `#applyTick`, et **coupe de son propre chef** dès
+que la condition n'est plus vraie — mana épuisé, PV pleins (Heal), tour réparée au maximum
+(Repair), ou coup reçu (Heal seulement, voir plus bas) — sans attendre un nouveau paquet du
+client. `PlayerAbilityChannels` garde cet état côté serveur (au plus une canalisation par
+joueur), en mémoire uniquement — jamais synchronisé ni persisté, une canalisation ne doit pas
+survivre à une reconnexion.
+
+Le mana n'est resynchronisé qu'une fois tous les 4 ticks pendant une canalisation
+(`MANA_SYNC_INTERVAL_TICKS` dans `ModEvents`), pas à chaque tick : vingt paquets par seconde
+pour un HUD qui n'a pas besoin d'une telle fréquence.
+
+### Heal Self — `ability/HealAbility.java`
+
+1 mana = 1 PV, chaque tick tant que la touche reste maintenue (ratio de test, le jeu de
+référence lie plutôt le débit à une statistique "Casting Rate" qui n'existe pas dans ce mod).
+
+**Interrompue par un coup reçu**, en plus de PV pleins/mana épuisé : `ModEvents` écoute
+`LivingDamageEvent.Post` et coupe la canalisation dès qu'un joueur en train de se soigner
+encaisse des dégâts réels (`getHealthDamage() > 0`) — comportement confirmé pour Heal Self dans
+le jeu de référence. **Volontairement pas étendu à Repair ni Blood Rage** : aucune source ne
+documente qu'elles sont interrompues par des dégâts, extrapoler aurait été deviner.
+
+### Repair Defense — `ability/RepairAbility.java`
+
+Même ratio que le soin (1 mana = 1 PV de tour/tick), pour n'avoir qu'un seul nombre à retenir.
+
+La cible est choisie **au moment de l'appui**, par le même raycast que le mode suppression de
+tour (`TowerRemovalClientEvents`, `ClipContext.Block.OUTLINE`, 20 blocs) — et reste fixée pour
+toute la durée de la canalisation, même si le joueur bouge la caméra en la maintenant.
+**Simplification assumée** : viser une tour différente demande de relâcher puis rappuyer, pas de
+"glisser" la cible en cours de canalisation. Plus simple à coder et à comprendre ; à revoir si
+le ressenti en jeu le demande.
+
+`AbstractTowerBlockEntity#setHealth` ne plafonne **pas** au maximum de lui-même (vérifié dans sa
+source : `Math.max(0, health)`, aucun `Math.min`) — c'est `RepairAbility` qui doit s'arrêter à
+`getMaxHealth()`, pas le block entity.
+
+### Circular Slice — `ability/CircularSliceAbility.java` (sort 1 de l'Écuyer)
+
+**60 mana, 3 secondes de recharge (60 ticks) : les vraies valeurs du jeu de référence**,
+confirmées par recherche — pas des valeurs de test comme presque partout ailleurs dans le mod.
+Une attaque tournante à 360° autour du joueur : dégâts + repousse à tous les `Monster` dans un
+rayon de 4 blocs.
+
+**Simplification assumée** : le jeu de référence touche deux fois ("hits twice"), ici un seul
+coup avec les dégâts cumulés — pas de raison technique, juste plus simple pour une première
+version. Le rayon (4 blocs) et le knockback ne sont, eux, pas confirmés — valeurs de test.
+
+Repousse avec la même formule que le Bouncer Blockade (`AbstractBlockadeBlockEntity`),
+**testée en jeu** : `dx = joueurX - monstreX` (pas l'inverse), qui pousse bien loin du joueur.
+
+### Blood Rage — `ability/BloodRageAbility.java` (sort 2 de l'Écuyer)
+
+Buff Speed + Strength tant que la touche est maintenue, drainant le mana "très rapidement"
+(jeu de référence, valeur exacte non documentée — 2 mana/tick est un choix de test,
+volontairement plus cher que le soin).
+
+Implémentée avec les effets **vanilla** `MobEffects.SPEED`/`MobEffects.STRENGTH` — vérifiés
+dans les sources avant d'écrire cette classe, à la place de noms plausibles mais faux
+(`MOVEMENT_SPEED`/`DAMAGE_BOOST`, qui n'existent pas dans cette version). Rafraîchis à chaque
+tick avec une durée volontairement courte (`EFFECT_DURATION_TICKS`) : dès que la canalisation
+s'arrête, l'effet expire de lui-même en quelques ticks, sans code de nettoyage séparé.
+
+### Les touches — `ModKeyMappings.ABILITY_KEYS`, `client/AbilityClientEvents.java`
+
+**1 à 4**, dans l'ordre du HUD (Heal, Sort 1, Sort 2, Réparation). `AbilityClientEvents` est le
+premier endroit du mod à utiliser `KeyMapping#isDown()` (une touche *maintenue*) plutôt que
+`consumeClick()` (un appui simple, déjà utilisé partout ailleurs pour R/G/X/H) — trois des
+quatre compétences en ont besoin.
+
+**Effet de bord accepté** : en créatif, où la hotbar reste active (elle est neutralisée
+seulement en survie, voir `DungeonDefendersModClient`), appuyer sur 1-4 change *aussi* le slot
+de hotbar sélectionné en plus de déclencher la compétence. Sans conséquence pratique : les
+compétences n'ont d'utilité qu'en jeu, pas en train de construire.
+
+**Une canalisation en cours est coupée si un écran s'ouvre** (menu pause, roue des tours...) :
+`AbilityClientEvents` détecte `minecraft.screen != null` et envoie un `Stop` immédiatement —
+capturer une touche de compétence pendant qu'un écran a le focus n'aurait de toute façon aucun
+sens.
+
+### Ce qui n'est PAS fait, volontairement
+
+- **Aucun retour visuel de recharge** sur Circular Slice (pas de minuterie affichée sur son
+  icône), aucune mise en avant du slot pendant une canalisation, aucun grisé quand le mana
+  manque — `AbilitySlotsOverlay` affiche les icônes, rien de plus pour l'instant.
+- **Aucun message** quand une canalisation démarrée s'arrête immédiatement au premier tick
+  (cible déjà à PV pleins, par exemple) — silencieux, pas de distinction avec "n'a jamais
+  démarré".
+- Repair et Blood Rage ne sont **pas** interrompues par des dégâts (voir Heal Self plus haut,
+  volontaire).
+- Pas de nettoyage de `PlayerAbilityChannels`/`AbilityCooldowns` à la déconnexion — limite
+  acceptée, négligeable sur un serveur privé (voir le commentaire de classe de
+  `PlayerAbilityChannels`).
+
 ## Le mana du joueur
 
 Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore) **et** la

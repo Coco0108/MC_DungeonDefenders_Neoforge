@@ -29,8 +29,21 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild : transitions de phase centralisées
     │   │   ├── GameMap.java                  # Liste des maps proposées dans l'écran de choix (visible = false pour masquer une map en cours de conception)
     │   │   ├── TowerDefinition.java          # Catalogue des tours posables via la roue (voir client/gui/screen/TowerWheelScreen.java)
+    │   │   ├── HeroDefinition.java           # Catalogue des héros : ses tours, ses deux sorts (spell1/spell2), son libellé
+    │   │   ├── AbilitySlot.java              # Les 4 emplacements de compétence (HEAL, SPELL_1, SPELL_2, REPAIR), même ordre que le HUD
     │   │   ├── ManaCrystalType.java           # Paliers de cristaux de mana (un seul pour l'instant, extensible)
     │   │   └── ModEntities.java               # DeferredRegister.Entities (premier Entity custom du mod : le cristal de mana)
+    │   ├── ability/
+    │   │   ├── HeroAbility.java              # Contrat minimal (nom, icône) partagé par toute compétence
+    │   │   ├── BurstAbility.java             # Salve instantanée + recharge (Circular Slice)
+    │   │   ├── ChannelAbility.java           # Maintenue, mana en continu (Heal, Repair, Blood Rage)
+    │   │   ├── HealAbility.java              # Générique à tout héros : 1 mana = 1 PV/tick, interrompue par un coup reçu
+    │   │   ├── RepairAbility.java            # Générique à tout héros : 1 mana = 1 PV de tour/tick, cible visée au clic
+    │   │   ├── CircularSliceAbility.java     # Sort 1 de l'Écuyer : dégâts + repousse en cercle, valeurs du jeu de référence
+    │   │   ├── BloodRageAbility.java         # Sort 2 de l'Écuyer : buff Speed+Strength tant que maintenue
+    │   │   ├── AbilityRegistry.java          # Résout la ChannelAbility d'un (joueur, emplacement) — partagé réseau/tick
+    │   │   ├── PlayerAbilityChannels.java    # Canalisation active de chaque joueur (état runtime serveur, non persisté)
+    │   │   └── AbilityCooldowns.java         # Dernier usage d'une BurstAbility, par joueur et par emplacement
     │   ├── menu/
     │   │   ├── SpawnerConfigMenu.java        # AbstractContainerMenu sans slot, transmet juste le BlockPos
     │   │   ├── SpawnerConfigMenuProvider.java # MenuProvider ouvert par SpawnerBlock au clic droit
@@ -43,6 +56,10 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── PlaceTowerPayload.java        # Paquet C2S (tour + position + rotation, confirmation finale de la roue)
     │   │   ├── ManaChestConfigPayload.java   # Paquet C2S (BlockPos + quantité de mana du coffre)
     │   │   ├── RemoveTowerPayload.java       # Paquet C2S (BlockPos de la tour à retirer, mode suppression)
+    │   │   ├── SelectHeroPayload.java        # Paquet C2S (héros choisi dans HeroSelectionScreen)
+    │   │   ├── StartChannelAbilityPayload.java # Paquet C2S (emplacement + cible optionnelle, début d'une compétence maintenue)
+    │   │   ├── StopChannelAbilityPayload.java  # Paquet C2S sans champ (fin d'une compétence maintenue)
+    │   │   ├── ActivateBurstAbilityPayload.java # Paquet C2S (emplacement, déclenchement d'une compétence en salve)
     │   │   ├── GameOverPayload.java          # Paquet S2C (victoire/défaite, ouvre GameOverScreen)
     │   │   ├── ScoreGainPayload.java         # Paquet S2C (montant + source du gain, alimente ScoreGainOverlay)
     │   │   ├── OpenMapSelectionPayload.java  # Paquet S2C sans champ (ouvre MapSelectionScreen depuis TavernCrystalBlock)
@@ -52,11 +69,13 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── TowerPlacementState.java      # État transitoire du mode pose (AIMING/ORIENTING, tour choisie, rotation)
     │   │   ├── TowerPlacementRenderState.java # Instantané pour le rendu de l'hologramme (ContextKey sur LevelRenderState)
     │   │   ├── TowerPlacementClientEvents.java # Ouverture roue, rayon de visée, rotation, confirmation, rendu hologramme/portée
+    │   │   ├── AbilityClientEvents.java      # Touches 1-4 : Start/Stop des compétences maintenues, salve pour le sort 1
     │   │   └── ClientDisplayConfig.java      # Spec de config CLIENT (options d'affichage HUD facultatives), branchée dans DungeonDefendersModClient
     │   ├── client/gui/screen/
     │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
     │   │   ├── ManaChestConfigScreen.java    # Écran de config du coffre de mana, un seul champ (client uniquement)
     │   │   ├── MapSelectionScreen.java       # Écran de choix de map + difficulté (client uniquement, pas de Menu)
+    │   │   ├── HeroSelectionScreen.java      # Écran de choix de héros (touche H, client uniquement, pas de Menu)
     │   │   └── TowerWheelScreen.java         # Roue radiale de sélection des tours (client uniquement, pas de Menu)
     │   ├── client/gui/
     │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)
@@ -70,7 +89,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── PhaseOverlay.java             # Couche HUD affichant la phase (construction/combat) (client uniquement)
     │   │   ├── ScoreOverlay.java             # Couche HUD affichant le score de la carte, bas centre (client uniquement)
     │   │   ├── CharacterOverlay.java         # Couche HUD affichant "Nom - niv X", bas centre (client uniquement)
-    │   │   └── AbilitySlotsOverlay.java      # 4 emplacements de compétences, bas gauche, à côté des losanges (client uniquement)
+    │   │   └── AbilitySlotsOverlay.java      # 4 emplacements de compétences, icônes des HeroAbility du joueur (client uniquement)
     │   ├── entity/
     │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
     │   │   ├── MobHealthBarRenderer.java      # RenderLivingEvent.Post : barre de vie zombie/squelette, cachée à PV pleins/hors portée (client)

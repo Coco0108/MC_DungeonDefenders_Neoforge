@@ -123,6 +123,20 @@ public class ModAttachments {
     // de commande/écran pour le faire). Par défaut, prend le pseudo Minecraft du joueur au
     // premier accès — juste pour ne pas afficher une chaîne vide tant qu'aucune valeur n'a
     // été choisie, ça reste un champ à part qui peut diverger du compte ensuite.
+    // Héros choisi par le joueur. Persisté par NOM (comme GAME_PHASE) et non par ordinal :
+    // l'ordre des membres de HeroDefinition changera forcément quand les trois autres héros
+    // s'ajouteront, et une sauvegarde existante ne doit pas se retrouver avec le mauvais héros.
+    // La valeur synchronisée reste un ordinal, les deux côtés partageant le même enum.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> HERO = ATTACHMENT_TYPES.register(
+            "hero",
+            () -> AttachmentType.builder(() -> HeroDefinition.DEFAULT.ordinal())
+                    .serialize(Codec.STRING.xmap(
+                            name -> HeroDefinition.valueOf(name).ordinal(),
+                            ordinal -> HeroDefinition.values()[ordinal].name()
+                    ).fieldOf("Hero"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<String>> CHARACTER_NAME = ATTACHMENT_TYPES.register(
             "character_name",
             () -> AttachmentType.builder(holder -> holder instanceof Player player ? player.getGameProfile().name() : "")
