@@ -577,6 +577,11 @@ Creer une map de bout en bout :
 - [ ] En creatif, construire une petite arene **loin de (0,65,0) et de (10000,65,0)**, avec un
       `eternia_crystal`, un `spawner` configure, un `player_spawn`, et un bloc
       **Configuration de map**.
+- [ ] **Corrige (2026-09-06, meme incident que la taverne)** : si jamais tu construis a
+      `(10000, 65, 0)` (MAP_POS) plutot qu'ailleurs, cliquer "Jouer" sur n'importe quelle map
+      sans structure sauvegardee (y compris la tienne en cours) ne doit **plus rien effacer** a
+      cet endroit — avant ce correctif, chaque tentative de "Jouer" sans structure trouvee
+      nettoyait toute la zone avant de poser le placeholder.
 - [ ] Clic droit sur le bloc de config : l'ecran s'ouvre (creatif seulement — verifier qu'en
       survie il est introuvable et que le message apparait si on force). Renseigner nom, ordre,
       nombre de vagues (mettre **3**, pas 5, pour verifier que ce n'est plus une constante) et

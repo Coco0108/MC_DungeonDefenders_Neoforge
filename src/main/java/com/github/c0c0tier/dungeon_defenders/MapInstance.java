@@ -111,7 +111,11 @@ public final class MapInstance {
             if (map != null) {
                 LOGGER.warn("Structure de map introuvable ({}) : repli sur l'arène provisoire.", map.structureId());
             }
-            clearZone(level, zoneFrom(null), zoneSize(null));
+            // PAS de clearZone ici (même incident que TavernSpawn, 2026-09-06) : MAP_POS est
+            // l'endroit où un créateur bâtit sa map à la main avant de la sauvegarder en
+            // structure. Nettoyer à chaque "Jouer" sans structure trouvée effacerait ce travail
+            // en cours — buildPlaceholderArena ne fait que (re)poser le sol, sans rien effacer
+            // autour.
             buildPlaceholderArena(level);
             return MAP_POS;
         }

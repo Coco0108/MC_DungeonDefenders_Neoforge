@@ -244,21 +244,22 @@ maps/structures"), toutes les maps partagent la **même coordonnée fixe**
 (`MAP_POS = (10000, 65, 0)`, loin de la taverne) plutôt que d'avoir chacune la leur — pas
 besoin d'une grille de coordonnées puisqu'il n'y en a jamais deux en même temps.
 
-- **`startGame(level)`** (déclenché par `StartGamePayload`) : nettoie la zone (remplace tout
-  par de l'air dans un volume autour de `MAP_POS` — plus large que le placeholder lui-même,
-  pour rattraper d'éventuelles tours posées autour une fois qu'elles existeront), pose un
-  placeholder générique (même technique que `TavernSpawn`, une simple plateforme), cherche et
-  consomme un `PLAYER_SPAWN` (voir plus bas), puis téléporte **tous** les joueurs de la `Level`
-  — pas seulement celui qui a cliqué "Jouer", puisqu'une seule partie est partagée par tout le
-  monde (confirmé explicitement : "de toute façon on devra le faire").
-- **`returnToTavern(level)`** : même nettoyage de la zone, puis téléporte tout le monde vers
-  `TavernSpawn.SPAWN_POS`. Déclenché par la commande `/dd_leave` (voir `ModCommands` et
+- **`startGame(level, map)`** (déclenché par `StartGamePayload`) : depuis le 2026-09-02, la map
+  choisie est réellement chargée depuis sa structure `.nbt` (`MapInstance#placeMap`), même
+  mécanisme que `TavernSpawn` — nettoyage de zone dimensionné sur la structure puis pose si un
+  fichier existe, cherche et consomme un `PLAYER_SPAWN` (voir plus bas), puis téléporte
+  **tous** les joueurs de la `Level` — pas seulement celui qui a cliqué "Jouer", puisqu'une seule
+  partie est partagée par tout le monde (confirmé explicitement : "de toute façon on devra le
+  faire"). **Si aucune structure n'est trouvée** : repli sur `buildPlaceholderArena()` (une
+  simple plateforme à `MAP_POS`) — **sans nettoyer la zone** (corrigé le 2026-09-06, même
+  incident que `TavernSpawn` : `MAP_POS` est l'endroit où un créateur bâtit sa map à la main
+  avant de la sauvegarder en structure ; nettoyer à chaque "Jouer" sans structure trouvée
+  effacerait ce travail en cours).
+- **`returnToTavern(level)`** : nettoie la zone (fin de partie, plus rien à conserver — les
+  tours et monstres de la partie qui vient de se terminer), puis téléporte tout le monde vers
+  `TavernSpawn.arrivalPos(level)`. Déclenché par la commande `/dd_leave` (voir `ModCommands` et
   "Victoire et défaite" plus bas) — pas encore par un vrai point de sortie posé dans la map
-  elle-même, puisqu'aucune vraie map n'existe.
-
-`MapInstance` est pensé pour que le seul changement nécessaire, une fois de vraies maps
-prêtes, soit de remplacer `buildPlaceholderArena()` par un vrai chargement de structure
-`.nbt` — même logique que ce qui est prévu pour `TavernSpawn` (voir plus haut).
+  elle-même.
 
 ### Le bloc de spawn joueur — `block/PlayerSpawnBlock.java`, `MapInstance#findAndConsumeSpawnMarker`
 

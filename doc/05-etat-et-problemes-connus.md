@@ -1009,10 +1009,15 @@ injouable. Rien de codé, voir le backlog dans
   [02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté)) — la difficulté
   choisie s'applique réellement.
 - Le **mécanisme** de chargement de map (`MapInstance.java`) : un emplacement partagé
-  (`MAP_POS`, une seule map active à la fois), nettoyé puis reposé avec un placeholder
-  générique au clic sur "Jouer" (`startGame`), tout le monde téléporté ensemble. Retour à la
-  taverne via la commande `/dd_leave` (`returnToTavern`), aussi accessible comme lien
-  cliquable dans les messages de victoire/défaite (voir "Ce qui est implémenté" plus haut).
+  (`MAP_POS`, une seule map active à la fois), sa vraie structure `.nbt` chargée au clic sur
+  "Jouer" (`startGame`/`placeMap`, depuis le 2026-09-02, même mécanisme que `TavernSpawn`), tout
+  le monde téléporté ensemble. Retour à la taverne via la commande `/dd_leave`
+  (`returnToTavern`), aussi accessible comme lien cliquable dans les messages de victoire/défaite
+  (voir "Ce qui est implémenté" plus haut). **Corrigé (2026-09-06, même incident que
+  `TavernSpawn`)** : le repli sur l'arène placeholder (aucune structure trouvée) nettoyait la
+  zone avant de poser son sol, effaçant une map en cours de construction à la main à `MAP_POS`
+  au clic suivant sur "Jouer" (même la sienne, ou celle d'une autre map elle aussi sans
+  structure — même emplacement partagé). Le repli ne nettoie plus jamais rien désormais.
   Voir [02-gameplay.md](02-gameplay.md#la-map-active--mapinstancejava).
 - Le **mécanisme** du bloc de spawn joueur (`PLAYER_SPAWN`,
   `findAndConsumeSpawnMarker`, voir "Ce qui est implémenté" plus haut) : prêt à remplacer le
