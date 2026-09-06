@@ -6,7 +6,6 @@ import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.network.RemoveTowerPayload;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
@@ -22,7 +21,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -30,7 +28,6 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.ExtractLevelRenderStateEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
-import org.joml.Vector3f;
 
 // Fait vivre le mode suppression de tour (voir TowerRemovalState) : bascule au clavier, mise à
 // jour de la cible visée, envoi de la confirmation, et rendu du contour de surbrillance. Même
@@ -159,18 +156,7 @@ public class TowerRemovalClientEvents {
         poseStack.pushPose();
         poseStack.translate(pos.getX() - camPos.x, pos.getY() - camPos.y, pos.getZ() - camPos.z);
         event.getSubmitNodeCollector().submitCustomGeometry(poseStack, RenderTypes.lines(),
-                (pose, buffer) -> renderBoxOutline(pose, buffer, Shapes.block(), COLOR_TARGET, LINE_WIDTH));
+                (pose, buffer) -> LineBoxRenderer.renderBoxOutline(pose, buffer, Shapes.block(), COLOR_TARGET, LINE_WIDTH));
         poseStack.popPose();
-    }
-
-    // Copié de TowerPlacementClientEvents (même principe, pas assez de logique partagée pour
-    // justifier une extraction commune vu la taille des deux classes).
-    private static void renderBoxOutline(
-            PoseStack.Pose pose, VertexConsumer buffer, VoxelShape shape, int color, float width) {
-        shape.forAllEdges((x1, y1, z1, x2, y2, z2) -> {
-            Vector3f normal = new Vector3f((float) (x2 - x1), (float) (y2 - y1), (float) (z2 - z1)).normalize();
-            buffer.addVertex(pose, (float) x1, (float) y1, (float) z1).setColor(color).setNormal(pose, normal).setLineWidth(width);
-            buffer.addVertex(pose, (float) x2, (float) y2, (float) z2).setColor(color).setNormal(pose, normal).setLineWidth(width);
-        });
     }
 }

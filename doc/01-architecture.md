@@ -59,6 +59,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── TowerPlacementRenderState.java # Instantané pour le rendu de l'hologramme (ContextKey sur LevelRenderState)
     │   │   ├── TowerPlacementClientEvents.java # Ouverture roue, rayon de visée, rotation, confirmation, rendu hologramme/portée
     │   │   ├── BlockOutlineClientEvents.java # Masque le contour noir de sélection sur les tours et cristaux (ExtractBlockOutlineRenderStateEvent)
+    │   │   ├── LineBoxRenderer.java          # Contour filaire coloré partagé (pose/suppression de tour, repérage des marqueurs)
+    │   │   ├── MarkerOverlayClientEvents.java # Repérage en créatif des 5 blocs marqueurs invisibles : contour + étiquette à travers les murs
     │   │   ├── PauseMenuClientEvents.java   # Bouton "Abandonner le niveau" ajouté au menu pause (ScreenEvent.Init.Post)
     │   │   └── ClientDisplayConfig.java      # Spec de config CLIENT (options d'affichage HUD facultatives), branchée dans DungeonDefendersModClient
     │   ├── client/gui/screen/

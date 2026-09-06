@@ -162,6 +162,45 @@ ci-dessous, à vérifier au moins autant que le rendu.
       à son option voit la même chose (config purement locale, rien de synchronisé).
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `BlockOutlineClientEvents`.
 
+## Repérage des blocs marqueurs en créatif (`MarkerOverlayClientEvents`)
+
+Nouveau (2026-09-06), jamais vérifié en jeu — demandé pendant le premier test de la pile
+maps/taverne, faute de moyen de retrouver les blocs marqueurs (spawn joueur, zone interdite,
+config de map, support de mannequin, spawner) une fois posés, tous invisibles.
+
+- [ ] En créatif, poser un exemplaire de chacun des 5 marqueurs (spawn joueur, zone interdite,
+      config de map, support de mannequin, spawner), s'éloigner d'une quinzaine de blocs :
+      chacun affiche un **contour coloré** (une couleur différente par type) et son **nom
+      au-dessus**, sans avoir à viser précisément.
+- [ ] Se cacher derrière un mur plein face à un marqueur (toujours à moins de ~16 blocs) :
+      **l'étiquette de nom reste lisible à travers le mur**, seul le contour disparaît (il n'est
+      pas conçu pour traverser les murs, seulement l'étiquette).
+- [ ] S'éloigner de plus de 16 blocs (`SCAN_RADIUS`, valeur de test) : contour et étiquette
+      disparaissent. Se rapprocher : ils réapparaissent dans la seconde qui suit (`SCAN_INTERVAL_TICKS`
+      = 1 scan/seconde), pas besoin de bouger pour déclencher le rafraîchissement.
+- [ ] Passer en survie (ou en mode aventure/spectateur) : **plus aucun contour ni étiquette**,
+      même à côté d'un marqueur — c'est un outil d'édition, pas un élément de jeu.
+- [ ] Poser plusieurs marqueurs du même type à proximité : chacun a bien son propre contour et
+      sa propre étiquette, pas de fusion ni de doublon.
+- [ ] **Le point le plus incertain** : coût du scan périodique. Avec plusieurs marqueurs et un
+      monde chargé autour, vérifier qu'il n'y a **aucune saccade perceptible** une fois par
+      seconde (le scan n'a jamais été profilé) — sinon réduire `SCAN_RADIUS` ou espacer
+      `SCAN_INTERVAL_TICKS`.
+- [ ] Redémarrer le serveur/recharger le monde pendant qu'un contour est affiché : pas de crash,
+      pas d'étiquette "fantôme" qui reste affichée sur un marqueur qui n'existe plus.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `MarkerOverlayClientEvents`.
+
+**Corrigé au passage (2026-09-06)** : l'item en main de `player_spawn`, `no_build_zone`,
+`map_config` et `training_dummy` affichait une texture cassée violet/noir. Cause réelle : ces
+quatre blocs n'avaient qu'un modèle d'item à l'ancien format (`models/item/<nom>.json`, plus lu
+par cette version du jeu), pas le nouveau (`assets/dungeon_defenders/items/<nom>.json`) déjà
+utilisé par le reste du mod (spawner, tours...). Les quatre affichent maintenant leur texture
+placeholder (hay block, béton rouge, table de cartographie, lodestone) en main, comme dans
+l'onglet créatif.
+
+- [ ] Prendre chacun de ces 4 items en main/inventaire : texture placeholder correcte, plus de
+      violet/noir.
+
 ## Le reste du roster de l'Écuyer (Bouncer Blockade, Bowling Ball Turret)
 
 (Bouncer/Slice N Dice Blockade, Bowling Ball/Mortar Turret) — design discuté et validé avec le

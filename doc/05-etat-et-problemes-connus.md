@@ -501,6 +501,21 @@ vérifie la CI.
   **Jamais vérifié visuellement.** Détail dans
   [02-gameplay.md](02-gameplay.md#le-contour-de-sélection-masqué-sur-les-tours-et-les-cristaux--clientblockoutlineclienteventsjava).
 
+- ✅ **Repérage des blocs marqueurs en créatif** (`client/MarkerOverlayClientEvents.java`,
+  2026-09-06) : demandé en jeu pendant le premier test de la pile maps/taverne — les 5 blocs
+  marqueurs (spawn joueur, zone interdite, config de map, support de mannequin, spawner) sont
+  tous `RenderShape.INVISIBLE`, seul repérable en créatif en visant très précisément au jugé.
+  Scan périodique (1x/s, rayon 16 blocs, valeurs de test) autour du joueur créatif ; chaque
+  marqueur trouvé affiche un contour coloré (une couleur par type, `LineBoxRenderer.java`,
+  extrait à cette occasion de sa 3e copie entre `TowerPlacementClientEvents` et
+  `TowerRemovalClientEvents`) et une étiquette de nom **à travers les murs**
+  (`submitNameTag(..., seeThrough=true)`, même mécanisme que le nom d'un mob brillant). Rien en
+  survie : outil d'édition de map uniquement. **Jamais vérifié en jeu**, coût du scan non
+  profilé. Corrigé au passage : la texture d'item cassée (violet/noir) de `player_spawn`,
+  `no_build_zone`, `map_config` et `training_dummy` — il leur manquait le modèle d'item au
+  nouveau format (`assets/dungeon_defenders/items/<nom>.json`), ils n'avaient que l'ancien
+  (`models/item/<nom>.json`), plus lu par cette version du jeu.
+
 - ✅ **Mannequin d'entraînement** (`entity/TrainingDummyEntity.java`,
   `block/TrainingDummyBlock.java`, `block/entity/TrainingDummyBlockEntity.java`, 2026-08-31) :
   cible immobile et indestructible attaquée par les tours, pour mesurer leurs dégâts sans monter
