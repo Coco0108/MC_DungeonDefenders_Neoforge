@@ -742,7 +742,8 @@ Le bloc et l'invocation :
 - [ ] En creatif, l'item "Support de mannequin" apparait dans l'onglet du mod et se pose sans
       crash. Le bloc pose est **invisible** ; en creatif on le retrouve au contour de visee, en
       survie il est traversable et introuvable (meme comportement que le spawner).
-- [ ] Dans la seconde qui suit la pose, un mannequin apparait **juste au-dessus** du bloc.
+- [ ] Dans la seconde qui suit la pose, un mannequin apparait **a la position du bloc**
+      (**corrige le 2026-09-06** : il apparaissait avant un bloc plus haut, signale en jeu).
 - [ ] Le tuer n'est pas possible, mais le supprimer a la main (`/kill @e[type=dungeon_defenders:training_dummy]`)
       doit le faire **reapparaitre** en moins d'une seconde.
 - [ ] Casser le bloc en creatif : le mannequin **disparait avec lui**

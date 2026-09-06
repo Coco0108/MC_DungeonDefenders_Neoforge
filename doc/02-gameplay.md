@@ -1899,9 +1899,13 @@ si ce filtre est un jour élargi, il faudra penser à en exclure le mannequin.
 ### Le bloc — un "spawner de mannequin"
 
 `TrainingDummyBlock` n'a aucun comportement propre : son block entity vérifie une fois par
-seconde qu'un `TrainingDummyEntity` existe **juste au-dessus** de lui, et en invoque un sinon.
-Invisible, traversable, ciblable en créatif seulement — même traitement que `SpawnerBlock` et
-`PlayerSpawnBlock`, c'est un marqueur d'édition.
+seconde qu'un `TrainingDummyEntity` existe **à sa position** (pas au-dessus — changé le
+2026-09-06, retour en jeu : le mannequin apparaissait flottant un bloc plus haut que
+l'emplacement du support), et en invoque un sinon. Sans conséquence sur le mannequin lui-même,
+qui n'a de toute façon pas besoin de sol sous ses pieds (`setNoAi`). Invisible, traversable,
+ciblable en créatif seulement — même traitement que `SpawnerBlock` et `PlayerSpawnBlock`, c'est
+un marqueur d'édition, et le même principe "le marqueur EST l'endroit visé" que
+`PlayerSpawnBlock`.
 
 **Pourquoi un bloc plutôt qu'un mannequin posé directement dans le `.nbt` de la taverne**
 (décidé avec le joueur) : le bloc fait partie de la structure et se repose donc proprement à

@@ -528,7 +528,10 @@ vérifie la CI.
   de la taverne pour qu'aucun doublon ne puisse s'accumuler même si le nettoyage d'entités
   ratait l'ancien. **Deux limites assumées** : le mannequin **ressemble à un zombie** (pas de
   modèle de mannequin de paille), et l'absence de barre de vie tient au filtre par type de
-  `MobHealthBarRenderer`, pas à une exclusion explicite. **Jamais vérifié en jeu.** Détail dans
+  `MobHealthBarRenderer`, pas à une exclusion explicite. **Corrigé (2026-09-06, retour en jeu)** :
+  le mannequin apparaissait un bloc plus haut que le support, invoqué à `pos.above()` plutôt qu'à
+  la position du bloc lui-même — même principe que `PlayerSpawnBlock` désormais, le marqueur EST
+  l'emplacement visé. Détail dans
   [02-gameplay.md](02-gameplay.md#le-mannequin-dentraînement--entitytrainingdummyentityjava-blocktrainingdummyblockjava).
 
 - ✅ **Phase Taverne** (`GamePhase.TAVERN`, 2026-09-01) : troisième phase, à côté de
