@@ -377,9 +377,10 @@ vérifie la CI.
   exemplaire de plus à chaque démarrage. Les entités de la structure sont donc bien posées.
   Décidé avec le joueur (2026-08-31) : la suppression d'entités est de toute façon nécessaire
   pour le futur **mannequin d'entraînement** (PV infinis, immobile, cible des tours), qui ne
-  doit pas s'accumuler. **Jamais vérifié en jeu, et jamais essayé avec une vraie structure**
-  (aucune n'existe encore) — la partie « suppression des entités » est le point le plus incertain
-  faute de test réel. Détail dans
+  doit pas s'accumuler. **Corrigé (2026-09-06, incident en jeu)** : le repli nettoyait lui aussi
+  la zone avant de poser sa plateforme, effaçant une taverne en cours de construction à la main
+  (pas encore sauvegardée en structure) au redémarrage suivant. Le repli ne nettoie plus jamais
+  rien désormais ; seul le chargement d'une vraie structure le justifie encore. Détail dans
   [02-gameplay.md](02-gameplay.md#le-chargement-de-la-structure--tavernspawnplacetavern), recette
   de livraison dans [04-guide-ajout-contenu.md](04-guide-ajout-contenu.md).
 - ✅ Cristal de la taverne (`TavernCrystalBlock`, distinct d'`EterniaCrystalBlock` — pas de PV,

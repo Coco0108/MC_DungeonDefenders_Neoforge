@@ -789,6 +789,11 @@ Sans fichier de structure (état actuel du dépôt) :
 - [ ] Les logs contiennent l'avertissement `Structure de taverne introuvable ... repli sur la
       plateforme provisoire.` (une fois par chargement du monde, pas en boucle).
 - [ ] `/dd_leave` depuis une map ramene toujours au meme endroit.
+- [ ] **Corrige (2026-09-06, incident en jeu)** : construire quelque chose a la main a cote de
+      la plateforme de repli (par exemple les murs d'une taverne en cours de construction, pas
+      encore sauvegardee en structure), redemarrer le serveur — **ca doit survivre**. Avant ce
+      correctif, tout ce qui n'etait pas la plateforme 9x9 elle-meme etait efface a chaque
+      redemarrage (`clearZone` tournait meme en l'absence de structure).
 
 Une fois `data/dungeon_defenders/structure/tavern.nbt` livre :
 

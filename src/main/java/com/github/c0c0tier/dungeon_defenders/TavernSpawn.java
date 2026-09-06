@@ -48,6 +48,14 @@ import java.util.Optional;
 // Le nettoyage de zone remet à zéro les blocs ET les entités (voir clearZone) : la structure
 // peut donc contenir des entités (décor, et à terme le mannequin d'entraînement des tours) sans
 // qu'elles se dupliquent à chaque redémarrage.
+//
+// **Incident du 2026-09-06** : le repli ne doit PLUS nettoyer la zone avant de poser la
+// plateforme (voir placeTavern). Un joueur qui construit sa taverne à la main directement à
+// SPAWN_POS, sans être encore passé par un bloc de structure, la voyait entièrement effacée au
+// redémarrage suivant — clearZone tournait à chaque chargement, structure ou pas. Le repli ne
+// pose donc plus qu'un sol s'il manque, sans jamais rien effacer autour ; seul le chargement
+// d'une VRAIE structure justifie encore de nettoyer avant de poser (là, le contenu attendu est
+// entièrement déterminé par le fichier, rien à perdre).
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class TavernSpawn {
 
@@ -124,8 +132,10 @@ public class TavernSpawn {
         if (loaded.isEmpty()) {
             LOGGER.warn(
                     "Structure de taverne introuvable ({}) : repli sur la plateforme provisoire.", TAVERN_STRUCTURE);
-            Zone zone = zoneOf(level);
-            clearZone(level, zone.from(), zone.size());
+            // PAS de clearZone ici (voir le commentaire de classe, incident du 2026-09-06) :
+            // tant qu'aucune structure n'est sauvegardée, cette position peut contenir une
+            // taverne en cours de construction à la main. buildPlaceholderPlatform ne fait que
+            // (re)poser le sol, sans jamais rien effacer autour.
             buildPlaceholderPlatform(level);
             return SPAWN_POS;
         }

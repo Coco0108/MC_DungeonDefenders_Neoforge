@@ -85,16 +85,28 @@ Déroulé de `placeTavern` :
 1. `level.getStructureManager().get(TAVERN_STRUCTURE)` — le gestionnaire vanilla, qui lit aussi
    bien les structures livrées dans le jar du mod que celles d'un datapack.
 2. **Si le fichier est absent** : message d'avertissement dans les logs et **repli sur l'ancienne
-   plateforme** 9×9 en `smooth_stone`. Volontaire : dans un monde vide, un mod sans sol est
-   injouable — mieux vaut une plateforme moche qu'une chute infinie.
-3. **Nettoyage de la zone** avant de poser (`clearZone`), sur l'emprise exacte de la structure
-   plus `CLEAR_MARGIN = 4` de marge dans toutes les directions. Sans ça, une version précédente
-   plus grande (ou la plateforme de repli) laisserait ses restes flotter autour de la nouvelle
+   plateforme** 9×9 en `smooth_stone`, posée **sans rien nettoyer autour** (voir encadré
+   ci-dessous). Volontaire : dans un monde vide, un mod sans sol est injouable — mieux vaut une
+   plateforme moche qu'une chute infinie.
+3. **Si un fichier est chargé**, nettoyage de la zone avant de poser (`clearZone`), sur l'emprise
+   exacte de la structure plus `CLEAR_MARGIN = 4` de marge dans toutes les directions. Sans ça,
+   une version précédente plus grande laisserait ses restes flotter autour de la nouvelle
    taverne. La marge se calcule à partir de `template.getSize()`, pas d'un rayon en dur : la
    taverne peut grandir sans qu'on ait à toucher au code.
 4. `template.placeInWorld(...)` avec `Block.UPDATE_CLIENTS` (et **pas** `UPDATE_ALL`) : on ne
    veut pas déclencher une cascade de mises à jour de voisinage sur chaque bloc posé, seulement
    que les clients voient le résultat — même choix que le bloc de structure vanilla.
+
+> **Incident du 2026-09-06** : le repli nettoyait lui aussi la zone avant de poser sa plateforme.
+> Un joueur qui construit sa taverne à la main directement à `SPAWN_POS`, **avant** d'avoir
+> sauvegardé quoi que ce soit comme structure, la voyait entièrement effacée au redémarrage
+> suivant — `clearZone` tournait à chaque chargement, qu'une structure existe ou non. Le repli ne
+> nettoie donc plus jamais rien ; seul le chargement d'une vraie structure le justifie encore (là,
+> le contenu final est entièrement déterminé par le fichier, rien à perdre). **Conséquence pour
+> construire la taverne à la main** : le contenu posé au-dessus de la plateforme de repli survit
+> maintenant aux redémarrages — mais reste vulnérable tant qu'il n'est pas capturé dans un bloc de
+> structure nommé `dungeon_defenders:tavern` (un `/save`, une régénération de chunk, etc. peuvent
+> encore le perdre).
 
 #### Où la structure est posée
 
