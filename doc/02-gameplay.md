@@ -3088,6 +3088,60 @@ logique. Contrairement aux autres overlays, pas d'attachment ici non plus : il n
 aucun état à lire (pas de cooldown, pas de "sort débloqué ou non"), voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 
+## Le plan plein écran — `client/MapOverlay*.java`, `MapInstance.java`, `TavernSpawn.java`
+
+Décidé avec le joueur (2026-09-07), en parallèle de la reconstruction de la taverne et des
+tests du système de héros — approche explicitement expérimentale ("on essaie comme ça et on
+verra sinon on fera autrement"), pas peaufinée avant un premier retour en jeu. Touche maintenue
+(`ModKeyMappings.MAP_OVERLAY`, `M` par défaut) : affiche un plan schématique de la zone
+actuelle (taverne ou map) en plein écran, avec un point par joueur connecté et un marqueur pour
+le cristal — comme dans le jeu de référence. Relâchée : disparaît. Comme le Tab vanilla (liste
+des joueurs), pas une bascule.
+
+### Ce qui manquait pour le faire — la taille de la zone
+
+Ni `MapDefinition`/`MapRegistry` ni `ModAttachments.CURRENT_MAP` ne transportaient la taille
+réellement posée (structure ou repli) — juste de quoi identifier/relancer une map, pas de quoi
+savoir où se trouvent ses limites. Trois nouveaux attachments génériques,
+`ModAttachments.PLAYFIELD_SIZE_X/Y/Z` (int, synced, même patron que `CURRENT_MAP`), remplis à
+deux endroits : `MapInstance#startGame` (réutilise `sizeOf(level, map)`, déjà calculé pour
+`ModChunkTickets.forceZone`) et `TavernSpawn#placeTavern` (réutilise `template.getSize()` pour
+une vraie structure, ou l'emprise du repli plateforme sinon). Génériques et pas spécifiques aux
+maps parce que le plan doit aussi fonctionner à la Taverne — demande explicite du joueur.
+
+**L'origine du rectangle** n'est jamais synchronisée séparément : le client la recalcule avec la
+même formule que `MapInstance#originOf`/`TavernSpawn#originOf` (`ancre.getX() - sizeX/2`,
+`ancre.getZ() - sizeZ/2`), dupliquée en quelques lignes côté client. L'ancre dépend d'où on se
+trouve : `GamePhase.of(level) == GamePhase.TAVERN` → `TavernSpawn.SPAWN_POS`, sinon →
+`MapInstance.MAP_POS` — les deux constantes sont déjà publiques, aucune classe cliente n'est
+nommée par ce choix.
+
+### Le scan du cristal — `MapOverlayClientEvents`
+
+Pendant que le plan est affiché, un scan périodique (toutes les 20 ticks) cherche le cristal de
+la zone actuelle : le Cristal d'Eternia (`EterniaCrystalBlockEntity`) en map, le cristal de la
+taverne (`TavernCrystalBlock`, pas de block entity, comparaison de `Block` directement) à la
+Taverne. **Borné exactement** à la zone connue (les trois attachments de taille), pas à un rayon
+arbitraire autour du joueur — contrairement au scan similaire de `MarkerOverlayClientEvents`
+(marqueurs d'édition en créatif), la zone entière est ici petite et exactement connue, inutile
+de deviner un rayon. Résultat caché dans `MapOverlayState.crystalPos`, lu par le rendu.
+
+### Le rendu — `client/gui/MapOverlay.java`
+
+`GuiLayer` plein écran (`registerAboveAll`) : fond semi-transparent, rectangle centré aux vraies
+proportions (largeur/profondeur synced, mis à l'échelle pour tenir dans 70% de l'écran), un
+point par joueur de `Level#players()` (position normalisée dans le rectangle, écrêtée aux
+bords), le marqueur du cristal si trouvé. Le joueur local a une couleur fixe distincte des
+autres joueurs, qui piochent dans une petite palette choisie de façon déterministe par le hash
+de leur UUID (pas de système de couleur/équipe par joueur dans le mod). Pas d'interpolation de
+mouvement (positions tick-à-tick brutes) ni de rendu de terrain façon carte vanilla — juste un
+rectangle schématique. **Jamais vérifié en jeu.**
+
+**Ce qui n'est PAS fait, volontairement** : pas de marqueurs pour les spawners, pas de mini-carte
+permanente en coin d'écran, pas d'étiquette de nom au-dessus des points (la couleur suffit à
+distinguer "moi" des autres pour cette première version) — voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
 ## Le HUD vanilla masqué
 
 Le mod vise une interface entièrement custom : plusieurs couches du HUD vanilla sont donc

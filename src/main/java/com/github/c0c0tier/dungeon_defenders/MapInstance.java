@@ -48,6 +48,11 @@ public final class MapInstance {
     // Marge de nettoyage autour de l'emprise réelle : rattrape une map précédente plus grande,
     // et les tours que les joueurs auraient posées en bordure.
     private static final int CLEAR_MARGIN = 10;
+    // Hauteur de repli pour ModAttachments.PLAYFIELD_SIZE_Y quand l'arène provisoire est posée
+    // (pas de vraie structure) : buildPlaceholderArena ne pose qu'un sol, aucune "hauteur"
+    // réelle à exposer, cette valeur ne sert qu'à borner le scan de repérage du cristal côté
+    // client (MapOverlayClientEvents) — valeur de test, jamais vue en jeu.
+    private static final int PLACEHOLDER_HEIGHT = 16;
 
     private MapInstance() {
     }
@@ -82,6 +87,21 @@ public final class MapInstance {
         // l'autre bout de la map cesserait simplement de fonctionner, sans erreur ni message.
         Vec3i size = sizeOf(level, map);
         ModChunkTickets.forceZone(level, zoneFrom(size), zoneSize(size));
+
+        // Réexpose cette même taille au client, pour le plan de la mini-map (MapOverlay) — voir
+        // ModAttachments.PLAYFIELD_SIZE_X/Y/Z. Repli sur l'emprise de l'arène provisoire
+        // (2 * PLATFORM_RADIUS + 1 en X/Z, comme buildPlaceholderArena) quand size est null ;
+        // pas de vraie notion de hauteur pour une simple plateforme, PLACEHOLDER_HEIGHT n'est
+        // qu'une marge suffisante pour le scan de repérage du cristal côté client.
+        int sizeX = size != null ? size.getX() : 2 * PLATFORM_RADIUS + 1;
+        int sizeY = size != null ? size.getY() : PLACEHOLDER_HEIGHT;
+        int sizeZ = size != null ? size.getZ() : 2 * PLATFORM_RADIUS + 1;
+        level.setData(ModAttachments.PLAYFIELD_SIZE_X, sizeX);
+        level.setData(ModAttachments.PLAYFIELD_SIZE_Y, sizeY);
+        level.setData(ModAttachments.PLAYFIELD_SIZE_Z, sizeZ);
+        level.syncData(ModAttachments.PLAYFIELD_SIZE_X);
+        level.syncData(ModAttachments.PLAYFIELD_SIZE_Y);
+        level.syncData(ModAttachments.PLAYFIELD_SIZE_Z);
     }
 
     /** Nettoie l'emplacement (plus besoin d'y rester) et ramène tout le monde à la taverne. */

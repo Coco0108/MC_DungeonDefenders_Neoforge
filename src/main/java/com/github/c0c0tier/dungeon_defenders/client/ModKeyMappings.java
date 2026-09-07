@@ -44,10 +44,22 @@ public class ModKeyMappings {
             GLFW.GLFW_KEY_X,
             CATEGORY);
 
+    // Maintenue : affiche le plan de la zone actuelle (taverne ou map) en plein écran, avec les
+    // joueurs dessus — voir MapOverlayClientEvents. Relâchée : disparaît. Premier usage de
+    // isDown() sur cette branche (pollée chaque tick client, comme le sera le mécanisme des
+    // compétences canalisées sur la branche héros/sorts) plutôt que consumeClick() : un
+    // affichage "tant que maintenu", pas une bascule.
+    public static final KeyMapping MAP_OVERLAY = new KeyMapping(
+            "key.dungeon_defenders.map_overlay",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_M,
+            CATEGORY);
+
     public static void register(RegisterKeyMappingsEvent event) {
         event.registerCategory(CATEGORY);
         event.register(TOWER_WHEEL);
         event.register(ROTATE_TOWER);
         event.register(REMOVE_TOWER_MODE);
+        event.register(MAP_OVERLAY);
     }
 }

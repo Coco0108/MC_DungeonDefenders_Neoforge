@@ -10,6 +10,7 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.CharacterOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ExperienceOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.HealthOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ManaOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.MapOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.PhaseOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreGainOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
@@ -168,6 +169,12 @@ public class DungeonDefendersModClient {
         event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "ability_slots_overlay"),
                 new AbilitySlotsOverlay());
+        // Plein écran ; comme le fond couvre tout l'écran, l'ordre exact d'empilement avec les
+        // autres registerAboveAll n'a pas d'impact visible même si un autre layer passait
+        // dessus par endroits.
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "map_overlay"),
+                new MapOverlay());
 
         // Les cœurs vanilla ne sont pas prévus pour 100 PV (ils s'étalent sur plusieurs
         // rangées) et feraient doublon avec HealthOverlay : on les masque plutôt que de

@@ -26,6 +26,7 @@
   "key.dungeon_defenders.tower_wheel": "Open tower wheel",
   "key.dungeon_defenders.rotate_tower": "Rotate tower (placement)",
   "key.dungeon_defenders.remove_tower_mode": "Toggle tower removal mode",
+  "key.dungeon_defenders.map_overlay": "Show area map",
   "dungeon_defenders.eternia_crystal.destroyed": "The Eternia Crystal has been destroyed! Game Over!",
   "dungeon_defenders.eternia_crystal.ready_progress": "Ready: %s/%s",
   "dungeon_defenders.game.victory": "Victory! All waves cleared.",
