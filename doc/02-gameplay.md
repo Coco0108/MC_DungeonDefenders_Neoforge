@@ -3093,7 +3093,7 @@ aucun état à lire (pas de cooldown, pas de "sort débloqué ou non"), voir
 Décidé avec le joueur (2026-09-07), en parallèle de la reconstruction de la taverne et des
 tests du système de héros — approche explicitement expérimentale ("on essaie comme ça et on
 verra sinon on fera autrement"), pas peaufinée avant un premier retour en jeu. Touche maintenue
-(`ModKeyMappings.MAP_OVERLAY`, `M` par défaut) : affiche un plan schématique de la zone
+(`ModKeyMappings.MAP_OVERLAY`, `Tab` par défaut, partagée avec la liste des joueurs vanilla) : affiche un plan schématique de la zone
 actuelle (taverne ou map) en plein écran, avec un point par joueur connecté et un marqueur pour
 le cristal — comme dans le jeu de référence. Relâchée : disparaît. Comme le Tab vanilla (liste
 des joueurs), pas une bascule.

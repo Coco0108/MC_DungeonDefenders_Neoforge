@@ -49,10 +49,16 @@ public class ModKeyMappings {
     // isDown() sur cette branche (pollée chaque tick client, comme le sera le mécanisme des
     // compétences canalisées sur la branche héros/sorts) plutôt que consumeClick() : un
     // affichage "tant que maintenu", pas une bascule.
+    //
+    // Tab (2026-09-07, retour du joueur : plus confortable à maintenir que M) plutôt qu'une
+    // touche libre : partage volontairement le code physique avec key.playerList (liste des
+    // joueurs vanilla, elle aussi lue via isDown() sans exclusivité) — les deux s'affichent donc
+    // ensemble en la maintenant, pas un conflit qui casse l'un des deux, juste une superposition
+    // assumée (liste en haut, plan au centre).
     public static final KeyMapping MAP_OVERLAY = new KeyMapping(
             "key.dungeon_defenders.map_overlay",
             InputConstants.Type.KEYSYM,
-            GLFW.GLFW_KEY_M,
+            GLFW.GLFW_KEY_TAB,
             CATEGORY);
 
     public static void register(RegisterKeyMappingsEvent event) {

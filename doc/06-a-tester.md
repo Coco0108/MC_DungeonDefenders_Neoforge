@@ -204,17 +204,18 @@ l'onglet créatif.
 ## Le plan plein écran de la zone actuelle (`client/MapOverlay*.java`)
 
 Nouveau (2026-09-07), jamais vérifié en jeu — essai explicitement expérimental, demandé pendant
-que le joueur reconstruit la taverne. Touche par défaut : `M`, maintenue.
+que le joueur reconstruit la taverne. Touche par défaut : `Tab`, maintenue (partagée avec la
+liste des joueurs vanilla, volontairement — voir 02-gameplay.md).
 
 Dans la Taverne :
 
-- [ ] Maintenir `M` : un fond sombre plein écran apparaît, avec un rectangle centré aux
+- [ ] Maintenir `Tab` : un fond sombre plein écran apparaît, avec un rectangle centré aux
       proportions de la taverne actuelle (repli 9x9 si aucune structure sauvegardée, ou les
       vraies dimensions une fois la structure livrée).
 - [ ] Un point apparaît à ta position, dans une couleur distincte (vert par défaut).
 - [ ] Le cristal de la taverne apparaît comme un marqueur carré doré, à peu près à sa vraie
       position dans le rectangle par rapport à toi.
-- [ ] Relâcher `M` : tout disparaît immédiatement.
+- [ ] Relâcher `Tab` : tout disparaît immédiatement.
 
 Dans une map (Construction ou Combat) :
 
@@ -232,10 +233,10 @@ Dans une map (Construction ou Combat) :
 Cas transverses :
 
 - [ ] **Le point le plus incertain** : le scan périodique du cristal (une fois par seconde
-      pendant que `M` est maintenu) ne doit provoquer **aucune saccade perceptible**, même sur
+      pendant que `Tab` est maintenu) ne doit provoquer **aucune saccade perceptible**, même sur
       une grande map — jamais profilé, zone potentiellement grande contrairement au scan des
       marqueurs d'édition (rayon fixe de 16, lui, déjà mesuré comme négligeable).
-- [ ] Maintenir `M` juste après un chargement du monde/une téléportation (avant que le serveur
+- [ ] Maintenir `Tab` juste après un chargement du monde/une téléportation (avant que le serveur
       ait eu le temps de synchroniser la taille) : pas de crash, l'overlay ne s'affiche
       simplement pas tant que la taille n'est pas connue (repli `sizeX/sizeZ <= 0`).
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `MapOverlay`, `MapOverlayState`

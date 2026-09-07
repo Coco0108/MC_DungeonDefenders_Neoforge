@@ -518,7 +518,7 @@ vérifie la CI.
   (`models/item/<nom>.json`), plus lu par cette version du jeu.
 
 - ✅ **Plan plein écran de la zone actuelle** (`client/MapOverlay*.java`, 2026-09-07) : touche
-  maintenue (`M` par défaut), affiche un rectangle schématique de la taverne ou de la map en
+  maintenue (`Tab` par défaut), affiche un rectangle schématique de la taverne ou de la map en
   cours avec un point par joueur connecté et un marqueur du cristal — décidé explicitement comme
   un essai expérimental ("on verra sinon on fera autrement"), en parallèle de la reconstruction
   de la taverne. A demandé trois nouveaux attachments génériques,
