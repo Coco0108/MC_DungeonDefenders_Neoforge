@@ -3093,10 +3093,24 @@ aucun état à lire (pas de cooldown, pas de "sort débloqué ou non"), voir
 Décidé avec le joueur (2026-09-07), en parallèle de la reconstruction de la taverne et des
 tests du système de héros — approche explicitement expérimentale ("on essaie comme ça et on
 verra sinon on fera autrement"), pas peaufinée avant un premier retour en jeu. Touche maintenue
-(`ModKeyMappings.MAP_OVERLAY`, `Tab` par défaut, partagée avec la liste des joueurs vanilla) : affiche un plan schématique de la zone
+(`ModKeyMappings.MAP_OVERLAY`, `Tab` par défaut) : affiche un plan schématique de la zone
 actuelle (taverne ou map) en plein écran, avec un point par joueur connecté et un marqueur pour
 le cristal — comme dans le jeu de référence. Relâchée : disparaît. Comme le Tab vanilla (liste
 des joueurs), pas une bascule.
+
+### Tab libérée de la liste des joueurs vanilla — `DungeonDefendersModClient#onClientSetup`
+
+`key.playerList` (la liste des joueurs vanilla) est aussi bindée sur Tab par défaut, et lue via
+`isDown()` sans exclusivité comme notre propre touche : sans rien faire, maintenir Tab aurait
+affiché les deux superposées. Réglé au démarrage du client (`FMLClientSetupEvent`, travail
+différé sur le thread principal via `event.enqueueWork(...)` puisque cet événement tourne en
+parallèle des autres mods) : `Minecraft.getInstance().options.keyPlayerList.setKey(InputConstants.UNKNOWN)`
+— demandé en jeu (2026-09-07), le mod n'a plus l'usage de la liste vanilla.
+
+Simple changement de la touche **vive**, pas de la touche par défaut (`KeyMapping#defaultKey`
+n'est pas mutable après construction) : refait à chaque lancement du jeu. Un joueur qui
+rebinderait `key.playerList` sur une autre touche manuellement ne verrait donc pas son choix
+survivre à un redémarrage — assumé, cette touche n'a plus de rôle dans ce mod.
 
 ### Ce qui manquait pour le faire — la taille de la zone
 

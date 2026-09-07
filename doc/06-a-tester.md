@@ -204,8 +204,14 @@ l'onglet créatif.
 ## Le plan plein écran de la zone actuelle (`client/MapOverlay*.java`)
 
 Nouveau (2026-09-07), jamais vérifié en jeu — essai explicitement expérimental, demandé pendant
-que le joueur reconstruit la taverne. Touche par défaut : `Tab`, maintenue (partagée avec la
-liste des joueurs vanilla, volontairement — voir 02-gameplay.md).
+que le joueur reconstruit la taverne. Touche par défaut : `Tab`, maintenue.
+
+- [ ] La liste des joueurs vanilla (normalement affichée en maintenant Tab) **n'apparaît plus du
+      tout**, même en multijoueur avec plusieurs joueurs connectés — `key.playerList` a été
+      libérée au démarrage du client (`DungeonDefendersModClient#onClientSetup`) puisque Tab
+      n'affiche désormais que notre plan.
+- [ ] Aller dans Options > Contrôles > Touches : "Liste des joueurs" apparaît **non liée**
+      ("Aucune"/"Non attribuée"), pas sur Tab.
 
 Dans la Taverne :
 

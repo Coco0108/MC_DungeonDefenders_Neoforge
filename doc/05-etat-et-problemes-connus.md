@@ -525,6 +525,9 @@ vérifie la CI.
   `ModAttachments.PLAYFIELD_SIZE_X/Y/Z`, remplis par `MapInstance#startGame` et
   `TavernSpawn#placeTavern` — rien n'exposait la taille réelle de la zone posée au client
   jusqu'ici. Scan borné exactement à cette zone (pas un rayon deviné) pour repérer le cristal.
+  `key.playerList` (liste des joueurs vanilla, aussi sur Tab par défaut) est libérée au
+  démarrage du client (`DungeonDefendersModClient#onClientSetup`, `setKey(UNKNOWN)`) : le mod
+  n'en a plus l'usage, demandé en jeu pour ne pas superposer les deux affichages.
   Pas d'interpolation de mouvement, pas de rendu de terrain façon carte vanilla, pas d'étiquette
   de nom (couleur fixe pour le joueur local, palette déterministe par UUID pour les autres) —
   simplifications assumées pour un premier essai. **Jamais vérifié en jeu.** Détail dans

@@ -50,11 +50,12 @@ public class ModKeyMappings {
     // compétences canalisées sur la branche héros/sorts) plutôt que consumeClick() : un
     // affichage "tant que maintenu", pas une bascule.
     //
-    // Tab (2026-09-07, retour du joueur : plus confortable à maintenir que M) plutôt qu'une
-    // touche libre : partage volontairement le code physique avec key.playerList (liste des
-    // joueurs vanilla, elle aussi lue via isDown() sans exclusivité) — les deux s'affichent donc
-    // ensemble en la maintenant, pas un conflit qui casse l'un des deux, juste une superposition
-    // assumée (liste en haut, plan au centre).
+    // Tab (2026-09-07, retour du joueur : plus confortable à maintenir que M). Ce code physique
+    // était aussi celui de key.playerList (liste des joueurs vanilla) ; comme les deux touches
+    // sont lues via isDown() sans exclusivité, les garder toutes les deux sur Tab aurait affiché
+    // les deux superposées. Réglé en libérant key.playerList (voir
+    // DungeonDefendersModClient#onClientSetup) : le mod n'en a plus l'usage, Tab n'affiche donc
+    // plus que ce plan.
     public static final KeyMapping MAP_OVERLAY = new KeyMapping(
             "key.dungeon_defenders.map_overlay",
             InputConstants.Type.KEYSYM,
