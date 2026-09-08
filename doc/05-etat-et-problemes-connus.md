@@ -619,6 +619,22 @@ vérifie la CI.
   « Campagne » quand du vrai contenu existera. **Jamais chargée par Minecraft.** Détail dans
   [02-gameplay.md](02-gameplay.md#la-map-de-test-livrée--maptest_arenanbt).
 
+- ✅ **Deuxième map, plus travaillée** (`data/dungeon_defenders/structure/map/ruins_sanctuary.nbt`,
+  2026-09-08) : « Sanctuaire en Ruines », 63×9×63, trois couloirs de monstres (compositions
+  différentes) convergeant en rampe vers une plateforme centrale surélevée avec le Cristal
+  d'Eternia, décor de piliers en ruine. Demandé par le joueur pour voir jusqu'où la génération
+  sans passer par le jeu peut aller — **concept librement inspiré** de la structure générale des
+  premières maps de la campagne du jeu de référence (couloirs multiples + salle centrale
+  surélevée), explicitement **pas** une reproduction précise (ni dimensions, ni textures, ni
+  tracé exact). Générée par `tools/generer-map-sanctuaire.py`, même méthode que `test_arena`.
+  Un vrai bug trouvé et corrigé pendant l'écriture : une première version plaçait le cristal et
+  les marqueurs **à la même hauteur** que le bloc de sol plutôt qu'un bloc au-dessus — détecté
+  par un garde-fou ajouté au script (positions hors bornes refusées, décompte des écrasements
+  intentionnels) puis confirmé par relecture programmatique du `.nbt` généré (rampes continues,
+  aucun marqueur flottant, murs pleins). **Jamais chargée par Minecraft ni vue en jeu** — ces
+  vérifications portent sur la cohérence du fichier, pas sur le rendu visuel réel. Détail dans
+  [02-gameplay.md](02-gameplay.md#une-deuxième-map-plus-travaillée--mapruins_sanctuarynbt).
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.

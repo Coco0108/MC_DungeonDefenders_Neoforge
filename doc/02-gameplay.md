@@ -1623,6 +1623,41 @@ le NBT, et le fichier produit a été relu et vérifié tag par tag.
 C'est une map de **test**, pas de contenu : elle apparaît dans le pack « Campagne » et devra en
 être retirée quand de vraies maps existeront.
 
+### Une deuxième map, plus travaillée — `map/ruins_sanctuary.nbt`
+
+« Sanctuaire en Ruines » (63×9×63, `dungeon_defenders:map/ruins_sanctuary`, générée par
+`tools/generer-map-sanctuaire.py`, même méthode que `test_arena`) : un essai pour voir jusqu'où
+la génération sans passer par le jeu peut aller, à la demande du joueur — **concept librement
+inspiré** de la structure générale des toutes premières maps de la campagne du jeu de référence
+(plusieurs couloirs de monstres convergeant vers une salle centrale surélevée), **pas** une
+reproduction d'une map précise : ni ses dimensions, ni ses textures, ni son tracé exact ne sont
+repris (voir la décision sur la provenance des assets,
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)).
+
+Trois couloirs de monstres (nord, est, ouest), chacun avec son propre spawner et sa propre
+composition — nord en zombies purs (rush au contact), est majoritairement squelettes (pression à
+distance), ouest un mélange des deux — remontant une rampe en escalier (4 marches d'1 bloc,
+praticable nativement par le pathfinding vanilla, pas de blocstate d'escalier orienté) jusqu'à
+une plateforme centrale surélevée où se trouve le Cristal d'Eternia. Une quatrième rampe, côté
+sud, ne sert qu'aux joueurs (pas de spawner) et mène à une cour d'arrivée où sont posés le
+`player_spawn` et le coffre de mana. Décor : piliers en ruine (`mossy_stone_bricks`, quelques-uns
+au sommet fissuré) et torches le long des couloirs, lampes encastrées dans les murs d'enceinte
+comme `test_arena`. 5 vagues (contre 3 pour `test_arena`), multiplicateur de score 1,2.
+
+**Convention de hauteur du script** : `LANE`/`PLAZA_TOP` (postés par une petite fonction
+`fill_column`, qui remplit aussi la colonne en dessous pour qu'aucune marche ne soit creuse) sont
+le bloc **solide** du sol, jamais la case où se tient une entité — un marqueur/spawner/le cristal
+va donc systématiquement un bloc au-dessus de la hauteur de sol correspondante. Piégeant à
+écrire : une première version plaçait le Cristal d'Eternia **à la même position** que le bloc de
+sol de la plateforme, une superposition invisible à la simple lecture du script. Détectée par un
+garde-fou ajouté pour l'occasion (`put()` refuse toute position hors des bornes de la structure,
+et le script compte les positions écrasées intentionnellement — seulement les lampes plantées
+dans les murs, 16 au total) puis confirmée par une relecture du `.nbt` généré (script de
+vérification séparé, temporaire, pas conservé dans le dépôt) : chaque marqueur repose bien sur un
+bloc solide, aucune rampe ne saute plus d'un bloc de haut d'une rangée à l'autre, les quatre murs
+d'enceinte sont pleins sur toute leur hauteur. **Jamais vu en jeu** — ces vérifications portent
+sur la cohérence du fichier généré, pas sur le rendu visuel réel, qui reste à confirmer.
+
 ### Le force-chargement de la zone — `init/ModChunkTickets.java`
 
 **Pourquoi c'est indispensable et pas un détail** : Minecraft ne charge et ne fait tourner que
