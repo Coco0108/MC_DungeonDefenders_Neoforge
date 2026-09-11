@@ -1003,7 +1003,10 @@ injouable. Rien de codé, voir le backlog dans
 - Le **chargement de la structure de la taverne** (`TavernSpawn#placeTavern`, 2026-08-31) : le
   mécanisme complet (lecture du `.nbt`, nettoyage de zone dimensionné sur la structure, marqueur
   d'arrivée non consommé, repli si le fichier manque). Voir "Ce qui est implémenté" plus haut.
-  Il ne manque plus que **le fichier lui-même**, que le joueur construit.
+  **Le fichier lui-même est livré depuis le 2026-09-11** (`data/dungeon_defenders/structure/tavern.nbt`,
+  premier jet du joueur : 40×12×35, 16 800 blocs, cristal de la taverne + support de mannequin +
+  spawn joueur + décor). Reçu via `map-handoff/`, vérifié avant intégration (un seul de chacun
+  des trois blocs fonctionnels, `DataVersion` cohérent). **Jamais chargé par Minecraft.**
 - L'écran de choix de map/difficulté dans la taverne (`TavernCrystalBlock`/
   `MapSelectionScreen`, voir plus haut et
   [02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté)) — la difficulté
@@ -1024,9 +1027,10 @@ injouable. Rien de codé, voir le backlog dans
   repli sur `MAP_POS` dès qu'une vraie structure en pose un, mais rien à trouver tant que
   `buildPlaceholderArena()` ne pose qu'un sol générique.
 
-**Reste à faire** : les **fichiers** eux-mêmes — la structure de la taverne et au moins une
-vraie map ; les deux mécanismes de chargement existent désormais, ils n'ont simplement rien à
-charger. Puis l'aperçu des maps capturé en jeu (phase 2), et la réinitialisation tours/PV du cristal entre deux tentatives ;
+**Reste à faire** : la taverne a désormais un premier jet réel (voir plus haut, 2026-09-11) ;
+les maps, elles, n'ont encore que du contenu généré hors du jeu (`test_arena`, `ruins_sanctuary`)
+comme galop d'essai, pas de vraie map de campagne construite par le joueur. Puis l'aperçu des
+maps capturé en jeu (phase 2), et la réinitialisation tours/PV du cristal entre deux tentatives ;
 une bordure/barrière anti-chute dans le vide en
 dehors des zones bâties ; les métadonnées par map (nombre de vagues, multiplicateur de
 difficulté — `MAX_WAVE` est encore global). Le point de sortie, lui, est réglé autrement que

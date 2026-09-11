@@ -783,9 +783,9 @@ Le mannequin lui-meme :
 
 ## Le chargement de la structure de la taverne (`TavernSpawn#placeTavern`)
 
-Nouveau (2026-08-31), jamais vérifié en jeu — et **jamais essayé avec une vraie structure**,
-puisqu'aucune n'existe encore. Les premiers points sont donc testables tout de suite (repli),
-les suivants seulement une fois `tavern.nbt` livré.
+Nouveau (2026-08-31), jamais vérifié en jeu. **La vraie structure est désormais livrée**
+(2026-09-11, premier jet du joueur : 40×12×35, 16 800 blocs) — les points ci-dessous sous
+« Une fois `tavern.nbt` livré » sont donc maintenant tous testables, plus seulement le repli.
 
 Sans fichier de structure (état actuel du dépôt) :
 
@@ -816,6 +816,9 @@ Une fois `data/dungeon_defenders/structure/tavern.nbt` livre :
 - [ ] Mourir dans une map fait reapparaitre a la position d'arrivee de la taverne, pas a
       (0, 65, 0) si le marqueur est ailleurs.
 - [ ] Les entites de la structure (cadres, supports a armure, tableaux) **sont bien posees**.
+- [ ] Le support de mannequin (`training_dummy`, present dans ce premier jet) invoque bien son
+      mannequin dans la seconde qui suit le chargement — meme checklist que sa propre section
+      plus haut, mais cette fois dans la vraie taverne plutot qu'un bloc pose isolement en test.
 - [ ] **Le point le plus incertain** : redemarrer le serveur trois ou quatre fois d'affilee et
       recompter ces entites. Elles doivent rester au **meme nombre**, pas se dupliquer a chaque
       demarrage — c'est ce que doit empecher la suppression d'entites de `clearZone`, et c'est
