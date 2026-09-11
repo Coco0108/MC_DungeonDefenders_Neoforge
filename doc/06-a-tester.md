@@ -811,6 +811,14 @@ Une fois `data/dungeon_defenders/structure/tavern.nbt` livre :
       de map (les block entities d'une structure gardent leurs donnees NBT).
 - [ ] Avec un `player_spawn` pose dans la structure : on arrive **a sa position**, pas au
       centre. Sans marqueur : on arrive au centre (0, 65, 0).
+- [ ] **Corrige (2026-09-11, incident en jeu)** : un joueur qui rejoint ce monde **pour la toute
+      premiere fois** (jamais connecte avant, aucune donnee de joueur existante) arrive bien au
+      marqueur, pas au centre par defaut. Avant ce correctif, seuls les teleports explicites
+      (mort, `/dd_leave`, retour de map) respectaient le marqueur — le tout premier placement
+      d'un joueur neuf, lui, ignorait `setRespawnData` (particularite vanilla non comprise en
+      profondeur, contournee plutot que corrigee a la racine — voir
+      `ModEvents.onPlayerLoggedIn`/`ModAttachments.FIRST_SPAWN_HANDLED`). A tester avec un compte
+      qui n'a jamais rejoint ce monde precis, pas en se reconnectant avec un joueur existant.
 - [ ] Le marqueur **n'est pas consomme** : quitter la taverne, y revenir (`/dd_leave`), et
       redemarrer le serveur — on doit arriver au meme endroit a chaque fois.
 - [ ] Mourir dans une map fait reapparaitre a la position d'arrivee de la taverne, pas a

@@ -1006,7 +1006,15 @@ injouable. Rien de codé, voir le backlog dans
   **Le fichier lui-même est livré depuis le 2026-09-11** (`data/dungeon_defenders/structure/tavern.nbt`,
   premier jet du joueur : 40×12×35, 16 800 blocs, cristal de la taverne + support de mannequin +
   spawn joueur + décor). Reçu via `map-handoff/`, vérifié avant intégration (un seul de chacun
-  des trois blocs fonctionnels, `DataVersion` cohérent). **Jamais chargé par Minecraft.**
+  des trois blocs fonctionnels, `DataVersion` cohérent). Premier vrai test en jeu (même jour) :
+  **corrigé** — un joueur qui rejoint le monde pour la toute première fois n'atterrissait pas au
+  marqueur `player_spawn`, seulement au centre par défaut ; les téléports explicites (mort,
+  `/dd_leave`, retour de map) le respectaient déjà correctement, ce qui a permis d'isoler le
+  problème au tout premier placement uniquement. `setRespawnData` (mis à jour à chaque
+  chargement du monde) ne suffit visiblement pas pour ce cas précis — particularité vanilla non
+  comprise en profondeur, contournée plutôt que corrigée à la racine : `ModEvents.onPlayerLoggedIn`
+  téléporte explicitement tout joueur qui se connecte sans avoir encore ce drapeau
+  (`ModAttachments.FIRST_SPAWN_HANDLED`, persistant, posé une seule fois par joueur).
 - L'écran de choix de map/difficulté dans la taverne (`TavernCrystalBlock`/
   `MapSelectionScreen`, voir plus haut et
   [02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté)) — la difficulté

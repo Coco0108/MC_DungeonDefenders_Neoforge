@@ -134,6 +134,26 @@ public class ModAttachments {
                     .sync(ByteBufCodecs.VAR_INT)
                     .build());
 
+    // Vrai dès que la toute première position de ce joueur sur ce monde a été corrigée vers
+    // l'arrivée de la taverne (voir ModEvents.onPlayerLoggedIn) — persistant (pour ne corriger
+    // qu'une seule fois par joueur, jamais à chaque reconnexion), jamais synchronisé : pure
+    // comptabilité serveur, jamais lue côté client.
+    //
+    // Pourquoi ce correctif existe : setRespawnData (TavernSpawn#onLevelLoad) met bien à jour le
+    // point de spawn du monde à chaque chargement, et ça fonctionne pour tout téléport explicite
+    // (mort, /dd_leave, retour de map). Mais en jeu (2026-09-11), le tout premier joueur à
+    // rejoindre un monde tout neuf n'atterrissait PAS au marqueur `player_spawn` de la taverne —
+    // seulement au centre par défaut. Vraisemblablement un cas particulier vanilla où le tout
+    // premier placement d'un joueur ne relit pas les données de respawn en vigueur au moment où
+    // sa position initiale est calculée. Non reproduit ailleurs : uniquement ce tout premier
+    // placement, jamais vérifié précisément pourquoi côté moteur — ce correctif contourne le
+    // problème plutôt que de le comprendre en profondeur.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> FIRST_SPAWN_HANDLED = ATTACHMENT_TYPES.register(
+            "first_spawn_handled",
+            () -> AttachmentType.builder(() -> Boolean.FALSE)
+                    .serialize(Codec.BOOL.fieldOf("FirstSpawnHandled"))
+                    .build());
+
     // Niveau du personnage : état du joueur (contrairement au score), commence à 1,
     // persistant, synchronisé au client pour le HUD. Rien ne le fait encore monter.
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> LEVEL = ATTACHMENT_TYPES.register(
