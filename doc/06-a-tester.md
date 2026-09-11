@@ -162,6 +162,45 @@ ci-dessous, à vérifier au moins autant que le rendu.
       à son option voit la même chose (config purement locale, rien de synchronisé).
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `BlockOutlineClientEvents`.
 
+## Repérage des blocs marqueurs en créatif (`MarkerOverlayClientEvents`)
+
+Nouveau (2026-09-06), jamais vérifié en jeu — demandé pendant le premier test de la pile
+maps/taverne, faute de moyen de retrouver les blocs marqueurs (spawn joueur, zone interdite,
+config de map, support de mannequin, spawner) une fois posés, tous invisibles.
+
+- [ ] En créatif, poser un exemplaire de chacun des 5 marqueurs (spawn joueur, zone interdite,
+      config de map, support de mannequin, spawner), s'éloigner d'une quinzaine de blocs :
+      chacun affiche un **contour coloré** (une couleur différente par type) et son **nom
+      au-dessus**, sans avoir à viser précisément.
+- [ ] Se cacher derrière un mur plein face à un marqueur (toujours à moins de ~16 blocs) :
+      **l'étiquette de nom reste lisible à travers le mur**, seul le contour disparaît (il n'est
+      pas conçu pour traverser les murs, seulement l'étiquette).
+- [ ] S'éloigner de plus de 16 blocs (`SCAN_RADIUS`, valeur de test) : contour et étiquette
+      disparaissent. Se rapprocher : ils réapparaissent dans la seconde qui suit (`SCAN_INTERVAL_TICKS`
+      = 1 scan/seconde), pas besoin de bouger pour déclencher le rafraîchissement.
+- [ ] Passer en survie (ou en mode aventure/spectateur) : **plus aucun contour ni étiquette**,
+      même à côté d'un marqueur — c'est un outil d'édition, pas un élément de jeu.
+- [ ] Poser plusieurs marqueurs du même type à proximité : chacun a bien son propre contour et
+      sa propre étiquette, pas de fusion ni de doublon.
+- [ ] **Le point le plus incertain** : coût du scan périodique. Avec plusieurs marqueurs et un
+      monde chargé autour, vérifier qu'il n'y a **aucune saccade perceptible** une fois par
+      seconde (le scan n'a jamais été profilé) — sinon réduire `SCAN_RADIUS` ou espacer
+      `SCAN_INTERVAL_TICKS`.
+- [ ] Redémarrer le serveur/recharger le monde pendant qu'un contour est affiché : pas de crash,
+      pas d'étiquette "fantôme" qui reste affichée sur un marqueur qui n'existe plus.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `MarkerOverlayClientEvents`.
+
+**Corrigé au passage (2026-09-06)** : l'item en main de `player_spawn`, `no_build_zone`,
+`map_config` et `training_dummy` affichait une texture cassée violet/noir. Cause réelle : ces
+quatre blocs n'avaient qu'un modèle d'item à l'ancien format (`models/item/<nom>.json`, plus lu
+par cette version du jeu), pas le nouveau (`assets/dungeon_defenders/items/<nom>.json`) déjà
+utilisé par le reste du mod (spawner, tours...). Les quatre affichent maintenant leur texture
+placeholder (hay block, béton rouge, table de cartographie, lodestone) en main, comme dans
+l'onglet créatif.
+
+- [ ] Prendre chacun de ces 4 items en main/inventaire : texture placeholder correcte, plus de
+      violet/noir.
+
 ## Le reste du roster de l'Écuyer (Bouncer Blockade, Bowling Ball Turret)
 
 (Bouncer/Slice N Dice Blockade, Bowling Ball/Mortar Turret) — design discuté et validé avec le
@@ -459,6 +498,147 @@ seulement les tours.
 - [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
       `ModEvents.onBlockBreakAttempt` ou `BreakBlockEvent`.
 
+## L'export d'un pack de maps (`/dd_export`)
+
+Nouveau (2026-09-02). Le TOML et le JSON generes ont ete valides hors jeu (analyse syntaxique),
+et `lowcodefml` existe bien dans le loader de cette version — mais **le jar produit n'a jamais
+ete charge par Minecraft**, c'est tout l'objet de ce test.
+
+- [ ] Creer deux maps sous un meme namespace personnalise (ex. `test_pack:map/a` et
+      `test_pack:map/b`), puis lancer `/dd_export test_pack`.
+- [ ] Un message de succes indique le nombre de maps, d'apercus (0 pour l'instant) et le chemin.
+- [ ] Le fichier existe dans `<dossier du serveur>/dungeon_defenders_export/test_pack.jar`.
+      L'ouvrir avec un gestionnaire d'archives : il doit contenir `META-INF/neoforge.mods.toml`,
+      deux `.nbt` sous `data/test_pack/structure/map/`, et deux fichiers de langue.
+- [ ] **Le test qui compte** : deposer ce jar dans le dossier `mods` d'une installation
+      **propre** (un autre monde, ou apres avoir supprime les maps de la sauvegarde), demarrer,
+      et verifier que les deux maps apparaissent dans le carrousel sous un pack nomme
+      "Test Pack" — sans erreur au demarrage.
+- [ ] Verifier que les maps du jar sont bien **non supprimables** (bouton grise) : ce sont des
+      ressources en lecture seule.
+- [ ] `/dd_export` sur un namespace inexistant, ou avec des majuscules : message d'erreur clair,
+      pas de plantage, pas de jar vide cree.
+- [ ] `/dd_export dungeon_defenders` alors que la campagne vient du jar du mod : doit refuser
+      (aucune map creee en jeu sous ce namespace), sauf si tu as toi-meme cree des maps dedans.
+- [ ] La commande refuse bien en dessous du niveau de permission gamemaster.
+
+## Le force-chargement de la zone de map (`ModChunkTickets`)
+
+Nouveau (2026-09-02), jamais verifie en jeu. Difficile a observer directement : le test consiste
+surtout a verifier qu'un spawner **loin** du groupe fonctionne quand meme.
+
+- [ ] Construire une map assez large pour que deux spawners soient a plus de ~150 blocs l'un de
+      l'autre (au-dela de la distance de rendu/simulation par defaut).
+- [ ] Lancer la partie, rester pres d'un seul spawner pendant toute une vague : les ennemis du
+      spawner **eloigne** doivent quand meme apparaitre et arriver. C'est le test central.
+- [ ] `/forceload query` dans la zone de map pendant une partie : des chunks doivent etre
+      signales comme forces.
+- [ ] Retourner a la taverne (`/dd_leave` ou bouton Abandonner) puis refaire `/forceload query` :
+      **plus aucun** chunk force dans la zone de map.
+- [ ] Quitter le serveur **en pleine partie**, le relancer, puis `/forceload query` : plus aucun
+      chunk force non plus — c'est le rappel de validation qui doit avoir fait le menage.
+- [ ] Enchainer deux parties de tailles de map differentes : aucun chunk de la premiere ne doit
+      rester force pendant la seconde.
+- [ ] Sur une tres grande map, verifier l'avertissement dans les logs au-dela de 1024 chunks (et
+      surveiller le TPS du serveur).
+- [ ] Aucune exception liee a `ModChunkTickets` ou au systeme de tickets.
+
+## La creation de map en jeu (`MapRegistry`, `MapConfigBlock`, ecran a trois colonnes)
+
+Nouveau (2026-09-02), jamais verifie en jeu. **La plus grosse modification a ce jour** : l'enum
+GameMap disparait, le carrousel devient dynamique, StartGamePayload change de forme, et le
+nombre de vagues n'est plus une constante. Beaucoup de regressions possibles sur l'existant.
+
+> Une **map de test est desormais livree** dans le mod (`dungeon_defenders:map/test_arena`) :
+> l'essentiel de cette section se teste donc sans rien construire. Elle s'appelle "Arene de
+> test", tient en 3 vagues, et contient deja cristal, spawner, coffre de mana, marqueur de spawn
+> et zones interdites.
+
+- [ ] Clic droit sur le cristal de la taverne : "Arene de test" apparait dans le pack
+      "Campagne". L'apercu affiche la texture manquante (aucun PNG) — attendu.
+- [ ] Cliquer "Jouer" : l'arene se pose a (10000, 65, 0), murs compris. On arrive devant le
+      cristal, pas au milieu du vide.
+- [ ] Le HUD affiche **Vague 1/3**, pas 1/5 — la preuve que le nombre de vagues vient de la map.
+- [ ] Le spawner fait bien apparaitre 8 zombies et 4 squelettes en combat.
+- [ ] Le coffre de mana s'ouvre et donne 50 mana.
+- [ ] Poser une tour pres du spawner (dans la zone rouge) est refuse avec le message ; quelques
+      blocs plus loin, ca passe.
+- [ ] Enchainer les 3 vagues jusqu'a la victoire, puis "Rejouer" : l'arene est reposee a neuf,
+      cristal a 100 PV, tours effacees.
+
+Sans aucune map (retirer temporairement test_arena du jar, ou tester avant de l'ajouter) :
+
+- [ ] Clic droit sur le cristal de la taverne : l'ecran s'ouvre, colonne des packs vide, message
+      "Aucune map disponible" a la place de l'apercu, bouton "Jouer" **grise**.
+- [ ] Aucune exception dans les logs.
+
+Creer une map de bout en bout :
+
+- [ ] En creatif, construire une petite arene **loin de (0,65,0) et de (10000,65,0)**, avec un
+      `eternia_crystal`, un `spawner` configure, un `player_spawn`, et un bloc
+      **Configuration de map**.
+- [ ] **Corrige (2026-09-06, meme incident que la taverne)** : si jamais tu construis a
+      `(10000, 65, 0)` (MAP_POS) plutot qu'ailleurs, cliquer "Jouer" sur n'importe quelle map
+      sans structure sauvegardee (y compris la tienne en cours) ne doit **plus rien effacer** a
+      cet endroit — avant ce correctif, chaque tentative de "Jouer" sans structure trouvee
+      nettoyait toute la zone avant de poser le placeholder.
+- [ ] Clic droit sur le bloc de config : l'ecran s'ouvre (creatif seulement — verifier qu'en
+      survie il est introuvable et que le message apparait si on force). Renseigner nom, ordre,
+      nombre de vagues (mettre **3**, pas 5, pour verifier que ce n'est plus une constante) et
+      multiplicateur. Valider.
+- [ ] Rouvrir l'ecran : les valeurs saisies sont bien la (persistance + synchro du block entity).
+- [ ] Sauvegarder la zone avec un bloc de structure vanilla, nommee
+      `dungeon_defenders:map/ma_map`.
+- [ ] **Sans redemarrer**, retourner a la taverne, clic droit sur le cristal : la map apparait,
+      dans le pack "Campagne", avec le nom saisi. C'est le point central de toute la
+      fonctionnalite.
+- [ ] L'apercu affiche la texture "manquante" (aucun PNG fourni) — comportement attendu, pas un
+      bug.
+- [ ] Cliquer "Jouer" : la **vraie structure** est posee a (10000,65,0), pas la plateforme de
+      pierre lisse. On arrive sur le `player_spawn`, qui a disparu.
+- [ ] Le HUD affiche **Vague 1/3**, pas 1/5 — c'est ce qui verifie que le nombre de vagues vient
+      bien de la map.
+- [ ] Enchainer les 3 vagues jusqu'a la victoire : l'ecran de fin s'ouvre bien a la 3e.
+- [ ] Bouton "Rejouer" de l'ecran de fin : relance **la meme map** (et pas la plateforme
+      placeholder) — c'est ce que verifie l'attachment CURRENT_MAP.
+
+Les packs et le regroupement :
+
+- [ ] Creer une deuxieme map dans le meme namespace : les deux apparaissent sous "Campagne", et
+      les fleches du carrousel passent de l'une a l'autre avec le compteur "1 / 2".
+- [ ] Donner des ordres differents dans leurs blocs de config, resauvegarder : l'ordre du
+      carrousel suit.
+- [ ] Sauvegarder une map sous un **autre namespace** (ex. `test_pack:map/essai`) : un deuxieme
+      pack apparait dans la colonne de gauche, sous "Campagne", et son carrousel ne contient que
+      ses maps. Son nom affiche est `test_pack` (pas de traduction fournie).
+- [ ] Selectionner un pack puis l'autre : le carrousel repart bien a la premiere map du pack.
+
+La suppression :
+
+- [ ] **En survie**, ouvrir l'ecran de choix : **aucun** bouton "Supprimer cette map".
+- [ ] **En creatif**, le bouton apparait sous "Jouer", en rouge.
+- [ ] Sur une map creee en jeu : le bouton est **actif**. Cliquer -> confirmation.
+- [ ] Repondre Non : rien n'est supprime, retour a l'ecran de choix.
+- [ ] Repondre Oui : message en chat, et la map disparait **immediatement** du carrousel (pas
+      besoin de rouvrir l'ecran).
+- [ ] Supprimer la derniere map d'un pack : le pack disparait aussi de la colonne de gauche, et
+      la selection retombe sur un pack valide sans planter.
+- [ ] Sur une map livree dans le jar du mod (quand la campagne existera) : le bouton est
+      **grise** — c'est une ressource en lecture seule.
+
+Regressions a surveiller :
+
+- [ ] Les spawners fonctionnent toujours : leur ecran de config s'ouvre, la borne "derniere
+      vague active" propose par defaut le nombre de vagues de la map en cours (et non plus 5).
+- [ ] `/dd_leave` et le bouton "Abandonner le niveau" ramenent toujours a la taverne, et le HUD
+      repasse en phase Taverne.
+- [ ] Le HUD Vague reaffiche bien la bonne borne apres un retour a la taverne puis une nouvelle
+      partie sur une map a nombre de vagues different.
+- [ ] Aucune exception liee a `MapRegistry`, `MapConfigBlockEntity`, `StartGamePayload` ou
+      `OpenMapSelectionPayload` — ce dernier a change de forme (il portait zero champ, il porte
+      maintenant une liste), donc un client et un serveur de versions differentes ne peuvent pas
+      se parler : verifier que les deux sont bien a jour.
+
 ## Le bouton "Abandonner le niveau" (menu pause)
 
 Nouveau (2026-09-02), jamais verifie en jeu. Premier ajout du mod a un ecran **vanilla** : le
@@ -567,7 +747,8 @@ Le bloc et l'invocation :
 - [ ] En creatif, l'item "Support de mannequin" apparait dans l'onglet du mod et se pose sans
       crash. Le bloc pose est **invisible** ; en creatif on le retrouve au contour de visee, en
       survie il est traversable et introuvable (meme comportement que le spawner).
-- [ ] Dans la seconde qui suit la pose, un mannequin apparait **juste au-dessus** du bloc.
+- [ ] Dans la seconde qui suit la pose, un mannequin apparait **a la position du bloc**
+      (**corrige le 2026-09-06** : il apparaissait avant un bloc plus haut, signale en jeu).
 - [ ] Le tuer n'est pas possible, mais le supprimer a la main (`/kill @e[type=dungeon_defenders:training_dummy]`)
       doit le faire **reapparaitre** en moins d'une seconde.
 - [ ] Casser le bloc en creatif : le mannequin **disparait avec lui**
@@ -602,9 +783,9 @@ Le mannequin lui-meme :
 
 ## Le chargement de la structure de la taverne (`TavernSpawn#placeTavern`)
 
-Nouveau (2026-08-31), jamais vérifié en jeu — et **jamais essayé avec une vraie structure**,
-puisqu'aucune n'existe encore. Les premiers points sont donc testables tout de suite (repli),
-les suivants seulement une fois `tavern.nbt` livré.
+Nouveau (2026-08-31), jamais vérifié en jeu. **La vraie structure est désormais livrée**
+(2026-09-11, premier jet du joueur : 40×12×35, 16 800 blocs) — les points ci-dessous sous
+« Une fois `tavern.nbt` livré » sont donc maintenant tous testables, plus seulement le repli.
 
 Sans fichier de structure (état actuel du dépôt) :
 
@@ -613,6 +794,11 @@ Sans fichier de structure (état actuel du dépôt) :
 - [ ] Les logs contiennent l'avertissement `Structure de taverne introuvable ... repli sur la
       plateforme provisoire.` (une fois par chargement du monde, pas en boucle).
 - [ ] `/dd_leave` depuis une map ramene toujours au meme endroit.
+- [ ] **Corrige (2026-09-06, incident en jeu)** : construire quelque chose a la main a cote de
+      la plateforme de repli (par exemple les murs d'une taverne en cours de construction, pas
+      encore sauvegardee en structure), redemarrer le serveur — **ca doit survivre**. Avant ce
+      correctif, tout ce qui n'etait pas la plateforme 9x9 elle-meme etait efface a chaque
+      redemarrage (`clearZone` tournait meme en l'absence de structure).
 
 Une fois `data/dungeon_defenders/structure/tavern.nbt` livre :
 
@@ -625,11 +811,22 @@ Une fois `data/dungeon_defenders/structure/tavern.nbt` livre :
       de map (les block entities d'une structure gardent leurs donnees NBT).
 - [ ] Avec un `player_spawn` pose dans la structure : on arrive **a sa position**, pas au
       centre. Sans marqueur : on arrive au centre (0, 65, 0).
+- [ ] **Corrige (2026-09-11, incident en jeu)** : un joueur qui rejoint ce monde **pour la toute
+      premiere fois** (jamais connecte avant, aucune donnee de joueur existante) arrive bien au
+      marqueur, pas au centre par defaut. Avant ce correctif, seuls les teleports explicites
+      (mort, `/dd_leave`, retour de map) respectaient le marqueur — le tout premier placement
+      d'un joueur neuf, lui, ignorait `setRespawnData` (particularite vanilla non comprise en
+      profondeur, contournee plutot que corrigee a la racine — voir
+      `ModEvents.onPlayerLoggedIn`/`ModAttachments.FIRST_SPAWN_HANDLED`). A tester avec un compte
+      qui n'a jamais rejoint ce monde precis, pas en se reconnectant avec un joueur existant.
 - [ ] Le marqueur **n'est pas consomme** : quitter la taverne, y revenir (`/dd_leave`), et
       redemarrer le serveur — on doit arriver au meme endroit a chaque fois.
 - [ ] Mourir dans une map fait reapparaitre a la position d'arrivee de la taverne, pas a
       (0, 65, 0) si le marqueur est ailleurs.
 - [ ] Les entites de la structure (cadres, supports a armure, tableaux) **sont bien posees**.
+- [ ] Le support de mannequin (`training_dummy`, present dans ce premier jet) invoque bien son
+      mannequin dans la seconde qui suit le chargement — meme checklist que sa propre section
+      plus haut, mais cette fois dans la vraie taverne plutot qu'un bloc pose isolement en test.
 - [ ] **Le point le plus incertain** : redemarrer le serveur trois ou quatre fois d'affilee et
       recompter ces entites. Elles doivent rester au **meme nombre**, pas se dupliquer a chaque
       demarrage — c'est ce que doit empecher la suppression d'entites de `clearZone`, et c'est

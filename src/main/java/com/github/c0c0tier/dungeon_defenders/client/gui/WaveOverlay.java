@@ -34,7 +34,7 @@ public class WaveOverlay implements GuiLayer {
         }
 
         int currentWave = level.getData(ModAttachments.CURRENT_WAVE);
-        int maxWave = ModAttachments.MAX_WAVE;
+        int maxWave = ModAttachments.waveCount(level);
 
         Component text = Component.translatable("dungeon_defenders.hud.wave", currentWave, maxWave);
         int x = guiGraphics.guiWidth() - MARGIN - minecraft.font.width(text);

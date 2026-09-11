@@ -101,7 +101,7 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
         this.intervalText = String.valueOf(spawner != null ? spawner.getIntervalTicks() : 20);
         this.radiusText = String.valueOf(spawner != null ? spawner.getSpawnRadius() : 0);
         this.waveStartText = String.valueOf(spawner != null ? spawner.getWaveStart() : 1);
-        this.waveEndText = String.valueOf(spawner != null ? spawner.getWaveEnd() : ModAttachments.MAX_WAVE);
+        this.waveEndText = String.valueOf(spawner != null ? spawner.getWaveEnd() : defaultWaveEnd());
 
         this.rows.clear();
         if (spawner != null) {
@@ -278,7 +278,7 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
                 parseOr(this.intervalText, 20),
                 parseOr(this.radiusText, 0),
                 parseOr(this.waveStartText, 1),
-                parseOr(this.waveEndText, ModAttachments.MAX_WAVE),
+                parseOr(this.waveEndText, defaultWaveEnd()),
                 entries
         );
 
@@ -305,4 +305,14 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
         }
         return null;
     }
+
+    // Borne par défaut de "dernière vague active" : le nombre de vagues de la partie en cours,
+    // qui vient désormais de la map jouée (voir MapDefinition) et non plus d'une constante
+    // globale. Repli sur MAX_WAVE hors partie (à la taverne, où l'on configure justement les
+    // spawners d'une map en construction).
+    private static int defaultWaveEnd() {
+        Level level = Minecraft.getInstance().level;
+        return level == null ? ModAttachments.MAX_WAVE : ModAttachments.waveCount(level);
+    }
+
 }

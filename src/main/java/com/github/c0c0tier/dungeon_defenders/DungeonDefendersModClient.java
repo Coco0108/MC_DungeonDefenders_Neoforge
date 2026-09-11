@@ -17,6 +17,7 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.GameOverScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.ManaChestConfigScreen;
+import com.github.c0c0tier.dungeon_defenders.client.gui.screen.MapConfigScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.MapSelectionScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScreen;
 import com.github.c0c0tier.dungeon_defenders.entity.MobHealthBarRenderer;
@@ -196,6 +197,7 @@ public class DungeonDefendersModClient {
     static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.SPAWNER_CONFIG.get(), SpawnerConfigScreen::new);
         event.register(ModMenus.MANA_CHEST_CONFIG.get(), ManaChestConfigScreen::new);
+        event.register(ModMenus.MAP_CONFIG.get(), MapConfigScreen::new);
     }
 
     // Handlers des paquets clientbound du mod (voir ModNetworking, qui n'enregistre que les
@@ -211,7 +213,7 @@ public class DungeonDefendersModClient {
         // bloc est chargé aussi sur un serveur dédié, où nommer une classe cliente fait
         // planter le chargement du mod — voir OpenMapSelectionPayload.
         event.register(OpenMapSelectionPayload.TYPE, (payload, context) ->
-                context.enqueueWork(() -> Minecraft.getInstance().setScreen(new MapSelectionScreen())));
+                context.enqueueWork(() -> Minecraft.getInstance().setScreen(new MapSelectionScreen(payload.maps()))));
     }
 
     private static void handleScoreGain(ScoreGainPayload payload, IPayloadContext context) {

@@ -85,16 +85,28 @@ Déroulé de `placeTavern` :
 1. `level.getStructureManager().get(TAVERN_STRUCTURE)` — le gestionnaire vanilla, qui lit aussi
    bien les structures livrées dans le jar du mod que celles d'un datapack.
 2. **Si le fichier est absent** : message d'avertissement dans les logs et **repli sur l'ancienne
-   plateforme** 9×9 en `smooth_stone`. Volontaire : dans un monde vide, un mod sans sol est
-   injouable — mieux vaut une plateforme moche qu'une chute infinie.
-3. **Nettoyage de la zone** avant de poser (`clearZone`), sur l'emprise exacte de la structure
-   plus `CLEAR_MARGIN = 4` de marge dans toutes les directions. Sans ça, une version précédente
-   plus grande (ou la plateforme de repli) laisserait ses restes flotter autour de la nouvelle
+   plateforme** 9×9 en `smooth_stone`, posée **sans rien nettoyer autour** (voir encadré
+   ci-dessous). Volontaire : dans un monde vide, un mod sans sol est injouable — mieux vaut une
+   plateforme moche qu'une chute infinie.
+3. **Si un fichier est chargé**, nettoyage de la zone avant de poser (`clearZone`), sur l'emprise
+   exacte de la structure plus `CLEAR_MARGIN = 4` de marge dans toutes les directions. Sans ça,
+   une version précédente plus grande laisserait ses restes flotter autour de la nouvelle
    taverne. La marge se calcule à partir de `template.getSize()`, pas d'un rayon en dur : la
    taverne peut grandir sans qu'on ait à toucher au code.
 4. `template.placeInWorld(...)` avec `Block.UPDATE_CLIENTS` (et **pas** `UPDATE_ALL`) : on ne
    veut pas déclencher une cascade de mises à jour de voisinage sur chaque bloc posé, seulement
    que les clients voient le résultat — même choix que le bloc de structure vanilla.
+
+> **Incident du 2026-09-06** : le repli nettoyait lui aussi la zone avant de poser sa plateforme.
+> Un joueur qui construit sa taverne à la main directement à `SPAWN_POS`, **avant** d'avoir
+> sauvegardé quoi que ce soit comme structure, la voyait entièrement effacée au redémarrage
+> suivant — `clearZone` tournait à chaque chargement, qu'une structure existe ou non. Le repli ne
+> nettoie donc plus jamais rien ; seul le chargement d'une vraie structure le justifie encore (là,
+> le contenu final est entièrement déterminé par le fichier, rien à perdre). **Conséquence pour
+> construire la taverne à la main** : le contenu posé au-dessus de la plateforme de repli survit
+> maintenant aux redémarrages — mais reste vulnérable tant qu'il n'est pas capturé dans un bloc de
+> structure nommé `dungeon_defenders:tavern` (un `/save`, une régénération de chunk, etc. peuvent
+> encore le perdre).
 
 #### Où la structure est posée
 
@@ -232,21 +244,22 @@ maps/structures"), toutes les maps partagent la **même coordonnée fixe**
 (`MAP_POS = (10000, 65, 0)`, loin de la taverne) plutôt que d'avoir chacune la leur — pas
 besoin d'une grille de coordonnées puisqu'il n'y en a jamais deux en même temps.
 
-- **`startGame(level)`** (déclenché par `StartGamePayload`) : nettoie la zone (remplace tout
-  par de l'air dans un volume autour de `MAP_POS` — plus large que le placeholder lui-même,
-  pour rattraper d'éventuelles tours posées autour une fois qu'elles existeront), pose un
-  placeholder générique (même technique que `TavernSpawn`, une simple plateforme), cherche et
-  consomme un `PLAYER_SPAWN` (voir plus bas), puis téléporte **tous** les joueurs de la `Level`
-  — pas seulement celui qui a cliqué "Jouer", puisqu'une seule partie est partagée par tout le
-  monde (confirmé explicitement : "de toute façon on devra le faire").
-- **`returnToTavern(level)`** : même nettoyage de la zone, puis téléporte tout le monde vers
-  `TavernSpawn.SPAWN_POS`. Déclenché par la commande `/dd_leave` (voir `ModCommands` et
+- **`startGame(level, map)`** (déclenché par `StartGamePayload`) : depuis le 2026-09-02, la map
+  choisie est réellement chargée depuis sa structure `.nbt` (`MapInstance#placeMap`), même
+  mécanisme que `TavernSpawn` — nettoyage de zone dimensionné sur la structure puis pose si un
+  fichier existe, cherche et consomme un `PLAYER_SPAWN` (voir plus bas), puis téléporte
+  **tous** les joueurs de la `Level` — pas seulement celui qui a cliqué "Jouer", puisqu'une seule
+  partie est partagée par tout le monde (confirmé explicitement : "de toute façon on devra le
+  faire"). **Si aucune structure n'est trouvée** : repli sur `buildPlaceholderArena()` (une
+  simple plateforme à `MAP_POS`) — **sans nettoyer la zone** (corrigé le 2026-09-06, même
+  incident que `TavernSpawn` : `MAP_POS` est l'endroit où un créateur bâtit sa map à la main
+  avant de la sauvegarder en structure ; nettoyer à chaque "Jouer" sans structure trouvée
+  effacerait ce travail en cours).
+- **`returnToTavern(level)`** : nettoie la zone (fin de partie, plus rien à conserver — les
+  tours et monstres de la partie qui vient de se terminer), puis téléporte tout le monde vers
+  `TavernSpawn.arrivalPos(level)`. Déclenché par la commande `/dd_leave` (voir `ModCommands` et
   "Victoire et défaite" plus bas) — pas encore par un vrai point de sortie posé dans la map
-  elle-même, puisqu'aucune vraie map n'existe.
-
-`MapInstance` est pensé pour que le seul changement nécessaire, une fois de vraies maps
-prêtes, soit de remplacer `buildPlaceholderArena()` par un vrai chargement de structure
-`.nbt` — même logique que ce qui est prévu pour `TavernSpawn` (voir plus haut).
+  elle-même.
 
 ### Le bloc de spawn joueur — `block/PlayerSpawnBlock.java`, `MapInstance#findAndConsumeSpawnMarker`
 
@@ -1492,6 +1505,206 @@ Le contour n'était pas le seul repère visuel : le mode suppression dessine son
 **orange** (`TowerRemovalClientEvents`, inchangé et désormais mieux lisible sans la boîte noire
 par-dessus) et les tours affichent leur barre de vie (`TowerHealthBarRenderer`).
 
+## Créer une map entièrement en jeu — `init/MapRegistry.java`, `block/MapConfigBlock.java`
+
+Décidé avec le joueur (2026-09-02). Objectif : **plus une seule ligne de code ni de JSON à
+écrire pour ajouter une map**, ni pour lui, ni pour un tiers qui voudrait publier un pack.
+
+### Le mécanisme qui rend tout ça possible
+
+Le gestionnaire de structures de Minecraft cherche dans deux familles de sources, dans cet
+ordre (vérifié dans son constructeur) :
+
+1. **le dossier `generated/` de la sauvegarde** — exactement là où un bloc de structure vanilla
+   écrit quand on sauvegarde ;
+2. **les ressources chargées** — datapacks *et* jars de mods, tous namespaces confondus
+   (`ResourceManagerTemplateSource#list` passe par `listMatchingResources`).
+
+Conséquence : une map sauvegardée en jeu avec un bloc de structure est **immédiatement
+chargeable par le mod, sur le même serveur, sans transfert de fichier ni redémarrage**. Et
+`listTemplates()` voit tout, quelle que soit l'origine.
+
+`MapRegistry.discover` ne filtre donc que sur le **chemin** (`map/*`), jamais sur le namespace.
+C'est ce qui rend l'extensibilité gratuite.
+
+### Le namespace fait office de pack
+
+`dungeon_defenders:map/*` est la campagne, `<autre>:map/*` un pack tiers. Aucune donnée à
+déclarer : l'identifiant de la structure suffit à regrouper les maps. Un pack peut traduire son
+nom via `dungeon_defenders.map_pack.<namespace>` dans son propre fichier de langue ; sans ça,
+son namespace s'affiche tel quel plutôt qu'une clé crue.
+
+### Les réglages voyagent dans le `.nbt`
+
+`MapConfigBlock` (invisible, traversable, créatif seulement — même traitement que les autres
+marqueurs) est posé **dans** la map. Il porte le nom affiché, l'ordre dans le pack, le nombre de
+vagues et le multiplicateur de score.
+
+Comme il fait partie de la structure, ces réglages sont sauvegardés dans le `.nbt` : copier le
+fichier emporte tout, il n'y a aucun fichier de configuration à transmettre à côté.
+
+**Ils se lisent sans poser la map** : `StructureTemplate#filterBlocks` renvoie les blocs demandés
+avec leur NBT, donc le carrousel peut afficher le nom et le nombre de vagues d'une map qui n'a
+jamais été chargée — même technique que la recherche du marqueur `player_spawn` de la taverne.
+
+Une map **sans** bloc de configuration reste jouable, avec les valeurs par défaut (décidé avec le
+joueur) : on peut ainsi tester une map avant de l'avoir renseignée.
+
+Un champ `FormatVersion` est écrit à chaque sauvegarde. Il ne sert à rien aujourd'hui, mais
+chaque champ ayant déjà son propre repli, un pack publié avant l'ajout d'un champ reste lisible.
+
+### Le nombre de vagues devient propre à chaque map
+
+`MAX_WAVE = 5` n'est plus qu'un **repli**. La valeur réelle vit dans l'attachment
+`ModAttachments.MAP_WAVE_COUNT`, posé par `MapInstance.startGame` depuis la map choisie, et lue
+par `ModAttachments.waveCount(level)` — utilisée par la condition de victoire
+(`ModEvents.onMonsterDeath`), la progression de vague (`PhaseTransitions.enterBuild`), le HUD
+(`WaveOverlay`) et la borne par défaut de l'écran de config du spawner.
+
+### L'écran de choix — trois colonnes
+
+```
+PACKS          |        LA MAP         |  DIFFICULTÉ
+▸ Campagne     |    ◀ [aperçu] ▶       |   Facile
+  Cavernes     |      Deeper Well      |   Normal
+  …            |         2 / 5         |   Difficile
+                                           [ Jouer ]
+```
+
+Le carrousel ne parcourt que les maps **du pack sélectionné** : on ne traverse plus toute la
+campagne pour atteindre la map d'un DLC. La colonne des packs défile à la molette au-delà de 8.
+
+**La liste vient du serveur**, portée par `OpenMapSelectionPayload` (qui n'avait aucun champ
+auparavant). Ce n'est pas un choix : le gestionnaire de structures est construit à partir de
+l'accès au dossier de sauvegarde, il n'existe donc que côté serveur. Un pack installé côté
+serveur apparaît ainsi sans que le client ait à le connaître.
+
+`StartGamePayload` porte désormais l'identifiant de la map choisie — sans ce champ, le carrousel
+n'était que décoratif. `ModAttachments.CURRENT_MAP` mémorise la map en cours pour que le bouton
+« Rejouer » de l'écran de fin de partie relance **la même**, alors que l'écran de choix est
+fermé depuis longtemps côté client.
+
+### Supprimer une map — dans l'écran de choix, en créatif
+
+Le bouton vit dans l'écran de **choix**, pas dans celui de configuration. Raison : le bloc de
+configuration ne connaît pas l'identifiant de sa propre structure — celui-ci est choisi bien plus
+tard, au moment de sauvegarder avec un bloc de structure. Il aurait donc fallu le retaper à la
+main. Dans l'écran de choix, l'identifiant est connu et on voit ce qu'on efface.
+
+Le bouton **n'existe pas en survie** (outil de mappeur), et n'est **actif que sur une map
+réellement supprimable** : `MapDefinition#fromWorld`, calculé côté serveur en vérifiant si le
+fichier existe dans le dossier `generated/` de la sauvegarde. Une map livrée dans un jar est une
+ressource en lecture seule — autant griser le bouton que laisser cliquer pour échouer ensuite.
+
+Confirmation par `ConfirmScreen` avant d'agir. La map est aussi retirée de la liste **locale** :
+celle-ci vient du serveur à l'ouverture de l'écran et n'est pas rafraîchie, sans ça la map
+supprimée resterait affichée. Un pack vidé de sa dernière map disparaît avec elle.
+
+### La map de test livrée — `map/test_arena.nbt`
+
+Une arène de 49×6×49 livrée dans le jar (`dungeon_defenders:map/test_arena`), pour que la chaîne
+complète soit exerçable **avant** qu'une vraie map existe. Contenu : sol et murs d'enceinte (le
+monde est vide, sans murs on tombe), un couloir visible entre les deux bouts, un Cristal
+d'Eternia, un spawner configuré (8 zombies + 4 squelettes, vagues 1 à 3), un `player_spawn`, un
+coffre de mana, des `no_build_zone` autour du spawner, et un `map_config` réglé sur **3 vagues** —
+volontairement différent du défaut de 5, pour qu'un simple coup d'œil au HUD confirme que le
+nombre de vagues vient bien de la map.
+
+Elle a été **générée sans passer par le jeu**, avec `tools/generer-map-de-test.py` : un `.nbt` de
+structure n'est qu'un fichier NBT gzippé au format relu dans `StructureTemplate`. Le script écrit
+le NBT, et le fichier produit a été relu et vérifié tag par tag.
+
+> **Le piège du format, à connaître si tu génères une structure à la main** : `size` et `pos`
+> s'écrivent en **`TAG_List` d'entiers**, pas en `TAG_Int_Array`. `StructureTemplate#load` les lit
+> avec `getListOrEmpty` — un `TAG_Int_Array` y serait lu comme une liste vide, donnant une
+> structure de taille 0 avec tous les blocs empilés à l'origine, **sans le moindre message
+> d'erreur**.
+
+C'est une map de **test**, pas de contenu : elle apparaît dans le pack « Campagne » et devra en
+être retirée quand de vraies maps existeront.
+
+### Le force-chargement de la zone — `init/ModChunkTickets.java`
+
+**Pourquoi c'est indispensable et pas un détail** : Minecraft ne charge et ne fait tourner que
+les chunks proches d'un joueur. Une arène fixe où plusieurs spawners sont éloignés les uns des
+autres verrait donc ceux qui sont loin du groupe **cesser simplement de fonctionner**, sans
+erreur ni message. Le symptôme — « certains ennemis n'apparaissent jamais » — est
+particulièrement pénible à diagnostiquer, d'où le fait de le régler avant la première vraie map.
+
+Passe par le système de **tickets de NeoForge** plutôt que par le `/forceload` vanilla : les
+tickets ont un propriétaire (ici `MapInstance.MAP_POS`), sont persistés, et surtout **revalidés
+au chargement du monde**. Le rappel de validation supprime tout : le monde démarre toujours à la
+taverne, donc aucun chunk de map n'a de raison de rester chargé — sans ça, un serveur arrêté en
+pleine partie garderait la zone chargée indéfiniment au redémarrage.
+
+Le dernier argument de `forceChunk` est passé à `true` : on veut des chunks qui **tickent**
+réellement, pas seulement chargés — sans ça les spawners ne tourneraient toujours pas.
+
+Forcé par `MapInstance.startGame` sur exactement la même emprise que le nettoyage, relâché par
+`returnToTavern`. La liste de ce qui est réellement forcé est gardée en mémoire pour pouvoir
+relâcher les **mêmes** chunks : la taille d'une map peut changer entre-temps si son créateur la
+re-sauvegarde. Un avertissement est loggé au-delà de 1024 chunks (environ 512×512 blocs) — un
+garde-fou d'alerte, pas une limite de conception.
+
+### Publier une map
+
+Une map créée en jeu vit dans la sauvegarde du monde, pas dans le mod : elle ne part pas avec
+lui. Mais c'est le **même format et la même recherche**, donc publier revient à copier le `.nbt`
+dans les ressources d'un jar — celui du mod pour la campagne, un jar d'extension pour un pack
+tiers. Un jar d'extension ne contient **aucun code** :
+
+```
+mon_pack.jar
+├── META-INF/neoforge.mods.toml      (dépendance à dungeon_defenders)
+├── data/mon_pack/structure/map/ma_map.nbt
+└── assets/mon_pack/textures/gui/maps/ma_map.png
+```
+
+Un datapack seul fonctionne aussi pour la structure, mais ne peut pas embarquer l'image
+d'aperçu — d'où le jar comme format recommandé.
+
+#### `/dd_export <namespace>` — le jar est généré pour toi
+
+Recopier des fichiers aux bons endroits et écrire un `neoforge.mods.toml` correct, c'est
+exactement le genre d'étape qui décourage un auteur. La commande produit donc l'objet fini, dans
+`<dossier du serveur>/dungeon_defenders_export/<namespace>.jar` :
+
+- le `neoforge.mods.toml`, avec `modLoader = "lowcodefml"` (le chargeur des mods **sans code** —
+  vérifié présent dans le loader de cette version) et une dépendance requise à
+  `dungeon_defenders` ;
+- une entrée `data/<ns>/structure/map/<id>.nbt` par map du pack ;
+- son aperçu `assets/<ns>/textures/gui/maps/<id>.png` s'il existe ;
+- un fichier de langue de départ avec la clé `dungeon_defenders.map_pack.<ns>`.
+
+**Un jar par pack, pas par map** : un pack de cinq maps donne un seul fichier à publier. La
+commande prend donc un namespace.
+
+**Seules les maps créées en jeu sont exportées** (`MapDefinition#fromWorld`) : une map qui vient
+déjà d'un jar est une ressource en lecture seule, la ré-emballer n'aurait pas de sens.
+
+Le **nom du pack** n'est stocké nulle part — la commande écrit donc une valeur de départ dérivée
+du namespace (`cavernes_oubliees` → « Cavernes Oubliees ») que l'auteur corrige dans le fichier
+de langue. Mieux vaut un fichier à retoucher qu'une clé de traduction crue affichée aux joueurs.
+
+Les **aperçus** sont cherchés dans `<monde>/dungeon_defenders/previews/<ns>/<id>.png`. Rien ne
+les y écrit encore — c'est l'emplacement que remplira la capture en jeu (phase 2), prévu dès
+maintenant pour que cette commande n'ait pas à changer ensuite.
+
+Réservée au niveau de permission « gamemaster » : c'est un outil de créateur.
+
+**Attention au masquage** : une structure du monde est cherchée *avant* celle d'un jar. Une map
+publiée puis re-sauvegardée en jeu sous le même identifiant est donc remplacée par la version
+locale tant qu'on ne la supprime pas de la sauvegarde. Pratique pour itérer, déroutant si on
+l'oublie.
+
+### Ce qui n'est PAS fait dans cette étape
+
+- **Pas d'aperçu capturé en jeu** : une map créée en jeu affiche la texture "manquante" tant
+  qu'aucun PNG ne lui est fourni. La capture d'écran est la phase suivante.
+- **Pas de commande d'export** vers un jar prêt à publier (phase 3).
+- **Pas de réinitialisation entre deux tentatives** (tours retirées, PV du cristal) — PR séparée
+  juste après, décidé avec le joueur pour ne pas gonfler celle-ci.
+
 ## Abandonner un niveau — `client/PauseMenuClientEvents.java`, `network/LeaveMapPayload.java`
 
 Un bouton rouge **« Abandonner le niveau »** ajouté au bas du menu pause vanilla, qui ramène à
@@ -1699,9 +1912,13 @@ si ce filtre est un jour élargi, il faudra penser à en exclure le mannequin.
 ### Le bloc — un "spawner de mannequin"
 
 `TrainingDummyBlock` n'a aucun comportement propre : son block entity vérifie une fois par
-seconde qu'un `TrainingDummyEntity` existe **juste au-dessus** de lui, et en invoque un sinon.
-Invisible, traversable, ciblable en créatif seulement — même traitement que `SpawnerBlock` et
-`PlayerSpawnBlock`, c'est un marqueur d'édition.
+seconde qu'un `TrainingDummyEntity` existe **à sa position** (pas au-dessus — changé le
+2026-09-06, retour en jeu : le mannequin apparaissait flottant un bloc plus haut que
+l'emplacement du support), et en invoque un sinon. Sans conséquence sur le mannequin lui-même,
+qui n'a de toute façon pas besoin de sol sous ses pieds (`setNoAi`). Invisible, traversable,
+ciblable en créatif seulement — même traitement que `SpawnerBlock` et `PlayerSpawnBlock`, c'est
+un marqueur d'édition, et le même principe "le marqueur EST l'endroit visé" que
+`PlayerSpawnBlock`.
 
 **Pourquoi un bloc plutôt qu'un mannequin posé directement dans le `.nbt` de la taverne**
 (décidé avec le joueur) : le bloc fait partie de la structure et se repose donc proprement à

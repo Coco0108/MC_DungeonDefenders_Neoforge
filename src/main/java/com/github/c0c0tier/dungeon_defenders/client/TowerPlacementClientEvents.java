@@ -27,7 +27,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -217,7 +216,7 @@ public class TowerPlacementClientEvents {
         poseStack.mulPose(Axis.YP.rotationDegrees(facingYRot(state.rotation)));
         poseStack.translate(-0.5D, -0.5D, -0.5D);
         event.getSubmitNodeCollector().submitCustomGeometry(poseStack, RenderTypes.lines(),
-                (pose, buffer) -> renderBoxOutline(pose, buffer, Shapes.block(), color, LINE_WIDTH));
+                (pose, buffer) -> LineBoxRenderer.renderBoxOutline(pose, buffer, Shapes.block(), color, LINE_WIDTH));
         poseStack.popPose();
 
         if (state.range > 0.0D) {
@@ -232,18 +231,6 @@ public class TowerPlacementClientEvents {
                     (pose, buffer) -> renderRangeArea(pose, buffer, state.range, coneAngle, COLOR_RANGE, LINE_WIDTH));
             poseStack.popPose();
         }
-    }
-
-    // Même principe que ShapeRenderer.renderShape (vanilla), adapté pour prendre un
-    // PoseStack.Pose plutôt qu'un PoseStack complet : submitCustomGeometry ne fournit que le
-    // Pose au moment différé où ce rendu est réellement exécuté.
-    private static void renderBoxOutline(
-            PoseStack.Pose pose, VertexConsumer buffer, VoxelShape shape, int color, float width) {
-        shape.forAllEdges((x1, y1, z1, x2, y2, z2) -> {
-            Vector3f normal = new Vector3f((float) (x2 - x1), (float) (y2 - y1), (float) (z2 - z1)).normalize();
-            buffer.addVertex(pose, (float) x1, (float) y1, (float) z1).setColor(color).setNormal(pose, normal).setLineWidth(width);
-            buffer.addVertex(pose, (float) x2, (float) y2, (float) z2).setColor(color).setNormal(pose, normal).setLineWidth(width);
-        });
     }
 
     // Rotation Y (degrés) à appliquer via Axis.YP.rotationDegrees(...) au gabarit du

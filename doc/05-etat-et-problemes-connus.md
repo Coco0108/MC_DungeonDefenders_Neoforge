@@ -377,9 +377,10 @@ vérifie la CI.
   exemplaire de plus à chaque démarrage. Les entités de la structure sont donc bien posées.
   Décidé avec le joueur (2026-08-31) : la suppression d'entités est de toute façon nécessaire
   pour le futur **mannequin d'entraînement** (PV infinis, immobile, cible des tours), qui ne
-  doit pas s'accumuler. **Jamais vérifié en jeu, et jamais essayé avec une vraie structure**
-  (aucune n'existe encore) — la partie « suppression des entités » est le point le plus incertain
-  faute de test réel. Détail dans
+  doit pas s'accumuler. **Corrigé (2026-09-06, incident en jeu)** : le repli nettoyait lui aussi
+  la zone avant de poser sa plateforme, effaçant une taverne en cours de construction à la main
+  (pas encore sauvegardée en structure) au redémarrage suivant. Le repli ne nettoie plus jamais
+  rien désormais ; seul le chargement d'une vraie structure le justifie encore. Détail dans
   [02-gameplay.md](02-gameplay.md#le-chargement-de-la-structure--tavernspawnplacetavern), recette
   de livraison dans [04-guide-ajout-contenu.md](04-guide-ajout-contenu.md).
 - ✅ Cristal de la taverne (`TavernCrystalBlock`, distinct d'`EterniaCrystalBlock` — pas de PV,
@@ -501,6 +502,21 @@ vérifie la CI.
   **Jamais vérifié visuellement.** Détail dans
   [02-gameplay.md](02-gameplay.md#le-contour-de-sélection-masqué-sur-les-tours-et-les-cristaux--clientblockoutlineclienteventsjava).
 
+- ✅ **Repérage des blocs marqueurs en créatif** (`client/MarkerOverlayClientEvents.java`,
+  2026-09-06) : demandé en jeu pendant le premier test de la pile maps/taverne — les 5 blocs
+  marqueurs (spawn joueur, zone interdite, config de map, support de mannequin, spawner) sont
+  tous `RenderShape.INVISIBLE`, seul repérable en créatif en visant très précisément au jugé.
+  Scan périodique (1x/s, rayon 16 blocs, valeurs de test) autour du joueur créatif ; chaque
+  marqueur trouvé affiche un contour coloré (une couleur par type, `LineBoxRenderer.java`,
+  extrait à cette occasion de sa 3e copie entre `TowerPlacementClientEvents` et
+  `TowerRemovalClientEvents`) et une étiquette de nom **à travers les murs**
+  (`submitNameTag(..., seeThrough=true)`, même mécanisme que le nom d'un mob brillant). Rien en
+  survie : outil d'édition de map uniquement. **Jamais vérifié en jeu**, coût du scan non
+  profilé. Corrigé au passage : la texture d'item cassée (violet/noir) de `player_spawn`,
+  `no_build_zone`, `map_config` et `training_dummy` — il leur manquait le modèle d'item au
+  nouveau format (`assets/dungeon_defenders/items/<nom>.json`), ils n'avaient que l'ancien
+  (`models/item/<nom>.json`), plus lu par cette version du jeu.
+
 - ✅ **Mannequin d'entraînement** (`entity/TrainingDummyEntity.java`,
   `block/TrainingDummyBlock.java`, `block/entity/TrainingDummyBlockEntity.java`, 2026-08-31) :
   cible immobile et indestructible attaquée par les tours, pour mesurer leurs dégâts sans monter
@@ -513,7 +529,10 @@ vérifie la CI.
   de la taverne pour qu'aucun doublon ne puisse s'accumuler même si le nettoyage d'entités
   ratait l'ancien. **Deux limites assumées** : le mannequin **ressemble à un zombie** (pas de
   modèle de mannequin de paille), et l'absence de barre de vie tient au filtre par type de
-  `MobHealthBarRenderer`, pas à une exclusion explicite. **Jamais vérifié en jeu.** Détail dans
+  `MobHealthBarRenderer`, pas à une exclusion explicite. **Corrigé (2026-09-06, retour en jeu)** :
+  le mannequin apparaissait un bloc plus haut que le support, invoqué à `pos.above()` plutôt qu'à
+  la position du bloc lui-même — même principe que `PlayerSpawnBlock` désormais, le marqueur EST
+  l'emplacement visé. Détail dans
   [02-gameplay.md](02-gameplay.md#le-mannequin-dentraînement--entitytrainingdummyentityjava-blocktrainingdummyblockjava).
 
 - ✅ **Phase Taverne** (`GamePhase.TAVERN`, 2026-09-01) : troisième phase, à côté de
@@ -555,6 +574,50 @@ vérifie la CI.
   les joueurs sont ramenés. `/dd_leave` reste en parallèle comme harnais de test. **Jamais
   vérifié en jeu.** Détail dans
   [02-gameplay.md](02-gameplay.md#abandonner-un-niveau--clientpausemenuclienteventsjava-networkleavemappayloadjava).
+
+- ✅ **Création de map entièrement en jeu** (`init/MapRegistry.java`, `init/MapDefinition.java`,
+  `block/MapConfigBlock.java`, 2026-09-02) : les maps ne sont plus une liste fermée écrite en dur
+  (l'enum `GameMap` est supprimé) mais **découvertes à l'exécution** parmi les structures
+  disponibles. Le gestionnaire de structures cherchant à la fois dans le dossier `generated/` de
+  la sauvegarde et dans toutes les ressources chargées (datapacks et jars de mods, tous
+  namespaces confondus), une map sauvegardée en jeu avec un bloc de structure est chargeable
+  immédiatement, et **un pack tiers est découvert sans une ligne de code de sa part**. Le
+  namespace fait office de pack. Les réglages (nom, ordre, nombre de vagues, multiplicateur de
+  score) vivent dans un bloc posé DANS la map, voyagent donc dans le `.nbt`, et se lisent sans
+  poser la structure. `MAX_WAVE` n'est plus qu'un repli : le nombre de vagues vient de la map
+  (`ModAttachments.MAP_WAVE_COUNT`). L'écran de choix passe à trois colonnes (packs / map /
+  difficulté) et reçoit sa liste du serveur. `StartGamePayload` porte enfin la map choisie — le
+  carrousel n'était que décoratif jusque-là. **Jamais vérifié en jeu.** Détail dans
+  [02-gameplay.md](02-gameplay.md#créer-une-map-entièrement-en-jeu--initmapregistryjava-blockmapconfigblockjava).
+
+- ✅ **Force-chargement de la zone de map** (`init/ModChunkTickets.java`, 2026-09-02) : sans lui,
+  Minecraft ne fait tourner que les chunks proches du groupe, et un spawner éloigné cesse
+  simplement de fonctionner — sans erreur, avec pour seul symptôme « certains ennemis
+  n'apparaissent jamais ». Passe par le système de tickets de NeoForge (propriétaire, persistance,
+  revalidation au chargement du monde) plutôt que par `/forceload`. Forcé sur la même emprise que
+  le nettoyage à `startGame`, relâché à `returnToTavern`, et **tout est supprimé au chargement du
+  monde** : un serveur arrêté en pleine partie garderait sinon la zone chargée indéfiniment.
+  **Jamais vérifié en jeu.** Détail dans
+  [02-gameplay.md](02-gameplay.md#le-force-chargement-de-la-zone--initmodchunkticketsjava).
+
+- ✅ **`/dd_export <namespace>`** (`MapExporter.java`, 2026-09-02) : emballe les maps d'un pack
+  dans un jar d'extension prêt à publier — `mods.toml` généré (`modLoader = "lowcodefml"`,
+  dépendance requise à `dungeon_defenders`), structures, aperçus s'ils existent, fichier de
+  langue de départ. Un jar par **pack**, écrit dans
+  `<dossier du serveur>/dungeon_defenders_export/`. Réservé au niveau de permission gamemaster.
+  Seules les maps créées en jeu sont exportées. Le TOML et le JSON générés ont été validés hors
+  jeu (analyse syntaxique), et `lowcodefml` est bien présent dans le loader de cette version —
+  mais **le jar produit n'a jamais été chargé par Minecraft**. Détail dans
+  [02-gameplay.md](02-gameplay.md#dd_export-namespace--le-jar-est-généré-pour-toi).
+
+- ✅ **Map de test livrée** (`data/dungeon_defenders/structure/map/test_arena.nbt`, 2026-09-02) :
+  arène 49×6×49 générée hors du jeu par `tools/generer-map-de-test.py`, pour rendre la chaîne
+  complète (découverte, chargement, config, vagues, force-chargement) exerçable avant qu'une
+  vraie map existe. Contient cristal, spawner configuré, coffre de mana, marqueur de spawn, zones
+  interdites et un bloc de config réglé sur **3 vagues** — différent du défaut de 5 exprès.
+  Le fichier a été relu tag par tag après génération. Map de **test**, à retirer du pack
+  « Campagne » quand du vrai contenu existera. **Jamais chargée par Minecraft.** Détail dans
+  [02-gameplay.md](02-gameplay.md#la-map-de-test-livrée--maptest_arenanbt).
 
 ## Corrections apportées
 
@@ -940,30 +1003,43 @@ injouable. Rien de codé, voir le backlog dans
 - Le **chargement de la structure de la taverne** (`TavernSpawn#placeTavern`, 2026-08-31) : le
   mécanisme complet (lecture du `.nbt`, nettoyage de zone dimensionné sur la structure, marqueur
   d'arrivée non consommé, repli si le fichier manque). Voir "Ce qui est implémenté" plus haut.
-  Il ne manque plus que **le fichier lui-même**, que le joueur construit.
+  **Le fichier lui-même est livré depuis le 2026-09-11** (`data/dungeon_defenders/structure/tavern.nbt`,
+  premier jet du joueur : 40×12×35, 16 800 blocs, cristal de la taverne + support de mannequin +
+  spawn joueur + décor). Reçu via `map-handoff/`, vérifié avant intégration (un seul de chacun
+  des trois blocs fonctionnels, `DataVersion` cohérent). Premier vrai test en jeu (même jour) :
+  **corrigé** — un joueur qui rejoint le monde pour la toute première fois n'atterrissait pas au
+  marqueur `player_spawn`, seulement au centre par défaut ; les téléports explicites (mort,
+  `/dd_leave`, retour de map) le respectaient déjà correctement, ce qui a permis d'isoler le
+  problème au tout premier placement uniquement. `setRespawnData` (mis à jour à chaque
+  chargement du monde) ne suffit visiblement pas pour ce cas précis — particularité vanilla non
+  comprise en profondeur, contournée plutôt que corrigée à la racine : `ModEvents.onPlayerLoggedIn`
+  téléporte explicitement tout joueur qui se connecte sans avoir encore ce drapeau
+  (`ModAttachments.FIRST_SPAWN_HANDLED`, persistant, posé une seule fois par joueur).
 - L'écran de choix de map/difficulté dans la taverne (`TavernCrystalBlock`/
   `MapSelectionScreen`, voir plus haut et
   [02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté)) — la difficulté
   choisie s'applique réellement.
 - Le **mécanisme** de chargement de map (`MapInstance.java`) : un emplacement partagé
-  (`MAP_POS`, une seule map active à la fois), nettoyé puis reposé avec un placeholder
-  générique au clic sur "Jouer" (`startGame`), tout le monde téléporté ensemble. Retour à la
-  taverne via la commande `/dd_leave` (`returnToTavern`), aussi accessible comme lien
-  cliquable dans les messages de victoire/défaite (voir "Ce qui est implémenté" plus haut).
+  (`MAP_POS`, une seule map active à la fois), sa vraie structure `.nbt` chargée au clic sur
+  "Jouer" (`startGame`/`placeMap`, depuis le 2026-09-02, même mécanisme que `TavernSpawn`), tout
+  le monde téléporté ensemble. Retour à la taverne via la commande `/dd_leave`
+  (`returnToTavern`), aussi accessible comme lien cliquable dans les messages de victoire/défaite
+  (voir "Ce qui est implémenté" plus haut). **Corrigé (2026-09-06, même incident que
+  `TavernSpawn`)** : le repli sur l'arène placeholder (aucune structure trouvée) nettoyait la
+  zone avant de poser son sol, effaçant une map en cours de construction à la main à `MAP_POS`
+  au clic suivant sur "Jouer" (même la sienne, ou celle d'une autre map elle aussi sans
+  structure — même emplacement partagé). Le repli ne nettoie plus jamais rien désormais.
   Voir [02-gameplay.md](02-gameplay.md#la-map-active--mapinstancejava).
 - Le **mécanisme** du bloc de spawn joueur (`PLAYER_SPAWN`,
   `findAndConsumeSpawnMarker`, voir "Ce qui est implémenté" plus haut) : prêt à remplacer le
   repli sur `MAP_POS` dès qu'une vraie structure en pose un, mais rien à trouver tant que
   `buildPlaceholderArena()` ne pose qu'un sol générique.
 
-**Reste à faire** : le choix de map précis dans le carrousel n'a toujours aucun effet (une
-seule map placeholder générique pour l'instant, quel que soit l'élément sélectionné) ; le
-**fichier** de structure de la taverne (le mécanisme de chargement existe, il n'a rien à
-charger) ; le mannequin d'entraînement annoncé pour la taverne (voir le backlog) ; au
-moins une vraie map, et le vrai chargement de sa structure `.nbt` (remplacerait
-`buildPlaceholderArena()`, en réutilisant ce que fait déjà `TavernSpawn`) ; la réinitialisation tours/PV du cristal
-entre deux tentatives ;
-le force-chargement pendant une partie ; une bordure/barrière anti-chute dans le vide en
+**Reste à faire** : la taverne a désormais un premier jet réel (voir plus haut, 2026-09-11) ;
+les maps, elles, n'ont encore que du contenu généré hors du jeu (`test_arena`, `ruins_sanctuary`)
+comme galop d'essai, pas de vraie map de campagne construite par le joueur. Puis l'aperçu des
+maps capturé en jeu (phase 2), et la réinitialisation tours/PV du cristal entre deux tentatives ;
+une bordure/barrière anti-chute dans le vide en
 dehors des zones bâties ; les métadonnées par map (nombre de vagues, multiplicateur de
 difficulté — `MAX_WAVE` est encore global). Le point de sortie, lui, est réglé autrement que
 prévu : par le bouton « Abandonner le niveau » du menu pause plutôt qu'un bloc à poser (voir

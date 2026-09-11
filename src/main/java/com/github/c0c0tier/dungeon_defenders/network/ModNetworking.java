@@ -8,13 +8,18 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MapConfigBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.MapRegistry;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -28,7 +33,10 @@ import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import org.slf4j.Logger;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,6 +47,8 @@ import java.util.List;
 // envoient.
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class ModNetworking {
+
+    private static final Logger LOGGER = LogUtils.getLogger();
 
     // Distance max (au carré) entre le joueur et le spawner pour accepter le paquet — même
     // ordre de grandeur que la portée d'interaction avec un bloc à conteneur vanilla.
@@ -87,6 +97,16 @@ public class ModNetworking {
                 LeaveMapPayload.TYPE,
                 LeaveMapPayload.STREAM_CODEC,
                 ModNetworking::handleLeaveMap
+        );
+        registrar.playToServer(
+                MapConfigPayload.TYPE,
+                MapConfigPayload.STREAM_CODEC,
+                ModNetworking::handleMapConfig
+        );
+        registrar.playToServer(
+                DeleteMapPayload.TYPE,
+                DeleteMapPayload.STREAM_CODEC,
+                ModNetworking::handleDeleteMap
         );
         // Sans handler ici : paquets clientbound du mod, le handler vit côté client
         // uniquement (DungeonDefendersModClient#onRegisterClientPayloadHandlers), pour ne
@@ -225,7 +245,53 @@ public class ModNetworking {
             if (!(level instanceof ServerLevel serverLevel)) {
                 return;
             }
-            MapInstance.startGame(serverLevel);
+            // Revérifié côté serveur : le client a listé les maps à l'ouverture de l'écran, mais
+            // l'identifiant reçu reste une valeur venue du réseau. Introuvable (map supprimée
+            // entre-temps, client bricolé...), on retombe sur l'arène provisoire plutôt que de
+            // refuser silencieusement.
+            MapInstance.startGame(serverLevel, MapRegistry.find(serverLevel, payload.structureId()).orElse(null));
+        });
+    }
+
+    // Réglages d'une map, envoyés par MapConfigScreen. Créatif uniquement, comme la config d'un
+    // spawner : une map est censée être figée une fois construite.
+    private static void handleMapConfig(MapConfigPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (level.isClientSide() || !player.isCreative()) {
+                return;
+            }
+
+            BlockPos pos = payload.pos();
+            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > MAX_DISTANCE_SQ) {
+                return;
+            }
+
+            if (level.getBlockEntity(pos) instanceof MapConfigBlockEntity mapConfig) {
+                mapConfig.applyConfig(payload.displayName(), payload.order(), payload.waveCount(), payload.scoreMultiplier());
+            }
+        });
+    }
+
+    // Suppression d'une map créée en jeu, après confirmation côté client. Ne peut effacer qu'un
+    // fichier du dossier `generated/` de la sauvegarde : une map livrée dans un jar (la campagne,
+    // un pack tiers) est une ressource en lecture seule, d'où le message d'échec.
+    private static void handleDeleteMap(DeleteMapPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (!(level instanceof ServerLevel serverLevel) || !player.isCreative()) {
+                return;
+            }
+            if (!MapDefinition.isMapStructure(payload.structureId())) {
+                return;
+            }
+
+            boolean deleted = MapRegistry.delete(serverLevel.getStructureManager(), payload.structureId());
+            player.sendSystemMessage(Component.translatable(deleted
+                    ? "dungeon_defenders.map_config.deleted"
+                    : "dungeon_defenders.map_config.delete_failed", payload.structureId().toString()));
         });
     }
 

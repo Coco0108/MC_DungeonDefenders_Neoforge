@@ -541,3 +541,51 @@ Deux contraintes à respecter à la construction :
   `template.getSize()` — mais elle est reposée **entièrement** à chaque chargement du monde,
   blocs **et entités** : tout ce qu'un joueur y aurait modifié ou laissé traîner est écrasé au
   redémarrage. Les entités décoratives (cadres, supports à armure, tableaux) sont bien posées.
+
+## Créer et publier une map
+
+Tout se fait **en jeu**, sans toucher au code ni écrire de JSON.
+
+1. Construire la map en créatif, **loin de (0, 65, 0) et de (10000, 65, 0)** — ces deux zones
+   sont rasées, l'une à chaque chargement du monde, l'autre au lancement d'une partie.
+2. Y poser : un `eternia_crystal` (l'objectif), au moins un `spawner` configuré, un
+   `player_spawn` (point d'arrivée, consommé au démarrage), des marqueurs `no_build_zone` où
+   la pose de tours doit être interdite, et un **`map_config`** (nom, ordre dans le pack,
+   nombre de vagues, multiplicateur de score).
+3. Encadrer le tout avec un **bloc de structure** vanilla en mode « Sauvegarder », en la
+   nommant **`<namespace>:map/<id>`** — le namespace est l'identité du pack
+   (`dungeon_defenders` pour la campagne, le sien pour une extension).
+4. C'est fini : la map apparaît dans l'écran de choix du cristal de la taverne, sans
+   redémarrage. Le fichier est écrit dans `<monde>/generated/<namespace>/structure/map/<id>.nbt`.
+
+> **Le nom de sauvegarde est le seul identifiant.** Le bloc de configuration ne le connaît pas
+> et ne peut donc pas l'afficher — c'est pour ça que la suppression d'une map demande de le
+> saisir à la main dans son écran.
+
+### Publier
+
+Une map créée en jeu vit dans la sauvegarde du monde : elle ne part pas avec le mod. Pour la
+distribuer, copier son `.nbt` dans les ressources d'un jar :
+
+```
+mon_pack.jar
+├── META-INF/neoforge.mods.toml      (dépendance à dungeon_defenders)
+├── data/mon_pack/structure/map/ma_map.nbt
+└── assets/mon_pack/textures/gui/maps/ma_map.png     (aperçu 128x72)
+```
+
+**Aucun code dans le jar.** Il est découvert automatiquement (voir `MapRegistry`). Le nom
+affiché du pack peut venir d'un `assets/mon_pack/lang/fr_fr.json` contenant
+`"dungeon_defenders.map_pack.mon_pack": "Mon Pack"` ; sans ça c'est le namespace qui s'affiche.
+
+Un datapack seul fonctionne pour la structure mais ne peut pas embarquer l'image d'aperçu.
+
+**Tu n'as pas à construire ce jar à la main** : `/dd_export <namespace>` le génère dans
+`<dossier du serveur>/dungeon_defenders_export/<namespace>.jar`, avec le `mods.toml`, toutes les
+maps du pack, leurs aperçus s'ils existent, et un fichier de langue de départ à retoucher pour
+donner un vrai nom au pack. Un jar par **pack**, pas par map. Seules les maps créées en jeu sont
+exportées — celles qui viennent déjà d'un jar sont en lecture seule.
+
+> **Piège** : une structure du monde est cherchée **avant** celle d'un jar. Une map publiée puis
+> re-sauvegardée en jeu sous le même identifiant est remplacée par la version locale tant qu'on
+> ne la supprime pas de la sauvegarde.

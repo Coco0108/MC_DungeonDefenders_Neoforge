@@ -12,6 +12,7 @@ import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
 import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,6 +27,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -183,6 +185,26 @@ public class ModEvents {
         }
     }
 
+    // Corrige le tout premier placement d'un joueur qui n'avait jamais rejoint ce monde — voir
+    // ModAttachments.FIRST_SPAWN_HANDLED pour le pourquoi (setRespawnData, mis à jour à chaque
+    // chargement du monde par TavernSpawn, ne suffit pas pour ce cas précis, retour en jeu
+    // 2026-09-11). Le drapeau persistant garantit que ça ne se déclenche qu'une seule fois par
+    // joueur, jamais aux reconnexions suivantes une fois sa position déjà correcte.
+    @SubscribeEvent
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        Player player = event.getEntity();
+        if (player.level().isClientSide() || player.getData(ModAttachments.FIRST_SPAWN_HANDLED)) {
+            return;
+        }
+        player.setData(ModAttachments.FIRST_SPAWN_HANDLED, true);
+
+        if (!(player.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        BlockPos arrival = TavernSpawn.arrivalPos(serverLevel);
+        player.teleportTo(arrival.getX() + 0.5, arrival.getY(), arrival.getZ() + 0.5);
+    }
+
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
@@ -228,7 +250,7 @@ public class ModEvents {
             // Capturé avant enterBuild/onVictory, qui font tous les deux avancer/réinitialiser
             // current_wave : c'est la vague qu'on vient de nettoyer qui détermine la victoire,
             // pas celle qui suit.
-            boolean wasLastWave = level.getData(ModAttachments.CURRENT_WAVE) >= ModAttachments.MAX_WAVE;
+            boolean wasLastWave = level.getData(ModAttachments.CURRENT_WAVE) >= ModAttachments.waveCount(level);
             if (wasLastWave) {
                 PhaseTransitions.onVictory(level);
             } else {

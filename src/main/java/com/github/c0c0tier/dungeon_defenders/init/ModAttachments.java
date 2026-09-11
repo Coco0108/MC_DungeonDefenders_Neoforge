@@ -63,6 +63,26 @@ public class ModAttachments {
                     .sync(ByteBufCodecs.VAR_INT)
                     .build());
 
+    // Nombre de vagues de la map en cours. Vient du bloc de configuration de la map (voir
+    // MapDefinition), posé à startGame ; MAX_WAVE n'en est plus que le repli, pour une map qui
+    // ne le précise pas et pour la taverne. État de la Level, comme la vague courante.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> MAP_WAVE_COUNT = ATTACHMENT_TYPES.register(
+            "map_wave_count",
+            () -> AttachmentType.builder(() -> MAX_WAVE)
+                    .serialize(Codec.INT.fieldOf("MapWaveCount"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Identifiant de structure de la map en cours ("" à la taverne). Synchronisé parce que le
+    // bouton "Rejouer" de l'écran de fin de partie doit savoir QUELLE map relancer : le client
+    // n'a plus la liste sous la main à ce moment-là, l'écran de choix est fermé depuis longtemps.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<String>> CURRENT_MAP = ATTACHMENT_TYPES.register(
+            "current_map",
+            () -> AttachmentType.<String>builder(() -> "")
+                    .serialize(Codec.STRING.fieldOf("CurrentMap"))
+                    .sync(ByteBufCodecs.STRING_UTF8)
+                    .build());
+
     // Nombre total d'ennemis de la vague en cours et nombre d'ennemis déjà tués. Même
     // logique que current_wave : état de la Level, pas du joueur. Le total est réinitialisé
     // à sa valeur par défaut au premier chargement du monde ; les tués repartent de 0, comme
@@ -112,6 +132,26 @@ public class ModAttachments {
             () -> AttachmentType.builder(() -> 0)
                     .serialize(Codec.INT.fieldOf("Score"))
                     .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Vrai dès que la toute première position de ce joueur sur ce monde a été corrigée vers
+    // l'arrivée de la taverne (voir ModEvents.onPlayerLoggedIn) — persistant (pour ne corriger
+    // qu'une seule fois par joueur, jamais à chaque reconnexion), jamais synchronisé : pure
+    // comptabilité serveur, jamais lue côté client.
+    //
+    // Pourquoi ce correctif existe : setRespawnData (TavernSpawn#onLevelLoad) met bien à jour le
+    // point de spawn du monde à chaque chargement, et ça fonctionne pour tout téléport explicite
+    // (mort, /dd_leave, retour de map). Mais en jeu (2026-09-11), le tout premier joueur à
+    // rejoindre un monde tout neuf n'atterrissait PAS au marqueur `player_spawn` de la taverne —
+    // seulement au centre par défaut. Vraisemblablement un cas particulier vanilla où le tout
+    // premier placement d'un joueur ne relit pas les données de respawn en vigueur au moment où
+    // sa position initiale est calculée. Non reproduit ailleurs : uniquement ce tout premier
+    // placement, jamais vérifié précisément pourquoi côté moteur — ce correctif contourne le
+    // problème plutôt que de le comprendre en profondeur.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> FIRST_SPAWN_HANDLED = ATTACHMENT_TYPES.register(
+            "first_spawn_handled",
+            () -> AttachmentType.builder(() -> Boolean.FALSE)
+                    .serialize(Codec.BOOL.fieldOf("FirstSpawnHandled"))
                     .build());
 
     // Niveau du personnage : état du joueur (contrairement au score), commence à 1,
@@ -190,6 +230,14 @@ public class ModAttachments {
             () -> AttachmentType.builder(() -> Boolean.FALSE)
                     .sync(ByteBufCodecs.BOOL)
                     .build());
+
+    /**
+     * Nombre de vagues de la partie en cours — celui de la map jouée, ou {@link #MAX_WAVE} par
+     * défaut. À préférer à MAX_WAVE partout où il s'agit de "la dernière vague de CETTE partie".
+     */
+    public static int waveCount(net.minecraft.world.level.Level level) {
+        return level.getData(MAP_WAVE_COUNT);
+    }
 
     public static void register(IEventBus modEventBus) {
         ATTACHMENT_TYPES.register(modEventBus);

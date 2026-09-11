@@ -13,7 +13,7 @@ import net.minecraft.world.phys.AABB;
 
 import java.util.List;
 
-// Entretient le mannequin d'entraînement du bloc : s'il n'y en a pas juste au-dessus, en invoque
+// Entretient le mannequin d'entraînement du bloc : s'il n'y en a pas à sa position, en invoque
 // un. Aucun état à persister — contrairement à SpawnerBlockEntity, il n'y a rien à configurer,
 // ce block entity n'existe que pour avoir un tick serveur.
 public class TrainingDummyBlockEntity extends BlockEntity {
@@ -22,8 +22,8 @@ public class TrainingDummyBlockEntity extends BlockEntity {
     // rechargement de monde ou si quelqu'un le supprime à la main. Inutile de balayer les
     // entités 20 fois par seconde pour ça.
     private static final int CHECK_INTERVAL_TICKS = 20;
-    // Marge autour du bloc du dessus : le mannequin ne bouge pas (setNoAi), mais il fait presque
-    // deux blocs de haut et sa boîte englobante dépasse forcément de la case visée.
+    // Marge autour de la position du bloc : le mannequin ne bouge pas (setNoAi), mais il fait
+    // presque deux blocs de haut et sa boîte englobante dépasse forcément de la case visée.
     private static final double SEARCH_RADIUS = 1.5D;
 
     public TrainingDummyBlockEntity(BlockPos pos, BlockState state) {
@@ -35,14 +35,19 @@ public class TrainingDummyBlockEntity extends BlockEntity {
             return;
         }
 
-        BlockPos dummyPos = pos.above();
-        if (!findDummies(serverLevel, dummyPos).isEmpty()) {
+        if (!findDummies(serverLevel, pos).isEmpty()) {
             return;
         }
 
         // EntitySpawnReason.TRIGGERED : invoqué par un mécanisme, pas par le spawn naturel ni
         // par une commande — même famille que ce que fait SpawnerBlockEntity (SPAWNER).
-        ModEntities.TRAINING_DUMMY.get().spawn(serverLevel, dummyPos, EntitySpawnReason.TRIGGERED);
+        //
+        // À la position du bloc lui-même, pas au-dessus (changé le 2026-09-06, retour en jeu :
+        // le mannequin apparaissait flottant un bloc plus haut que l'endroit où le support avait
+        // été posé dans la structure). Comme PlayerSpawnBlock, le marqueur EST l'endroit visé,
+        // pas la case juste en dessous — cohérent entre les deux marqueurs, et sans conséquence
+        // ici puisque le mannequin n'a de toute façon pas besoin de sol sous ses pieds (setNoAi).
+        ModEntities.TRAINING_DUMMY.get().spawn(serverLevel, pos, EntitySpawnReason.TRIGGERED);
     }
 
     /**
@@ -51,7 +56,7 @@ public class TrainingDummyBlockEntity extends BlockEntity {
      * laisserait une entité orpheline que plus rien ne gère.
      */
     public static void discardDummy(ServerLevel level, BlockPos pos) {
-        for (TrainingDummyEntity dummy : findDummies(level, pos.above())) {
+        for (TrainingDummyEntity dummy : findDummies(level, pos)) {
             dummy.discard();
         }
     }

@@ -20,7 +20,7 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 // Le "spawner de mannequin" : ce bloc n'a aucun comportement propre, il se contente de garantir
-// qu'un TrainingDummyEntity existe juste au-dessus de lui (voir TrainingDummyBlockEntity).
+// qu'un TrainingDummyEntity existe à sa position (voir TrainingDummyBlockEntity).
 //
 // Pourquoi un bloc plutôt qu'un mannequin posé directement dans le `.nbt` de la taverne
 // (décidé avec le joueur, 2026-08-31) : le bloc, lui, fait partie de la structure et se repose
