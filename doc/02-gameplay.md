@@ -1696,6 +1696,36 @@ cristal ; `map_config` réglé sur 2 vagues pour rejouer vite pendant les tests.
 pré-posée : rien n'empêche d'en placer une au milieu du couloir pour vérifier au passage qu'un
 monstre s'arrête la taper avant de reprendre sa route vers le cristal.
 
+### `map/detour_ia.nbt`
+
+Complément de `couloir_ecart_ia` (2026-09-12, même génération hors du jeu) : là où celle-ci
+teste une **longue** distance en ligne droite, celle-ci teste une distance **modérée** (~27
+blocs à vol d'oiseau) mais avec **deux obstacles qui rendent la ligne droite impossible** —
+vérifie que `SeekEterniaCrystalGoal`, via le vrai pathfinder Minecraft, sait aussi contourner un
+obstacle plutôt que de foncer bêtement dans un mur.
+
+Généré par `tools/generer-map-detour-ia.py`, salle 13×11×34 :
+
+1. Un **mur plein** de 5 blocs de haut barre presque toute la largeur (rangées `z=7-8`), avec un
+   passage de 3 blocs de large seulement sur la gauche — détour latéral obligatoire.
+2. Une **falaise** de 3 blocs de haut (`z=20`) barre la suite pour qui n'a pas déjà pris la
+   rampe à droite (rangées `z=16-19`, terrassée 1 bloc de plus par rangée — même technique de
+   rampe qu'utilise le générateur du Sanctuaire en Ruines sur une autre branche, pas encore
+   fusionnée ici) — détour **et** changement de hauteur, puisque 3 blocs dépasse largement ce
+   qu'un mob franchit d'un seul pas (~1 bloc en vanilla).
+
+Le sol change aussi de texture (`smooth_quartz`) une fois sur la plateforme haute, pour que la
+différence de hauteur soit lisible d'un coup d'œil en jeu. Cristal, `player_spawn` et coffre de
+mana sur la plateforme haute ; spawner (10 zombies, vagues 1-2) dans la salle basse, avant les
+deux obstacles.
+
+Vérifié hors jeu **par simulation**, pas seulement visuellement : un script BFS (même règle que
+le pathfinder vanilla — pas de 1 bloc de hauteur maximum par déplacement) confirme qu'un chemin
+existe bien du spawner au cristal, qu'il passe obligatoirement par le trou du mur ET par la
+rampe, et que la colonne centrale (le raccourci direct) est bien bloquée aux deux endroits —
+sans cette vérification, une erreur de coordonnées aurait pu livrer une map insoluble sans
+aucun moyen de le voir avant un vrai test en jeu.
+
 ### Le force-chargement de la zone — `init/ModChunkTickets.java`
 
 **Pourquoi c'est indispensable et pas un détail** : Minecraft ne charge et ne fait tourner que

@@ -979,6 +979,28 @@ blocs entre le spawner et le cristal, sans autre chemin possible — voir
       portée, monstres de mêlée qui respectent toujours l'ordre de priorité Block > Corps à
       corps > Cristal > Tourelle une fois à portée locale.
 
+## IA : contournement d'obstacle (`map/detour_ia.nbt`)
+
+Complète le test ci-dessus : celui-là vérifie qu'un monstre converge sur une **longue**
+distance en ligne droite, celui-ci vérifie qu'il sait **contourner** un obstacle sur une
+distance **modérée** (~27 blocs) où la ligne droite est physiquement impossible (mur avec
+passage étroit, puis falaise franchissable seulement via une rampe à l'opposé) — voir
+[02-gameplay.md](02-gameplay.md#mapdetour_ianbt).
+Vérifié hors jeu par simulation (BFS), pas seulement par relecture des coordonnées — mais
+**jamais vu bouger un vrai monstre dedans**.
+
+- [ ] Choisir « Detour - IA » (pack "Maps de test") dans l'écran de la taverne, jouer, passer en
+      Combat : un monstre qui spawn se dirige d'abord vers le passage étroit à gauche du mur
+      (pas vers le mur lui-même), puis, une fois de l'autre côté, se dirige vers la droite pour
+      trouver la rampe plutôt que de rester coincé au pied de la falaise.
+- [ ] Le monstre monte bien la rampe (changement de hauteur visible, sol clair une fois en
+      haut) puis continue vers le cristal, sans redescendre ni faire d'aller-retour absurde.
+- [ ] Poser une tour sur le trajet (dans le passage du mur, ou en haut près du cristal) : même
+      comportement "s'arrête taper, puis reprend sa route" que sur `couloir_ecart_ia`.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception, et surtout qu'un monstre ne reste pas
+      visiblement bloqué/tremblant indéfiniment contre le mur ou la falaise (signerait un
+      chemin que le pathfinder ne sait pas calculer malgré la vérification hors jeu).
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

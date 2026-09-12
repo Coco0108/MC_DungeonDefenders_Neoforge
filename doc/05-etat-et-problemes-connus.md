@@ -637,6 +637,19 @@ vérifie la CI.
   génération. **Jamais chargée par Minecraft.** Détail dans
   [02-gameplay.md](02-gameplay.md#mapcouloir_ecart_ianbt).
 
+- ✅ **Map de test « détour IA » livrée**
+  (`data/dungeon_defenders_test/structure/map/detour_ia.nbt`, 2026-09-12) : salle 13×11×34
+  générée hors du jeu par `tools/generer-map-detour-ia.py`, complémentaire de
+  `couloir_ecart_ia` — distance modérée (~27 blocs) mais deux obstacles qui rendent la ligne
+  droite impossible (un mur avec un passage étroit sur un côté, puis une falaise de 3 blocs
+  franchissable seulement via une rampe à l'opposé), pour vérifier que
+  `SeekEterniaCrystalGoal` sait aussi contourner un obstacle et pas seulement foncer tout droit.
+  Vérifiée hors jeu par une simulation BFS (mêmes règles de déplacement que le pathfinder
+  vanilla : 1 bloc de hauteur maximum par pas) qui confirme qu'un chemin existe et passe
+  obligatoirement par les deux détours — pas seulement une relecture visuelle des coordonnées.
+  **Jamais chargée par Minecraft.** Détail dans
+  [02-gameplay.md](02-gameplay.md#mapdetour_ianbt).
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.
