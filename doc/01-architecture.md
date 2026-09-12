@@ -74,7 +74,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── ai/
     │   │       ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal (un seul sous-classeur : la version à distance)
     │   │       ├── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal (archers, ignorent Blockade/Turret)
-    │   │       └── AttackPriorityTargetGoal.java         # Goal unique des monstres de mêlée : choisit Block > Corps à corps > Cristal > Tourelle selon AiAttackTarget
+    │   │       ├── AttackPriorityTargetGoal.java         # Goal unique des monstres de mêlée : choisit Block > Corps à corps > Cristal > Tourelle selon AiAttackTarget
+    │   │       └── SeekEterniaCrystalGoal.java           # Goal de secours (priorité plus basse) : navigue vers ModAttachments.CRYSTAL_POS sans limite de distance
     │   ├── gametest/
     │   │   ├── DungeonDefendersGameTests.java # Fonctions de test + enregistrement (RegisterGameTestsEvent)
     │   │   └── ModGameTestInstance.java       # GameTestInstance custom (contourne Registries.TEST_FUNCTION, hors d'atteinte d'un mod)
@@ -91,7 +92,7 @@ MC_DungeonDefenders_Neoforge/
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
     │       ├── ManaChestBlock.java           # Meuble de map : donne du mana au clic droit (survie, 1x/vague) ou config (créatif)
     │       └── entity/
-    │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal)
+    │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal) + enregistre CRYSTAL_POS
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
     │           ├── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D, toujours affichée (client)
     │           ├── AiAttackTarget.java                     # Interface : contrat + paliers de priorité IA (Block/Corps à corps/Cristal/Tourelle)
@@ -215,7 +216,8 @@ Chargement FML
    ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana, experience, current_wave,
    │                                      wave_enemies_total, wave_enemies_killed, game_phase,
    │                                      score, level, character_name, difficulty,
-   │                                      combat_session, active_spawners, active_mana_chests, ready
+   │                                      combat_session, active_spawners, active_mana_chests,
+   │                                      crystal_pos, ready
    ├─ RegisterEvent(MENU)              → spawner_config, mana_chest_config (MenuType)
    ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal, spawner, mana_chest (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
@@ -253,6 +255,10 @@ EterniaCrystalBlockEntity#setCrystalHealth, à 0 PV :
 Chaque SpawnerBlockEntity, en plus de ces événements :
    ├─ setLevel(...)/setRemoved()   → s'ajoute/se retire de ModAttachments.ACTIVE_SPAWNERS
    └─ BlockEntityTicker [serveur]  → SpawnerBlockEntity.serverTick(...), une fois par tick de bloc
+
+EterniaCrystalBlockEntity, même principe :
+   └─ setLevel(...)/setRemoved()   → pose/retire ModAttachments.CRYSTAL_POS (voir 02-gameplay.md,
+                                      "Le goal de longue distance" — lu par SeekEterniaCrystalGoal)
 
 Clic droit sur un SpawnerBlock, sans shift, en créatif uniquement (voir 02-gameplay.md) :
    └─ player.openMenu(SpawnerConfigMenuProvider)
