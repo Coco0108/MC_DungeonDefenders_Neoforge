@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders.block.entity;
 
 import com.github.c0c0tier.dungeon_defenders.Config;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -11,6 +12,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -31,6 +34,33 @@ public class EterniaCrystalBlockEntity extends BlockEntity implements AiAttackTa
 
     public int getCrystalHealth() {
         return this.crystalHealth;
+    }
+
+    // --- REGISTRE DE POSITION (voir ModAttachments.CRYSTAL_POS) ---
+    // Même patron que SpawnerBlockEntity#setLevel/#setRemoved pour ACTIVE_SPAWNERS : permet à
+    // entity/ai/SeekEterniaCrystalGoal.java de naviguer directement vers le cristal sans avoir
+    // à le re-chercher.
+
+    @Override
+    public void setLevel(Level level) {
+        super.setLevel(level);
+        if (level instanceof ServerLevel serverLevel) {
+            serverLevel.setData(ModAttachments.CRYSTAL_POS, this.worldPosition);
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        // Ne retire la position que si elle pointait encore vers CE cristal : évite qu'un
+        // (dé)chargement de chunk désordonné entre deux cristaux (cas normalement impossible,
+        // un seul par map) n'efface la position d'un autre exemplaire plus récent.
+        if (this.level instanceof ServerLevel serverLevel
+                && this.worldPosition.equals(serverLevel.getData(ModAttachments.CRYSTAL_POS))) {
+            // setData(..., null) est refusé par NeoForge (Objects.requireNonNull) : removeData
+            // est la façon correcte d'effacer un attachment à valeur par défaut null.
+            serverLevel.removeData(ModAttachments.CRYSTAL_POS);
+        }
     }
 
     @Override

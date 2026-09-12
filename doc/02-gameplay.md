@@ -621,23 +621,67 @@ pose vanilla "arc tendu" puisque le squelette porte déjà un arc par défaut) e
 le **visuel** du tir, ce n'est pas sa collision qui inflige les dégâts (le cristal n'étant pas
 une entité, une flèche vanilla ne saurait pas le "toucher" toute seule).
 
+### Le goal de longue distance — `entity/ai/SeekEterniaCrystalGoal.java`, `ModAttachments.CRYSTAL_POS`
+
+Les trois goals ci-dessus ont tous un point commun : ils héritent (directement ou via
+`AbstractEterniaCrystalAttackGoal`) de `MoveToBlockGoal`, qui ne s'active que si une cible
+existe déjà dans un rayon de recherche **local et court** (16 blocs pour le cristal, 8 pour les
+tours). Tant qu'un monstre n'est pas par hasard entré dans ce rayon, rien ne le pousse à s'en
+approcher — il retombe sur l'errance aléatoire vanilla, ce qui peut ne jamais converger sur une
+grande map (63 blocs de large pour le Sanctuaire en Ruines, par exemple). Décidé avec le joueur
+(2026-09-12) : peu importe la distance, un monstre doit toujours pouvoir trouver un chemin
+jusqu'au cristal.
+
+`ModAttachments.CRYSTAL_POS` (`BlockPos` nullable, ni persistant ni synchronisé) retient la
+position réelle du cristal actuellement chargé sur la `Level`, posée par
+`EterniaCrystalBlockEntity#setLevel` et retirée par `#setRemoved` — même patron que
+`ACTIVE_SPAWNERS`/`ACTIVE_MANA_CHESTS`. Évite de refaire une recherche en spirale coûteuse à
+chaque monstre : la position est déjà connue.
+
+`SeekEterniaCrystalGoal` (`extends Goal`, `Flag.MOVE`) navigue en ligne directe vers cette
+position via le vrai pathfinder Minecraft (`mob.getNavigation().moveTo(...)`, calculé une fois
+au démarrage puis relancé toutes les `RETRY_INTERVAL_TICKS` (40, ~2 s) si la navigation
+s'arrête sans être arrivée — chemin bloqué ou déjà terminé). Aucune limite de distance dans
+`canUse()` (juste `crystalPos() != null`) : contrairement aux trois goals ci-dessus, celui-ci
+est censé toujours pouvoir s'activer.
+
+Ajouté à une **priorité plus basse** que le goal de palier (`AttackPriorityTargetGoal`/
+`RangedAttackEterniaCrystalGoal`), qui partage `Flag.MOVE` : dès qu'une cible locale existe (une
+tour à moins de 8 blocs sur le chemin, par exemple), le goal de palier reprend la main sur le
+déplacement ; une fois cette cible détruite ou hors de portée, `SeekEterniaCrystalGoal` redevient
+le seul goal éligible et reprend naturellement la direction du cristal. C'est le comportement
+"le monstre tape la tour sur son chemin puis reprend sa route vers le cristal" obtenu
+**gratuitement** par la hiérarchie de priorité des goals, sans système de points de passage
+dédié.
+
 ### L'attribution — `ModEvents.onMonsterSpawn`
 
 Écoute `EntityJoinLevelEvent` sur le bus de jeu. Pour chaque `Monster` rejoignant un monde
-côté serveur, **un seul** goal est ajouté au `goalSelector`, selon le type :
+côté serveur :
 
 - `AbstractSkeleton` (squelette, et tout futur sous-type) reçoit `RangedAttackEterniaCrystalGoal`
-  (priorité 1) — ignore Blockade/Turret, ne vise que le cristal à distance.
-- Tout le reste reçoit `AttackPriorityTargetGoal` (priorité 0) — choisit lui-même sa cible
-  parmi Block/Corps à corps/Cristal/Tourelle selon leur palier de priorité et leur portée
-  respective (voir "Le goal de mêlée unifié" plus haut).
+  (priorité 1) puis `SeekEterniaCrystalGoal` (priorité 2) — ignore Blockade/Turret, ne vise que
+  le cristal à distance ou, hors de portée, s'en approche en ligne directe.
+- Tout le reste reçoit `AttackPriorityTargetGoal` (priorité 0) puis `SeekEterniaCrystalGoal`
+  (priorité 1) — choisit sa cible parmi Block/Corps à corps/Cristal/Tourelle selon leur palier
+  de priorité et leur portée respective (voir "Le goal de mêlée unifié" plus haut), ou converge
+  vers le cristal si rien n'est à portée.
 
-> `Monster` plutôt que `PathfinderMob` : les deux goals n'exigent techniquement qu'un
+Dans les deux cas, l'attribut vanilla `FOLLOW_RANGE` du monstre est aussi relevé à 128 blocs
+(`MONSTER_FOLLOW_RANGE`) : c'est ce même attribut que le pathfinder vanilla utilise pour borner
+la recherche de chemin, pas seulement la détection de cible — sans ce relèvement,
+`SeekEterniaCrystalGoal` ne pourrait tout simplement pas calculer de chemin sur toute la
+distance d'une grande map (la valeur vanilla d'un zombie, 35 blocs, ne suffit déjà plus au
+Sanctuaire en Ruines).
+
+> `Monster` plutôt que `PathfinderMob` : les trois goals n'exigent techniquement qu'un
 > `PathfinderMob`, mais cette classe couvre aussi les mobs passifs (animaux, villageois...).
 > `Monster` est la bonne frontière sémantique — tout ce qui est hostile, rien de passif.
 
 `EntityJoinLevelEvent` se déclenche aussi au rechargement d'un chunk et au changement de
-dimension. Le code vérifie donc d'abord qu'aucun des deux goals n'est déjà présent :
+dimension. Le code vérifie donc d'abord qu'aucun des deux goals "marqueurs" n'est déjà présent
+(pas besoin de vérifier `SeekEterniaCrystalGoal` séparément : il est toujours ajouté dans la
+même branche que l'un des deux autres) :
 
 ```java
 monster.goalSelector.getAvailableGoals().stream()
@@ -645,7 +689,7 @@ monster.goalSelector.getAvailableGoals().stream()
                 || wrapped.getGoal() instanceof AttackPriorityTargetGoal)
 ```
 
-Sans ce test, un même monstre cumulerait plusieurs exemplaires du goal et attaquerait le
+Sans ce test, un même monstre cumulerait plusieurs exemplaires des goals et attaquerait le
 cristal plusieurs fois par seconde.
 
 ## La barre de vie des monstres — `entity/MobHealthBarRenderer.java`
