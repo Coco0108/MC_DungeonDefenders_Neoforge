@@ -549,16 +549,22 @@ Nouveau (2026-09-02), jamais verifie en jeu. **La plus grosse modification a ce 
 GameMap disparait, le carrousel devient dynamique, StartGamePayload change de forme, et le
 nombre de vagues n'est plus une constante. Beaucoup de regressions possibles sur l'existant.
 
-> Une **map de test est desormais livree** dans le mod (`dungeon_defenders:map/test_arena`) :
+> Une **map de test est desormais livree** dans le mod (`dungeon_defenders_test:map/test_arena`) :
 > l'essentiel de cette section se teste donc sans rien construire. Elle s'appelle "Arene de
 > test", tient en 3 vagues, et contient deja cristal, spawner, coffre de mana, marqueur de spawn
 > et zones interdites.
 
-- [ ] Clic droit sur le cristal de la taverne : "Arene de test" apparait dans le pack
-      "Campagne". L'apercu affiche la texture manquante (aucun PNG) — attendu.
+- [ ] Clic droit sur le cristal de la taverne : "Arene de test" apparait dans le pack **"Maps de
+      test"**, separe de "Campagne" (namespace `dungeon_defenders_test`, pas `dungeon_defenders`
+      — voir 05-etat-et-problemes-connus.md). L'apercu affiche la texture manquante (aucun PNG)
+      — attendu.
 - [ ] Cliquer "Jouer" : l'arene se pose a (10000, 65, 0), murs compris. On arrive devant le
       cristal, pas au milieu du vide.
 - [ ] Le HUD affiche **Vague 1/3**, pas 1/5 — la preuve que le nombre de vagues vient de la map.
+- [ ] **Corrige (2026-09-12)** : le compteur d'ennemis de la vague (ennemis tues/total, HUD) doit
+      afficher le vrai total (12 = 8 zombies + 4 squelettes) des l'arrivee sur la map, pas 0 —
+      sinon la vague ne se termine jamais meme une fois tous les ennemis tues (voir
+      05-etat-et-problemes-connus.md).
 - [ ] Le spawner fait bien apparaitre 8 zombies et 4 squelettes en combat.
 - [ ] Le coffre de mana s'ouvre et donne 50 mana.
 - [ ] Poser une tour pres du spawner (dans la zone rouge) est refuse avec le message ; quelques
@@ -952,6 +958,52 @@ serveur.` Sinon il affiche la chaîne fautive, à corriger avec un des deux patr
       connecté à distance, pas seulement en solo.
 - [ ] À deux joueurs si possible : le score/l'XP sont bien partagés, et chacun voit ses propres
       popups.
+
+## IA : convergence longue distance vers le cristal (`SeekEterniaCrystalGoal`)
+
+Corrige un trou de fond jamais testé avant : sans ça, un monstre spawné hors du rayon local des
+goals de palier (16 blocs cristal / 8 blocs tour) errait au hasard sans jamais forcément
+approcher le cristal. Une map dédiée à ce test est livrée dans le mod
+(`dungeon_defenders_test:map/couloir_ecart_ia`, dans le pack "Maps de test") : un couloir de 74
+blocs entre le spawner et le cristal, sans autre chemin possible — voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#convergence-longue-distance-vers-le-cristal-seeketerniacrystalgoal).
+
+- [ ] Choisir « Couloir - ecart IA » (pack "Maps de test") dans l'écran de la taverne, jouer,
+      passer en Combat : un monstre qui spawn à l'autre bout du couloir se dirige tout de suite
+      vers le cristal (pas d'errance aléatoire prolongée avant de "tomber" dans son rayon de
+      détection de 16 blocs).
+- [ ] Poser une tour (Blockade ou Turret) au milieu du couloir, sur le chemin : le monstre
+      s'arrête pour la taper dès qu'il est à portée, puis, une fois la tour détruite, reprend sa
+      route vers le cristal sans avoir besoin de la retrouver par hasard.
+- [ ] Un monstre bloqué (aucun chemin possible vers le cristal, si testable) ne plante pas —
+      il retente périodiquement plutôt que de figer ou de spammer des calculs de chemin.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `SeekEterniaCrystalGoal`,
+      `ModAttachments.CRYSTAL_POS`, ou `EterniaCrystalBlockEntity`.
+- [ ] Aucune régression sur le comportement déjà validé : archers qui tirent sur le cristal à
+      portée, monstres de mêlée qui respectent toujours l'ordre de priorité Block > Corps à
+      corps > Cristal > Tourelle une fois à portée locale.
+
+## IA : contournement d'obstacle (`map/detour_ia.nbt`)
+
+Complète le test ci-dessus : celui-là vérifie qu'un monstre converge sur une **longue**
+distance en ligne droite, celui-ci vérifie qu'il sait **contourner** un obstacle sur une
+distance **modérée** (~27 blocs) où la ligne droite est physiquement impossible (mur avec
+passage étroit, puis falaise franchissable seulement via une rampe à l'opposé) — voir
+[02-gameplay.md](02-gameplay.md#mapdetour_ianbt).
+Vérifié hors jeu par simulation (BFS), pas seulement par relecture des coordonnées — mais
+**jamais vu bouger un vrai monstre dedans**.
+
+- [ ] Choisir « Detour - IA » (pack "Maps de test") dans l'écran de la taverne, jouer, passer en
+      Combat : un monstre qui spawn se dirige d'abord vers le passage étroit à gauche du mur
+      (pas vers le mur lui-même), puis, une fois de l'autre côté, se dirige vers la droite pour
+      trouver la rampe plutôt que de rester coincé au pied de la falaise.
+- [ ] Le monstre monte bien la rampe (changement de hauteur visible, sol clair une fois en
+      haut) puis continue vers le cristal, sans redescendre ni faire d'aller-retour absurde.
+- [ ] Poser une tour sur le trajet (dans le passage du mur, ou en haut près du cristal) : même
+      comportement "s'arrête taper, puis reprend sa route" que sur `couloir_ecart_ia`.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception, et surtout qu'un monstre ne reste pas
+      visiblement bloqué/tremblant indéfiniment contre le mur ou la falaise (signerait un
+      chemin que le pathfinder ne sait pas calculer malgré la vérification hors jeu).
 
 ## Général
 

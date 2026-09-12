@@ -610,14 +610,45 @@ vérifie la CI.
   mais **le jar produit n'a jamais été chargé par Minecraft**. Détail dans
   [02-gameplay.md](02-gameplay.md#dd_export-namespace--le-jar-est-généré-pour-toi).
 
-- ✅ **Map de test livrée** (`data/dungeon_defenders/structure/map/test_arena.nbt`, 2026-09-02) :
-  arène 49×6×49 générée hors du jeu par `tools/generer-map-de-test.py`, pour rendre la chaîne
-  complète (découverte, chargement, config, vagues, force-chargement) exerçable avant qu'une
-  vraie map existe. Contient cristal, spawner configuré, coffre de mana, marqueur de spawn, zones
-  interdites et un bloc de config réglé sur **3 vagues** — différent du défaut de 5 exprès.
-  Le fichier a été relu tag par tag après génération. Map de **test**, à retirer du pack
-  « Campagne » quand du vrai contenu existera. **Jamais chargée par Minecraft.** Détail dans
-  [02-gameplay.md](02-gameplay.md#la-map-de-test-livrée--maptest_arenanbt).
+- ✅ **Pack « Maps de test » séparé de la Campagne** (namespace `dungeon_defenders_test`,
+  2026-09-12, sur demande du joueur) : les maps qui ne sont pas du contenu vivent sous
+  `data/dungeon_defenders_test/structure/map/` plutôt que sous `data/dungeon_defenders/` —
+  `MapRegistry` les découvre pareil (le filtre porte sur le chemin `map/*`, pas le namespace),
+  elles apparaissent simplement dans leur propre colonne de pack à l'écran de choix
+  (`dungeon_defenders.map_pack.dungeon_defenders_test`, "Maps de test"/"Test Maps") au lieu de
+  polluer « Campagne ». Aucun changement de code, juste un déplacement de fichiers + une
+  traduction. Détail dans
+  [02-gameplay.md](02-gameplay.md#le-pack--maps-de-test--datadungeon_defenders_test).
+
+- ✅ **Map de test livrée** (`data/dungeon_defenders_test/structure/map/test_arena.nbt`,
+  2026-09-02) : arène 49×6×49 générée hors du jeu par `tools/generer-map-de-test.py`, pour
+  rendre la chaîne complète (découverte, chargement, config, vagues, force-chargement)
+  exerçable avant qu'une vraie map existe. Contient cristal, spawner configuré, coffre de mana,
+  marqueur de spawn, zones interdites et un bloc de config réglé sur **3 vagues** — différent du
+  défaut de 5 exprès. Le fichier a été relu tag par tag après génération. **Jamais chargée par
+  Minecraft.** Détail dans [02-gameplay.md](02-gameplay.md#maptest_arenanbt).
+
+- ✅ **Map de test « écart IA » livrée**
+  (`data/dungeon_defenders_test/structure/map/couloir_ecart_ia.nbt`, 2026-09-12) : couloir
+  9×6×90 généré hors du jeu par `tools/generer-map-ecart-ia.py`, dédié à
+  [SeekEterniaCrystalGoal](05-etat-et-problemes-connus.md#convergence-longue-distance-vers-le-cristal-seeketerniacrystalgoal) —
+  74 blocs entre le spawner et le cristal, bien au-delà des 16/35 blocs qui suffisaient avant ce
+  goal. Le fichier a été relu et vérifié (bornes, entités posées sur du solide, écart réel) après
+  génération. **Jamais chargée par Minecraft.** Détail dans
+  [02-gameplay.md](02-gameplay.md#mapcouloir_ecart_ianbt).
+
+- ✅ **Map de test « détour IA » livrée**
+  (`data/dungeon_defenders_test/structure/map/detour_ia.nbt`, 2026-09-12) : salle 13×11×34
+  générée hors du jeu par `tools/generer-map-detour-ia.py`, complémentaire de
+  `couloir_ecart_ia` — distance modérée (~27 blocs) mais deux obstacles qui rendent la ligne
+  droite impossible (un mur avec un passage étroit sur un côté, puis une falaise de 3 blocs
+  franchissable seulement via une rampe à l'opposé), pour vérifier que
+  `SeekEterniaCrystalGoal` sait aussi contourner un obstacle et pas seulement foncer tout droit.
+  Vérifiée hors jeu par une simulation BFS (mêmes règles de déplacement que le pathfinder
+  vanilla : 1 bloc de hauteur maximum par pas) qui confirme qu'un chemin existe et passe
+  obligatoirement par les deux détours — pas seulement une relecture visuelle des coordonnées.
+  **Jamais chargée par Minecraft.** Détail dans
+  [02-gameplay.md](02-gameplay.md#mapdetour_ianbt).
 
 ## Corrections apportées
 
@@ -926,6 +957,48 @@ mana insuffisant) — vérifié une seconde fois côté client (la roue elle-mê
 en Combat) pour éviter de faire tout le mode pose avant un refus final, mais le serveur reste
 la seule autorité réelle.
 
+### Convergence longue distance vers le cristal (`SeekEterniaCrystalGoal`)
+
+Discuté avec le joueur (2026-09-12), en préparation du test de la première vraie map : le
+système de priorité ci-dessus (`AttackPriorityTargetGoal`/`RangedAttackEterniaCrystalGoal`) ne
+s'active que si une cible existe déjà dans un rayon **local et court** (16 blocs pour le
+cristal, 8 pour les tours, tous deux calqués sur `MoveToBlockGoal`, qui ne cherche jamais plus
+loin). Tant qu'un monstre spawné loin n'est pas par hasard entré dans ce rayon, il retombe sur
+l'errance aléatoire vanilla — sur une map de 63 blocs de large comme le Sanctuaire en Ruines, ça
+pouvait ne jamais converger.
+
+Demande exacte du joueur : peu importe la distance, le monstre doit trouver un chemin vers le
+cristal ; s'il croise une tour à portée sur son chemin, il la tape, puis reprend le cristal en
+vue une fois la tour détruite. La deuxième moitié (tour sur le chemin) était déjà gratuite grâce
+à la hiérarchie de priorité des `Goal` existants (`Flag.MOVE` partagé) — il manquait juste le
+"trouve un chemin peu importe la distance" en amont.
+
+Ajouté :
+
+- `ModAttachments.CRYSTAL_POS` : position réelle du cristal, posée/retirée par
+  `EterniaCrystalBlockEntity#setLevel`/`#setRemoved` (même patron qu'`ACTIVE_SPAWNERS`) — évite
+  de re-chercher le cristal par une recherche en spirale à chaque monstre.
+- `entity/ai/SeekEterniaCrystalGoal.java` : navigue vers cette position via le vrai pathfinder
+  Minecraft, sans aucune limite de distance dans `canUse()`, à une priorité plus basse que les
+  goals de palier existants — dès qu'une cible locale existe, ceux-ci reprennent la main sur le
+  déplacement (même `Flag.MOVE`) ; une fois détruite/hors de portée, ce goal redevient seul
+  éligible et reprend naturellement la direction du cristal.
+- `ModEvents.onMonsterSpawn` relève aussi l'attribut vanilla `FOLLOW_RANGE` du monstre à 128
+  blocs : c'est ce même attribut qui borne la recherche de chemin du pathfinder vanilla, pas
+  seulement la détection de cible — sans ce relèvement, la valeur par défaut d'un zombie (35
+  blocs) ne suffirait déjà plus à calculer un chemin jusqu'au bout d'une grande map.
+
+Détail complet dans
+[02-gameplay.md](02-gameplay.md#le-goal-de-longue-distance--entityaiseeketerniacrystalgoaljava-modattachmentscrystal_pos).
+Jamais testé en jeu (aucune map assez grande n'a encore tourné avec des monstres vivants) — voir
+[06-a-tester.md](06-a-tester.md).
+
+**Limite connue, assumée pour l'instant** : si le cristal est totalement inaccessible (chemin
+scellé sans issue), le pathfinder échoue silencieusement et le monstre retombe sur l'errance
+vanilla jusqu'au prochain essai (toutes les 40 ticks) — pas de comportement de secours du genre
+"attendre" ou "creuser". Pas un problème en pratique tant qu'une map garde au moins un chemin
+ouvert vers le cristal en permanence, ce qui est déjà une contrainte de conception des maps.
+
 ### La partie se termine, mais sans conclusion visuelle complète
 
 Victoire et défaite existent maintenant (voir "Ce qui est implémenté" plus haut et
@@ -1029,7 +1102,20 @@ injouable. Rien de codé, voir le backlog dans
   zone avant de poser son sol, effaçant une map en cours de construction à la main à `MAP_POS`
   au clic suivant sur "Jouer" (même la sienne, ou celle d'une autre map elle aussi sans
   structure — même emplacement partagé). Le repli ne nettoie plus jamais rien désormais.
-  Voir [02-gameplay.md](02-gameplay.md#la-map-active--mapinstancejava).
+  Voir [02-gameplay.md](02-gameplay.md#la-map-active--mapinstancejava). **Corrigé (2026-09-12,
+  retour en jeu)** : le nombre d'ennemis prévu (`WAVE_ENEMIES_TOTAL`, affiché au HUD) restait
+  bloqué à 0 sur une map fraîchement posée, ce qui empêchait aussi la vague de jamais se
+  terminer (la garde `total > 0 && killed >= total` d'`ModEvents.onMonsterDeath` ne se
+  déclenchait donc jamais). Cause identifiée avec certitude : `MapInstance#startGame` appelle
+  `PhaseTransitions.startNewGame` (qui recalcule ce total) **avant** `placeMap`, donc avec les
+  spawners de la partie précédente (ou aucun, sur une toute première partie) — jamais ceux
+  qu'on vient de poser. `SpawnerBlockEntity#setLevel` déclenche bien son propre recalcul
+  différé au tick suivant (pour éviter la réentrance décrite plus bas), mais ça ne suffisait
+  visiblement pas à corriger le total pour un spawner posé par une structure — pas identifié
+  avec certitude pourquoi ce cas précis diffère d'un rechargement de chunk normal, contourné
+  plutôt que compris en profondeur (même limite que le premier spawn de la taverne, voir plus
+  haut). Fixé en ajoutant un recalcul explicite et synchrone juste après `placeMap`, à un point
+  où tous les spawners de la structure sont garantis posés avec leur configuration réelle.
 - Le **mécanisme** du bloc de spawn joueur (`PLAYER_SPAWN`,
   `findAndConsumeSpawnMarker`, voir "Ce qui est implémenté" plus haut) : prêt à remplacer le
   repli sur `MAP_POS` dès qu'une vraie structure en pose un, mais rien à trouver tant que

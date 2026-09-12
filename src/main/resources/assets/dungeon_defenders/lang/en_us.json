@@ -108,6 +108,7 @@
   "dungeon_defenders.map_config.delete_failed": "Could not delete %s: it isn't a map saved in this world.",
   "dungeon_defenders.map_selection.position": "%s / %s",
   "dungeon_defenders.map_pack.dungeon_defenders": "Campaign",
+  "dungeon_defenders.map_pack.dungeon_defenders_test": "Test Maps",
   "dungeon_defenders.map_selection.delete": "Delete this map",
   "dungeon_defenders.map_selection.delete_confirm_title": "Delete this map?",
   "dungeon_defenders.map_selection.delete_confirm_message": "%s (%s) will be removed from this world. This cannot be undone.",

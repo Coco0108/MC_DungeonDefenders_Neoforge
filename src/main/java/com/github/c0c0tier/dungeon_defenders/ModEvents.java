@@ -5,6 +5,7 @@ import com.github.c0c0tier.dungeon_defenders.entity.ManaCrystalEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackPriorityTargetGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
+import com.github.c0c0tier.dungeon_defenders.entity.ai.SeekEterniaCrystalGoal;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ManaCrystalType;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -46,6 +47,15 @@ public class ModEvents {
     private static final int FULL_FOOD_LEVEL = 20;
     private static final float FULL_SATURATION = 20.0F;
 
+    // Portée de suivi (attribut vanilla FOLLOW_RANGE) donnée à tout monstre équipé de l'IA du
+    // mod : c'est ce même attribut que le pathfinder vanilla utilise pour borner la recherche
+    // de chemin (pas seulement la détection de cible). La valeur vanilla d'un zombie (35) ou
+    // d'un squelette (16) suffit pour un couloir court, mais pas pour traverser une grande map
+    // (ex. Sanctuaire en Ruines, 63 blocs de large) jusqu'au cristal — voir
+    // SeekEterniaCrystalGoal, qui a justement besoin de pouvoir calculer un chemin sur toute la
+    // distance, quelle que soit la taille de la map.
+    private static final double MONSTER_FOLLOW_RANGE = 128.0D;
+
     @SubscribeEvent
     public static void onMonsterSpawn(EntityJoinLevelEvent event) {
         // Généralisé de Zombie à Monster (les deux goals n'exigent qu'un PathfinderMob, que
@@ -71,16 +81,27 @@ public class ModEvents {
             return;
         }
 
+        AttributeInstance followRange = monster.getAttribute(Attributes.FOLLOW_RANGE);
+        if (followRange != null) {
+            followRange.setBaseValue(MONSTER_FOLLOW_RANGE);
+        }
+
         // Les squelettes (et tout futur AbstractSkeleton) attaquent à distance avec l'arc
         // déjà équipé par défaut, et ignorent Blockade/Turret (un archer peut tirer par-dessus/
         // à côté sans avoir besoin de les détruire) ; les autres reçoivent un seul goal qui
         // choisit lui-même la meilleure cible à portée selon les paliers de priorité (voir
         // AiAttackTarget) : Block, puis Corps à corps, puis Cristal, puis Tourelle en dernier
-        // recours.
+        // recours. Dans les deux cas, SeekEterniaCrystalGoal est ajouté juste après, à une
+        // priorité plus basse : il prend le relais dès qu'aucune cible locale n'est à portée
+        // (spawn loin du cristal, ou palier local temporairement épuisé) pour naviguer en
+        // ligne directe vers le cristal, quelle que soit la distance — voir ce Goal pour le
+        // détail de comment il s'articule avec les deux autres.
         if (monster instanceof AbstractSkeleton) {
             monster.goalSelector.addGoal(1, new RangedAttackEterniaCrystalGoal(monster));
+            monster.goalSelector.addGoal(2, new SeekEterniaCrystalGoal(monster));
         } else {
             monster.goalSelector.addGoal(0, new AttackPriorityTargetGoal(monster));
+            monster.goalSelector.addGoal(1, new SeekEterniaCrystalGoal(monster));
         }
     }
 

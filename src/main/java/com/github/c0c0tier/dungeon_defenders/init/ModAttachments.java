@@ -220,6 +220,19 @@ public class ModAttachments {
             "active_mana_chests",
             () -> AttachmentType.<Set<BlockPos>>builder((Supplier<Set<BlockPos>>) HashSet::new).build());
 
+    // Position connue du Cristal d'Eternia actuellement chargé sur cette Level (ou null s'il
+    // n'y en a aucun) : EterniaCrystalBlockEntity s'y enregistre/se retire lui-même (voir
+    // #setLevel/#setRemoved), même principe qu'ACTIVE_SPAWNERS. Sert à entity/ai/
+    // SeekEterniaCrystalGoal.java pour naviguer directement vers le cristal quelle que soit la
+    // distance, sans avoir à le re-chercher par une recherche en spirale coûteuse à chaque
+    // monstre à chaque fois (ce que fait déjà AttackPriorityTargetGoal/
+    // RangedAttackEterniaCrystalGoal, mais seulement dans un rayon local court). Ni persistant
+    // ni synchronisé : usage strictement serveur, se reconstruit naturellement au (dé)chargement
+    // du chunk du cristal, comme ACTIVE_SPAWNERS.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<BlockPos>> CRYSTAL_POS = ATTACHMENT_TYPES.register(
+            "crystal_pos",
+            () -> AttachmentType.<BlockPos>builder(() -> null).build());
+
     // "Prêt" : état du joueur (clic droit sur le Cristal d'Eternia en phase Construction, voir
     // EterniaCrystalBlock), pas de la Level, comme mana/experience. Faux par défaut, remis à
     // faux pour tout le monde dès que le Combat démarre (voir PhaseTransitions#enterCombat) —

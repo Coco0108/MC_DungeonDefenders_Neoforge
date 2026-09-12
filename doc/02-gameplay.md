@@ -621,23 +621,67 @@ pose vanilla "arc tendu" puisque le squelette porte déjà un arc par défaut) e
 le **visuel** du tir, ce n'est pas sa collision qui inflige les dégâts (le cristal n'étant pas
 une entité, une flèche vanilla ne saurait pas le "toucher" toute seule).
 
+### Le goal de longue distance — `entity/ai/SeekEterniaCrystalGoal.java`, `ModAttachments.CRYSTAL_POS`
+
+Les trois goals ci-dessus ont tous un point commun : ils héritent (directement ou via
+`AbstractEterniaCrystalAttackGoal`) de `MoveToBlockGoal`, qui ne s'active que si une cible
+existe déjà dans un rayon de recherche **local et court** (16 blocs pour le cristal, 8 pour les
+tours). Tant qu'un monstre n'est pas par hasard entré dans ce rayon, rien ne le pousse à s'en
+approcher — il retombe sur l'errance aléatoire vanilla, ce qui peut ne jamais converger sur une
+grande map (63 blocs de large pour le Sanctuaire en Ruines, par exemple). Décidé avec le joueur
+(2026-09-12) : peu importe la distance, un monstre doit toujours pouvoir trouver un chemin
+jusqu'au cristal.
+
+`ModAttachments.CRYSTAL_POS` (`BlockPos` nullable, ni persistant ni synchronisé) retient la
+position réelle du cristal actuellement chargé sur la `Level`, posée par
+`EterniaCrystalBlockEntity#setLevel` et retirée par `#setRemoved` — même patron que
+`ACTIVE_SPAWNERS`/`ACTIVE_MANA_CHESTS`. Évite de refaire une recherche en spirale coûteuse à
+chaque monstre : la position est déjà connue.
+
+`SeekEterniaCrystalGoal` (`extends Goal`, `Flag.MOVE`) navigue en ligne directe vers cette
+position via le vrai pathfinder Minecraft (`mob.getNavigation().moveTo(...)`, calculé une fois
+au démarrage puis relancé toutes les `RETRY_INTERVAL_TICKS` (40, ~2 s) si la navigation
+s'arrête sans être arrivée — chemin bloqué ou déjà terminé). Aucune limite de distance dans
+`canUse()` (juste `crystalPos() != null`) : contrairement aux trois goals ci-dessus, celui-ci
+est censé toujours pouvoir s'activer.
+
+Ajouté à une **priorité plus basse** que le goal de palier (`AttackPriorityTargetGoal`/
+`RangedAttackEterniaCrystalGoal`), qui partage `Flag.MOVE` : dès qu'une cible locale existe (une
+tour à moins de 8 blocs sur le chemin, par exemple), le goal de palier reprend la main sur le
+déplacement ; une fois cette cible détruite ou hors de portée, `SeekEterniaCrystalGoal` redevient
+le seul goal éligible et reprend naturellement la direction du cristal. C'est le comportement
+"le monstre tape la tour sur son chemin puis reprend sa route vers le cristal" obtenu
+**gratuitement** par la hiérarchie de priorité des goals, sans système de points de passage
+dédié.
+
 ### L'attribution — `ModEvents.onMonsterSpawn`
 
 Écoute `EntityJoinLevelEvent` sur le bus de jeu. Pour chaque `Monster` rejoignant un monde
-côté serveur, **un seul** goal est ajouté au `goalSelector`, selon le type :
+côté serveur :
 
 - `AbstractSkeleton` (squelette, et tout futur sous-type) reçoit `RangedAttackEterniaCrystalGoal`
-  (priorité 1) — ignore Blockade/Turret, ne vise que le cristal à distance.
-- Tout le reste reçoit `AttackPriorityTargetGoal` (priorité 0) — choisit lui-même sa cible
-  parmi Block/Corps à corps/Cristal/Tourelle selon leur palier de priorité et leur portée
-  respective (voir "Le goal de mêlée unifié" plus haut).
+  (priorité 1) puis `SeekEterniaCrystalGoal` (priorité 2) — ignore Blockade/Turret, ne vise que
+  le cristal à distance ou, hors de portée, s'en approche en ligne directe.
+- Tout le reste reçoit `AttackPriorityTargetGoal` (priorité 0) puis `SeekEterniaCrystalGoal`
+  (priorité 1) — choisit sa cible parmi Block/Corps à corps/Cristal/Tourelle selon leur palier
+  de priorité et leur portée respective (voir "Le goal de mêlée unifié" plus haut), ou converge
+  vers le cristal si rien n'est à portée.
 
-> `Monster` plutôt que `PathfinderMob` : les deux goals n'exigent techniquement qu'un
+Dans les deux cas, l'attribut vanilla `FOLLOW_RANGE` du monstre est aussi relevé à 128 blocs
+(`MONSTER_FOLLOW_RANGE`) : c'est ce même attribut que le pathfinder vanilla utilise pour borner
+la recherche de chemin, pas seulement la détection de cible — sans ce relèvement,
+`SeekEterniaCrystalGoal` ne pourrait tout simplement pas calculer de chemin sur toute la
+distance d'une grande map (la valeur vanilla d'un zombie, 35 blocs, ne suffit déjà plus au
+Sanctuaire en Ruines).
+
+> `Monster` plutôt que `PathfinderMob` : les trois goals n'exigent techniquement qu'un
 > `PathfinderMob`, mais cette classe couvre aussi les mobs passifs (animaux, villageois...).
 > `Monster` est la bonne frontière sémantique — tout ce qui est hostile, rien de passif.
 
 `EntityJoinLevelEvent` se déclenche aussi au rechargement d'un chunk et au changement de
-dimension. Le code vérifie donc d'abord qu'aucun des deux goals n'est déjà présent :
+dimension. Le code vérifie donc d'abord qu'aucun des deux goals "marqueurs" n'est déjà présent
+(pas besoin de vérifier `SeekEterniaCrystalGoal` séparément : il est toujours ajouté dans la
+même branche que l'un des deux autres) :
 
 ```java
 monster.goalSelector.getAvailableGoals().stream()
@@ -645,7 +689,7 @@ monster.goalSelector.getAvailableGoals().stream()
                 || wrapped.getGoal() instanceof AttackPriorityTargetGoal)
 ```
 
-Sans ce test, un même monstre cumulerait plusieurs exemplaires du goal et attaquerait le
+Sans ce test, un même monstre cumulerait plusieurs exemplaires des goals et attaquerait le
 cristal plusieurs fois par seconde.
 
 ## La barre de vie des monstres — `entity/MobHealthBarRenderer.java`
@@ -1600,15 +1644,29 @@ Confirmation par `ConfirmScreen` avant d'agir. La map est aussi retirée de la l
 celle-ci vient du serveur à l'ouverture de l'écran et n'est pas rafraîchie, sans ça la map
 supprimée resterait affichée. Un pack vidé de sa dernière map disparaît avec elle.
 
-### La map de test livrée — `map/test_arena.nbt`
+### Le pack « Maps de test » — `data/dungeon_defenders_test/`
 
-Une arène de 49×6×49 livrée dans le jar (`dungeon_defenders:map/test_arena`), pour que la chaîne
-complète soit exerçable **avant** qu'une vraie map existe. Contenu : sol et murs d'enceinte (le
-monde est vide, sans murs on tombe), un couloir visible entre les deux bouts, un Cristal
-d'Eternia, un spawner configuré (8 zombies + 4 squelettes, vagues 1 à 3), un `player_spawn`, un
-coffre de mana, des `no_build_zone` autour du spawner, et un `map_config` réglé sur **3 vagues** —
-volontairement différent du défaut de 5, pour qu'un simple coup d'œil au HUD confirme que le
-nombre de vagues vient bien de la map.
+Les maps qui ne sont **pas du contenu** (générées pour exercer la chaîne technique ou une IA
+avant qu'une vraie map n'existe) vivent sous un **namespace séparé**,
+`dungeon_defenders_test`, plutôt que sous `dungeon_defenders` — décidé avec le joueur
+(2026-09-12) pour qu'elles n'apparaissent plus dans le pack « Campagne ». `MapDefinition#packId`
+étant simplement le namespace de l'identifiant de structure, et `MapRegistry#discover`
+découvrant les structures `map/*` de **tous** les namespaces sans avoir besoin qu'un mod les
+"déclare" (un dossier `data/<namespace>/` suffit, comme pour tout datapack), ce déplacement n'a
+demandé qu'à déplacer les fichiers `.nbt` et à ajouter la traduction du nom de pack
+(`dungeon_defenders.map_pack.dungeon_defenders_test`) — aucun changement de code. Elles
+apparaissent donc dans l'écran de choix sous leur propre colonne « Maps de test », séparée de
+la campagne.
+
+### `map/test_arena.nbt`
+
+Une arène de 49×6×49 livrée dans le jar (`dungeon_defenders_test:map/test_arena`), pour que la
+chaîne complète soit exerçable **avant** qu'une vraie map existe. Contenu : sol et murs
+d'enceinte (le monde est vide, sans murs on tombe), un couloir visible entre les deux bouts, un
+Cristal d'Eternia, un spawner configuré (8 zombies + 4 squelettes, vagues 1 à 3), un
+`player_spawn`, un coffre de mana, des `no_build_zone` autour du spawner, et un `map_config`
+réglé sur **3 vagues** — volontairement différent du défaut de 5, pour qu'un simple coup d'œil
+au HUD confirme que le nombre de vagues vient bien de la map.
 
 Elle a été **générée sans passer par le jeu**, avec `tools/generer-map-de-test.py` : un `.nbt` de
 structure n'est qu'un fichier NBT gzippé au format relu dans `StructureTemplate`. Le script écrit
@@ -1620,8 +1678,53 @@ le NBT, et le fichier produit a été relu et vérifié tag par tag.
 > structure de taille 0 avec tous les blocs empilés à l'origine, **sans le moindre message
 > d'erreur**.
 
-C'est une map de **test**, pas de contenu : elle apparaît dans le pack « Campagne » et devra en
-être retirée quand de vraies maps existeront.
+### `map/couloir_ecart_ia.nbt`
+
+Un couloir étroit et long de 9×6×90 (`dungeon_defenders_test:map/couloir_ecart_ia`), généré le
+2026-09-12 avec `tools/generer-map-ecart-ia.py` (même écriture NBT que `generer-map-de-test.py`).
+Objectif unique : exercer `SeekEterniaCrystalGoal` (voir "Le goal de longue distance" plus haut)
+sur une distance largement supérieure au rayon de détection local des goals de palier (16 blocs
+cristal / 8 blocs tour) et à l'ancien `FOLLOW_RANGE` vanilla d'un zombie (35 blocs) — sans ce
+goal, un monstre spawné ici n'aurait aucune raison de se diriger vers le cristal avant d'y
+"tomber" par hasard.
+
+Cristal près de l'extrémité sud (`z=8`), spawner près de l'extrémité nord (`z=82`) : **74 blocs**
+d'écart en ligne droite, le couloir lui-même ne laissant aucun autre chemin possible. Spawner
+volontairement simple (10 zombies, vagues 1-2, aucun squelette) : ce test porte sur le
+déplacement, pas sur la composition des vagues. `player_spawn` et coffre de mana près du
+cristal ; `map_config` réglé sur 2 vagues pour rejouer vite pendant les tests. Aucune tour
+pré-posée : rien n'empêche d'en placer une au milieu du couloir pour vérifier au passage qu'un
+monstre s'arrête la taper avant de reprendre sa route vers le cristal.
+
+### `map/detour_ia.nbt`
+
+Complément de `couloir_ecart_ia` (2026-09-12, même génération hors du jeu) : là où celle-ci
+teste une **longue** distance en ligne droite, celle-ci teste une distance **modérée** (~27
+blocs à vol d'oiseau) mais avec **deux obstacles qui rendent la ligne droite impossible** —
+vérifie que `SeekEterniaCrystalGoal`, via le vrai pathfinder Minecraft, sait aussi contourner un
+obstacle plutôt que de foncer bêtement dans un mur.
+
+Généré par `tools/generer-map-detour-ia.py`, salle 13×11×34 :
+
+1. Un **mur plein** de 5 blocs de haut barre presque toute la largeur (rangées `z=7-8`), avec un
+   passage de 3 blocs de large seulement sur la gauche — détour latéral obligatoire.
+2. Une **falaise** de 3 blocs de haut (`z=20`) barre la suite pour qui n'a pas déjà pris la
+   rampe à droite (rangées `z=16-19`, terrassée 1 bloc de plus par rangée — même technique de
+   rampe qu'utilise le générateur du Sanctuaire en Ruines sur une autre branche, pas encore
+   fusionnée ici) — détour **et** changement de hauteur, puisque 3 blocs dépasse largement ce
+   qu'un mob franchit d'un seul pas (~1 bloc en vanilla).
+
+Le sol change aussi de texture (`smooth_quartz`) une fois sur la plateforme haute, pour que la
+différence de hauteur soit lisible d'un coup d'œil en jeu. Cristal, `player_spawn` et coffre de
+mana sur la plateforme haute ; spawner (10 zombies, vagues 1-2) dans la salle basse, avant les
+deux obstacles.
+
+Vérifié hors jeu **par simulation**, pas seulement visuellement : un script BFS (même règle que
+le pathfinder vanilla — pas de 1 bloc de hauteur maximum par déplacement) confirme qu'un chemin
+existe bien du spawner au cristal, qu'il passe obligatoirement par le trou du mur ET par la
+rampe, et que la colonne centrale (le raccourci direct) est bien bloquée aux deux endroits —
+sans cette vérification, une erreur de coordonnées aurait pu livrer une map insoluble sans
+aucun moyen de le voir avant un vrai test en jeu.
 
 ### Le force-chargement de la zone — `init/ModChunkTickets.java`
 
