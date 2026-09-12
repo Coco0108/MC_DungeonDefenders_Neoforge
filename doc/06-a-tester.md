@@ -549,13 +549,15 @@ Nouveau (2026-09-02), jamais verifie en jeu. **La plus grosse modification a ce 
 GameMap disparait, le carrousel devient dynamique, StartGamePayload change de forme, et le
 nombre de vagues n'est plus une constante. Beaucoup de regressions possibles sur l'existant.
 
-> Une **map de test est desormais livree** dans le mod (`dungeon_defenders:map/test_arena`) :
+> Une **map de test est desormais livree** dans le mod (`dungeon_defenders_test:map/test_arena`) :
 > l'essentiel de cette section se teste donc sans rien construire. Elle s'appelle "Arene de
 > test", tient en 3 vagues, et contient deja cristal, spawner, coffre de mana, marqueur de spawn
 > et zones interdites.
 
-- [ ] Clic droit sur le cristal de la taverne : "Arene de test" apparait dans le pack
-      "Campagne". L'apercu affiche la texture manquante (aucun PNG) — attendu.
+- [ ] Clic droit sur le cristal de la taverne : "Arene de test" apparait dans le pack **"Maps de
+      test"**, separe de "Campagne" (namespace `dungeon_defenders_test`, pas `dungeon_defenders`
+      — voir 05-etat-et-problemes-connus.md). L'apercu affiche la texture manquante (aucun PNG)
+      — attendu.
 - [ ] Cliquer "Jouer" : l'arene se pose a (10000, 65, 0), murs compris. On arrive devant le
       cristal, pas au milieu du vide.
 - [ ] Le HUD affiche **Vague 1/3**, pas 1/5 — la preuve que le nombre de vagues vient de la map.
@@ -958,13 +960,14 @@ serveur.` Sinon il affiche la chaîne fautive, à corriger avec un des deux patr
 Corrige un trou de fond jamais testé avant : sans ça, un monstre spawné hors du rayon local des
 goals de palier (16 blocs cristal / 8 blocs tour) errait au hasard sans jamais forcément
 approcher le cristal. Une map dédiée à ce test est livrée dans le mod
-(`dungeon_defenders:map/couloir_ecart_ia`, choisissable depuis la taverne comme toute autre
-map) : un couloir de 74 blocs entre le spawner et le cristal, sans autre chemin possible — voir
+(`dungeon_defenders_test:map/couloir_ecart_ia`, dans le pack "Maps de test") : un couloir de 74
+blocs entre le spawner et le cristal, sans autre chemin possible — voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#convergence-longue-distance-vers-le-cristal-seeketerniacrystalgoal).
 
-- [ ] Choisir « Couloir - ecart IA » dans l'écran de la taverne, jouer, passer en Combat : un
-      monstre qui spawn à l'autre bout du couloir se dirige tout de suite vers le cristal (pas
-      d'errance aléatoire prolongée avant de "tomber" dans son rayon de détection de 16 blocs).
+- [ ] Choisir « Couloir - ecart IA » (pack "Maps de test") dans l'écran de la taverne, jouer,
+      passer en Combat : un monstre qui spawn à l'autre bout du couloir se dirige tout de suite
+      vers le cristal (pas d'errance aléatoire prolongée avant de "tomber" dans son rayon de
+      détection de 16 blocs).
 - [ ] Poser une tour (Blockade ou Turret) au milieu du couloir, sur le chemin : le monstre
       s'arrête pour la taper dès qu'il est à portée, puis, une fois la tour détruite, reprend sa
       route vers le cristal sans avoir besoin de la retrouver par hasard.

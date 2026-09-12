@@ -1644,15 +1644,29 @@ Confirmation par `ConfirmScreen` avant d'agir. La map est aussi retirée de la l
 celle-ci vient du serveur à l'ouverture de l'écran et n'est pas rafraîchie, sans ça la map
 supprimée resterait affichée. Un pack vidé de sa dernière map disparaît avec elle.
 
-### La map de test livrée — `map/test_arena.nbt`
+### Le pack « Maps de test » — `data/dungeon_defenders_test/`
 
-Une arène de 49×6×49 livrée dans le jar (`dungeon_defenders:map/test_arena`), pour que la chaîne
-complète soit exerçable **avant** qu'une vraie map existe. Contenu : sol et murs d'enceinte (le
-monde est vide, sans murs on tombe), un couloir visible entre les deux bouts, un Cristal
-d'Eternia, un spawner configuré (8 zombies + 4 squelettes, vagues 1 à 3), un `player_spawn`, un
-coffre de mana, des `no_build_zone` autour du spawner, et un `map_config` réglé sur **3 vagues** —
-volontairement différent du défaut de 5, pour qu'un simple coup d'œil au HUD confirme que le
-nombre de vagues vient bien de la map.
+Les maps qui ne sont **pas du contenu** (générées pour exercer la chaîne technique ou une IA
+avant qu'une vraie map n'existe) vivent sous un **namespace séparé**,
+`dungeon_defenders_test`, plutôt que sous `dungeon_defenders` — décidé avec le joueur
+(2026-09-12) pour qu'elles n'apparaissent plus dans le pack « Campagne ». `MapDefinition#packId`
+étant simplement le namespace de l'identifiant de structure, et `MapRegistry#discover`
+découvrant les structures `map/*` de **tous** les namespaces sans avoir besoin qu'un mod les
+"déclare" (un dossier `data/<namespace>/` suffit, comme pour tout datapack), ce déplacement n'a
+demandé qu'à déplacer les fichiers `.nbt` et à ajouter la traduction du nom de pack
+(`dungeon_defenders.map_pack.dungeon_defenders_test`) — aucun changement de code. Elles
+apparaissent donc dans l'écran de choix sous leur propre colonne « Maps de test », séparée de
+la campagne.
+
+### `map/test_arena.nbt`
+
+Une arène de 49×6×49 livrée dans le jar (`dungeon_defenders_test:map/test_arena`), pour que la
+chaîne complète soit exerçable **avant** qu'une vraie map existe. Contenu : sol et murs
+d'enceinte (le monde est vide, sans murs on tombe), un couloir visible entre les deux bouts, un
+Cristal d'Eternia, un spawner configuré (8 zombies + 4 squelettes, vagues 1 à 3), un
+`player_spawn`, un coffre de mana, des `no_build_zone` autour du spawner, et un `map_config`
+réglé sur **3 vagues** — volontairement différent du défaut de 5, pour qu'un simple coup d'œil
+au HUD confirme que le nombre de vagues vient bien de la map.
 
 Elle a été **générée sans passer par le jeu**, avec `tools/generer-map-de-test.py` : un `.nbt` de
 structure n'est qu'un fichier NBT gzippé au format relu dans `StructureTemplate`. Le script écrit
@@ -1664,12 +1678,9 @@ le NBT, et le fichier produit a été relu et vérifié tag par tag.
 > structure de taille 0 avec tous les blocs empilés à l'origine, **sans le moindre message
 > d'erreur**.
 
-C'est une map de **test**, pas de contenu : elle apparaît dans le pack « Campagne » et devra en
-être retirée quand de vraies maps existeront.
+### `map/couloir_ecart_ia.nbt`
 
-### La map de test « écart IA » — `map/couloir_ecart_ia.nbt`
-
-Un couloir étroit et long de 9×6×90 (`dungeon_defenders:map/couloir_ecart_ia`), généré le
+Un couloir étroit et long de 9×6×90 (`dungeon_defenders_test:map/couloir_ecart_ia`), généré le
 2026-09-12 avec `tools/generer-map-ecart-ia.py` (même écriture NBT que `generer-map-de-test.py`).
 Objectif unique : exercer `SeekEterniaCrystalGoal` (voir "Le goal de longue distance" plus haut)
 sur une distance largement supérieure au rayon de détection local des goals de palier (16 blocs

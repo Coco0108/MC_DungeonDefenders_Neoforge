@@ -610,22 +610,32 @@ vérifie la CI.
   mais **le jar produit n'a jamais été chargé par Minecraft**. Détail dans
   [02-gameplay.md](02-gameplay.md#dd_export-namespace--le-jar-est-généré-pour-toi).
 
-- ✅ **Map de test livrée** (`data/dungeon_defenders/structure/map/test_arena.nbt`, 2026-09-02) :
-  arène 49×6×49 générée hors du jeu par `tools/generer-map-de-test.py`, pour rendre la chaîne
-  complète (découverte, chargement, config, vagues, force-chargement) exerçable avant qu'une
-  vraie map existe. Contient cristal, spawner configuré, coffre de mana, marqueur de spawn, zones
-  interdites et un bloc de config réglé sur **3 vagues** — différent du défaut de 5 exprès.
-  Le fichier a été relu tag par tag après génération. Map de **test**, à retirer du pack
-  « Campagne » quand du vrai contenu existera. **Jamais chargée par Minecraft.** Détail dans
-  [02-gameplay.md](02-gameplay.md#la-map-de-test-livrée--maptest_arenanbt).
+- ✅ **Pack « Maps de test » séparé de la Campagne** (namespace `dungeon_defenders_test`,
+  2026-09-12, sur demande du joueur) : les maps qui ne sont pas du contenu vivent sous
+  `data/dungeon_defenders_test/structure/map/` plutôt que sous `data/dungeon_defenders/` —
+  `MapRegistry` les découvre pareil (le filtre porte sur le chemin `map/*`, pas le namespace),
+  elles apparaissent simplement dans leur propre colonne de pack à l'écran de choix
+  (`dungeon_defenders.map_pack.dungeon_defenders_test`, "Maps de test"/"Test Maps") au lieu de
+  polluer « Campagne ». Aucun changement de code, juste un déplacement de fichiers + une
+  traduction. Détail dans
+  [02-gameplay.md](02-gameplay.md#le-pack--maps-de-test--datadungeon_defenders_test).
 
-- ✅ **Map de test « écart IA » livrée** (`data/dungeon_defenders/structure/map/couloir_ecart_ia.nbt`,
-  2026-09-12) : couloir 9×6×90 généré hors du jeu par `tools/generer-map-ecart-ia.py`, dédié à
+- ✅ **Map de test livrée** (`data/dungeon_defenders_test/structure/map/test_arena.nbt`,
+  2026-09-02) : arène 49×6×49 générée hors du jeu par `tools/generer-map-de-test.py`, pour
+  rendre la chaîne complète (découverte, chargement, config, vagues, force-chargement)
+  exerçable avant qu'une vraie map existe. Contient cristal, spawner configuré, coffre de mana,
+  marqueur de spawn, zones interdites et un bloc de config réglé sur **3 vagues** — différent du
+  défaut de 5 exprès. Le fichier a été relu tag par tag après génération. **Jamais chargée par
+  Minecraft.** Détail dans [02-gameplay.md](02-gameplay.md#maptest_arenanbt).
+
+- ✅ **Map de test « écart IA » livrée**
+  (`data/dungeon_defenders_test/structure/map/couloir_ecart_ia.nbt`, 2026-09-12) : couloir
+  9×6×90 généré hors du jeu par `tools/generer-map-ecart-ia.py`, dédié à
   [SeekEterniaCrystalGoal](05-etat-et-problemes-connus.md#convergence-longue-distance-vers-le-cristal-seeketerniacrystalgoal) —
   74 blocs entre le spawner et le cristal, bien au-delà des 16/35 blocs qui suffisaient avant ce
   goal. Le fichier a été relu et vérifié (bornes, entités posées sur du solide, écart réel) après
-  génération. Map de **test**, comme `test_arena`. **Jamais chargée par Minecraft.** Détail dans
-  [02-gameplay.md](02-gameplay.md#la-map-de-test--écart-ia--mapcouloir_ecart_ianbt).
+  génération. **Jamais chargée par Minecraft.** Détail dans
+  [02-gameplay.md](02-gameplay.md#mapcouloir_ecart_ianbt).
 
 ## Corrections apportées
 
