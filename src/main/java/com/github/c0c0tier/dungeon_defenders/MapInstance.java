@@ -78,6 +78,18 @@ public final class MapInstance {
         BlockPos spawnPos = placeMap(level, map);
         teleportAllPlayers(level, spawnPos);
 
+        // Recalculé une seconde fois, explicitement, une fois la structure posée : l'appel fait
+        // par startNewGame() ci-dessus tourne AVANT placeMap(), donc avec les spawners de la
+        // partie précédente (ou aucun, sur une toute première partie) — jamais ceux qu'on vient
+        // de poser. SpawnerBlockEntity#setLevel déclenche bien son propre recalcul différé (au
+        // tick suivant, voir ce fichier), mais en jeu (2026-09-12) le total restait bloqué à 0
+        // malgré ça — jamais identifié avec certitude pourquoi ce différé ne suffit pas pour un
+        // spawner posé par une structure (par opposition à un rechargement de chunk normal),
+        // seulement contourné : cet appel-ci est synchrone, juste après que placeInWorld ait
+        // fini d'appliquer le NBT de chaque spawner, donc garanti de lire leur configuration
+        // réelle plutôt qu'un état encore par défaut.
+        PhaseTransitions.recomputeWaveEnemiesTotal(level);
+
         // Sans ça, Minecraft ne fait tourner que les chunks proches du groupe : un spawner à
         // l'autre bout de la map cesserait simplement de fonctionner, sans erreur ni message.
         Vec3i size = sizeOf(level, map);

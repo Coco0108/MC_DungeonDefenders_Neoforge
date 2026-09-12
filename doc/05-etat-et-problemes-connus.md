@@ -1102,7 +1102,20 @@ injouable. Rien de codé, voir le backlog dans
   zone avant de poser son sol, effaçant une map en cours de construction à la main à `MAP_POS`
   au clic suivant sur "Jouer" (même la sienne, ou celle d'une autre map elle aussi sans
   structure — même emplacement partagé). Le repli ne nettoie plus jamais rien désormais.
-  Voir [02-gameplay.md](02-gameplay.md#la-map-active--mapinstancejava).
+  Voir [02-gameplay.md](02-gameplay.md#la-map-active--mapinstancejava). **Corrigé (2026-09-12,
+  retour en jeu)** : le nombre d'ennemis prévu (`WAVE_ENEMIES_TOTAL`, affiché au HUD) restait
+  bloqué à 0 sur une map fraîchement posée, ce qui empêchait aussi la vague de jamais se
+  terminer (la garde `total > 0 && killed >= total` d'`ModEvents.onMonsterDeath` ne se
+  déclenchait donc jamais). Cause identifiée avec certitude : `MapInstance#startGame` appelle
+  `PhaseTransitions.startNewGame` (qui recalcule ce total) **avant** `placeMap`, donc avec les
+  spawners de la partie précédente (ou aucun, sur une toute première partie) — jamais ceux
+  qu'on vient de poser. `SpawnerBlockEntity#setLevel` déclenche bien son propre recalcul
+  différé au tick suivant (pour éviter la réentrance décrite plus bas), mais ça ne suffisait
+  visiblement pas à corriger le total pour un spawner posé par une structure — pas identifié
+  avec certitude pourquoi ce cas précis diffère d'un rechargement de chunk normal, contourné
+  plutôt que compris en profondeur (même limite que le premier spawn de la taverne, voir plus
+  haut). Fixé en ajoutant un recalcul explicite et synchrone juste après `placeMap`, à un point
+  où tous les spawners de la structure sont garantis posés avec leur configuration réelle.
 - Le **mécanisme** du bloc de spawn joueur (`PLAYER_SPAWN`,
   `findAndConsumeSpawnMarker`, voir "Ce qui est implémenté" plus haut) : prêt à remplacer le
   repli sur `MAP_POS` dès qu'une vraie structure en pose un, mais rien à trouver tant que

@@ -561,6 +561,10 @@ nombre de vagues n'est plus une constante. Beaucoup de regressions possibles sur
 - [ ] Cliquer "Jouer" : l'arene se pose a (10000, 65, 0), murs compris. On arrive devant le
       cristal, pas au milieu du vide.
 - [ ] Le HUD affiche **Vague 1/3**, pas 1/5 — la preuve que le nombre de vagues vient de la map.
+- [ ] **Corrige (2026-09-12)** : le compteur d'ennemis de la vague (ennemis tues/total, HUD) doit
+      afficher le vrai total (12 = 8 zombies + 4 squelettes) des l'arrivee sur la map, pas 0 —
+      sinon la vague ne se termine jamais meme une fois tous les ennemis tues (voir
+      05-etat-et-problemes-connus.md).
 - [ ] Le spawner fait bien apparaitre 8 zombies et 4 squelettes en combat.
 - [ ] Le coffre de mana s'ouvre et donne 50 mana.
 - [ ] Poser une tour pres du spawner (dans la zone rouge) est refuse avec le message ; quelques
