@@ -957,17 +957,17 @@ serveur.` Sinon il affiche la chaîne fautive, à corriger avec un des deux patr
 
 Corrige un trou de fond jamais testé avant : sans ça, un monstre spawné hors du rayon local des
 goals de palier (16 blocs cristal / 8 blocs tour) errait au hasard sans jamais forcément
-approcher le cristal. Nécessite une vraie map avec un peu de distance entre spawner et cristal
-(le placeholder plateforme actuel n'a pas assez d'espace pour ça) — voir
+approcher le cristal. Une map dédiée à ce test est livrée dans le mod
+(`dungeon_defenders:map/couloir_ecart_ia`, choisissable depuis la taverne comme toute autre
+map) : un couloir de 74 blocs entre le spawner et le cristal, sans autre chemin possible — voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#convergence-longue-distance-vers-le-cristal-seeketerniacrystalgoal).
 
-- [ ] Poser un cristal et un spawner à bonne distance l'un de l'autre (au-delà de 16 blocs,
-      idéalement 40+), passer en Combat : un monstre qui spawn loin se dirige tout de suite
-      vers le cristal (pas d'errance aléatoire prolongée avant de "tomber" dans son rayon de
-      détection).
-- [ ] Poser une tour (Blockade ou Turret) sur le chemin direct entre spawner et cristal : le
-      monstre s'arrête pour la taper dès qu'il est à portée, puis, une fois la tour détruite,
-      reprend sa route vers le cristal sans avoir besoin de la retrouver par hasard.
+- [ ] Choisir « Couloir - ecart IA » dans l'écran de la taverne, jouer, passer en Combat : un
+      monstre qui spawn à l'autre bout du couloir se dirige tout de suite vers le cristal (pas
+      d'errance aléatoire prolongée avant de "tomber" dans son rayon de détection de 16 blocs).
+- [ ] Poser une tour (Blockade ou Turret) au milieu du couloir, sur le chemin : le monstre
+      s'arrête pour la taper dès qu'il est à portée, puis, une fois la tour détruite, reprend sa
+      route vers le cristal sans avoir besoin de la retrouver par hasard.
 - [ ] Un monstre bloqué (aucun chemin possible vers le cristal, si testable) ne plante pas —
       il retente périodiquement plutôt que de figer ou de spammer des calculs de chemin.
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `SeekEterniaCrystalGoal`,

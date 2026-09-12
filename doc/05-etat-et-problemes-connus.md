@@ -619,6 +619,14 @@ vérifie la CI.
   « Campagne » quand du vrai contenu existera. **Jamais chargée par Minecraft.** Détail dans
   [02-gameplay.md](02-gameplay.md#la-map-de-test-livrée--maptest_arenanbt).
 
+- ✅ **Map de test « écart IA » livrée** (`data/dungeon_defenders/structure/map/couloir_ecart_ia.nbt`,
+  2026-09-12) : couloir 9×6×90 généré hors du jeu par `tools/generer-map-ecart-ia.py`, dédié à
+  [SeekEterniaCrystalGoal](05-etat-et-problemes-connus.md#convergence-longue-distance-vers-le-cristal-seeketerniacrystalgoal) —
+  74 blocs entre le spawner et le cristal, bien au-delà des 16/35 blocs qui suffisaient avant ce
+  goal. Le fichier a été relu et vérifié (bornes, entités posées sur du solide, écart réel) après
+  génération. Map de **test**, comme `test_arena`. **Jamais chargée par Minecraft.** Détail dans
+  [02-gameplay.md](02-gameplay.md#la-map-de-test--écart-ia--mapcouloir_ecart_ianbt).
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.

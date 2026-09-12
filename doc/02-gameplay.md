@@ -1667,6 +1667,24 @@ le NBT, et le fichier produit a été relu et vérifié tag par tag.
 C'est une map de **test**, pas de contenu : elle apparaît dans le pack « Campagne » et devra en
 être retirée quand de vraies maps existeront.
 
+### La map de test « écart IA » — `map/couloir_ecart_ia.nbt`
+
+Un couloir étroit et long de 9×6×90 (`dungeon_defenders:map/couloir_ecart_ia`), généré le
+2026-09-12 avec `tools/generer-map-ecart-ia.py` (même écriture NBT que `generer-map-de-test.py`).
+Objectif unique : exercer `SeekEterniaCrystalGoal` (voir "Le goal de longue distance" plus haut)
+sur une distance largement supérieure au rayon de détection local des goals de palier (16 blocs
+cristal / 8 blocs tour) et à l'ancien `FOLLOW_RANGE` vanilla d'un zombie (35 blocs) — sans ce
+goal, un monstre spawné ici n'aurait aucune raison de se diriger vers le cristal avant d'y
+"tomber" par hasard.
+
+Cristal près de l'extrémité sud (`z=8`), spawner près de l'extrémité nord (`z=82`) : **74 blocs**
+d'écart en ligne droite, le couloir lui-même ne laissant aucun autre chemin possible. Spawner
+volontairement simple (10 zombies, vagues 1-2, aucun squelette) : ce test porte sur le
+déplacement, pas sur la composition des vagues. `player_spawn` et coffre de mana près du
+cristal ; `map_config` réglé sur 2 vagues pour rejouer vite pendant les tests. Aucune tour
+pré-posée : rien n'empêche d'en placer une au milieu du couloir pour vérifier au passage qu'un
+monstre s'arrête la taper avant de reprendre sa route vers le cristal.
+
 ### Le force-chargement de la zone — `init/ModChunkTickets.java`
 
 **Pourquoi c'est indispensable et pas un détail** : Minecraft ne charge et ne fait tourner que
