@@ -736,6 +736,48 @@ mana insuffisant) — vérifié une seconde fois côté client (la roue elle-mê
 en Combat) pour éviter de faire tout le mode pose avant un refus final, mais le serveur reste
 la seule autorité réelle.
 
+### Convergence longue distance vers le cristal (`SeekEterniaCrystalGoal`)
+
+Discuté avec le joueur (2026-09-12), en préparation du test de la première vraie map : le
+système de priorité ci-dessus (`AttackPriorityTargetGoal`/`RangedAttackEterniaCrystalGoal`) ne
+s'active que si une cible existe déjà dans un rayon **local et court** (16 blocs pour le
+cristal, 8 pour les tours, tous deux calqués sur `MoveToBlockGoal`, qui ne cherche jamais plus
+loin). Tant qu'un monstre spawné loin n'est pas par hasard entré dans ce rayon, il retombe sur
+l'errance aléatoire vanilla — sur une map de 63 blocs de large comme le Sanctuaire en Ruines, ça
+pouvait ne jamais converger.
+
+Demande exacte du joueur : peu importe la distance, le monstre doit trouver un chemin vers le
+cristal ; s'il croise une tour à portée sur son chemin, il la tape, puis reprend le cristal en
+vue une fois la tour détruite. La deuxième moitié (tour sur le chemin) était déjà gratuite grâce
+à la hiérarchie de priorité des `Goal` existants (`Flag.MOVE` partagé) — il manquait juste le
+"trouve un chemin peu importe la distance" en amont.
+
+Ajouté :
+
+- `ModAttachments.CRYSTAL_POS` : position réelle du cristal, posée/retirée par
+  `EterniaCrystalBlockEntity#setLevel`/`#setRemoved` (même patron qu'`ACTIVE_SPAWNERS`) — évite
+  de re-chercher le cristal par une recherche en spirale à chaque monstre.
+- `entity/ai/SeekEterniaCrystalGoal.java` : navigue vers cette position via le vrai pathfinder
+  Minecraft, sans aucune limite de distance dans `canUse()`, à une priorité plus basse que les
+  goals de palier existants — dès qu'une cible locale existe, ceux-ci reprennent la main sur le
+  déplacement (même `Flag.MOVE`) ; une fois détruite/hors de portée, ce goal redevient seul
+  éligible et reprend naturellement la direction du cristal.
+- `ModEvents.onMonsterSpawn` relève aussi l'attribut vanilla `FOLLOW_RANGE` du monstre à 128
+  blocs : c'est ce même attribut qui borne la recherche de chemin du pathfinder vanilla, pas
+  seulement la détection de cible — sans ce relèvement, la valeur par défaut d'un zombie (35
+  blocs) ne suffirait déjà plus à calculer un chemin jusqu'au bout d'une grande map.
+
+Détail complet dans
+[02-gameplay.md](02-gameplay.md#le-goal-de-longue-distance--entityaiseeketerniacrystalgoaljava-modattachmentscrystal_pos).
+Jamais testé en jeu (aucune map assez grande n'a encore tourné avec des monstres vivants) — voir
+[06-a-tester.md](06-a-tester.md).
+
+**Limite connue, assumée pour l'instant** : si le cristal est totalement inaccessible (chemin
+scellé sans issue), le pathfinder échoue silencieusement et le monstre retombe sur l'errance
+vanilla jusqu'au prochain essai (toutes les 40 ticks) — pas de comportement de secours du genre
+"attendre" ou "creuser". Pas un problème en pratique tant qu'une map garde au moins un chemin
+ouvert vers le cristal en permanence, ce qui est déjà une contrainte de conception des maps.
+
 ### La partie se termine, mais sans conclusion visuelle complète
 
 Victoire et défaite existent maintenant (voir "Ce qui est implémenté" plus haut et
