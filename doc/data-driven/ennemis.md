@@ -1,13 +1,44 @@
 # Data-driven, étape 1 : les ennemis
 
-> **Statut : plan, rien n'est codé.** Rédigé le 2026-09-29 sur la branche `feature/data-driven`,
-> créée depuis `feature/map-ecart-ia` (PR #43). Cette branche est la seule à réunir le système
-> de maps par structure, `/dd_export`, les maps de test embarquées et le correctif du total de
-> vague.
+> **Statut : plan finalisé et validé avec le joueur le 2026-09-29, rien n'est codé.** Branche
+> `feature/data-driven`, créée depuis `feature/map-ecart-ia` (PR #43). Cette branche est la
+> seule à réunir le système de maps par structure, `/dd_export`, les maps de test embarquées et
+> le correctif du total de vague. Les décisions prises sont récapitulées en fin de document.
 >
 > **Contrainte absolue : aucune valeur de gameplay ne change.** Les JSON livrés reprennent
 > exactement les valeurs actuelles du code. Après migration, une partie doit se dérouler
 > exactement comme avant : mêmes monstres, même XP, mêmes dégâts, même IA.
+
+## ⚠️ Gel de l'enum `SpawnableEnemy` jusqu'à la fusion
+
+**Décidé avec le joueur le 2026-09-29.** Jusqu'à la fusion de cette migration, **on ne touche
+ni à l'ordre ni au contenu de l'enum `init/SpawnableEnemy.java`, sur aucune branche**. Concrètement,
+c'est interdit :
+
+- ajouter un ennemi, même en fin de liste ;
+- en retirer ou en renommer un ;
+- réordonner les constantes ;
+- changer l'`EntityType` associé à une constante.
+
+**Pourquoi.** Le joueur continue de construire la première map de campagne pendant ce temps-là.
+Ses spawners sont sauvegardés à l'ancien format, par ordinal. À la conversion, ces nombres seront
+traduits par la table figée `LegacyEnemyIds` (§5) : `0 → zombie`, `1 → squelette`. Cette table
+décrit l'enum **tel qu'il est aujourd'hui**. Si l'enum bouge avant la fusion, un même nombre
+voudra dire deux choses selon la date de sauvegarde du fichier, et la conversion donnera le
+mauvais monstre, sans erreur ni message. C'est exactement le problème que cette migration doit
+supprimer.
+
+**État vérifié le 2026-09-29 :** le fichier est identique sur toutes les branches du dépôt
+(`origin/*`). Il n'y a rien à rattraper, et c'est cet état qui fait foi pour `LegacyEnemyIds`.
+
+**Ce qui reste permis :** modifier les valeurs portées par une constante sans toucher à son rang,
+par exemple l'XP (`10`/`15`). Les ordinaux n'en dépendent pas. Mais la règle « aucune valeur de
+gameplay ne change » de cette migration s'applique : les JSON reprendront les valeurs du jour de
+l'implémentation.
+
+**Après la fusion,** l'enum est supprimé, donc la question ne se pose plus. La table
+`LegacyEnemyIds`, elle, reste figée **pour toujours** : c'est elle qui permet de relire les
+anciens fichiers.
 
 ## Pourquoi
 
@@ -310,10 +341,18 @@ des spawners.
   `Enemy` diffère (même taille, même palette, mêmes positions, mêmes autres valeurs). C'est la
   preuve qu'aucune valeur de gameplay n'a bougé.
 
-**B2. Maps créées en jeu** (dossier `generated/` de la sauvegarde). ⚠️ **C'est le cas de la map
-de campagne que tu construis en ce moment.** Tant que cette branche n'est pas fusionnée, ses
-spawners sont sauvegardés à l'ancien format. Elle restera jouable grâce à la lecture compatible.
-Son fichier sera corrigé à l'export (procédure au §7).
+**B2. Maps créées en jeu** (dossier `generated/` de la sauvegarde). Les maps d'un pack tiers
+sont corrigées à l'export (procédure au §7).
+
+**Décidé le 2026-09-29 pour la première map de campagne,** celle que le joueur construit en ce
+moment :
+
+- Le joueur **continue sans attendre la migration**. Ses spawners sont sauvegardés à l'ancien
+  format ; ça fonctionne grâce à la lecture compatible.
+- Il la livrera via `map-handoff/`, comme la taverne.
+- Je la convertirai à l'intégration dans `src/main/resources/data/dungeon_defenders/`. La
+  procédure est détaillée au §7, point 5.
+- Condition : **le gel de l'enum** (voir en tête de document) doit être respecté jusque-là.
 
 **B3. Maps déjà exportées et publiées par quelqu'un d'autre.** Ces fichiers sont hors de notre
 portée : la lecture compatible les garde jouables indéfiniment. Seul effet : une ligne de log
@@ -352,7 +391,12 @@ de vague bloquée.**
 maps créées en jeu (`fromWorld`) du namespace demandé. Sans rien changer, un export après la
 migration republierait donc l'ancien format tel quel.
 
-**Changement proposé.** `MapExporter` ne recopie plus le fichier brut. Il le décompresse,
+**Décidé (2026-09-29) : `/dd_export` convertit, et la lecture reste compatible.** Les deux
+mécanismes se complètent. La lecture compatible garde jouable tout ancien fichier, y compris
+ceux publiés avant la migration. L'export garantit que tout ce qui est publié *après* est au
+nouveau format.
+
+`MapExporter` ne recopie plus le fichier brut. Il le décompresse,
 convertit les champs `"Enemy"` numériques des blocs `dungeon_defenders:spawner` avec la même
 table `LegacyEnemyIds`, puis réécrit le résultat dans le jar. Chaque conversion est loggée
 (`Export <ns> : map <id>, spawner (x, y, z) relatif : ennemi n°0 converti en …`). La commande
@@ -369,10 +413,18 @@ intact, octet pour octet dans son contenu NBT.
 4. Vérifier le jar produit : relancer avec ce jar à la place des `.nbt` du monde, jouer la map,
    et contrôler que **aucune** ligne « ancien format converti » n'apparaît dans les logs. C'est
    la preuve que le fichier publié est bien au nouveau format.
-5. Pour la campagne livrée **dans le jar du mod** (le cas de ta future première map, pas un pack
-   tiers), le fichier ne passe pas par `/dd_export` mais par `map-handoff/` → intégration dans
-   `src/main/resources/`. Je la convertirai au moment de l'intégration, avec la même table et le
-   même contrôle « seul `Enemy` diffère » qu'au cas B1.
+5. **La campagne livrée dans le jar du mod** (la première map du joueur, pas un pack tiers) ne
+   passe pas par `/dd_export`. Elle passe par `map-handoff/`, puis est intégrée dans
+   `src/main/resources/data/dungeon_defenders/structure/map/`. Conversion à l'intégration :
+   1. Relire le fichier reçu et lister chaque spawner avec ses valeurs `"Enemy"`.
+   2. Convertir avec la même table `LegacyEnemyIds`. Une valeur hors table (ni `0` ni `1`)
+      signalerait une violation du gel de l'enum : dans ce cas, **arrêt et question au
+      joueur**, pas de conversion à l'aveugle.
+   3. Vérifier que **seul** le champ `Enemy` diffère entre l'original et le converti, avec le
+      même contrôle qu'au cas B1.
+   4. Si l'intégration a lieu **avant** la fusion de cette branche, garder le fichier à
+      l'ancien format (le code en place ne lit que les nombres) et le convertir dans le cadre
+      de la migration, avec les trois maps de test.
 
 **Le fichier source dans `generated/` reste à l'ancien format** tant que la map n'est pas
 resauvegardée au bloc de structure. Ce n'est pas grave : il reste lisible, et c'est l'export
@@ -421,15 +473,16 @@ qui publie. Le resauvegarder après une partie ne suffirait d'ailleurs pas : la 
   - serveur dédié (icônes et écran de config corrects pour un client distant) ;
   - `/dd_export` sur une map créée avant la migration.
 
-## Questions ouvertes (à trancher avant de coder)
+## Décisions (2026-09-29)
 
-1. **Chemin de ce document.** Tu as demandé `docs/data-driven/`. Le reste de la doc du projet
-   vit dans `doc/` (sans « s »). Je l'ai mis où tu l'as dit. Veux-tu le déplacer dans
-   `doc/data-driven/` pour rester cohérent ?
-2. **Conversion à l'export (§7).** Je propose que `/dd_export` convertisse à la volée. Autre
-   option : ne rien changer à l'export et compter uniquement sur la lecture compatible, mais les
-   jars publiés garderaient l'ancien format et loggeraient à chaque partie. Je recommande la
-   conversion.
-3. **Ta map de campagne en cours.** Elle sera à l'ancien format si tu la sauvegardes avant la
-   fusion. Ça fonctionne grâce à la lecture compatible. Veux-tu attendre la migration pour
-   poser et configurer ses spawners, ou continuer en parallèle et convertir à l'intégration ?
+1. **Emplacement de la doc :** tout ce qui concerne le passage en data-driven vit dans
+   `doc/data-driven/`, avec le reste de la documentation du projet. Le premier jet avait été
+   créé dans `docs/` par erreur et a été déplacé.
+2. **Export et lecture :** `/dd_export` convertit les anciens fichiers au nouveau format (§7), et
+   la lecture reste compatible avec l'ancien format partout (§5). L'un ne remplace pas l'autre.
+3. **Première map de campagne :** le joueur continue de la construire sans attendre, puis me la
+   livre pour conversion à l'intégration (§5 B2, §7 point 5). D'ici la fusion, **gel complet
+   de l'enum `SpawnableEnemy`** : ni l'ordre, ni le contenu (voir la section dédiée en tête de
+   document).
+
+Plus aucune question ouverte : le plan est prêt à être implémenté, sur feu vert du joueur.
