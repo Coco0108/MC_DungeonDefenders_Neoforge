@@ -1,8 +1,9 @@
 package com.github.c0c0tier.dungeon_defenders.client.gui.screen;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.client.ClientEnemyDefinitions;
+import com.github.c0c0tier.dungeon_defenders.init.LegacyEnemyIds;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
-import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.menu.SpawnerConfigMenu;
 import com.github.c0c0tier.dungeon_defenders.network.SpawnerConfigPayload;
 import net.minecraft.client.Minecraft;
@@ -14,15 +15,18 @@ import net.minecraft.client.gui.screens.inventory.MenuAccess;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 // Écran de config du spawner, sans slot ni item. Composition dynamique : une ligne par ennemi
 // (bouton "cycler le type" + champ nombre de base + bouton retirer), plus un bouton "Ajouter"
-// (caché une fois tous les SpawnableEnemy utilisés, la liste est fermée). Les champs scalaires
+// (caché une fois tous les ennemis connus utilisés — la liste vient des JSON d'ennemis, reçue du
+// serveur par ClientEnemyDefinitions). Les champs scalaires
 // (intervalle, rayon, plage de vagues) et l'état des lignes sont gardés en mémoire (intervalText,
 // rows, ...) et non dans les widgets eux-mêmes, car Ajouter/Retirer une ligne reconstruit tous
 // les widgets (rebuildWidgets) pour replacer les lignes suivantes et le bouton Valider.
@@ -66,10 +70,10 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
     private final List<Button> rowCycleButtons = new ArrayList<>();
 
     private static final class RowState {
-        SpawnableEnemy enemy;
+        Identifier enemy;
         String countText;
 
-        RowState(SpawnableEnemy enemy, int baseCount) {
+        RowState(Identifier enemy, int baseCount) {
             this.enemy = enemy;
             this.countText = String.valueOf(baseCount);
         }
@@ -110,8 +114,8 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
             }
         }
         if (this.rows.isEmpty()) {
-            this.rows.add(new RowState(SpawnableEnemy.ZOMBIE, 15));
-            this.rows.add(new RowState(SpawnableEnemy.SKELETON, 5));
+            this.rows.add(new RowState(LegacyEnemyIds.ZOMBIE, 15));
+            this.rows.add(new RowState(LegacyEnemyIds.SKELETON, 5));
         }
     }
 
@@ -120,7 +124,7 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
         this.rowCountFields.clear();
         this.rowCycleButtons.clear();
 
-        boolean showAdd = this.rows.size() < SpawnableEnemy.values().length;
+        boolean showAdd = firstUnusedEnemy() != null;
         int totalRows = 4 + this.rows.size() + (showAdd ? 1 : 0) + 1;
         int centerX = this.width / 2;
         int top = Math.max(24, this.height / 2 - (totalRows * ROW_HEIGHT) / 2);
@@ -164,13 +168,13 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
         return this.addRenderableWidget(field);
     }
 
-    /** Bouton "cycler le type" (auto-libellé par l'enum) + champ nombre + bouton retirer, pour une ligne. */
+    /** Bouton "cycler le type" (libellé = nom de l'ennemi) + champ nombre + bouton retirer, pour une ligne. */
     private void addEntryRow(int centerX, int y, int rowIndex) {
         RowState row = this.rows.get(rowIndex);
         int left = centerX - ROW_TOTAL_WIDTH / 2;
 
         Button cycleButton = this.addRenderableWidget(Button.builder(
-                        Component.translatable(row.enemy.translationKey()),
+                        ClientEnemyDefinitions.displayName(row.enemy),
                         button -> onCycleEnemy(rowIndex))
                 .bounds(left, y, CYCLE_BUTTON_WIDTH, FIELD_HEIGHT)
                 .build());
@@ -192,23 +196,31 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
         }
     }
 
-    /** Passe la ligne au prochain SpawnableEnemy pas déjà utilisé par une autre ligne (jamais deux lignes sur le même type). */
+    /**
+     * Passe la ligne à l'ennemi connu suivant (ordre des JSON : "order" puis identifiant) pas déjà
+     * utilisé par une autre ligne — jamais deux lignes sur le même ennemi. Une ligne sur un ennemi
+     * inconnu (pack retiré...) passe au premier ennemi connu disponible.
+     */
     private void onCycleEnemy(int rowIndex) {
         RowState row = this.rows.get(rowIndex);
-        SpawnableEnemy candidate = row.enemy;
-        for (int i = 0; i < SpawnableEnemy.values().length; i++) {
-            candidate = candidate.next();
-            if (candidate == row.enemy || !isUsedByOtherRow(rowIndex, candidate)) {
+        List<Identifier> known = ClientEnemyDefinitions.sorted().stream().map(ClientEnemyDefinitions.Entry::id).toList();
+        if (known.isEmpty()) {
+            return;
+        }
+        int start = known.indexOf(row.enemy);
+        for (int step = 1; step <= known.size(); step++) {
+            Identifier candidate = known.get(Math.floorMod(start + step, known.size()));
+            if (candidate.equals(row.enemy) || !isUsedByOtherRow(rowIndex, candidate)) {
+                row.enemy = candidate;
                 break;
             }
         }
-        row.enemy = candidate;
-        this.rowCycleButtons.get(rowIndex).setMessage(Component.translatable(candidate.translationKey()));
+        this.rowCycleButtons.get(rowIndex).setMessage(ClientEnemyDefinitions.displayName(row.enemy));
     }
 
-    private boolean isUsedByOtherRow(int rowIndex, SpawnableEnemy enemy) {
+    private boolean isUsedByOtherRow(int rowIndex, Identifier enemy) {
         for (int i = 0; i < this.rows.size(); i++) {
-            if (i != rowIndex && this.rows.get(i).enemy == enemy) {
+            if (i != rowIndex && Objects.equals(this.rows.get(i).enemy, enemy)) {
                 return true;
             }
         }
@@ -217,7 +229,11 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
 
     private void onAddRow() {
         syncFieldsToState();
-        this.rows.add(new RowState(firstUnusedEnemy(), 0));
+        Identifier enemy = firstUnusedEnemy();
+        if (enemy == null) {
+            return; // bouton caché dans ce cas, garde-fou seulement
+        }
+        this.rows.add(new RowState(enemy, 0));
         this.rebuildWidgets();
     }
 
@@ -227,14 +243,14 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
         this.rebuildWidgets();
     }
 
-    private SpawnableEnemy firstUnusedEnemy() {
-        for (SpawnableEnemy candidate : SpawnableEnemy.values()) {
-            if (this.rows.stream().noneMatch(row -> row.enemy == candidate)) {
-                return candidate;
+    /** @return le premier ennemi connu qu'aucune ligne n'utilise, ou null s'ils le sont tous. */
+    private Identifier firstUnusedEnemy() {
+        for (ClientEnemyDefinitions.Entry candidate : ClientEnemyDefinitions.sorted()) {
+            if (this.rows.stream().noneMatch(row -> row.enemy.equals(candidate.id()))) {
+                return candidate.id();
             }
         }
-        // Ne devrait pas arriver : le bouton Ajouter est caché une fois la liste pleine.
-        return SpawnableEnemy.values()[0];
+        return null;
     }
 
     /** Recopie les valeurs des widgets actuels dans l'état en mémoire, avant qu'un rebuild ne les détruise. */
@@ -270,7 +286,7 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
 
         List<SpawnerConfigPayload.Entry> entries = new ArrayList<>();
         for (RowState row : this.rows) {
-            entries.add(new SpawnerConfigPayload.Entry(row.enemy.ordinal(), parseOr(row.countText, 0)));
+            entries.add(new SpawnerConfigPayload.Entry(row.enemy, parseOr(row.countText, 0)));
         }
 
         SpawnerConfigPayload payload = new SpawnerConfigPayload(

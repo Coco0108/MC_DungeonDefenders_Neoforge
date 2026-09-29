@@ -45,6 +45,12 @@ public class ModCommands {
             source.sendSuccess(() -> Component.translatable(
                     "dungeon_defenders.export.success",
                     result.mapCount(), result.previewCount(), result.jar().toString()), true);
+            // Maps sauvegardées avant le passage des ennemis en data-driven : leurs spawners ont été
+            // réécrits au nouveau format dans le jar (détail par spawner dans le log serveur).
+            if (result.convertedEnemyCount() > 0) {
+                source.sendSuccess(() -> Component.translatable(
+                        "dungeon_defenders.export.converted", result.convertedEnemyCount()), true);
+            }
             return result.mapCount();
         } catch (IllegalArgumentException refused) {
             // Message métier destiné au joueur (namespace invalide, aucune map exportable).

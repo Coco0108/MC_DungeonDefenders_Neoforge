@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
+import com.github.c0c0tier.dungeon_defenders.client.ClientEnemyDefinitions;
 import com.github.c0c0tier.dungeon_defenders.init.DifficultyScaling;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -31,8 +32,8 @@ import java.util.List;
 // Combat (voir extractRenderState) : pas d'intérêt une fois la vague lancée, et évite de
 // polluer l'écran pendant le combat.
 //
-// Icône par ligne de détail : réutilise l'œuf d'invocation vanilla correspondant
-// (SpawnableEnemy#spawnEggItem) plutôt qu'un sprite dédié — voir 05-etat-et-problemes-connus.md
+// Icône par ligne de détail : l'"icon" du JSON de l'ennemi (l'œuf d'invocation vanilla pour
+// les ennemis livrés, voir ClientEnemyDefinitions) plutôt qu'un sprite dédié — voir 05-etat-et-problemes-connus.md
 // pour la limite connue (l'icône est bloquée par les murs, contrairement au texte en
 // SEE_THROUGH, faute d'équivalent "à travers les murs" pour le rendu d'item).
 public class SpawnerBlockEntityRenderer implements BlockEntityRenderer<SpawnerBlockEntity, SpawnerRenderState> {
@@ -102,18 +103,28 @@ public class SpawnerBlockEntityRenderer implements BlockEntityRenderer<SpawnerBl
         List<Component> entryLines = new ArrayList<>();
         int total = 0;
         for (SpawnerBlockEntity.SpawnEntry entry : blockEntity.getEntries()) {
-            // Même formule que SpawnEntry.resetForWave(...), pour que l'aperçu affiché ici
-            // corresponde exactement à ce que la prochaine vague fera spawn.
-            int count = Math.max(1, (int) Math.round(entry.baseCount() * multiplier));
-            total += count;
-            entryLines.add(Component.translatable(
-                    "dungeon_defenders.spawner.preview_entry",
-                    Component.translatable(entry.enemy().translationKey()),
-                    count));
+            if (ClientEnemyDefinitions.isKnown(entry.enemy())) {
+                // Même formule que SpawnEntry.resetForWave(...), pour que l'aperçu affiché ici
+                // corresponde exactement à ce que la prochaine vague fera spawn.
+                int count = Math.max(1, (int) Math.round(entry.baseCount() * multiplier));
+                total += count;
+                entryLines.add(Component.translatable(
+                        "dungeon_defenders.spawner.preview_entry",
+                        ClientEnemyDefinitions.displayName(entry.enemy()),
+                        count));
+            } else {
+                // Ennemi inconnu (pack retiré, JSON invalide...) : identifiant brut + barrière,
+                // pour que le créateur voie le problème en regardant le spawner. Hors total,
+                // comme côté serveur (PhaseTransitions#recomputeWaveEnemiesTotal) : il ne fera
+                // rien apparaître.
+                entryLines.add(Component.translatable(
+                        "dungeon_defenders.spawner.preview_unknown_entry",
+                        entry.enemy().toString()));
+            }
 
             ItemStackRenderState icon = new ItemStackRenderState();
-            ItemStack spawnEgg = new ItemStack(entry.enemy().spawnEggItem());
-            this.itemModelResolver.updateForTopItem(icon, spawnEgg, ItemDisplayContext.FIXED, level, null, 0);
+            ItemStack iconStack = new ItemStack(ClientEnemyDefinitions.iconOrBarrier(entry.enemy()));
+            this.itemModelResolver.updateForTopItem(icon, iconStack, ItemDisplayContext.FIXED, level, null, 0);
             state.icons.add(icon);
         }
 

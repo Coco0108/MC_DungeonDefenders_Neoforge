@@ -1,10 +1,17 @@
 package com.github.c0c0tier.dungeon_defenders;
 
+import com.github.c0c0tier.dungeon_defenders.init.LegacyEnemyIds;
 import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.MapRegistry;
+import com.mojang.logging.LogUtils;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
+import org.slf4j.Logger;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -26,6 +33,8 @@ import java.util.zip.ZipOutputStream;
 // n'importe quelle structure (voir MapRegistry), sans inscription ni API.
 public final class MapExporter {
 
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     /** Dossier de sortie, à la racine du serveur/jeu — hors de la sauvegarde, facile à retrouver. */
     public static final String EXPORT_DIR = "dungeon_defenders_export";
 
@@ -39,8 +48,11 @@ public final class MapExporter {
     private MapExporter() {
     }
 
-    /** Ce qu'a produit un export, pour le message de retour. */
-    public record Result(Path jar, int mapCount, int previewCount) {
+    /**
+     * Ce qu'a produit un export, pour le message de retour. {@code convertedEnemyCount} : nombre
+     * d'ennemis de spawner réécrits de l'ancien format (ordinal) au nouveau (identifiant).
+     */
+    public record Result(Path jar, int mapCount, int previewCount, int convertedEnemyCount) {
     }
 
     /**
@@ -69,14 +81,26 @@ public final class MapExporter {
         StructureTemplateManager manager = level.getStructureManager();
         Path worldDir = level.getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).normalize();
         int previews = 0;
+        int convertedEnemies = 0;
 
         try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(jar))) {
             writeEntry(zip, "META-INF/neoforge.mods.toml", modsToml(namespace, maps.size()).getBytes(StandardCharsets.UTF_8));
 
             for (MapDefinition map : maps) {
                 Path structure = MapRegistry.worldFile(manager, map.structureId());
+                // Plus une copie octet pour octet depuis le passage des ennemis en data-driven
+                // (doc/data-driven/ennemis.md, §7) : une map sauvegardée AVANT la migration porte
+                // encore des spawners à l'ancien format (ennemi par ordinal). Le jeu sait les
+                // relire, mais ce qu'on publie doit sortir au nouveau format ; seuls ces champs
+                // "Enemy" changent, tout le reste du NBT est réécrit à l'identique.
+                CompoundTag content = NbtIo.readCompressed(structure, NbtAccounter.unlimitedHeap());
+                String mapLabel = map.structureId().toString();
+                convertedEnemies += LegacyEnemyIds.convertStructure(content,
+                        message -> LOGGER.info("Export {} : map {}, {}", namespace, mapLabel, message));
+                ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+                NbtIo.writeCompressed(content, bytes);
                 writeEntry(zip, "data/" + namespace + "/structure/" + map.structureId().getPath() + ".nbt",
-                        Files.readAllBytes(structure));
+                        bytes.toByteArray());
 
                 Path preview = worldDir.resolve(PREVIEW_DIR).resolve(namespace).resolve(map.mapId() + ".png");
                 if (Files.isRegularFile(preview)) {
@@ -94,7 +118,7 @@ public final class MapExporter {
             writeEntry(zip, "assets/" + namespace + "/lang/fr_fr.json", lang);
         }
 
-        return new Result(jar, maps.size(), previews);
+        return new Result(jar, maps.size(), previews, convertedEnemies);
     }
 
     private static void writeEntry(ZipOutputStream zip, String path, byte[] content) throws IOException {

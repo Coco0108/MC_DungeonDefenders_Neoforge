@@ -5,22 +5,23 @@ import com.github.c0c0tier.dungeon_defenders.entity.ManaCrystalEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackPriorityTargetGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
-import com.github.c0c0tier.dungeon_defenders.entity.ai.SeekEterniaCrystalGoal;
+import com.github.c0c0tier.dungeon_defenders.init.EnemyBehavior;
+import com.github.c0c0tier.dungeon_defenders.init.EnemyDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.EnemyRegistry;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ManaCrystalType;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
-import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
-import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -32,6 +33,8 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+
+import java.util.Optional;
 
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class ModEvents {
@@ -86,23 +89,17 @@ public class ModEvents {
             followRange.setBaseValue(MONSTER_FOLLOW_RANGE);
         }
 
-        // Les squelettes (et tout futur AbstractSkeleton) attaquent à distance avec l'arc
-        // déjà équipé par défaut, et ignorent Blockade/Turret (un archer peut tirer par-dessus/
-        // à côté sans avoir besoin de les détruire) ; les autres reçoivent un seul goal qui
-        // choisit lui-même la meilleure cible à portée selon les paliers de priorité (voir
-        // AiAttackTarget) : Block, puis Corps à corps, puis Cristal, puis Tourelle en dernier
-        // recours. Dans les deux cas, SeekEterniaCrystalGoal est ajouté juste après, à une
-        // priorité plus basse : il prend le relais dès qu'aucune cible locale n'est à portée
-        // (spawn loin du cristal, ou palier local temporairement épuisé) pour naviguer en
-        // ligne directe vers le cristal, quelle que soit la distance — voir ce Goal pour le
-        // détail de comment il s'articule avec les deux autres.
-        if (monster instanceof AbstractSkeleton) {
-            monster.goalSelector.addGoal(1, new RangedAttackEterniaCrystalGoal(monster));
-            monster.goalSelector.addGoal(2, new SeekEterniaCrystalGoal(monster));
-        } else {
-            monster.goalSelector.addGoal(0, new AttackPriorityTargetGoal(monster));
-            monster.goalSelector.addGoal(1, new SeekEterniaCrystalGoal(monster));
-        }
+        // Le TYPE d'IA vient du JSON de l'ennemi (init/EnemyBehavior, doc/data-driven/
+        // ennemis.md §3) : "melee_priority" (goal à paliers Block > Corps à corps > Cristal >
+        // Tourelle, puis SeekEterniaCrystalGoal) ou "ranged_crystal" (tir sur le cristal
+        // uniquement, puis SeekEterniaCrystalGoal). Un monstre SANS définition (zombie
+        // /summon d'un type sans JSON, stray, wither skeleton...) garde exactement la règle
+        // d'avant la migration — distance pour tout AbstractSkeleton, mêlée sinon — pour
+        // qu'aucun monstre ne perde l'IA qu'il avait.
+        EnemyBehavior behavior = EnemyRegistry.definitionFor(monster.getType())
+                .map(EnemyDefinition::behavior)
+                .orElseGet(() -> EnemyBehavior.legacyFor(monster));
+        behavior.applyGoals(monster);
     }
 
     // Générique à TOUTE catégorie de tour (Blockade, Turret, ...) : filtre sur
@@ -289,14 +286,13 @@ public class ModEvents {
     // notion de "quel joueur a tué quoi" n'existe aujourd'hui) — même logique co-op que le
     // ramassage des cristaux de mana, ouvert à tous.
     private static void awardExperienceAndScore(Level level, Monster monster) {
-        int xpValue = SpawnableEnemy.xpValueFor(monster.getType());
+        // "xp_value" du JSON de l'ennemi ; EnemyRegistry.DEFAULT_XP_VALUE (5, comme avant) pour
+        // un monstre sans définition.
+        int xpValue = EnemyRegistry.xpValueFor(monster.getType());
 
-        // NO_ENEMY en repli si jamais ce monstre n'est pas dans la liste fermée du Spawner
-        // (même repli défensif que SpawnableEnemy.xpValueFor juste au-dessus).
-        int enemyOrdinal = SpawnableEnemy.find(monster.getType())
-                .map(SpawnableEnemy::ordinal)
-                .orElse(ScoreGainPayload.NO_ENEMY);
-        grantScore(level, xpValue, ScoreSource.MONSTER_KILLED, enemyOrdinal);
+        // Pas d'ennemi associé (donc pas d'icône dans le popup) si ce monstre n'a pas de
+        // définition — même repli qu'avant la migration.
+        grantScore(level, xpValue, ScoreSource.MONSTER_KILLED, EnemyRegistry.idFor(monster.getType()));
 
         for (Player player : level.players()) {
             grantExperience(player, xpValue);
@@ -308,9 +304,9 @@ public class ModEvents {
     // ScoreGainOverlay côté client — voir ce paquet pour le pourquoi des deux canaux distincts).
     // Toute future source de score (fin de vague, fin de map, multiplicateurs — voir
     // doc/02-gameplay.md) doit passer par ici plutôt que toucher SCORE directement, pour ne pas
-    // dupliquer cette double mise à jour ; passer ScoreGainPayload.NO_ENEMY si le gain n'a pas
+    // dupliquer cette double mise à jour ; passer Optional.empty() si le gain n'a pas
     // d'ennemi associé (tout ce qui n'est pas un kill).
-    private static void grantScore(Level level, int amount, ScoreSource source, int enemyOrdinal) {
+    private static void grantScore(Level level, int amount, ScoreSource source, Optional<Identifier> enemy) {
         int score = level.getData(ModAttachments.SCORE) + amount;
         level.setData(ModAttachments.SCORE, score);
         level.syncData(ModAttachments.SCORE);
@@ -318,7 +314,7 @@ public class ModEvents {
         for (Player player : level.players()) {
             if (player instanceof ServerPlayer serverPlayer) {
                 serverPlayer.connection.send(
-                        new ScoreGainPayload(amount, source.ordinal(), enemyOrdinal).toVanillaClientbound());
+                        new ScoreGainPayload(amount, source.ordinal(), enemy).toVanillaClientbound());
             }
         }
     }

@@ -1,15 +1,55 @@
 # Data-driven, étape 1 : les ennemis
 
-> **Statut : plan finalisé et validé avec le joueur le 2026-09-29, rien n'est codé.** Branche
-> `feature/data-driven`, créée depuis `feature/map-ecart-ia` (PR #43). Cette branche est la
-> seule à réunir le système de maps par structure, `/dd_export`, les maps de test embarquées et
-> le correctif du total de vague. Les décisions prises sont récapitulées en fin de document.
+> **Statut : implémenté le 2026-09-29** sur la branche `feature/data-driven`, créée depuis
+> `feature/map-ecart-ia` (PR #43), à partir du plan ci-dessous validé avec le joueur le même jour.
+> **Pas encore testé en jeu** : procédure dans
+> [06-a-tester.md](../06-a-tester.md#ennemis-data-driven-étape-1-enemyregistry-json-dennemis-migration-du-format-des-spawners).
 >
 > **Contrainte absolue : aucune valeur de gameplay ne change.** Les JSON livrés reprennent
 > exactement les valeurs actuelles du code. Après migration, une partie doit se dérouler
-> exactement comme avant : mêmes monstres, même XP, mêmes dégâts, même IA.
+> exactement comme avant : mêmes monstres, même XP, mêmes dégâts, même IA. Vérifié par le
+> gametest `enemy_shipped_values`, et par comparaison des trois `.nbt` de test régénérés : seul
+> le champ `Enemy` diffère, conformément à la table figée.
 
-## ⚠️ Gel de l'enum `SpawnableEnemy` jusqu'à la fusion
+## Ce qui a changé par rapport au plan
+
+Tout le plan est implémenté tel quel, avec quatre écarts. Aucun ne change une valeur de
+gameplay.
+
+1. **Registre des spawners actifs corrigé** (hors plan, mais bloquant pour le test n°1).
+   Le gametest `enemy_unknown_excluded_from_wave` trouvait un total de vague à 0.
+   - Cause : `LevelChunk#setBlockEntity` appelle `setLevel()` sur le block entity qui arrive,
+     **puis** `setRemoved()` sur celui qu'il remplace, à la même position.
+     `SpawnerBlockEntity#setRemoved` retirait alors d'`ACTIVE_SPAWNERS` le spawner tout juste
+     enregistré.
+   - C'est la vraie cause du « total bloqué à 0 » du 2026-09-12, qui n'avait été que contourné.
+   - Correctif : le retrait est différé, et n'a lieu que s'il n'y a plus de spawner à cette
+     position.
+   - Même patron suspect sur `ManaChestBlockEntity` (`ACTIVE_MANA_CHESTS`) : noté dans
+     `05-etat-et-problemes-connus.md`, pas corrigé ici.
+2. **Version du protocole réseau `"1"` → `"2"`** (`ModNetworking`). Deux paquets changent de
+   forme ; un client resté sur l'ancienne version est refusé proprement à la connexion, au lieu
+   d'échanger des paquets incompatibles. Conséquence pratique : un client à jour ne peut plus
+   rejoindre le serveur du homelab tant que celui-ci tourne l'ancien jar.
+3. **« Valider » dans l'écran du spawner conserve une ligne d'ennemi inconnu déjà présente.**
+   Le serveur refusait tout identifiant inconnu, ce qui aurait effacé cette ligne (et contredit
+   le « jamais de donnée perdue » du §6). Il accepte maintenant un identifiant inconnu s'il était
+   déjà dans ce spawner ; un client ne peut toujours pas en introduire un nouveau.
+4. **Un `/reload` recalcule le total de vague** des niveaux qui ont des spawners. Ajouter ou
+   retirer un ennemi utilisé en pleine vague ne laisse pas un total périmé.
+
+**Vérifié hors jeu :**
+- `./gradlew build` ;
+- `tools/verifier-dist.py` : aucune classe cliente dans le graphe serveur ;
+- les 7 gametests passent (`./gradlew runGameTestServer`), dont 4 nouveaux :
+  `enemy_legacy_format`, `enemy_shipped_values`, `enemy_unknown_excluded_from_wave`,
+  `enemy_export_conversion` ;
+- le serveur de gametest logge bien `2 ennemi(s) chargé(s)` au démarrage.
+
+## Gel de l'enum `SpawnableEnemy` jusqu'à la fusion
+
+> **Sur cette branche, l'enum n'existe plus** : il a été remplacé par les JSON. Le gel reste
+> valable **sur toutes les autres branches** tant que celle-ci n'est pas fusionnée.
 
 **Décidé avec le joueur le 2026-09-29.** Jusqu'à la fusion de cette migration, **on ne touche
 ni à l'ordre ni au contenu de l'enum `init/SpawnableEnemy.java`, sur aucune branche**. Concrètement,

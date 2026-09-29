@@ -400,23 +400,34 @@ la section correspondante de [02-gameplay.md](02-gameplay.md)). Un changement qu
 pas le nombre de lignes (ex. cycler la valeur d'un bouton) n'a pas besoin de tout reconstruire :
 `AbstractWidget#setMessage(...)` suffit pour changer son libellé en place.
 
-**Ajouter un ennemi choisissable dans le spawner** : une seule ligne dans
-`init/SpawnableEnemy.java` (nom + `EntityType`), plus sa clé de traduction
-(`dungeon_defenders.enemy.<nom>`) dans les deux fichiers de lang. Rien d'autre à toucher : le
-GUI, le réseau et la persistance passent déjà par cet enum (voir 02-gameplay.md).
+**Ajouter un ennemi choisissable dans le spawner** : un fichier JSON, sans une ligne de Java
+(depuis le 2026-09-29, voir [data-driven/ennemis.md](data-driven/ennemis.md)) :
+`data/<namespace>/dungeon_defenders/enemy/<nom>.json`, dans le mod ou dans n'importe quel
+datapack/jar de pack. Même forme que `zombie.json`/`skeleton.json` : `entity_type`, `icon`,
+`xp_value`, `order` (facultatif) et `behavior` (`dungeon_defenders:melee_priority`, ou
+`dungeon_defenders:ranged_crystal` avec `damage_per_shot`/`ticks_between_shots`/`shoot_range`
+facultatifs). Plus la clé de traduction `<namespace>.enemy.<nom>` dans les fichiers de lang (sans
+elle, l'identifiant brut s'affiche). `/reload` suffit pour l'essayer, sans redémarrer. Le GUI, le
+réseau et la persistance n'ont rien à changer.
+
+> **Règle absolue : ne jamais modifier `init/LegacyEnemyIds.java`.** C'est la traduction des
+> anciens fichiers (ennemi sauvegardé par numéro), pas la liste des ennemis actuels.
+
+**Nouveau TYPE de comportement** (pas seulement d'autres chiffres) : c'est le seul cas qui
+demande du Java — un record de plus dans `init/EnemyBehavior.java` (avec son `MapCodec` et son
+`applyGoals`), ajouté à `CODECS_BY_TYPE`.
 
 **Donner à un nouvel ennemi une attaque sur le cristal** : dans la grande majorité des cas,
-**pas besoin d'écrire de nouvelle classe**. `AttackEterniaCrystalGoal` (corps à corps) et
-`RangedAttackEterniaCrystalGoal` (distance) ont toutes les deux un constructeur
-`(mob, damagePerHit, ticksBetweenX, ...)` — il suffit de brancher le bon type dans
-`ModEvents.onMonsterSpawn` avec les chiffres voulus (voir
-[02-gameplay.md](02-gameplay.md#ia-des-ennemis)) :
+**pas besoin d'écrire de Java**. Le `behavior` de son JSON suffit : `melee_priority` (paliers
+Block > Corps à corps > Cristal > Tourelle) ou `ranged_crystal` avec ses propres chiffres, par
+exemple :
 
-```java
-if (monster instanceof AbstractSkeleton) {
-    monster.goalSelector.addGoal(1, new RangedAttackEterniaCrystalGoal(monster, 3, 20, 10.0D));
-} else {
-    monster.goalSelector.addGoal(1, new AttackEterniaCrystalGoal(monster));
+```json
+"behavior": {
+  "type": "dungeon_defenders:ranged_crystal",
+  "damage_per_shot": 3,
+  "ticks_between_shots": 20,
+  "shoot_range": 10.0
 }
 ```
 

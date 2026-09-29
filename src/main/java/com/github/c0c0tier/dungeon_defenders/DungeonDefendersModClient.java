@@ -21,12 +21,13 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.screen.MapConfigScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.MapSelectionScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScreen;
 import com.github.c0c0tier.dungeon_defenders.entity.MobHealthBarRenderer;
+import com.github.c0c0tier.dungeon_defenders.client.ClientEnemyDefinitions;
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
-import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.network.GameOverPayload;
 import com.github.c0c0tier.dungeon_defenders.network.OpenMapSelectionPayload;
+import com.github.c0c0tier.dungeon_defenders.network.EnemyDefinitionsPayload;
 import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
 import com.google.common.reflect.TypeToken;
 
@@ -207,6 +208,10 @@ public class DungeonDefendersModClient {
     @SubscribeEvent
     static void onRegisterClientPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
         event.register(ScoreGainPayload.TYPE, DungeonDefendersModClient::handleScoreGain);
+        // Les ennemis data-driven (icônes, noms, ordre, types de mob) : reçus à la connexion et
+        // après chaque /reload, voir init/EnemyRegistry#onDatapackSync.
+        event.register(EnemyDefinitionsPayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> ClientEnemyDefinitions.replace(payload.enemies())));
         event.register(GameOverPayload.TYPE, (payload, context) ->
                 context.enqueueWork(() -> Minecraft.getInstance().setScreen(new GameOverScreen(payload.victory()))));
         // L'écran de choix de map ne s'ouvre plus directement depuis TavernCrystalBlock : ce
@@ -218,15 +223,13 @@ public class DungeonDefendersModClient {
 
     private static void handleScoreGain(ScoreGainPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            // Pas de borne-check sur les ordinaux ici, contrairement à ModNetworking : ce
+            // Pas de borne-check sur l'ordinal de source ici, contrairement à ModNetworking : ce
             // paquet vient du serveur (autoritaire dans ce mod co-op), pas d'un client — même
             // confiance que les autres ordinaux d'enum synchronisés par attachment (GamePhase,
-            // GameDifficulty...), jamais revérifiés côté client non plus. NO_ENEMY (-1) reste un
-            // cas à part : ce n'est pas un ordinal invalide, juste "aucun ennemi associé".
-            SpawnableEnemy enemy = payload.enemyOrdinal() == ScoreGainPayload.NO_ENEMY
-                    ? null
-                    : SpawnableEnemy.values()[payload.enemyOrdinal()];
-            ScoreGainOverlay.INSTANCE.addPopup(payload.amount(), ScoreSource.values()[payload.sourceOrdinal()], enemy);
+            // GameDifficulty...). L'ennemi, lui, est un identifiant : s'il est inconnu de la
+            // copie client (ClientEnemyDefinitions), le popup s'affiche simplement sans icône.
+            ScoreGainOverlay.INSTANCE.addPopup(payload.amount(), ScoreSource.values()[payload.sourceOrdinal()],
+                    payload.enemy().orElse(null));
         });
     }
 

@@ -202,7 +202,7 @@ vérifie la CI.
   cristal de mana) donne du score à la carte (`ModAttachments.SCORE`) et de l'expérience à
   **tous les joueurs présents** (partagée, décidé avec le joueur — ce sont surtout les tours
   qui tuent, pas un joueur en particulier, aucune attribution de kill n'existe). Valeur par
-  monstre = `SpawnableEnemy.xpValue()` (zombie 10, squelette 15, valeurs de test). L'expérience
+  monstre = le champ `xp_value` de son JSON d'ennemi (zombie 10, squelette 15, valeurs de test ; data-driven depuis le 2026-09-29). L'expérience
   fait monter `ModAttachments.LEVEL` par paliers de `MAX_EXPERIENCE` (100, plafond fixe, pas de
   barème croissant), avec un message système au passage de niveau. `SCORE` est remis à 0 par
   `PhaseTransitions.resetGameState` à chaque nouvelle partie ; `EXPERIENCE`/`LEVEL` persistent
@@ -312,10 +312,10 @@ vérifie la CI.
 - ✅ Écran de configuration du spawner (premier GUI custom du mod) : clic droit sans shift sur
   un `SpawnerBlock` ouvre `SpawnerConfigScreen`, sans slot ni item. Intervalle, rayon, vague
   de début/fin, et une **liste dynamique** de composition (ajouter/retirer un ennemi, cycler
-  son type parmi `init/SpawnableEnemy.java`, régler son nombre de base) — plus la liste figée
+  son type parmi les ennemis data-driven — l'ex-enum `SpawnableEnemy` jusqu'au 2026-09-29 —, régler son nombre de base) — plus la liste figée
   zombie/squelette de la première version. Réseau custom C2S (`SpawnerConfigPayload`, avec une
   liste de longueur variable via `ByteBufCodecs.collection` + `ModNetworking`), revérifié côté
-  serveur (portée, existence du bloc, validité de chaque ordinal d'ennemi reçu) avant
+  serveur (portée, existence du bloc, validité de chaque ennemi reçu — identifiant connu ou déjà présent dans ce spawner) avant
   application — appliquée **immédiatement** (pas d'attente de la prochaine vague). **Réservé
   au mode créatif** (`player.isCreative()`) : une vraie partie est censée charger des
   spawners déjà configurés, pas les reconfigurer en jouant. Détail complet dans
@@ -650,6 +650,34 @@ vérifie la CI.
   **Jamais chargée par Minecraft.** Détail dans
   [02-gameplay.md](02-gameplay.md#mapdetour_ianbt).
 
+- ✅ **Ennemis data-driven, étape 1** (2026-09-29, plan :
+  [data-driven/ennemis.md](data-driven/ennemis.md)) : l'enum `SpawnableEnemy` est remplacé par
+  des JSON (`data/<ns>/dungeon_defenders/enemy/*.json`), rechargés par `/reload` sans redémarrer,
+  synchronisés au client (`EnemyDefinitionsPayload`). Les spawners sauvegardent désormais un
+  identifiant ; l'ancien format (ordinal) reste lisible, est converti et loggé une fois par
+  spawner, et `/dd_export` convertit les maps qu'il publie. Ennemi inconnu : log, rien ne spawne,
+  exclu du total de vague, jamais de crash. **Aucune valeur de gameplay changée** (vérifié par le
+  gametest `enemy_shipped_values`, et par comparaison des trois `.nbt` de test régénérés : seul le
+  champ `Enemy` diffère). 4 gametests ajoutés, les 7 passent. **Jamais testé en jeu** : voir
+  [06-a-tester.md](06-a-tester.md).
+  - **Gel de l'enum levé** : l'enum n'existe plus. La table `init/LegacyEnemyIds.java`
+    (`0` → zombie, `1` → squelette) est, elle, figée **pour toujours**.
+  - **Écarts par rapport au plan**, tous sans effet de gameplay :
+    - la version du protocole réseau passe de `"1"` à `"2"`, pour qu'un client resté sur
+      l'ancienne version soit refusé proprement ;
+    - « Valider » dans l'écran du spawner conserve une ligne d'ennemi inconnu déjà présente, au
+      lieu de la supprimer ;
+    - un `/reload` recalcule le total de vague des niveaux qui ont des spawners ;
+    - le registre des spawners actifs a été corrigé (voir la ligne suivante).
+- ✅ **Registre des spawners actifs corrigé** (2026-09-29, trouvé par le gametest
+  `enemy_unknown_excluded_from_wave`) : vraie cause du « total de vague bloqué à 0 » du
+  2026-09-12. `LevelChunk#setBlockEntity` appelle `setLevel()` sur le nouveau block entity puis
+  `setRemoved()` sur celui qu'il remplace, à la même position. `SpawnerBlockEntity#setRemoved`
+  retirait donc du registre `ACTIVE_SPAWNERS` le spawner tout juste enregistré (typiquement à la
+  pose d'une structure de map). Désormais, le retrait est différé et n'a lieu que s'il n'y a plus
+  de spawner à cette position. Même patron suspect pour les coffres de mana, voir « Les coffres
+  ne réapparaissent pas en jeu ».
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.
@@ -745,6 +773,15 @@ registre suit le même patron qu'`ACTIVE_SPAWNERS` (fonctionnel, confirmé en je
 changement de blockstate utilise le mécanisme vanilla standard. Pas corrigé faute d'avoir
 trouvé la vraie cause — détail dans
 [02-gameplay.md](02-gameplay.md#disparition-et-réapparition-visuelles--manachestblockopened-respawnall).
+
+**Piste sérieuse, non vérifiée (2026-09-29)** : le registre `ACTIVE_SPAWNERS`, présenté plus haut
+comme « fonctionnel », avait en fait un bug, trouvé grâce à un gametest pendant la migration
+data-driven des ennemis (voir « Registre des spawners actifs » plus bas). Quand un block entity
+en remplace un autre à la même position, `LevelChunk#setBlockEntity` enregistre le nouveau puis
+appelle `setRemoved()` sur l'ancien, qui retirait la position du registre. `ManaChestBlockEntity`
+suit exactement le même patron avec `ACTIVE_MANA_CHESTS` : un coffre ainsi retiré du registre
+serait ignoré par `respawnAll`, ce qui correspondrait au symptôme. Pas corrigé ici (hors sujet de
+la migration) : à confirmer puis corriger de la même façon que `SpawnerBlockEntity#setRemoved`.
 À retester avec un scénario précis (un seul coffre, harnais de test du spawner pour changer de
 phase manuellement) pour resserrer le diagnostic la prochaine fois.
 
@@ -1116,6 +1153,9 @@ injouable. Rien de codé, voir le backlog dans
   plutôt que compris en profondeur (même limite que le premier spawn de la taverne, voir plus
   haut). Fixé en ajoutant un recalcul explicite et synchrone juste après `placeMap`, à un point
   où tous les spawners de la structure sont garantis posés avec leur configuration réelle.
+  **Vraie cause trouvée le 2026-09-29** (voir « Registre des spawners actifs » plus bas) : ce
+  recalcul seul ne pouvait pas suffire, le spawner posé par la structure ayant été retiré du
+  registre `ACTIVE_SPAWNERS` au moment même où il remplaçait l'ancien block entity.
 - Le **mécanisme** du bloc de spawn joueur (`PLAYER_SPAWN`,
   `findAndConsumeSpawnMarker`, voir "Ce qui est implémenté" plus haut) : prêt à remplacer le
   repli sur `MAP_POS` dès qu'une vraie structure en pose un, mais rien à trouver tant que
@@ -1134,20 +1174,20 @@ aussi le prérequis pour que le verrou créatif du GUI de config du spawner (voi
 vraiment son plein effet : tant que ce système n'est pas fini, rien n'empêche techniquement de
 construire et tester une map "à la main" en créatif.
 
-### Le GUI du spawner ne choisit que parmi une liste fermée d'ennemis (SpawnableEnemy)
+### Le GUI du spawner ne choisit que parmi une liste fermée d'ennemis (les JSON d'ennemis)
 
 `SpawnerConfigScreen` (voir [02-gameplay.md](02-gameplay.md)) permet maintenant d'ajouter et
 retirer des lignes de composition librement, et de cycler le type de chaque ligne — mais
-uniquement parmi les valeurs d'`init/SpawnableEnemy.java` (`ZOMBIE`, `SKELETON` pour
-l'instant), pas n'importe quel mob du jeu. La feuille "Idées" du plan Excel du joueur
+uniquement parmi les ennemis data-driven chargés (`zombie`, `skeleton` pour l'instant ; l'enum
+`SpawnableEnemy` jusqu'au 2026-09-29), pas n'importe quel mob du jeu. La feuille "Idées" du plan Excel du joueur
 prévoyait à l'origine des **slots d'œufs** pour choisir librement n'importe quel type de mob.
 Choix assumé ici : une liste fermée plutôt qu'un `EntityType<?>` arbitraire, parce qu'il
 n'existe pas de tag vanilla générique "tout ce qui est hostile" dans cette version de
 Minecraft (vérifié) — il faudrait de toute façon une forme de liste blanche pour éviter
 qu'un joueur puisse faire spawn n'importe quelle entité (villageois, boss, etc.) depuis ce
-GUI. Ajouter un ennemi au jeu et le rendre choisissable ici se résume à une entrée dans
-`SpawnableEnemy` (une ligne, une clé de traduction) — pas de nouveau blocage architectural
-tant qu'on reste dans cette approche liste-fermée.
+GUI. Ajouter un ennemi au jeu et le rendre choisissable ici se résume désormais à un fichier
+JSON (voir [data-driven/ennemis.md](data-driven/ennemis.md)) — la liste reste fermée (seuls les
+ennemis déclarés), mais n'importe quel pack peut l'étendre sans code.
 
 Le seuil de déclenchement (`SPAWN_THRESHOLD = 20`) reste une constante globale non exposée
 dans le GUI, comme décidé avec le joueur (son effet se règle déjà via l'intervalle et le
@@ -1280,8 +1320,8 @@ métadonnées (renvoie vers `doc/`), `Config.java` a une vraie spec (`defaultHea
 11. ~~Étendre `SpawnerConfigScreen`/`SpawnerConfigPayload` d'une composition figée à une vraie
     liste~~ — fait : liste dynamique (ajouter/retirer/cycler), voir
     [02-gameplay.md](02-gameplay.md#lécran-de-configuration--menu-network-clientguiscreenspawnerconfigscreenjava).
-    Reste ouvert : gérer le défilement si `SpawnableEnemy` grandit au point de dépasser la
-    hauteur de l'écran (non géré pour l'instant, deux valeurs seulement).
+    Reste ouvert : gérer le défilement si la liste d'ennemis grandit au point de dépasser la
+    hauteur de l'écran (non géré pour l'instant, deux ennemis seulement).
 12. ~~Donner au squelette un vrai comportement d'archer~~ — fait :
     `RangedAttackEterniaCrystalGoal` (voir "Ce qui est implémenté" et
     [02-gameplay.md](02-gameplay.md#le-goal-à-distance--entityairangedattacketerniacrystalgoaljava)).
@@ -1290,7 +1330,7 @@ métadonnées (renvoie vers `doc/`), `Config.java` a une vraie spec (`defaultHea
     [02-gameplay.md](02-gameplay.md#la-taverne--choix-de-map-et-difficulté)).
 14. ~~Ajouter une icône par type de monstre dans l'aperçu de composition du spawner~~ — fait
     (2026-08-24) : chaque ligne de détail affiche maintenant l'œuf d'invocation vanilla de
-    l'ennemi (`SpawnableEnemy#spawnEggItem`), rendu via `ItemStackRenderState`/
+    l'ennemi (aujourd'hui le champ `icon` de son JSON), rendu via `ItemStackRenderState`/
     `ItemModelResolver` à côté du texte. **Jamais vu en jeu** (pas d'affichage possible dans cet
     environnement de dev) : taille (`ICON_SIZE`) et décalage (`ICON_GAP`) sont une première
     estimation à ajuster une fois testé — voir la checklist dédiée dans

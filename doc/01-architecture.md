@@ -26,7 +26,10 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── GamePhase.java                # Enum des phases (BUILD, COMBAT, TAVERN) + allowsTowerBuilding()/isInGame()
     │   │   ├── GameDifficulty.java           # Enum de difficulté (EASY, NORMAL, HARD)
     │   │   ├── DifficultyScaling.java        # Multiplicateur difficulté x vague, pour les spawners
-    │   │   ├── SpawnableEnemy.java           # Liste fermée des ennemis choisissables dans un spawner
+    │   │   ├── EnemyDefinition.java          # Un ennemi data-driven (entity_type, icône, XP, ordre, comportement) + codec strict
+    │   │   ├── EnemyBehavior.java            # Types d'IA en Java (melee_priority, ranged_crystal), paramètres en JSON
+    │   │   ├── EnemyRegistry.java            # Ennemis côté serveur : reload listener (/reload) + synchro client (OnDatapackSyncEvent)
+    │   │   ├── LegacyEnemyIds.java           # Table FIGÉE ancien ordinal -> identifiant (0 zombie, 1 squelette) + conversion NBT pour /dd_export
     │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild/enterTavern/startNewGame : transitions centralisées
     │   │   ├── MapDefinition.java            # Une map jouable (structure + nom + ordre + vagues + multiplicateur) ; le namespace fait office de pack
     │   │   ├── MapRegistry.java              # Découverte des maps parmi TOUTES les structures disponibles (monde, datapacks, jars)
@@ -50,7 +53,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── MapConfigPayload.java         # Paquet C2S (BlockPos + réglages d'une map)
     │   │   ├── DeleteMapPayload.java         # Paquet C2S (id de structure à supprimer de la sauvegarde)
     │   │   ├── GameOverPayload.java          # Paquet S2C (victoire/défaite, ouvre GameOverScreen)
-    │   │   ├── ScoreGainPayload.java         # Paquet S2C (montant + source du gain, alimente ScoreGainOverlay)
+    │   │   ├── ScoreGainPayload.java         # Paquet S2C (montant + source du gain + identifiant de l'ennemi tué, alimente ScoreGainOverlay)
+    │   │   ├── EnemyDefinitionsPayload.java  # Paquet S2C (ennemis data-driven : id, entity_type, icône, ordre), à la connexion et après /reload
     │   │   ├── OpenMapSelectionPayload.java  # Paquet S2C sans champ (ouvre MapSelectionScreen depuis TavernCrystalBlock)
     │   │   └── ModNetworking.java            # Enregistrement des paquets custom (RegisterPayloadHandlersEvent)
     │   ├── client/
@@ -62,6 +66,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── LineBoxRenderer.java          # Contour filaire coloré partagé (pose/suppression de tour, repérage des marqueurs)
     │   │   ├── MarkerOverlayClientEvents.java # Repérage en créatif des 5 blocs marqueurs invisibles : contour + étiquette à travers les murs
     │   │   ├── PauseMenuClientEvents.java   # Bouton "Abandonner le niveau" ajouté au menu pause (ScreenEvent.Init.Post)
+    │   │   ├── ClientEnemyDefinitions.java   # Copie CLIENT des ennemis data-driven (distincte d'EnemyRegistry, voir doc/data-driven/ennemis.md)
     │   │   └── ClientDisplayConfig.java      # Spec de config CLIENT (options d'affichage HUD facultatives), branchée dans DungeonDefendersModClient
     │   ├── client/gui/screen/
     │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
@@ -146,6 +151,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── textures/gui/maps/<id>.png                  # Aperçu de chaque GameMap (une image par map)
     │   ├── data/dungeon_defenders/loot_table/blocks/*.json  # Un par bloc (drop de lui-même)
     │   ├── data/dungeon_defenders/structure/gametest/empty.nbt  # Gabarit 3x3x3 sans bloc, partagé par les gametests
+    │   ├── data/dungeon_defenders/dungeon_defenders/enemy/*.json  # Ennemis data-driven (zombie, skeleton), relus par /reload
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
     │   └── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
     └── templates/META-INF/neoforge.mods.toml      # Métadonnées, expansées par Gradle
@@ -302,13 +308,21 @@ Chargement FML
    │                                      ScoreOverlay, CharacterOverlay, AbilitySlotsOverlay
    ├─ RegisterMenuScreensEvent [client] → spawner_config -> SpawnerConfigScreen,
    │                                       mana_chest_config -> ManaChestConfigScreen
-   └─ RegisterGameTestsEvent           → eternia_crystal_damage, phase_transitions
+   └─ RegisterGameTestsEvent           → eternia_crystal_damage, phase_transitions,
+                                          enemy_legacy_format, enemy_shipped_values,
+                                          enemy_unknown_excluded_from_wave, enemy_export_conversion
                                           (DungeonDefendersGameTests, voir 05-etat-et-problemes-connus.md)
 
 Bus de jeu (NeoForge.EVENT_BUS)
    ├─ MobHealthBarRenderer.onRenderLiving(RenderLivingEvent.Post) [client] → billboard de vie
-   │    filtré sur zombie/squelette, lit HEALTH/MAX_HEALTH/ENTITY_ID posés ci-dessus
+   │    filtré sur les entity_type des ennemis data-driven (ClientEnemyDefinitions),
+   │    lit HEALTH/MAX_HEALTH/ENTITY_ID posés ci-dessus
+   ├─ EnemyRegistry.onAddReloadListeners(AddServerReloadListenersEvent)
+   │    └─ au démarrage ET à chaque /reload : relit data/*/dungeon_defenders/enemy/*.json
+   ├─ EnemyRegistry.onDatapackSync(OnDatapackSyncEvent)
+   │    └─ à la connexion d'un joueur, et à tous après /reload : EnemyDefinitionsPayload
    ├─ ModEvents.onMonsterSpawn(EntityJoinLevelEvent)
+   │    └─ comportement de la définition de l'ennemi (EnemyBehavior), sinon règle d'avant
    ├─ ModEvents.onPlayerJoin(EntityJoinLevelEvent)
    ├─ ModEvents.onMonsterDeath(LivingDeathEvent)
    │    └─ si wave_enemies_killed >= wave_enemies_total :

@@ -1,0 +1,9 @@
+{
+  "entity_type": "minecraft:zombie",
+  "icon": "minecraft:zombie_spawn_egg",
+  "xp_value": 10,
+  "order": 0,
+  "behavior": {
+    "type": "dungeon_defenders:melee_priority"
+  }
+}

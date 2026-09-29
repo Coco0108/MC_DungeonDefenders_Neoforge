@@ -2,10 +2,14 @@ package com.github.c0c0tier.dungeon_defenders.block.entity;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.init.DifficultyScaling;
+import com.github.c0c0tier.dungeon_defenders.init.EnemyDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.EnemyRegistry;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
+import com.github.c0c0tier.dungeon_defenders.init.LegacyEnemyIds;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
-import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
+import com.mojang.datafixers.util.Either;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
@@ -14,6 +18,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.level.Level;
@@ -23,8 +28,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
+import org.slf4j.Logger;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.OptionalInt;
 
 // Implémente l'algorithme de spawn pondéré de la feuille "Idées" du plan Excel du joueur :
 // un accumulateur par type d'ennemi, incrémenté chaque contrôle de son "nombre de base" ; dès
@@ -37,6 +45,8 @@ import java.util.List;
 // attendant le GUI qui l'exposera — voir 05-etat-et-problemes-connus.md.
 public class SpawnerBlockEntity extends BlockEntity {
 
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     private static final int DEFAULT_INTERVAL_TICKS = 20;
     private static final int SPAWN_THRESHOLD = 20;
     // Nombre de positions aléatoires essayées dans le rayon avant de replier sur pos.above()
@@ -44,37 +54,65 @@ public class SpawnerBlockEntity extends BlockEntity {
     // ennemi à l'intérieur d'un bloc plein (mur, terrain irrégulier...) sans boucler indéfiniment.
     private static final int MAX_SPAWN_POSITION_ATTEMPTS = 8;
 
-    /** Un type d'ennemi (parmi la liste fermée SpawnableEnemy), son nombre de base, et sa progression pour la vague en cours. */
+    /**
+     * Un ennemi (identifiant data-driven, voir EnemyRegistry), son nombre de base, et sa
+     * progression pour la vague en cours.
+     */
     public static final class SpawnEntry {
+
+        /** Marqueur : cette entrée a été lue au nouveau format, rien n'a été converti. */
+        private static final int NOT_CONVERTED = -1;
+
+        // Lecture compatible (doc/data-driven/ennemis.md, §5) : "Enemy" est soit un NOMBRE
+        // (ancien format, ordinal de l'ex-enum SpawnableEnemy, traduit par la table figée
+        // LegacyEnemyIds), soit une CHAÎNE (nouveau format, identifiant). L'écriture passe
+        // toujours par la branche droite : un fichier ne revient jamais à l'ancien format.
+        private static final Codec<Either<Integer, Identifier>> ENEMY_FIELD = Codec.either(Codec.INT, Identifier.CODEC);
+
         public static final Codec<SpawnEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-                Codec.INT.fieldOf("Enemy").forGetter(e -> e.enemy.ordinal()),
+                ENEMY_FIELD.fieldOf("Enemy").forGetter(e -> Either.right(e.enemy)),
                 Codec.INT.fieldOf("BaseCount").forGetter(e -> e.baseCount),
                 Codec.INT.fieldOf("Spawned").forGetter(e -> e.spawned),
                 Codec.INT.fieldOf("Accumulator").forGetter(e -> e.accumulator),
                 Codec.INT.fieldOf("EffectiveTotal").forGetter(e -> e.effectiveTotal)
-        ).apply(instance, (enemyOrdinal, baseCount, spawned, accumulator, effectiveTotal) ->
-                new SpawnEntry(SpawnableEnemy.values()[enemyOrdinal], baseCount, spawned, accumulator, effectiveTotal)));
+        ).apply(instance, (enemyField, baseCount, spawned, accumulator, effectiveTotal) -> enemyField.map(
+                ordinal -> new SpawnEntry(LegacyEnemyIds.fromOrdinal(ordinal), baseCount, spawned, accumulator, effectiveTotal, ordinal),
+                id -> new SpawnEntry(id, baseCount, spawned, accumulator, effectiveTotal, NOT_CONVERTED))));
 
-        private final SpawnableEnemy enemy;
+        private final Identifier enemy;
         private final int baseCount;
         private int spawned;
         private int accumulator;
         private int effectiveTotal;
+        // Transitoire (jamais sauvegardé) : l'ancien ordinal si cette entrée vient d'être
+        // convertie, pour que SpawnerBlockEntity#loadAdditional puisse le logger avec la
+        // position du spawner (le codec, lui, ne la connaît pas).
+        private final int convertedFromOrdinal;
+        // Dernière "génération" de données ennemis (EnemyRegistry#generation) pour laquelle un
+        // ennemi inconnu a été signalé : un seul avertissement par chargement de données, pas un
+        // par tick, et de nouveau après un /reload si le problème persiste.
+        private int warnedUnknownGeneration = -1;
 
-        public SpawnEntry(SpawnableEnemy enemy, int baseCount) {
-            this(enemy, baseCount, 0, 0, baseCount);
+        public SpawnEntry(Identifier enemy, int baseCount) {
+            this(enemy, baseCount, 0, 0, baseCount, NOT_CONVERTED);
         }
 
-        private SpawnEntry(SpawnableEnemy enemy, int baseCount, int spawned, int accumulator, int effectiveTotal) {
+        private SpawnEntry(Identifier enemy, int baseCount, int spawned, int accumulator, int effectiveTotal, int convertedFromOrdinal) {
             this.enemy = enemy;
             this.baseCount = Math.max(0, baseCount);
             this.spawned = spawned;
             this.accumulator = accumulator;
             this.effectiveTotal = effectiveTotal;
+            this.convertedFromOrdinal = convertedFromOrdinal;
         }
 
-        public SpawnableEnemy enemy() {
+        public Identifier enemy() {
             return this.enemy;
+        }
+
+        /** @return l'ancien ordinal si cette entrée a été lue à l'ancien format, sinon vide. */
+        public OptionalInt convertedFromOrdinal() {
+            return this.convertedFromOrdinal == NOT_CONVERTED ? OptionalInt.empty() : OptionalInt.of(this.convertedFromOrdinal);
         }
 
         public int baseCount() {
@@ -94,6 +132,21 @@ public class SpawnerBlockEntity extends BlockEntity {
                 return false;
             }
 
+            // Ennemi inconnu (pack retiré, JSON invalide...) : l'entrée est conservée telle quelle
+            // (remettre le pack suffit à tout faire revenir) mais ne fait rien apparaître. Elle
+            // est aussi exclue du total de vague (PhaseTransitions#recomputeWaveEnemiesTotal),
+            // sinon la vague attendrait des monstres qui ne viendront jamais.
+            EnemyDefinition definition = EnemyRegistry.byId(this.enemy);
+            if (definition == null) {
+                int generation = EnemyRegistry.generation();
+                if (this.warnedUnknownGeneration != generation) {
+                    this.warnedUnknownGeneration = generation;
+                    LOGGER.warn("Spawner à {} : ennemi inconnu {}, ignoré (pack manquant ou JSON invalide ?)",
+                            pos.toShortString(), this.enemy);
+                }
+                return false;
+            }
+
             this.accumulator += this.effectiveTotal;
             if (this.accumulator < SPAWN_THRESHOLD) {
                 return false;
@@ -102,7 +155,7 @@ public class SpawnerBlockEntity extends BlockEntity {
             this.spawned++;
 
             BlockPos spawnPos = findSafeSpawnPos(level, pos, spawnRadius);
-            this.enemy.entityType().spawn(level, spawnPos, EntitySpawnReason.SPAWNER);
+            definition.entityType().spawn(level, spawnPos, EntitySpawnReason.SPAWNER);
             return true;
         }
     }
@@ -147,9 +200,14 @@ public class SpawnerBlockEntity extends BlockEntity {
     // Composition par défaut, avec les chiffres exacts de l'exemple du joueur
     // (15 gobelins / 5 orcs -> ici zombie/squelette, faute d'avoir plus d'ennemis).
     private List<SpawnEntry> entries = new ArrayList<>(List.of(
-            new SpawnEntry(SpawnableEnemy.ZOMBIE, 15),
-            new SpawnEntry(SpawnableEnemy.SKELETON, 5)
+            new SpawnEntry(LegacyEnemyIds.ZOMBIE, 15),
+            new SpawnEntry(LegacyEnemyIds.SKELETON, 5)
     ));
+
+    // Vrai si loadAdditional vient de lire au moins une entrée à l'ancien format : le block
+    // entity doit alors être resauvegardé, pour que le chunk soit réécrit au nouveau format et
+    // que la conversion (et son log) n'ait lieu qu'une seule fois. Voir markConvertedForResave.
+    private boolean needsResaveAfterConversion;
 
     private int intervalTicks = DEFAULT_INTERVAL_TICKS;
     private int spawnRadius;
@@ -192,7 +250,19 @@ public class SpawnerBlockEntity extends BlockEntity {
             // 05-etat-et-problemes-connus.md). Exécuter la recompute au tick suivant, une fois
             // l'enregistrement terminé, élimine la réentrance.
             serverLevel.getServer().execute(() -> PhaseTransitions.recomputeWaveEnemiesTotal(serverLevel));
+            scheduleResaveIfConverted(serverLevel);
         }
+    }
+
+    // setChanged() est différé pour la même raison que le recalcul ci-dessus : au chargement
+    // d'un chunk, ce block entity n'est pas encore inséré dans le chunk, et marquer le chunk
+    // "à sauvegarder" pendant son propre chargement risquerait la même réentrance.
+    private void scheduleResaveIfConverted(ServerLevel serverLevel) {
+        if (!this.needsResaveAfterConversion) {
+            return;
+        }
+        this.needsResaveAfterConversion = false;
+        serverLevel.getServer().execute(this::setChanged);
     }
 
     @Override
@@ -367,7 +437,25 @@ public class SpawnerBlockEntity extends BlockEntity {
             List<SpawnEntry> loaded = new ArrayList<>();
             savedEntries.forEach(loaded::add);
             this.entries = loaded;
+            logConversions(loaded);
         }
         // Sinon : garde la composition par défaut du champ (spawner tout juste placé, jamais sauvegardé).
+    }
+
+    // Une ligne par entrée convertie depuis l'ancien format. Seul le serveur peut en lire : il
+    // n'envoie jamais que le nouveau format au client (getUpdateTag passe par saveAdditional).
+    private void logConversions(List<SpawnEntry> loaded) {
+        for (SpawnEntry entry : loaded) {
+            entry.convertedFromOrdinal().ifPresent(ordinal -> {
+                LOGGER.info("Spawner à {} : ennemi n°{} (ancien format) converti en {}",
+                        this.worldPosition.toShortString(), ordinal, entry.enemy());
+                this.needsResaveAfterConversion = true;
+            });
+        }
+        // Posé par une structure (map), le block entity a déjà sa Level quand son NBT est
+        // appliqué ; au chargement d'un chunk, non — setLevel s'en chargera alors.
+        if (this.level instanceof ServerLevel serverLevel) {
+            scheduleResaveIfConverted(serverLevel);
+        }
     }
 }

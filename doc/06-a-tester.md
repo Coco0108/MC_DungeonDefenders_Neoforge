@@ -66,7 +66,7 @@ mana dans `onMonsterDeath` — même monstre tué, deux effets à vérifier en m
 - [ ] Tuer un zombie : le HUD **Score** (bas centre) augmente de **10**, et le HUD
       **Expérience** (barre verte bas gauche) augmente aussi de **10**.
 - [ ] Tuer un squelette : les deux augmentent de **15** cette fois (zombie et squelette n'ont
-      pas la même valeur, vérifie `SpawnableEnemy.xpValue()`).
+      pas la même valeur, vérifie le champ `xp_value` des JSON d'ennemis).
 - [ ] **En multijoueur (2 joueurs ou plus)** : tuer un monstre donne bien l'XP à **tous les
       joueurs présents** en même temps, pas seulement à celui qui a porté le coup — décidé
       volontairement, à vérifier que ce n'est pas juste un seul joueur qui progresse.
@@ -84,7 +84,7 @@ mana dans `onMonsterDeath` — même monstre tué, deux effets à vérifier en m
 - [ ] Se déconnecter/reconnecter après avoir gagné de l'expérience/un niveau : les deux valeurs
       sont bien conservées (persistance de l'attachment joueur).
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `awardExperienceAndScore`,
-      `grantExperience` ou `SpawnableEnemy.xpValueFor`.
+      `grantExperience` ou `EnemyRegistry.xpValueFor`.
 
 ## Gain de score flottant, avec sa source (`ScoreGainOverlay`, `ScoreGainPayload`)
 
@@ -982,6 +982,145 @@ blocs entre le spawner et le cristal, sans autre chemin possible — voir
 - [ ] Aucune régression sur le comportement déjà validé : archers qui tirent sur le cristal à
       portée, monstres de mêlée qui respectent toujours l'ordre de priorité Block > Corps à
       corps > Cristal > Tourelle une fois à portée locale.
+
+## Ennemis data-driven, étape 1 (`EnemyRegistry`, JSON d'ennemis, migration du format des spawners)
+
+Nouveau (2026-09-29), plan complet dans [data-driven/ennemis.md](data-driven/ennemis.md).
+Vérifié hors jeu : build, `tools/verifier-dist.py`, les 7 gametests (dont 4 nouveaux), et
+comparaison des trois `.nbt` de test régénérés (seul le champ `Enemy` diffère). **Jamais vu en
+jeu.**
+
+> ⚠️ **À tester en solo, pas sur le serveur dédié.** La version du protocole réseau du mod passe
+> de `1` à `2` : un client à jour sera **refusé** par le serveur du homelab tant que celui-ci
+> tourne l'ancien jar (et inversement). C'est voulu : sans ça, les deux versions échangeraient
+> des paquets de forme différente.
+
+**Où lire les logs** : en solo, le serveur intégré écrit dans le `logs/latest.log` de l'instance
+Minecraft (le même fichier que le client). Toutes les lignes ci-dessous y apparaissent.
+
+**Au lancement (tous les scénarios)** :
+
+- [ ] Le log contient `2 ennemi(s) chargé(s) : [...]` avec `dungeon_defenders:zombie` et
+      `dungeon_defenders:skeleton`.
+- [ ] Rien n'a changé à l'écran : l'aperçu au-dessus d'un spawner (icônes d'œufs, noms, total),
+      l'écran de config (bouton « cycler » : Zombie puis Squelette), la barre de vie des monstres,
+      le popup « +10 » / « +15 » avec l'œuf.
+
+### 1. Une map existante spawne toujours les bons ennemis (ancien format converti)
+
+**A. Avec un vrai monde d'avant la mise à jour.** C'est le cas de ta map de campagne, si elle
+contient déjà des spawners.
+
+- [ ] Avant de synchroniser, avec l'ancienne version du mod : vérifier que le monde contient au
+      moins un spawner configuré (zombies + squelettes), puis quitter le monde.
+- [ ] Synchroniser cette branche, relancer, ouvrir le monde. Aller près du spawner pour charger
+      son chunk. Le log contient une ligne **par ennemi du spawner** :
+      `Spawner à <x>, <y>, <z> : ennemi n°0 (ancien format) converti en dungeon_defenders:zombie`
+      (`n°1` → `dungeon_defenders:skeleton`).
+- [ ] L'aperçu du spawner et son écran de config affichent la même composition qu'avant.
+- [ ] Passer en Combat : il fait apparaître **les mêmes monstres qu'avant**, en même nombre, et la
+      vague se termine normalement (le compteur d'ennemis ne reste pas à 0).
+- [ ] Quitter, relancer, revenir au même spawner : **plus aucune** ligne « converti » pour lui.
+      Il a été resauvegardé au nouveau format.
+- [ ] Si la map est aussi sauvegardée en structure (`dungeon_defenders:map/...`) : la jouer depuis
+      la taverne. Les lignes « converti » **réapparaissent à chaque partie**. C'est attendu : le
+      fichier `.nbt` de la sauvegarde reste à l'ancien format, et seul l'export le convertit (§5).
+
+**B. Si tu n'as pas de monde d'avant sous la main**, on peut simuler l'ancien format avec la
+commande vanilla `/data`, en créatif :
+
+- [ ] Poser un spawner, le viser, puis taper (en remplaçant `<x> <y> <z>` par sa position) :
+      `/data merge block <x> <y> <z> {Entries:[{Enemy:0,BaseCount:4,Spawned:0,Accumulator:0,EffectiveTotal:4},{Enemy:1,BaseCount:2,Spawned:0,Accumulator:0,EffectiveTotal:2}]}`
+- [ ] Le log contient immédiatement les deux lignes `... ennemi n°0 (ancien format) converti en
+      dungeon_defenders:zombie` et `... n°1 ... dungeon_defenders:skeleton`.
+- [ ] `/data get block <x> <y> <z> Entries` affiche maintenant `Enemy: "dungeon_defenders:zombie"`
+      et `Enemy: "dungeon_defenders:skeleton"` : l'écriture est bien au nouveau format.
+- [ ] En Combat : 4 zombies et 2 squelettes apparaissent (difficulté Normal, vague 1), et la
+      vague se termine.
+
+**C. Les maps de test embarquées** (pack « Maps de test ») ont été régénérées au nouveau format :
+
+- [ ] Jouer `Arene de test` : **aucune** ligne « converti » dans le log, et toujours 8 zombies +
+      4 squelettes.
+
+### 2. Une modification de stat dans un JSON d'ennemi est appliquée par `/reload`
+
+Le JSON du mod est dans le jar. Pour le modifier sans le toucher, on le **remplace** par un
+datapack du monde, qui a priorité sur le mod.
+
+- [ ] Dans `saves/<ton monde>/datapacks/`, créer le dossier `dd_test_ennemis` avec deux
+      fichiers :
+  - `pack.mcmeta` :
+    ```json
+    { "pack": { "description": "Test ennemis Dungeon Defenders", "min_format": 101, "max_format": 101 } }
+    ```
+  - `data/dungeon_defenders/dungeon_defenders/enemy/zombie.json` : copie du zombie livré avec
+    **`"xp_value": 50`** au lieu de 10 :
+    ```json
+    {
+      "entity_type": "minecraft:zombie",
+      "icon": "minecraft:zombie_spawn_egg",
+      "xp_value": 50,
+      "order": 0,
+      "behavior": { "type": "dungeon_defenders:melee_priority" }
+    }
+    ```
+- [ ] En jeu, **sans quitter** : `/reload`. Le log contient à nouveau `2 ennemi(s) chargé(s)`.
+      `/datapack list enabled` doit lister `file/dd_test_ennemis`.
+- [ ] Tuer un zombie : le score et l'XP montent de **50**, et le popup affiche « +50 » avec l'œuf.
+      Un squelette donne toujours **15**.
+- [ ] Changer `50` en `80`, `/reload`, tuer un zombie : **+80**. Toujours sans redémarrer.
+- [ ] Si le zombie donne encore **10** alors que le pack est bien listé, c'est que l'ordre de
+      priorité des packs ne fait pas passer le datapack devant le mod. Me le signaler, c'est une
+      information utile en soi.
+- [ ] À la fin : supprimer le dossier `dd_test_ennemis`, puis `/reload`. Le zombie redonne 10.
+
+### 3. Une erreur volontaire dans un JSON donne un message clair, sans crash
+
+Avec le même datapack :
+
+- [ ] Dans `zombie.json`, remplacer `"minecraft:zombie"` par **`"minecraft:zombi"`**, puis
+      `/reload`.
+- [ ] Le jeu ne plante pas, et le log contient une erreur vanilla qui désigne le fichier et la
+      cause :
+      `Couldn't parse data file 'dungeon_defenders:zombie' from 'dungeon_defenders:dungeon_defenders/enemy/zombie.json': ...`,
+      avec dans le détail **`"entity_type" inconnu : minecraft:zombi`**.
+- [ ] La ligne suivante indique **`1 ennemi(s) chargé(s) : [dungeon_defenders:skeleton]`** :
+      le fichier cassé est ignoré, le squelette se charge normalement.
+- [ ] Conséquence attendue : le zombie est maintenant un **ennemi inconnu**. Les spawners qui en
+      contiennent se comportent comme au scénario 4 (barrière dans l'aperçu, rien ne spawne, hors
+      du total). Le squelette, lui, fonctionne normalement.
+- [ ] Variante : mettre `"type": "dungeon_defenders:lance_flammes"` dans `behavior`. Même chose,
+      avec dans le détail `Type de comportement d'ennemi inconnu : dungeon_defenders:lance_flammes`
+      et la liste des types connus.
+- [ ] Corriger le fichier (ou supprimer le datapack), `/reload` : les 2 ennemis reviennent, et
+      les spawners refont apparaître des zombies **sans avoir été reconfigurés**.
+
+### 4. Un identifiant inconnu dans un spawner : ignoré, loggé, vague pas bloquée
+
+- [ ] En créatif, sur un spawner (en remplaçant la position) :
+      `/data merge block <x> <y> <z> {Entries:[{Enemy:"dungeon_defenders:gobelin",BaseCount:6,Spawned:0,Accumulator:0,EffectiveTotal:6},{Enemy:"dungeon_defenders:zombie",BaseCount:4,Spawned:0,Accumulator:0,EffectiveTotal:4}]}`
+- [ ] En Construction, l'aperçu au-dessus du spawner montre une **barrière** et
+      `dungeon_defenders:gobelin : ennemi inconnu`, et un **total de 4** : l'inconnu n'est pas
+      compté.
+- [ ] L'écran de config affiche la ligne `dungeon_defenders:gobelin`. Cliquer « Valider » sans y
+      toucher : la ligne est **conservée** (vérifier avec `/data get block <x> <y> <z> Entries`).
+- [ ] Passer en Combat : le log contient **une seule fois** (pas à chaque seconde)
+      `Spawner à <x>, <y>, <z> : ennemi inconnu dungeon_defenders:gobelin, ignoré (pack manquant ou JSON invalide ?)`.
+- [ ] Seuls les 4 zombies apparaissent. Les tuer **termine la vague** : c'est le point essentiel,
+      l'ennemi inconnu ne bloque rien.
+- [ ] Aucun crash, ni en solo ni à la reconnexion au monde. L'identifiant inconnu est toujours
+      là après une sauvegarde et un rechargement.
+
+### Autres points à vérifier au passage
+
+- [ ] **`/dd_export`** sur un pack de maps créé en jeu **avant** la mise à jour : un message
+      supplémentaire indique le nombre d'ennemis convertis, et le log détaille chaque spawner.
+      Le jar produit ne donne plus aucune ligne « converti » quand on joue ses maps.
+- [ ] Des monstres **sans JSON** gardent leur IA d'avant : un husk ou un stray invoqué avec
+      `/summon` près du cristal l'attaque (le husk au corps à corps, le stray à l'arc).
+- [ ] Aucune exception liée à `EnemyRegistry`, `EnemyDefinitionsPayload`,
+      `ClientEnemyDefinitions` ou `SpawnerBlockEntity` dans le log.
 
 ## IA : contournement d'obstacle (`map/detour_ia.nbt`)
 

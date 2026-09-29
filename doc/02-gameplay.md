@@ -189,7 +189,7 @@ un simple paquet clientbound « ouvre cet écran », sur le même modèle que `G
 
 ### La liste des maps — `init/GameMap.java`
 
-Un enum, sur le même principe que `SpawnableEnemy` : chaque valeur porte un `id` (utilisé
+Un enum (sur le même principe que l'ex-`SpawnableEnemy`, aujourd'hui remplacé par des JSON) : chaque valeur porte un `id` (utilisé
 pour la clé de traduction `dungeon_defenders.map.<id>` et le chemin de la texture d'aperçu
 `assets/dungeon_defenders/textures/gui/maps/<id>.png`) et un booléen `visible`.
 
@@ -739,8 +739,8 @@ déclenche juste après ce `super.submit(...)` — même repère que le nametag,
 billboard caméra-face comme `HealthBarRendering`. Pas de filtre générique par type d'entité sur
 cet event (contrairement à `RegisterRenderStateModifiersEvent`) : `onRenderLiving` reçoit
 **toute** `LivingEntity` rendue et filtre lui-même sur `state.entityType` (zombie/squelette
-uniquement, seuls monstres du mod pour l'instant — pas de liste partagée avec
-`SpawnableEnemy`). Sort tôt si vide/PV pleins/trop loin (`state.distanceToCameraSq`, un champ
+— depuis le 2026-09-29, les `entity_type` des ennemis data-driven reçus du serveur par
+`ClientEnemyDefinitions`, soit exactement zombie + squelette avec les JSON livrés). Sort tôt si vide/PV pleins/trop loin (`state.distanceToCameraSq`, un champ
 vanilla), sinon anime via `HealthLerp` (indexé par `ENTITY_ID` plutôt que `BlockPos` — un
 monstre bouge, `LERP_BY_ENTITY_ID` static plutôt que porté par une instance de couche
 puisqu'il n'y a plus de couche) et dessine via `HealthBarRendering`, exactement comme avant.
@@ -1779,6 +1779,16 @@ exactement le genre d'étape qui décourage un auteur. La commande produit donc 
 - son aperçu `assets/<ns>/textures/gui/maps/<id>.png` s'il existe ;
 - un fichier de langue de départ avec la clé `dungeon_defenders.map_pack.<ns>`.
 
+**Conversion des ennemis à l'export (depuis le 2026-09-29)** : le `.nbt` n'est plus recopié
+octet pour octet. Il est relu, chaque champ `"Enemy"` numérique d'un spawner (ancien format,
+ordinal) est réécrit en identifiant via la table figée `LegacyEnemyIds`, puis le NBT est
+réécrit dans le jar ; rien d'autre ne change. Chaque conversion est loggée
+(`Export <ns> : map <id>, spawner [x, y, z] (relatif) : ennemi n°0 converti en ...`) et la
+commande affiche un message supplémentaire avec le nombre d'ennemis convertis. Une map
+sauvegardée avant la migration sort donc au nouveau format, sans rien refaire en jeu ; son
+fichier dans `generated/` reste, lui, à l'ancien format (lisible, voir « Les ennemis
+data-driven »).
+
 **Un jar par pack, pas par map** : un pack de cinq maps donne un seul fichier à publier. La
 commande prend donc un namespace.
 
@@ -2567,6 +2577,56 @@ qui pouvait gêner un monstre essayant de se frayer un chemin près de son propr
 **Conséquence sur la position de spawn** : `findSafeSpawnPos` (voir plus haut) ne peut plus
 compter sur le bloc du spawner comme sol — corrigé au même moment, voir la remarque plus haut.
 
+### Les ennemis data-driven — `init/EnemyRegistry.java`, `data/<ns>/dungeon_defenders/enemy/*.json`
+
+Depuis le 2026-09-29 (plan complet : [data-driven/ennemis.md](data-driven/ennemis.md)), un
+ennemi n'est plus une constante de l'enum `SpawnableEnemy` (supprimé) mais un **fichier JSON**,
+identifié par `<namespace>:<nom>`. Les deux ennemis livrés reprennent exactement les valeurs
+d'avant :
+
+| Fichier | `entity_type` | `icon` | `xp_value` | `order` | `behavior` |
+|---|---|---|---|---|---|
+| `data/dungeon_defenders/dungeon_defenders/enemy/zombie.json` | `minecraft:zombie` | `minecraft:zombie_spawn_egg` | 10 | 0 | `dungeon_defenders:melee_priority` |
+| `data/dungeon_defenders/dungeon_defenders/enemy/skeleton.json` | `minecraft:skeleton` | `minecraft:skeleton_spawn_egg` | 15 | 1 | `dungeon_defenders:ranged_crystal` (`damage_per_shot` 3, `ticks_between_shots` 20, `shoot_range` 10.0) |
+
+- **Chargement** : `EnemyRegistry` est un `SimpleJsonResourceReloadListener` (vanilla) ajouté
+  via `AddServerReloadListenersEvent`, donc relu au démarrage **et à chaque `/reload`**, sans
+  redémarrer. Un JSON invalide est loggé par vanilla (`Couldn't parse data file ...`) et ignoré ;
+  les autres se chargent. `entity_type` et `icon` sont validés **strictement** : les registres
+  d'entités et d'items sont des `DefaultedRegistry`, dont le codec standard transformerait une
+  faute de frappe en cochon ou en air sans rien dire.
+- **Comportement** (`init/EnemyBehavior.java`) : « types en Java, paramètres en JSON ». Deux
+  types, qui reproduisent la répartition d'avant : `melee_priority` (`AttackPriorityTargetGoal`
+  priorité 0 + `SeekEterniaCrystalGoal` priorité 1) et `ranged_crystal`
+  (`RangedAttackEterniaCrystalGoal` priorité 1 + `SeekEterniaCrystalGoal` priorité 2). Un
+  `type` inconnu est une erreur de parse (fichier ignoré, loggé). `ModEvents.onMonsterSpawn`
+  applique le comportement de la définition dont l'`entity_type` correspond au mob ; **sans
+  définition, l'ancienne règle s'applique** (`instanceof AbstractSkeleton` → distance, sinon
+  mêlée), pour qu'un zombie `/summon` d'un type sans JSON, un stray ou un wither skeleton garde
+  son IA.
+- **XP/score** : `EnemyRegistry.xpValueFor(EntityType)`, `DEFAULT_XP_VALUE` = 5 pour un monstre
+  sans définition, comme avant.
+- **Synchro client** : `EnemyDefinitionsPayload` (identifiant, `entity_type`, icône, ordre — pas
+  le comportement), envoyé depuis `OnDatapackSyncEvent` (connexion, et à tout le monde après un
+  `/reload`), stocké dans `client/ClientEnemyDefinitions` — classe **distincte** de
+  `EnemyRegistry`, pour qu'en solo (même JVM) un bug de synchro ne soit pas masqué.
+- **Nom affiché** : clé `<namespace>.enemy.<nom>`, déduite de l'identifiant — les clés d'avant
+  (`dungeon_defenders.enemy.zombie`) restent valables. Repli sur l'identifiant brut s'il n'y a
+  pas de traduction.
+- **Ennemi inconnu** dans un spawner (pack retiré, JSON invalide) : l'entrée est **conservée**
+  telle quelle, ne fait rien apparaître, est **exclue du total de vague** (sinon la vague ne se
+  terminerait jamais), et un seul avertissement est loggé par spawner et par chargement de
+  données (réarmé à chaque `/reload`). Voir la section du spawner ci-dessous.
+
+**Migration de l'ancien format** : `"Enemy"` est lu indifféremment comme un nombre (ancien
+ordinal, traduit par la table **figée** `init/LegacyEnemyIds.java` : `0` → zombie, `1` →
+squelette, tout autre nombre → `dungeon_defenders:legacy_unknown_<n>`) ou comme un identifiant,
+et toujours réécrit en identifiant. Chaque conversion est loggée
+(`Spawner à x, y, z : ennemi n°0 (ancien format) converti en dungeon_defenders:zombie`), puis
+le spawner est marqué modifié pour que son chunk soit resauvegardé au nouveau format — la
+conversion n'a lieu qu'une fois par spawner d'un monde. `/dd_export` convertit aussi les maps
+qu'il emballe (voir « `/dd_export <namespace>` » plus haut).
+
 ### L'état — `block/entity/SpawnerBlockEntity.java`
 
 `BaseEntityBlock` + `BlockEntityTicker`, sur le même principe qu'`EterniaCrystalBlockEntity`
@@ -2588,18 +2648,25 @@ un. `serverTick(...)` :
 
 **La composition** (`List<SpawnEntry>`) est modifiable par spawner — deux entrées par défaut,
 zombie (nombre de base 15) et squelette (nombre de base 5), reprenant exactement les chiffres
-de l'exemple du joueur. Chaque `SpawnEntry` combine son ennemi (`init/SpawnableEnemy.java`,
-plutôt qu'un `EntityType<?>` brut), son nombre de base et sa progression pour la vague en
-cours (`spawned`, `accumulator`, `effectiveTotal`), le tout persistant via un `Codec` dédié
-(`ValueOutput/ValueInput#list(...)`, la liste ayant une longueur variable contrairement aux
-compteurs simples du reste du mod ; l'ennemi est stocké par ordinal, comme `GamePhase`).
+de l'exemple du joueur. Chaque `SpawnEntry` combine son ennemi (un **identifiant**
+data-driven, voir « Les ennemis data-driven » ci-dessus), son nombre de base et sa progression
+pour la vague en cours (`spawned`, `accumulator`, `effectiveTotal`), le tout persistant via un
+`Codec` dédié (`ValueOutput/ValueInput#list(...)`, la liste ayant une longueur variable
+contrairement aux compteurs simples du reste du mod). L'ennemi est résolu dans `EnemyRegistry`
+**au moment de chaque spawn**, jamais au chargement : un `/reload` s'applique donc aux spawners
+déjà posés, et un ennemi inconnu n'empêche pas le spawner de se charger.
 
-`init/SpawnableEnemy.java` est la liste fermée des ennemis choisissables dans un spawner
-(`ZOMBIE`, `SKELETON` pour l'instant). Il n'existe pas de tag vanilla générique "tout ce qui
-est hostile" dans cette version de Minecraft (vérifié) : cet enum sert à la fois de source de
-vérité réseau (transmis par ordinal, voir plus bas) et de liste pour le bouton "cycler le
-type" du GUI. Ajouter un ennemi au jeu et vouloir le rendre choisissable dans un spawner se
-résume à une ligne dans cet enum — rien d'autre à toucher côté GUI/réseau/persistance.
+Ajouter un ennemi choisissable dans un spawner se résume à ajouter un JSON (dans le mod ou
+dans n'importe quel pack) — rien à toucher côté GUI/réseau/persistance.
+
+**Registre des spawners actifs, corrigé le 2026-09-29** : quand un block entity en remplace un
+autre à la même position (pose d'une structure de map notamment), `LevelChunk#setBlockEntity`
+appelle `setLevel()` sur le nouveau **puis** `setRemoved()` sur l'ancien. `setRemoved()` retirait
+alors d'`ACTIVE_SPAWNERS` la position que le nouveau venait d'y ajouter : le spawner disparaissait
+du calcul de `wave_enemies_total`, d'où le « total bloqué à 0, la vague ne se termine jamais »
+du 2026-09-12. Le retrait est désormais différé et n'a lieu que s'il n'y a plus de spawner
+vivant à cette position (vérifié par le gametest `enemy_unknown_excluded_from_wave`, qui
+échouait avec 0 avant le correctif).
 
 **Paramètres configurables par spawner**, en plus de la composition : `intervalTicks` (défaut
 20), `spawnRadius` (défaut 0 — spawn pile au-dessus du bloc ; au-delà, une position aléatoire
@@ -2651,11 +2718,12 @@ mode créatif**, comme un bloc de structure vanilla : la configuration d'un spaw
 Premier GUI custom du mod, **pas de slot ni d'item** — les paramètres décidés avec le joueur :
 intervalle (ticks), rayon de spawn, vague de début, vague de fin, et une **liste dynamique**
 de lignes de composition (une par ennemi choisi). Chaque ligne a un bouton qui affiche le nom
-de l'ennemi et le fait cycler vers le suivant au clic (`SpawnableEnemy.next()`, en sautant les
-ennemis déjà utilisés par une autre ligne), un champ pour son nombre de base, et un bouton "X"
+de l'ennemi et le fait cycler vers le suivant au clic (ordre des JSON : `order` puis
+identifiant, en sautant les ennemis déjà utilisés par une autre ligne ; une ligne sur un ennemi
+inconnu affiche son identifiant brut et passe au premier ennemi connu disponible), un champ pour son nombre de base, et un bouton "X"
 pour la retirer (cachée s'il ne reste qu'une seule ligne — on garde toujours au moins un
-ennemi). Un bouton "+ Ajouter" en bas de la liste, cachée une fois que toutes les valeurs de
-`SpawnableEnemy` sont utilisées (la liste d'ennemis possibles est fermée). Pré-rempli avec la
+ennemi). Un bouton "+ Ajouter" en bas de la liste, cachée une fois que tous les ennemis
+connus du client (`ClientEnemyDefinitions`) sont utilisés. Pré-rempli avec la
 configuration actuelle du spawner ciblé.
 
 **Pourquoi l'état est gardé en mémoire, pas seulement dans les widgets** : ajouter ou retirer
@@ -2700,9 +2768,10 @@ ne touche **pas** au nombre de lignes : pas besoin de rebuild, juste
 7. **`ModNetworking`** (enregistré via `RegisterPayloadHandlersEvent`, voir plus haut) reçoit
    le paquet côté serveur : revérifie que le bloc à cette position est toujours un
    `SpawnerBlockEntity` et que le joueur est encore à portée (8 blocs), reconstruit la liste
-   de `SpawnEntry` en validant chaque ordinal d'ennemi reçu (`0 <= ordinal <
-   SpawnableEnemy.values().length` — jamais faire confiance à une valeur reçue par le réseau
-   pour indexer un tableau), puis appelle `spawner.applyConfig(...)`.
+   de `SpawnEntry` en validant chaque identifiant d'ennemi reçu (accepté s'il existe dans
+   `EnemyRegistry`, **ou** s'il était déjà présent dans ce spawner — une ligne sur un ennemi
+   inconnu que le créateur n'a pas touchée survit ainsi à « Valider » ; un client ne peut jamais
+   introduire un identifiant inconnu), puis appelle `spawner.applyConfig(...)`.
 
 > **Pourquoi pas de vérification de portée dans `SpawnerConfigMenu#stillValid` ?** Parce que
 > ce menu ne contient ni slot ni item : la seule action possible dessus est d'envoyer le
@@ -2724,8 +2793,7 @@ nouvelles entrées.
 - Pas de choix de difficulté ici — c'est un réglage de partie (`ModAttachments.DIFFICULTY`),
   pas du spawner, voir plus haut.
 - Pas de défilement (scroll) si la liste d'ennemis grandit au point de dépasser la hauteur de
-  l'écran — non géré pour l'instant, acceptable tant que `SpawnableEnemy` ne contient que
-  deux valeurs.
+  l'écran — non géré pour l'instant, acceptable tant qu'il n'y a que deux ennemis.
 - **Pas accessible en survie** (`SpawnerBlock.openConfigScreen` vérifie `player.isCreative()`
   avant d'ouvrir l'écran, message système sinon) : l'idée à terme est que les maps soient des
   structures pré-construites (spawners déjà configurés en créatif, puis sauvegardées) posées
@@ -2756,9 +2824,9 @@ prochaine vague fera spawn, tant que la difficulté ne change pas entre-temps.
 **Ce qui n'y est pas, volontairement** (voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)) :
 
-- Pas d'icône par type de monstre, texte seul pour l'instant ("Zombie : 12") — à ajouter plus
-  tard si besoin, sans revoir cette classe puisque `SpawnableEnemy` porte déjà tout ce qu'il
-  faut (`translationKey()`) pour brancher une icône dessus.
+- Icône par ligne : l'`icon` du JSON de l'ennemi. Un ennemi inconnu affiche une **barrière** et
+  la ligne « `<identifiant>` : ennemi inconnu », et n'est pas compté dans le total (même règle
+  que côté serveur).
 - Portée d'affichage plafonnée à 32 blocs (`MAX_DISTANCE_SQ`) pour éviter d'encombrer l'écran
   si beaucoup de spawners sont proches les uns des autres — valeur arbitraire, à ajuster si
   besoin une fois testée en jeu.
@@ -3015,7 +3083,7 @@ plus.
 public class ScoreGainOverlay implements GuiLayer {
     public static final ScoreGainOverlay INSTANCE = new ScoreGainOverlay();
     ...
-    public void addPopup(int amount, ScoreSource source, SpawnableEnemy enemy) {
+    public void addPopup(int amount, ScoreSource source, @Nullable Identifier enemy) {
         this.popups.add(new Popup(amount, source, enemy, Util.getMillis()));
     }
 }
@@ -3048,14 +3116,13 @@ l'aperçu de composition du Spawner (`SpawnerBlockEntityRenderer`, qui réutilis
 comme icônes reconnaissables — mais celui-là dessine en 3D dans le monde, celui-ci en 2D dans le
 HUD).
 
-**Transport** : `ScoreGainPayload` porte un troisième champ, `enemyOrdinal` — l'ordinal du
-`SpawnableEnemy` tué, transmis comme `sourceOrdinal`, ou `ScoreGainPayload.NO_ENEMY` (`-1`) si
-ce gain n'a pas d'ennemi associé (toute future source hors kill). Pas d'`Optional<Integer>` sur
-le réseau : ce mod n'utilise ce patron nulle part ailleurs, une sentinelle entière suffit et
-reste lisible. Résolu côté serveur dans `ModEvents.awardExperienceAndScore` via
-`SpawnableEnemy.find(EntityType<?>)` (rendue publique à cette occasion — auparavant un détail
-privé de `xpValueFor`), avec le même repli `NO_ENEMY` que `DEFAULT_XP_VALUE` si jamais le
-monstre tué n'est pas dans la liste fermée du Spawner.
+**Transport** : `ScoreGainPayload` porte un troisième champ, `Optional<Identifier> enemy` —
+l'identifiant data-driven de l'ennemi tué (depuis le 2026-09-29 ; c'était auparavant un ordinal
+d'enum avec la sentinelle `NO_ENEMY = -1`), vide si ce gain n'a pas d'ennemi associé (toute
+future source hors kill) ou si le monstre tué n'a pas de définition. Résolu côté serveur dans
+`ModEvents.awardExperienceAndScore` via `EnemyRegistry.idFor(EntityType<?>)`. Côté client,
+l'icône vient de `ClientEnemyDefinitions` ; un identifiant inconnu du client donne un popup
+sans icône.
 
 **Rendu** : `guiGraphics.item(ItemStack, x, y)` — la même méthode que la hotbar vanilla, pas une
 API spéciale à découvrir. Positionnée à gauche du texte (`ICON_GAP` = 2px d'écart), centrée
@@ -3090,12 +3157,10 @@ Décidé avec le joueur (2026-08-27) : tuer un monstre (toute phase, comme le dr
 mana ci-dessus) donne à la fois du score (carte) et de l'expérience (joueur), branché dans le
 même `onMonsterDeath` que le cristal de mana.
 
-**Valeur par monstre** — `init/SpawnableEnemy.xpValue()`, un champ de plus sur l'enum déjà
-utilisé par le Spawner (zombie = 10, squelette = 15, valeurs de test pas encore équilibrées,
-le squelette rapportant plus car il attaque à distance). `SpawnableEnemy.xpValueFor(EntityType)`
-fait la correspondance depuis le monstre tué ; 5 en repli si jamais un monstre hors de cette
-liste venait à mourir (défensif, ne devrait pas arriver tant que le Spawner reste l'unique
-source de monstres).
+**Valeur par monstre** — le champ `xp_value` du JSON de l'ennemi (zombie = 10, squelette = 15,
+valeurs de test pas encore équilibrées, le squelette rapportant plus car il attaque à distance ;
+modifiable puis appliqué par `/reload`, sans redémarrer). `EnemyRegistry.xpValueFor(EntityType)`
+fait la correspondance depuis le monstre tué ; 5 en repli pour un monstre sans définition.
 
 **Le score** est incrémenté sans conditions : `level.getData(SCORE) + xpValue`.
 

@@ -71,6 +71,7 @@
   "dungeon_defenders.spawner.config_wave_end": "Last active wave",
   "dungeon_defenders.spawner.preview_total": "Total: %s",
   "dungeon_defenders.spawner.preview_entry": "%s: %s",
+  "dungeon_defenders.spawner.preview_unknown_entry": "%s: unknown enemy",
   "dungeon_defenders.spawner.config_count": "Base count",
   "dungeon_defenders.spawner.config_add": "+ Add enemy",
   "dungeon_defenders.spawner.config_confirm": "Confirm",
@@ -113,6 +114,7 @@
   "dungeon_defenders.map_selection.delete_confirm_title": "Delete this map?",
   "dungeon_defenders.map_selection.delete_confirm_message": "%s (%s) will be removed from this world. This cannot be undone.",
   "dungeon_defenders.export.success": "Exported %s map(s) and %s preview(s) to %s",
+  "dungeon_defenders.export.converted": "%s spawner enemy entries converted from the old format (details in the server log).",
   "dungeon_defenders.export.namespace_invalid": "\"%s\" is not a valid namespace (lowercase letters, digits and underscores, starting with a letter).",
   "dungeon_defenders.export.no_map": "No map created in this world under the namespace \"%s\".",
   "dungeon_defenders.export.failed": "Export failed: %s"
