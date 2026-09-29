@@ -199,11 +199,27 @@ public class SpawnerBlockEntity extends BlockEntity {
     public void setRemoved() {
         super.setRemoved();
         if (this.level instanceof ServerLevel serverLevel) {
-            serverLevel.getData(ModAttachments.ACTIVE_SPAWNERS).remove(this.worldPosition);
-            // Différé pour la même raison que dans setLevel() ci-dessus (setRemoved() peut lui
-            // aussi être appelée pendant l'enregistrement d'un autre block entity, quand
-            // LevelChunk.setBlockEntity remplace un exemplaire existant).
-            serverLevel.getServer().execute(() -> PhaseTransitions.recomputeWaveEnemiesTotal(serverLevel));
+            BlockPos pos = this.worldPosition;
+            // PAS de retrait immédiat du registre (corrigé le 2026-09-29, vraie cause du "total
+            // de vague bloqué à 0" du 2026-09-12) : quand un block entity en REMPLACE un autre à
+            // la même position (pose d'une structure de map, gametest...),
+            // LevelChunk.setBlockEntity appelle d'abord setLevel() sur le NOUVEAU — qui ajoute
+            // cette position — puis setRemoved() sur l'ANCIEN. Retirer la position ici effaçait
+            // donc l'enregistrement tout neuf du remplaçant, et le spawner disparaissait du total.
+            //
+            // Différé au tick suivant (même réentrance que dans setLevel() ci-dessus), puis
+            // retiré seulement s'il n'y a plus de spawner vivant à cette position. isLoaded
+            // d'abord : pour un chunk en cours de déchargement, getBlockEntity forcerait son
+            // rechargement ; déchargé, le spawner ne peut de toute façon plus rien faire
+            // apparaître, l'exclure est cohérent.
+            serverLevel.getServer().execute(() -> {
+                boolean replacedBySpawner = serverLevel.isLoaded(pos)
+                        && serverLevel.getBlockEntity(pos) instanceof SpawnerBlockEntity;
+                if (!replacedBySpawner) {
+                    serverLevel.getData(ModAttachments.ACTIVE_SPAWNERS).remove(pos);
+                }
+                PhaseTransitions.recomputeWaveEnemiesTotal(serverLevel);
+            });
         }
     }
 
