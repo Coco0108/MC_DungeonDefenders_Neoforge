@@ -375,6 +375,21 @@ Les pièces, dans l'ordre où elles interviennent :
    portée du joueur avant d'appliquer quoi que ce soit (voir `ModNetworking`) — le client est
    toujours considéré non fiable.
 
+> **Règle absolue quel que soit le chemin choisi** : le bloc (chargé aussi sur un serveur
+> dédié) ne doit **jamais** nommer l'écran, ni `Minecraft`, ni aucune classe
+> `net.minecraft.client.*` — même dans une branche `if (level.isClientSide())` qui ne
+> s'exécutera jamais côté serveur. Le mod refuserait de se charger sur un serveur dédié, voir
+> [01-architecture.md](01-architecture.md#la-règle-clientserveur--nommer-une-classe-cliente-suffit-à-casser-un-serveur-dédié).
+> Vérifier avec `python3 tools/verifier-dist.py build/libs/dungeon_defenders-<version>.jar`.
+
+**Écran sans donnée propre au bloc** : si l'écran n'a besoin d'aucune information de *ce*
+bloc-là (liste statique, attachment déjà synchronisé...), tout le mécanisme
+`Menu`/`MenuProvider`/`MenuType` ci-dessus est inutile — un simple paquet **clientbound** sans
+champ suffit : `StreamCodec.unit(INSTANCE)`, `registrar.playToClient(TYPE, STREAM_CODEC)` dans
+`ModNetworking`, `event.register(TYPE, ...)` dans `DungeonDefendersModClient`, et le bloc fait
+`serverPlayer.connection.send(MonPayload.INSTANCE.toVanillaClientbound())`. Exemple complet :
+`network/OpenMapSelectionPayload.java` + `block/TavernCrystalBlock.java`.
+
 **Nombre de lignes variable dans l'écran (ajouter/retirer)** : si l'écran doit permettre
 d'ajouter/retirer des lignes de widgets (pas juste des champs fixes), garder l'état
 (valeurs actuelles) dans des champs Java ordinaires de l'écran (pas seulement dans les

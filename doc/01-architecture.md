@@ -42,6 +42,10 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── StartGamePayload.java         # Paquet C2S (déclenche MapInstance.startGame, pas de champ)
     │   │   ├── PlaceTowerPayload.java        # Paquet C2S (tour + position + rotation, confirmation finale de la roue)
     │   │   ├── ManaChestConfigPayload.java   # Paquet C2S (BlockPos + quantité de mana du coffre)
+    │   │   ├── RemoveTowerPayload.java       # Paquet C2S (BlockPos de la tour à retirer, mode suppression)
+    │   │   ├── GameOverPayload.java          # Paquet S2C (victoire/défaite, ouvre GameOverScreen)
+    │   │   ├── ScoreGainPayload.java         # Paquet S2C (montant + source du gain, alimente ScoreGainOverlay)
+    │   │   ├── OpenMapSelectionPayload.java  # Paquet S2C sans champ (ouvre MapSelectionScreen depuis TavernCrystalBlock)
     │   │   └── ModNetworking.java            # Enregistrement des paquets custom (RegisterPayloadHandlersEvent)
     │   ├── client/
     │   │   ├── ModKeyMappings.java           # Touches roue des tours + rotation (RegisterKeyMappingsEvent)
@@ -187,15 +191,63 @@ référencé sans risque.
   `SpawnerConfigScreen::new`. Contrairement à `RegisterGuiLayersEvent`, ce n'est pas
   `MenuScreens.register(...)` qu'on appelle directement (privée dans cette version) mais cet
   événement, sur le même principe.
-- `onRegisterClientPayloadHandlers(RegisterClientPayloadHandlersEvent)` : associe le handler de
-  `ScoreGainPayload` (paquet clientbound) à `ScoreGainOverlay.INSTANCE` — le type/codec est
-  enregistré côté partagé (`ModNetworking`), mais le handler ne peut vivre qu'ici, voir
+- `onRegisterClientPayloadHandlers(RegisterClientPayloadHandlersEvent)` : associe les handlers
+  des paquets clientbound du mod — `ScoreGainPayload` → `ScoreGainOverlay.INSTANCE`,
+  `GameOverPayload` → `GameOverScreen`, `OpenMapSelectionPayload` → `MapSelectionScreen`. Les
+  types/codecs sont enregistrés côté partagé (`ModNetworking`), mais les handlers ne peuvent
+  vivre qu'ici, voir
   [02-gameplay.md](02-gameplay.md#le-gain-de-score-flottant--clientguiscoregainoverlayjava-networkscoregainpayloadjava).
 
 > `@EventBusSubscriber` n'a pas de paramètre `bus` dans cette version : les événements qui
 > implémentent `IModBusEvent` (comme `RegisterRenderers`) partent automatiquement sur le bus
 > du mod, les autres sur `NeoForge.EVENT_BUS`. C'est ce qui permet à `ModEvents` et à cette
 > classe d'utiliser la même annotation pour des bus différents.
+
+### La règle client/serveur : *nommer* une classe cliente suffit à casser un serveur dédié
+
+Contrainte à connaître avant d'écrire quoi que ce soit qui touche à un écran ou à un rendu, et
+qui a réellement empêché le mod de démarrer sur le serveur dédié du joueur (2026-08-30) :
+
+> Un serveur dédié n'embarque **aucune** classe cliente. Il ne suffit donc pas qu'une ligne de
+> code cliente ne s'*exécute* jamais côté serveur — il faut qu'aucune classe chargée par le
+> serveur ne **mentionne** une classe cliente, où que ce soit dans ses champs, signatures ou
+> corps de méthodes.
+
+En pratique, ce patron pourtant naturel est un piège :
+
+```java
+// NE PAS FAIRE dans une classe chargée par le serveur (bloc, block entity, item...)
+if (level.isClientSide()) {
+    Minecraft.getInstance().setScreen(new MonEcran());   // jamais exécuté côté serveur...
+}
+```
+
+La branche n'est jamais exécutée sur un serveur, mais charger la classe force la JVM à
+résoudre tout ce qu'elle nomme : `NoClassDefFoundError: net/minecraft/client/gui/screens/Screen`
+dès `constructMods`, et le mod ne charge pas du tout. C'est exactement ce qui est arrivé à
+`TavernCrystalBlock` (chargé par `ModBlocks`, donc par `DungeonDefendersMod`).
+
+Deux façons correctes d'ouvrir un écran depuis un bloc :
+
+1. **Paquet clientbound** quand l'écran n'a besoin d'aucune donnée du bloc — le serveur envoie
+   un signal, le handler client (enregistré dans `DungeonDefendersModClient`) ouvre l'écran.
+   C'est ce que fait `OpenMapSelectionPayload` pour `MapSelectionScreen`, et
+   `GameOverPayload` pour `GameOverScreen`.
+2. **`MenuProvider` + `RegisterMenuScreensEvent`** quand l'écran doit lire des données
+   synchronisées du bloc (`SpawnerBlock` → `SpawnerConfigScreen`,
+   `ManaChestBlock` → `ManaChestConfigScreen`).
+
+Attention aussi à la contagion : la classe cliente citée entraîne tout ce qu'elle cite. Ici
+`TavernCrystalBlock` traînait `MapSelectionScreen`, donc `Screen`, `Button`, `ClientLevel`…
+Les renderers rangés dans `block/entity/` (`TowerHealthBarRenderer`,
+`EterniaCrystalBlockEntityRenderer`, `SpawnerBlockEntityRenderer`, `HealthBarRendering`,
+`HealthLerp` et les `RenderState`) sont, eux, sains : ils citent bien du code client, mais
+aucune classe chargée par le serveur ne les nomme — seul `DungeonDefendersModClient` les
+atteint.
+
+Le compilateur ne détecte rien de tout ça (l'environnement de dev contient les deux côtés), et
+`./gradlew runServer` non plus, pour la même raison — d'où l'intérêt de vérifier le jar
+produit, voir [06-a-tester.md](06-a-tester.md#le-mod-sur-un-serveur-dédié).
 
 ## Chaîne d'enregistrement
 

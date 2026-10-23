@@ -488,6 +488,45 @@ reconfirmer avec ces deux changements.
       signerait que le handler client a fini par se charger côté serveur malgré la séparation
       voulue.
 
+## Le mod sur un serveur dédié
+
+Le mod a été déployé pour la première fois sur le serveur dédié du joueur le 2026-08-30 : il ne
+démarrait pas du tout (`NoClassDefFoundError: net/minecraft/client/gui/screens/Screen` dès
+`constructMods`, à cause de `TavernCrystalBlock` — voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#le-mod-ne-démarrait-pas-du-tout-sur-un-serveur-dédié-2026-08-30)).
+Corrigé, mais **rien de ce qui suit n'a encore été rejoué sur un vrai serveur** : le solo ne
+prouve rien ici, un client embarque les deux côtés.
+
+Avant même de déployer, vérifier le jar produit (ni `build` ni `runServer` ne détectent ce type
+de bug, l'environnement de dev contenant les classes des deux côtés) :
+
+```bash
+./gradlew build -x test
+python3 tools/verifier-dist.py build/libs/dungeon_defenders-0.0.1.jar
+```
+
+Le script refait le raisonnement de la JVM d'un serveur dédié : il part des classes du mod
+chargeables côté serveur et suit leurs références jusqu'à trouver — ou non — une classe
+`net.minecraft.client.*`. Sortie attendue : `OK : aucune classe cliente nommée dans le graphe
+serveur.` Sinon il affiche la chaîne fautive, à corriger avec un des deux patrons décrits dans
+[01-architecture.md](01-architecture.md#la-règle-clientserveur--nommer-une-classe-cliente-suffit-à-casser-un-serveur-dédié).
+
+- [ ] Le serveur démarre et le mod se charge (plus de `NoClassDefFoundError` dans les logs
+      serveur).
+- [ ] Un client peut se connecter (le protocole custom du mod négocie sans erreur : les paquets
+      sont bien enregistrés des deux côtés).
+- [ ] Clic droit sur le cristal de la taverne : `MapSelectionScreen` s'ouvre bien, avec le
+      carrousel de maps et la difficulté courante — c'est le chemin qui a changé (paquet
+      `OpenMapSelectionPayload` au lieu d'un appel direct), donc le plus à risque.
+- [ ] Choisir une difficulté puis « Jouer » fonctionne toujours (aller-retour
+      `SetDifficultyPayload` + `StartGamePayload`).
+- [ ] Les autres écrans s'ouvrent toujours en multijoueur : config du spawner, config du coffre
+      de mana, roue des tours, écran de fin de partie.
+- [ ] Le HUD (mana, vie, vague, score, popup de gain) s'affiche et se met à jour pour un joueur
+      connecté à distance, pas seulement en solo.
+- [ ] À deux joueurs si possible : le score/l'XP sont bien partagés, et chacun voit ses propres
+      popups.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

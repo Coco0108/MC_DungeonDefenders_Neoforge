@@ -80,13 +80,13 @@ pas l'Overworld (`serverLevel.dimension() != Level.OVERWORLD`), pour ne rien cha
 ### Le bloc — `block/TavernCrystalBlock.java`
 
 Un cristal, mais **différent** d'`EterniaCrystalBlock` : pas de block entity, pas de PV, pas
-de mécanique de combat — juste un point d'interaction dans la taverne. Clic droit ouvre
-`MapSelectionScreen`, **entièrement côté client** :
+de mécanique de combat — juste un point d'interaction dans la taverne. Clic droit demande au
+client d'ouvrir `MapSelectionScreen`, via un paquet sans champ :
 
 ```java
 protected InteractionResult useWithoutItem(...) {
-    if (level.isClientSide()) {
-        Minecraft.getInstance().setScreen(new MapSelectionScreen());
+    if (player instanceof ServerPlayer serverPlayer) {
+        serverPlayer.connection.send(OpenMapSelectionPayload.INSTANCE.toVanillaClientbound());
     }
     return InteractionResult.SUCCESS;
 }
@@ -97,7 +97,15 @@ n'a besoin d'aucune donnée propre à un bloc précis (contrairement au spawner,
 savoir *quel* spawner configurer via son `BlockPos`) : la liste des maps est statique côté
 client, et la difficulté actuelle vient d'un attachment de `Level` déjà synchronisé
 (`ModAttachments.DIFFICULTY`). Le système de `Menu` sert à transmettre des données du serveur
-au client à l'ouverture ; ici il n'y a rien à transmettre, donc pas besoin de ce système.
+au client à l'ouverture ; ici il n'y a rien à transmettre, donc pas besoin de ce système. D'où
+un simple paquet clientbound « ouvre cet écran », sur le même modèle que `GameOverPayload`.
+
+> **Pourquoi pas plus simple ?** La version d'origine faisait
+> `if (level.isClientSide()) Minecraft.getInstance().setScreen(new MapSelectionScreen());`,
+> directement dans le bloc. Ça marche en solo, mais empêche le mod de se charger **du tout**
+> sur un serveur dédié : la branche ne s'exécute jamais côté serveur, mais la classe *nomme*
+> `MapSelectionScreen`, donc `Screen`, absent d'un serveur. Crash constaté le 2026-08-30, voir
+> [01-architecture.md](01-architecture.md#la-règle-clientserveur--nommer-une-classe-cliente-suffit-à-casser-un-serveur-dédié).
 
 ### La liste des maps — `init/GameMap.java`
 
