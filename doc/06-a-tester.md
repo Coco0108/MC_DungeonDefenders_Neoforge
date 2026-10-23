@@ -572,6 +572,40 @@ Sans aucune map (retirer temporairement test_arena du jar, ou tester avant de l'
       "Aucune map disponible" a la place de l'apercu, bouton "Jouer" **grise**.
 - [ ] Aucune exception dans les logs.
 
+## La deuxieme map de test, plus travaillee (`map/ruins_sanctuary.nbt`)
+
+Nouveau (2026-09-08), jamais chargee par Minecraft ni vue en jeu — seulement verifiee
+programmatiquement (rampes continues, aucun marqueur flottant, murs pleins, positions dans les
+bornes). "Sanctuaire en Ruines" : trois couloirs de monstres convergeant vers une plateforme
+centrale surelevee. C'est le test le plus significatif a ce jour de `generer-map-de-test.py` et
+consorts : une geometrie bien plus complexe (denivele, rampes, plusieurs spawners) que l'arene
+plate de `test_arena`.
+
+- [ ] Clic droit sur le cristal de la taverne : "Sanctuaire en Ruines" apparait dans le pack
+      "Campagne", a cote de "Arene de test".
+- [ ] Cliquer "Jouer" : toute la structure se pose sans trou ni bloc manquant visible — sol,
+      quatre murs d'enceinte, plateforme centrale, les trois couloirs et leurs rampes, la cour
+      sud.
+- [ ] **Le point le plus incertain** : les rampes (4 marches d'1 bloc chacune, pas de blocstate
+      d'escalier) sont bien praticables — marcher dessus a pied, puis verifier qu'un monstre
+      spawne peut les monter tout seul jusqu'a la plateforme sans rester bloque.
+- [ ] Le cristal est bien au centre de la plateforme, PV pleins, joignable depuis les trois
+      couloirs.
+- [ ] Le HUD affiche **Vague 1/5**.
+- [ ] Les trois spawners fonctionnent independamment : nord = que des zombies, est = surtout des
+      squelettes, ouest = melange des deux. Verifier que chacun apparait bien dans son propre
+      couloir, pas dans un autre.
+- [ ] Le marqueur de spawn joueur et le coffre de mana sont sur la plateforme, pres du cristal ;
+      le coffre donne bien 50 mana.
+- [ ] Zone interdite autour de chaque spawner : poser une tour juste a cote d'un spawner est
+      refuse, quelques blocs plus loin dans le couloir ca passe.
+- [ ] Les piliers en ruine le long des couloirs sont visibles, poses sur le sol (pas flottants),
+      certains plus courts/fissures que d'autres. Les torches donnent assez de lumiere pour
+      qu'aucun monstre ne spawne naturellement dans les couloirs la nuit.
+- [ ] La cour sud (arrivee joueur) est accessible en descendant la quatrieme rampe depuis la
+      plateforme — **aucun spawner** ne doit s'y trouver.
+- [ ] Aucune exception dans les logs liee au chargement de cette structure.
+
 Creer une map de bout en bout :
 
 - [ ] En creatif, construire une petite arene **loin de (0,65,0) et de (10000,65,0)**, avec un
