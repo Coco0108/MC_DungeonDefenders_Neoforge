@@ -517,6 +517,22 @@ vérifie la CI.
   nouveau format (`assets/dungeon_defenders/items/<nom>.json`), ils n'avaient que l'ancien
   (`models/item/<nom>.json`), plus lu par cette version du jeu.
 
+- ✅ **Plan plein écran de la zone actuelle** (`client/MapOverlay*.java`, 2026-09-07) : touche
+  maintenue (`Tab` par défaut), affiche un rectangle schématique de la taverne ou de la map en
+  cours avec un point par joueur connecté et un marqueur du cristal — décidé explicitement comme
+  un essai expérimental ("on verra sinon on fera autrement"), en parallèle de la reconstruction
+  de la taverne. A demandé trois nouveaux attachments génériques,
+  `ModAttachments.PLAYFIELD_SIZE_X/Y/Z`, remplis par `MapInstance#startGame` et
+  `TavernSpawn#placeTavern` — rien n'exposait la taille réelle de la zone posée au client
+  jusqu'ici. Scan borné exactement à cette zone (pas un rayon deviné) pour repérer le cristal.
+  `key.playerList` (liste des joueurs vanilla, aussi sur Tab par défaut) est libérée au
+  démarrage du client (`DungeonDefendersModClient#onClientSetup`, `setKey(UNKNOWN)`) : le mod
+  n'en a plus l'usage, demandé en jeu pour ne pas superposer les deux affichages.
+  Pas d'interpolation de mouvement, pas de rendu de terrain façon carte vanilla, pas d'étiquette
+  de nom (couleur fixe pour le joueur local, palette déterministe par UUID pour les autres) —
+  simplifications assumées pour un premier essai. **Jamais vérifié en jeu.** Détail dans
+  [02-gameplay.md](02-gameplay.md#le-plan-plein-écran--clientmapoverlayjava-mapinstancejava-tavernspawnjava).
+
 - ✅ **Mannequin d'entraînement** (`entity/TrainingDummyEntity.java`,
   `block/TrainingDummyBlock.java`, `block/entity/TrainingDummyBlockEntity.java`, 2026-08-31) :
   cible immobile et indestructible attaquée par les tours, pour mesurer leurs dégâts sans monter

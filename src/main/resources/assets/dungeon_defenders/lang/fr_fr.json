@@ -26,6 +26,7 @@
   "key.dungeon_defenders.tower_wheel": "Ouvrir la roue des tours",
   "key.dungeon_defenders.rotate_tower": "Faire pivoter la tour (pose)",
   "key.dungeon_defenders.remove_tower_mode": "Basculer le mode suppression de tour",
+  "key.dungeon_defenders.map_overlay": "Afficher le plan de la zone",
   "dungeon_defenders.eternia_crystal.destroyed": "Le cristal a été détruit !! Game Over !",
   "dungeon_defenders.eternia_crystal.ready_progress": "Prêt : %s/%s",
   "dungeon_defenders.game.victory": "Victoire ! Toutes les vagues sont nettoyées.",

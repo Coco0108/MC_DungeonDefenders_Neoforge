@@ -83,6 +83,34 @@ public class ModAttachments {
                     .sync(ByteBufCodecs.STRING_UTF8)
                     .build());
 
+    // Taille (en blocs) de la zone actuellement occupée — taverne ou map, peu importe : ces
+    // trois attachments sont génériques, remplis à la fois par TavernSpawn#placeTavern et par
+    // MapInstance#startGame, chacun réexposant une taille déjà calculée sur place
+    // (StructureTemplate#getSize(), ou le repli placeholder). Ajoutés pour le plan de la
+    // mini-map (MapOverlay, client), qui a besoin de connaître les dimensions réelles pour
+    // placer le rectangle et les points des joueurs dedans — rien d'autre n'exposait cette
+    // information au client jusqu'ici (voir doc/02-gameplay.md).
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> PLAYFIELD_SIZE_X = ATTACHMENT_TYPES.register(
+            "playfield_size_x",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.INT.fieldOf("PlayfieldSizeX"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> PLAYFIELD_SIZE_Y = ATTACHMENT_TYPES.register(
+            "playfield_size_y",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.INT.fieldOf("PlayfieldSizeY"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> PLAYFIELD_SIZE_Z = ATTACHMENT_TYPES.register(
+            "playfield_size_z",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.INT.fieldOf("PlayfieldSizeZ"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
     // Nombre total d'ennemis de la vague en cours et nombre d'ennemis déjà tués. Même
     // logique que current_wave : état de la Level, pas du joueur. Le total est réinitialisé
     // à sa valeur par défaut au premier chargement du monde ; les tués repartent de 0, comme

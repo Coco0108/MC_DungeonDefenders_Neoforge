@@ -10,6 +10,7 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.CharacterOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ExperienceOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.HealthOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ManaOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.MapOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.PhaseOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreGainOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
@@ -29,6 +30,7 @@ import com.github.c0c0tier.dungeon_defenders.network.GameOverPayload;
 import com.github.c0c0tier.dungeon_defenders.network.OpenMapSelectionPayload;
 import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
 import com.google.common.reflect.TypeToken;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -45,6 +47,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
@@ -168,6 +171,12 @@ public class DungeonDefendersModClient {
         event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "ability_slots_overlay"),
                 new AbilitySlotsOverlay());
+        // Plein écran ; comme le fond couvre tout l'écran, l'ordre exact d'empilement avec les
+        // autres registerAboveAll n'a pas d'impact visible même si un autre layer passait
+        // dessus par endroits.
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "map_overlay"),
+                new MapOverlay());
 
         // Les cœurs vanilla ne sont pas prévus pour 100 PV (ils s'étalent sur plusieurs
         // rangées) et feraient doublon avec HealthOverlay : on les masque plutôt que de
@@ -233,6 +242,18 @@ public class DungeonDefendersModClient {
     @SubscribeEvent
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         ModKeyMappings.register(event);
+    }
+
+    // Libère Tab de la liste des joueurs vanilla : demandé en jeu (2026-09-07), maintenant que
+    // ModKeyMappings.MAP_OVERLAY partage ce code physique et que la liste vanilla n'a plus
+    // d'usage dans ce mod. Simple changement de la touche VIVE (KeyMapping#setKey), pas de la
+    // touche par défaut (non mutable après construction) : refait à chaque lancement du jeu —
+    // un rebind manuel du joueur sur cette touche ne survivrait donc pas à un redémarrage,
+    // acceptable puisqu'elle n'a plus aucun rôle ici. enqueueWork : FMLClientSetupEvent tourne
+    // en parallèle des autres mods, ce genre d'effet de bord doit attendre le thread principal.
+    @SubscribeEvent
+    static void onClientSetup(FMLClientSetupEvent event) {
+        event.enqueueWork(() -> Minecraft.getInstance().options.keyPlayerList.setKey(InputConstants.UNKNOWN));
     }
 
     // Plus de hotbar (HUD masqué, HOTBAR ci-dessus, et à terme un seul item par main plutôt

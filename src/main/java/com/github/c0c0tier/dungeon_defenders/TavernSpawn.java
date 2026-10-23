@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.mojang.logging.LogUtils;
@@ -77,6 +78,10 @@ public class TavernSpawn {
     // précédente plus grande (ou l'ancienne plateforme de repli) doit disparaître entièrement,
     // sinon ses restes flottent autour de la nouvelle taverne.
     private static final int CLEAR_MARGIN = 4;
+    // Hauteur de repli pour ModAttachments.PLAYFIELD_SIZE_Y quand la plateforme provisoire est
+    // posée (pas de vraie structure) — même rôle que MapInstance.PLACEHOLDER_HEIGHT, valeur de
+    // test jamais vue en jeu, ne sert qu'à borner le scan de repérage du cristal côté client.
+    private static final int PLACEHOLDER_HEIGHT = 16;
 
     private TavernSpawn() {
     }
@@ -137,6 +142,7 @@ public class TavernSpawn {
             // taverne en cours de construction à la main. buildPlaceholderPlatform ne fait que
             // (re)poser le sol, sans jamais rien effacer autour.
             buildPlaceholderPlatform(level);
+            syncPlayfieldSize(level, 2 * PLATFORM_RADIUS + 1, PLACEHOLDER_HEIGHT, 2 * PLATFORM_RADIUS + 1);
             return SPAWN_POS;
         }
 
@@ -151,8 +157,24 @@ public class TavernSpawn {
         // même choix que le bloc de structure vanilla.
         template.placeInWorld(level, origin, origin, placeSettings(), RandomSource.create(), Block.UPDATE_CLIENTS);
 
+        Vec3i size = template.getSize();
+        syncPlayfieldSize(level, size.getX(), size.getY(), size.getZ());
+
         BlockPos marker = findSpawnMarker(template, origin);
         return marker != null ? marker : SPAWN_POS;
+    }
+
+    // Réexpose la taille réellement posée (structure ou repli) au client, pour le plan de la
+    // mini-map (MapOverlay) — voir ModAttachments.PLAYFIELD_SIZE_X/Y/Z, même mécanisme que
+    // MapInstance#startGame pour les maps. Petit helper partagé entre les deux branches de
+    // placeTavern plutôt que dupliquer les six lignes de set/sync.
+    private static void syncPlayfieldSize(ServerLevel level, int sizeX, int sizeY, int sizeZ) {
+        level.setData(ModAttachments.PLAYFIELD_SIZE_X, sizeX);
+        level.setData(ModAttachments.PLAYFIELD_SIZE_Y, sizeY);
+        level.setData(ModAttachments.PLAYFIELD_SIZE_Z, sizeZ);
+        level.syncData(ModAttachments.PLAYFIELD_SIZE_X);
+        level.syncData(ModAttachments.PLAYFIELD_SIZE_Y);
+        level.syncData(ModAttachments.PLAYFIELD_SIZE_Z);
     }
 
     /** L'emprise occupée par la taverne dans le monde, marge de nettoyage comprise. */

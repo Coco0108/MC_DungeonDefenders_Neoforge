@@ -201,6 +201,53 @@ l'onglet créatif.
 - [ ] Prendre chacun de ces 4 items en main/inventaire : texture placeholder correcte, plus de
       violet/noir.
 
+## Le plan plein écran de la zone actuelle (`client/MapOverlay*.java`)
+
+Nouveau (2026-09-07), jamais vérifié en jeu — essai explicitement expérimental, demandé pendant
+que le joueur reconstruit la taverne. Touche par défaut : `Tab`, maintenue.
+
+- [ ] La liste des joueurs vanilla (normalement affichée en maintenant Tab) **n'apparaît plus du
+      tout**, même en multijoueur avec plusieurs joueurs connectés — `key.playerList` a été
+      libérée au démarrage du client (`DungeonDefendersModClient#onClientSetup`) puisque Tab
+      n'affiche désormais que notre plan.
+- [ ] Aller dans Options > Contrôles > Touches : "Liste des joueurs" apparaît **non liée**
+      ("Aucune"/"Non attribuée"), pas sur Tab.
+
+Dans la Taverne :
+
+- [ ] Maintenir `Tab` : un fond sombre plein écran apparaît, avec un rectangle centré aux
+      proportions de la taverne actuelle (repli 9x9 si aucune structure sauvegardée, ou les
+      vraies dimensions une fois la structure livrée).
+- [ ] Un point apparaît à ta position, dans une couleur distincte (vert par défaut).
+- [ ] Le cristal de la taverne apparaît comme un marqueur carré doré, à peu près à sa vraie
+      position dans le rectangle par rapport à toi.
+- [ ] Relâcher `Tab` : tout disparaît immédiatement.
+
+Dans une map (Construction ou Combat) :
+
+- [ ] Même chose, rectangle aux proportions de la map en cours (pas de la taverne) — vérifier
+      que ça change bien de forme/taille par rapport à la taverne si les deux ont des
+      dimensions différentes.
+- [ ] Le Cristal d'Eternia apparaît comme marqueur, pas le cristal de la taverne.
+- [ ] Avec un deuxième joueur connecté : **deux points distincts**, le tien dans ta couleur
+      "joueur local", l'autre dans une couleur de la palette — vérifier qu'ils bougent bien en
+      temps réel quand chacun se déplace, et qu'ils restent dans les limites du rectangle même
+      près des bords de la zone.
+- [ ] Se reconnecter (le deuxième joueur) : sa couleur reste la **même** qu'avant (déterministe
+      par UUID, pas par ordre de connexion).
+
+Cas transverses :
+
+- [ ] **Le point le plus incertain** : le scan périodique du cristal (une fois par seconde
+      pendant que `Tab` est maintenu) ne doit provoquer **aucune saccade perceptible**, même sur
+      une grande map — jamais profilé, zone potentiellement grande contrairement au scan des
+      marqueurs d'édition (rayon fixe de 16, lui, déjà mesuré comme négligeable).
+- [ ] Maintenir `Tab` juste après un chargement du monde/une téléportation (avant que le serveur
+      ait eu le temps de synchroniser la taille) : pas de crash, l'overlay ne s'affiche
+      simplement pas tant que la taille n'est pas connue (repli `sizeX/sizeZ <= 0`).
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `MapOverlay`, `MapOverlayState`
+      ou `MapOverlayClientEvents`.
+
 ## Le reste du roster de l'Écuyer (Bouncer Blockade, Bowling Ball Turret)
 
 (Bouncer/Slice N Dice Blockade, Bowling Ball/Mortar Turret) — design discuté et validé avec le
