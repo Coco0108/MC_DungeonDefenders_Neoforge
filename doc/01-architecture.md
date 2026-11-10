@@ -15,6 +15,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── DungeonDefendersModClient.java    # Point d'entrée @Mod côté CLIENT uniquement
     │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA, vie max du joueur)
     │   ├── TavernSpawn.java                  # Point de spawn fixe + chargement de la structure de la taverne (monde vide)
+    │   ├── WorldTime.java                    # Heure du monde figée (taverne, puis heure propre à chaque map) ; météo arrêtée
     │   ├── MapInstance.java                  # "La map active" : emplacement partagé, placeholder, téléportation
     │   ├── ModCommands.java                  # /dd_leave (harnais) et /dd_export (jar de pack de maps)
     │   ├── MapExporter.java                  # Emballe les maps d'un pack dans un jar d'extension prêt à publier
@@ -321,7 +322,8 @@ Chargement FML
                                           enemy_legacy_format, enemy_shipped_values,
                                           enemy_unknown_excluded_from_wave, enemy_export_conversion,
                                           tower_shipped_values, tower_stats_validation,
-                                          balance_shipped_values, balance_validation, mana_chest_respawn
+                                          balance_shipped_values, balance_validation, mana_chest_respawn,
+                                          world_time_frozen
                                           (DungeonDefendersGameTests, voir 05-etat-et-problemes-connus.md)
 
 Bus de jeu (NeoForge.EVENT_BUS)

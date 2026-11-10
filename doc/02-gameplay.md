@@ -155,6 +155,31 @@ tours. Chaque chargement du monde remet la taverne dans l'état livré avec le m
 > puisqu'un mannequin d'entraînement (PV infinis, immobile, cible des tours pour mesurer leurs
 > dégâts) viendra vivre dans la taverne et ne doit pas s'accumuler en plusieurs exemplaires.
 
+## L'heure du monde, figée — `WorldTime.java`
+
+Idées du joueur (issues #44 et #45), faites le 2026-11-10 : **plus de cycle jour/nuit**. La nuit
+qui tombe au milieu d'une partie n'apporte rien à un jeu de défense par vagues, et l'ambiance
+d'une map devient un choix de son créateur.
+
+- **Au démarrage du serveur** (`ServerStartedEvent`), l'heure est figée à
+  `defaultTimeOfDay` (config commune, `config/dungeon_defenders-common.toml`, **6000 = midi** par
+  défaut). C'est l'heure de la taverne. La météo est arrêtée aussi (règle `ADVANCE_WEATHER` à
+  faux, cycle remis à zéro) : de la pluie sur un monde vide n'a aucun intérêt.
+- **Au lancement d'une map** (`MapInstance#startGame`), l'heure passe à celle de la map si son
+  bloc de configuration en fixe une, sinon elle reste à l'heure par défaut.
+- **Au retour à la taverne** (`MapInstance#returnToTavern`), elle revient à l'heure par défaut.
+
+Heure en ticks vanilla : `0` = lever du soleil, `6000` = midi, `12000` = coucher, `18000` =
+minuit. Une map sans heure propre porte `-1` (`MapDefinition.DEFAULT_TIME_OF_DAY`) ; toute valeur
+hors de `[0, 24000[` est traitée comme « pas d'heure propre ».
+
+**Techniquement** : depuis Minecraft 26.1 l'heure passe par des « horloges »
+(`ServerClockManager`). `WorldTime.freezeAt` met l'horloge de l'Overworld en pause
+(`setPaused`) et la règle (`setTotalTicks`), ce qui diffuse aussi l'heure aux clients. Fait à
+`ServerStartedEvent` et pas au chargement du niveau comme `TavernSpawn` : le gestionnaire
+d'horloges est une donnée du serveur entier, initialisée après les niveaux. Vérifié par le
+gametest `world_time_frozen`.
+
 ## La taverne — choix de map et difficulté
 
 ### Le bloc — `block/TavernCrystalBlock.java`
@@ -1617,7 +1642,9 @@ son namespace s'affiche tel quel plutôt qu'une clé crue.
 
 `MapConfigBlock` (invisible, traversable, créatif seulement — même traitement que les autres
 marqueurs) est posé **dans** la map. Il porte le nom affiché, l'ordre dans le pack, le nombre de
-vagues et le multiplicateur de score.
+vagues, le multiplicateur de score et, depuis le 2026-11-10, l'**heure de la map** (`TimeOfDay`,
+0-23999 ; champ laissé vide dans l'écran = pas d'heure propre, voir « L'heure du monde, figée »).
+Une map publiée avant l'ajout de ce champ reste lisible : clé absente = pas d'heure propre.
 
 Comme il fait partie de la structure, ces réglages sont sauvegardés dans le `.nbt` : copier le
 fichier emporte tout, il n'y a aucun fichier de configuration à transmettre à côté.

@@ -669,6 +669,11 @@ vérifie la CI.
       lieu de la supprimer ;
     - un `/reload` recalcule le total de vague des niveaux qui ont des spawners ;
     - le registre des spawners actifs a été corrigé (voir la ligne suivante).
+- ✅ **Heure du monde figée, heure propre à chaque map** (2026-11-10, issues #44 et #45) :
+  plus de cycle jour/nuit ni de météo. La taverne est à `defaultTimeOfDay` (config, midi par
+  défaut) ; une map peut fixer la sienne dans son bloc de configuration (nouveau champ dans
+  l'écran). Voir [02-gameplay.md](02-gameplay.md#lheure-du-monde-figée--worldtimejava).
+  Gametest `world_time_frozen`. **Jamais vu en jeu.**
 - ✅ **Stats des tours data-driven, étape 2** (2026-11-10,
   [data-driven/tours.md](data-driven/tours.md)) : PV, coût en mana, dégâts, cadence, portée, cône,
   repousse, rayon de zone et projectile de chaque tour vivent dans

@@ -78,6 +78,9 @@ public final class MapInstance {
         BlockPos spawnPos = placeMap(level, map);
         teleportAllPlayers(level, spawnPos);
 
+        // Heure figée propre à la map (bloc de configuration), sinon celle par défaut.
+        WorldTime.freezeAt(level, map != null ? map.timeOfDay() : WorldTime.USE_DEFAULT);
+
         // Recalculé une seconde fois, explicitement, une fois la structure posée : l'appel fait
         // par startNewGame() ci-dessus tourne AVANT placeMap(), donc avec les spawners de la
         // partie précédente (ou aucun, sur une toute première partie) — jamais ceux qu'on vient
@@ -102,6 +105,8 @@ public final class MapInstance {
         level.setData(ModAttachments.CURRENT_MAP, "");
         level.syncData(ModAttachments.CURRENT_MAP);
         PhaseTransitions.enterTavern(level);
+        // La taverne retrouve l'heure par défaut, quelle qu'ait été celle de la map quittée.
+        WorldTime.freezeAt(level, WorldTime.USE_DEFAULT);
         // Pas TavernSpawn.SPAWN_POS en dur : si la structure de la taverne pose son propre
         // marqueur player_spawn, c'est lui qui fait foi (voir TavernSpawn#arrivalPos).
         teleportAllPlayers(level, TavernSpawn.arrivalPos(level));
