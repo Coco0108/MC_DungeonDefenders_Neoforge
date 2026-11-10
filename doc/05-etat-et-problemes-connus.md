@@ -669,6 +669,12 @@ vérifie la CI.
       lieu de la supprimer ;
     - un `/reload` recalcule le total de vague des niveaux qui ont des spawners ;
     - le registre des spawners actifs a été corrigé (voir la ligne suivante).
+- ✅ **Les monstres ne brûlent plus au soleil** (2026-11-10) : avec l'heure figée à midi, zombies
+  et squelettes auraient pris feu en permanence sur une map à ciel ouvert (ils brûlaient déjà en
+  journée avant). Corrigé en remplaçant la timeline vanilla `day` par une copie sans la piste
+  `monsters_burn`. Voir
+  [02-gameplay.md](02-gameplay.md#les-monstres-ne-brûlent-plus-au-soleil--dataminecrafttimelinedayjson).
+  Gametest `monsters_do_not_burn`. **À confirmer en jeu.**
 - ✅ **Bonus et multiplicateurs de score, score final, compte à rebours** (2026-11-10) : bonus
   de fin de vague et de fin de map, multiplicateurs « aucun dégât subi » et « cristal intact »,
   multiplicateur de difficulté, et le multiplicateur de score de la map (qui existait dans le

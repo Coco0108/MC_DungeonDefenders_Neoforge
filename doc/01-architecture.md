@@ -169,6 +169,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── data/dungeon_defenders/dungeon_defenders/tower/*.json    # Stats data-driven des 6 tours, relues par /reload
     │   ├── data/dungeon_defenders/dungeon_defenders/balance/*.json  # Réglages globaux (difficulty, towers, progression), relus par /reload
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
+    │   ├── data/minecraft/timeline/day.json        # Timeline "day" vanilla SANS la brûlure des monstres au soleil (générée, voir tools/)
     │   └── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
     └── templates/META-INF/neoforge.mods.toml      # Métadonnées, expansées par Gradle
 ```
@@ -329,7 +330,8 @@ Chargement FML
                                           enemy_unknown_excluded_from_wave, enemy_export_conversion,
                                           tower_shipped_values, tower_stats_validation,
                                           balance_shipped_values, balance_validation, mana_chest_respawn,
-                                          world_time_frozen, score_bonuses, combat_countdown
+                                          world_time_frozen, score_bonuses, combat_countdown,
+                                          monsters_do_not_burn
                                           (DungeonDefendersGameTests, voir 05-etat-et-problemes-connus.md)
 
 Bus de jeu (NeoForge.EVENT_BUS)

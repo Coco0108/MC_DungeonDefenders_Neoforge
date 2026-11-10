@@ -44,10 +44,12 @@ import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.clock.WorldClock;
 import net.minecraft.world.clock.WorldClocks;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
@@ -105,6 +107,7 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "enemy_export_conversion", DungeonDefendersGameTests::enemyExportConversion);
         register(event, environment, "mana_chest_respawn", DungeonDefendersGameTests::manaChestRespawn);
         register(event, environment, "world_time_frozen", DungeonDefendersGameTests::worldTimeFrozen);
+        register(event, environment, "monsters_do_not_burn", DungeonDefendersGameTests::monstersDoNotBurn);
         register(event, environment, "score_bonuses", DungeonDefendersGameTests::scoreBonuses);
         register(event, environment, "combat_countdown", DungeonDefendersGameTests::combatCountdown);
         // Stats des tours en data-driven (doc/data-driven/tours.md).
@@ -451,6 +454,23 @@ public final class DungeonDefendersGameTests {
 
         CombatCountdown.cancel(level);
         helper.assertValueEqual(level.getData(ModAttachments.COMBAT_COUNTDOWN), 0, "décompte annulé");
+        helper.succeed();
+    }
+
+    /**
+     * Zombies et squelettes ne brûlent jamais au soleil : avec l'heure figée (midi par défaut),
+     * ils prendraient feu en permanence sur une map à ciel ouvert. Le jeu lit pour ça l'attribut
+     * d'environnement MONSTERS_BURN, que le mod neutralise (voir data/minecraft/timeline/day.json).
+     */
+    static void monstersDoNotBurn(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Vec3 position = Vec3.atCenterOf(helper.absolutePos(new BlockPos(1, 1, 1)));
+        for (int time : new int[] {0, 6000, 12000, 18000}) {
+            WorldTime.freezeAt(level, time);
+            helper.assertFalse(level.environmentAttributes().getValue(EnvironmentAttributes.MONSTERS_BURN, position),
+                    "pas de brûlure au soleil à l'heure " + time);
+        }
+        WorldTime.freezeAt(level, WorldTime.USE_DEFAULT);
         helper.succeed();
     }
 
