@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
+import com.github.c0c0tier.dungeon_defenders.client.TowerInspectState;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
@@ -60,13 +61,16 @@ public class TowerHealthBarRenderer<T extends AbstractTowerBlockEntity>
 
         state.visible = false;
 
+        BlockPos pos = blockEntity.getBlockPos();
+
         // À PV pleins : rien à signaler, la barre reste cachée (voir le commentaire de
-        // classe) — pas la peine de calculer/mettre à jour l'animation pour rien.
-        if (blockEntity.getHealth() >= blockEntity.getMaxHealth()) {
+        // classe) — pas la peine de calculer/mettre à jour l'animation pour rien. Exception
+        // (2026-11-10) : la tour que le joueur regarde affiche toujours sa barre, même pleine,
+        // voir TowerInspectClientEvents.
+        if (blockEntity.getHealth() >= blockEntity.getMaxHealth() && !TowerInspectState.isTarget(pos)) {
             return;
         }
 
-        BlockPos pos = blockEntity.getBlockPos();
         double distanceSq = cameraPosition.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
         if (distanceSq > MAX_DISTANCE_SQ) {
             return;

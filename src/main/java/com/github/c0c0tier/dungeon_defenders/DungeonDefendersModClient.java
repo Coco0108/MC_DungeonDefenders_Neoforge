@@ -13,6 +13,7 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.ManaOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.PhaseOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreGainOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.TowerInspectOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.GameOverScreen;
@@ -173,6 +174,9 @@ public class DungeonDefendersModClient {
         event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "ability_slots_overlay"),
                 new AbilitySlotsOverlay());
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "tower_inspect_overlay"),
+                new TowerInspectOverlay());
 
         // Les cœurs vanilla ne sont pas prévus pour 100 PV (ils s'étalent sur plusieurs
         // rangées) et feraient doublon avec HealthOverlay : on les masque plutôt que de

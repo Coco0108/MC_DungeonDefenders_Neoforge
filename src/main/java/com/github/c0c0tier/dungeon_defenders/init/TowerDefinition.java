@@ -167,6 +167,11 @@ public enum TowerDefinition {
         return Component.translatable("dungeon_defenders.tower." + this.id);
     }
 
+    /** Une phrase qui dit à quoi sert la tour, affichée dans la roue (issue #15). */
+    public Component description() {
+        return Component.translatable("dungeon_defenders.tower." + this.id + ".description");
+    }
+
     public static @Nullable TowerDefinition byIdentifier(Identifier identifier) {
         for (TowerDefinition tower : values()) {
             if (tower.identifier.equals(identifier)) {

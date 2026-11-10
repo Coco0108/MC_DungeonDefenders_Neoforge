@@ -49,10 +49,11 @@ public class TowerPlacementClientEvents {
     // travers toute la carte.
     private static final double MAX_REACH = 20.0D;
     private static final int CIRCLE_SEGMENTS = 32;
-    private static final float LINE_WIDTH = 2.0F;
+    // Pas private : réutilisés par TowerInspectClientEvents (portée d'une tour déjà posée).
+    static final float LINE_WIDTH = 2.0F;
     private static final int COLOR_VALID = ARGB.color(220, 0, 255, 0);
     private static final int COLOR_INVALID = ARGB.color(220, 255, 0, 0);
-    private static final int COLOR_RANGE = ARGB.color(180, 255, 255, 0);
+    static final int COLOR_RANGE = ARGB.color(180, 255, 255, 0);
 
     private static final ContextKey<TowerPlacementRenderState> RENDER_KEY =
             new ContextKey<>(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "tower_placement"));
@@ -256,7 +257,7 @@ public class TowerPlacementClientEvents {
     // (deuxième bug constaté en jeu, EST/OUEST inversés — NORD/SUD par symétrie n'étaient pas
     // affectés, d'où un décalage de 180° pile sur les rotations testées). EST et OUEST sont
     // donc inversés ici par rapport au blockstate.
-    private static float facingYRot(Direction direction) {
+    static float facingYRot(Direction direction) {
         return switch (direction) {
             case EAST -> 270.0F;
             case SOUTH -> 180.0F;
@@ -274,7 +275,7 @@ public class TowerPlacementClientEvents {
     // vérifiée pour les 4 directions (voir facingYRot ci-dessus ; ce gabarit utilisait
     // auparavant Direction.toYRot(), qui a une convention différente et faisait pointer le
     // cône à 180° de la vraie direction de tir — corrigé).
-    private static void renderRangeArea(
+    static void renderRangeArea(
             PoseStack.Pose pose, VertexConsumer buffer, double radius, double coneAngleDegrees, int color, float width) {
         Vector3f normal = new Vector3f(0.0F, 1.0F, 0.0F);
         boolean omnidirectional = coneAngleDegrees >= 360.0D;

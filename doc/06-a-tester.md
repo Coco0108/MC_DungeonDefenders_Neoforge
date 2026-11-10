@@ -1122,6 +1122,21 @@ Avec le même datapack :
 - [ ] Aucune exception liée à `EnemyRegistry`, `EnemyDefinitionsPayload`,
       `ClientEnemyDefinitions` ou `SpawnerBlockEntity` dans le log.
 
+## Inspecter une tour posée et description dans la roue (2026-11-10)
+
+Tout est du rendu client, donc **rien n'a pu être vérifié hors jeu** au-delà de la compilation.
+
+- [ ] Roue des tours : sous le nom et le coût de la tour survolée, une ligne grise de
+      description apparaît, lisible et pas coupée par le bord de l'écran.
+- [ ] Poser un Harpoon Turret, sortir du mode pose, le **regarder** : son cône de portée
+      s'affiche au sol, orienté dans le sens où il tire, identique à celui de la pose.
+- [ ] En le regardant : sa barre de vie est visible même à PV pleins, et « Tourelle Harpon » +
+      « PV : 20 / 20 » s'affichent sous le viseur. Regarder ailleurs : tout disparaît.
+- [ ] Regarder une Blockade : barre de vie et texte, **pas** de cercle de portée.
+- [ ] Une tour endommagée affiche les bons PV, et ils baissent en direct pendant un combat.
+- [ ] Rien ne s'affiche pendant le mode pose, le mode suppression, ou avec la roue ouverte.
+- [ ] À plus de 20 blocs, rien ne s'affiche.
+
 ## Heure du monde figée et heure par map (`WorldTime`, 2026-11-10)
 
 Voir [02-gameplay.md](02-gameplay.md#lheure-du-monde-figée--worldtimejava). Vérifié par gametest,

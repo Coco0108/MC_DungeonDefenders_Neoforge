@@ -1328,6 +1328,10 @@ exactement les valeurs d'avant :
   entities, chargés des deux côtés, y lisent leurs PV max pour la barre de vie). Un block entity
   choisit sa copie selon `level.isClientSide()`.
 
+**Description dans la roue** (issue #15, 2026-11-10) : sous le nom et le coût de la tour
+survolée, une troisième ligne dit à quoi elle sert (`TowerDefinition#description`, clé
+`dungeon_defenders.tower.<id>.description`).
+
 ### Les touches — `client/ModKeyMappings.java`
 
 Deux `KeyMapping`, sous une catégorie dédiée `ModKeyMappings.CATEGORY` (pas la catégorie
@@ -1452,6 +1456,27 @@ restauré (`before.restore(...)`) — le bloc disparaît comme s'il n'avait jama
 
 - Pas de filtrage par héros — la roue liste toutes les tours, en attendant ce système.
 - Pas de remplissage translucide de l'hologramme, juste le contour filaire.
+
+## Inspecter une tour posée — `client/TowerInspectClientEvents.java`
+
+Idées du joueur (issues #13 et #16), faites ensemble le 2026-11-10 comme prévu au backlog :
+**regarder** une tour déjà posée (jusqu'à 20 blocs) suffit à afficher
+
+- sa **portée** au sol, cercle ou cône, exactement comme pendant la pose (rien pour une
+  Blockade, qui n'en a pas) ;
+- sa **barre de vie**, même à PV pleins (`TowerHealthBarRenderer` fait une exception pour la
+  tour regardée) ;
+- son **nom et ses PV** (`20 / 20`) sous le viseur (`client/gui/TowerInspectOverlay.java`).
+
+Un seul déclencheur, le regard, plutôt que le clic ou la touche évoqués dans l'issue #13 : rien à
+apprendre, rien à refermer, aucun conflit avec les clics déjà pris par la pose et la
+suppression. L'affichage disparaît dès qu'on regarde ailleurs. Il est désactivé pendant le mode
+pose et le mode suppression, qui dessinent déjà au même endroit, et quand un écran est ouvert.
+
+Tout est côté client : un raycast `OUTLINE` par tick (`TowerInspectState.target`), comme la
+suppression de tour. Le dessin de la portée réutilise `renderRangeArea`/`facingYRot` de
+`TowerPlacementClientEvents` (rendus accessibles au package), avec l'orientation réelle du bloc
+(`HORIZONTAL_FACING`) et les stats data-driven de la tour, donc à jour après un `/reload`.
 
 ## La suppression de tour — `client/TowerRemovalState.java`, `client/TowerRemovalClientEvents.java`, `network/RemoveTowerPayload.java`
 

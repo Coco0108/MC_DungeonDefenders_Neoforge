@@ -71,6 +71,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── TowerPlacementRenderState.java # Instantané pour le rendu de l'hologramme (ContextKey sur LevelRenderState)
     │   │   ├── TowerPlacementClientEvents.java # Ouverture roue, rayon de visée, rotation, confirmation, rendu hologramme/portée
     │   │   ├── BlockOutlineClientEvents.java # Masque le contour noir de sélection sur les tours et cristaux (ExtractBlockOutlineRenderStateEvent)
+    │   │   ├── TowerInspectState.java        # La tour que le joueur regarde (état de rendu, client)
+    │   │   ├── TowerInspectClientEvents.java # Regarder une tour posée : raycast, portée dessinée au sol
     │   │   ├── LineBoxRenderer.java          # Contour filaire coloré partagé (pose/suppression de tour, repérage des marqueurs)
     │   │   ├── MarkerOverlayClientEvents.java # Repérage en créatif des 5 blocs marqueurs invisibles : contour + étiquette à travers les murs
     │   │   ├── PauseMenuClientEvents.java   # Bouton "Abandonner le niveau" ajouté au menu pause (ScreenEvent.Init.Post)
@@ -86,6 +88,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)
     │   │   ├── DiamondGauge.java             # Dessine une jauge en forme de losange (fill() empilés, sans texture)
     │   │   ├── CircleSlot.java               # Dessine un rond (fond + bordure) (fill() empilés, sans texture)
+    │   │   ├── TowerInspectOverlay.java      # Nom + PV de la tour regardée, sous le viseur (client uniquement)
     │   │   ├── ManaOverlay.java              # Losange mana, bas gauche (client uniquement)
     │   │   ├── HealthOverlay.java            # Losange vie, bas gauche (client uniquement)
     │   │   ├── ExperienceOverlay.java        # Barre horizontale expérience custom, bas gauche (client uniquement)
