@@ -13,6 +13,7 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
 
 import java.util.Map;
+import java.util.Optional;
 
 // "Types de comportement en Java, paramètres en JSON" (doc/data-driven/ennemis.md, §3) : le
 // code définit un petit nombre de TYPES d'IA ; chaque JSON d'ennemi choisit le sien via
@@ -37,16 +38,20 @@ public sealed interface EnemyBehavior permits EnemyBehavior.MeleePriority, Enemy
 
     /**
      * Mêlée à paliers de priorité (Block > Corps à corps > Cristal > Tourelle), puis convergence
-     * vers le cristal. Aucun paramètre : les dégâts restent lus dans Config.DAMAGE_PER_HIT et les
-     * vitesses sont des constantes des goals, comme avant la migration.
+     * vers le cristal. Un seul paramètre, optionnel : damage_per_hit. Sans lui, les dégâts restent
+     * lus dans Config.DAMAGE_PER_HIT ; les vitesses sont des constantes des goals.
      */
-    record MeleePriority() implements EnemyBehavior {
-        public static final MeleePriority INSTANCE = new MeleePriority();
-        static final MapCodec<MeleePriority> CODEC = MapCodec.unit(INSTANCE);
+    record MeleePriority(Optional<Integer> damagePerHit) implements EnemyBehavior {
+        public static final MeleePriority INSTANCE = new MeleePriority(Optional.empty());
+        // "damage_per_hit" optionnel (2026-11-10) : absent, les dégâts restent ceux de la config
+        // (damagePerHit), comme avant — c'est le cas du zombie livré.
+        static final MapCodec<MeleePriority> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
+                Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("damage_per_hit").forGetter(MeleePriority::damagePerHit)
+        ).apply(instance, MeleePriority::new));
 
         @Override
         public void applyGoals(PathfinderMob mob) {
-            mob.goalSelector.addGoal(0, new AttackPriorityTargetGoal(mob));
+            mob.goalSelector.addGoal(0, new AttackPriorityTargetGoal(mob, this.damagePerHit));
             mob.goalSelector.addGoal(1, new SeekEterniaCrystalGoal(mob));
         }
 

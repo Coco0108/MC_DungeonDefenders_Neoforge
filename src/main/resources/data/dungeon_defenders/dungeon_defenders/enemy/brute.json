@@ -1,0 +1,13 @@
+{
+  "entity_type": "minecraft:zombie",
+  "icon": "minecraft:iron_axe",
+  "xp_value": 40,
+  "order": 2,
+  "max_health": 60.0,
+  "movement_speed": 0.19,
+  "scale": 1.4,
+  "behavior": {
+    "type": "dungeon_defenders:melee_priority",
+    "damage_per_hit": 12
+  }
+}

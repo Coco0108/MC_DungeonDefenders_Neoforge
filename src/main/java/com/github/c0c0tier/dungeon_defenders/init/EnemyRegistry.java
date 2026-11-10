@@ -10,6 +10,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -89,6 +90,30 @@ public final class EnemyRegistry {
         return definitionFor(entityType).map(EnemyDefinition::xpValue).orElse(DEFAULT_XP_VALUE);
     }
 
+    /**
+     * L'identifiant de l'ennemi que CE mob incarne : celui posé par son spawner
+     * (ModAttachments.ENEMY_ID) s'il est connu, sinon le premier ennemi de son type de mob.
+     */
+    public static Optional<Identifier> idFor(Entity entity) {
+        String marked = entity.getData(ModAttachments.ENEMY_ID);
+        if (!marked.isEmpty()) {
+            Identifier id = Identifier.tryParse(marked);
+            if (id != null && byId.containsKey(id)) {
+                return Optional.of(id);
+            }
+        }
+        return idFor(entity.getType());
+    }
+
+    public static Optional<EnemyDefinition> definitionFor(Entity entity) {
+        return idFor(entity).map(byId::get);
+    }
+
+    /** XP/score à la mort de ce mob ; {@link #DEFAULT_XP_VALUE} s'il n'incarne aucun ennemi. */
+    public static int xpValueFor(Entity entity) {
+        return definitionFor(entity).map(EnemyDefinition::xpValue).orElse(DEFAULT_XP_VALUE);
+    }
+
     public static int generation() {
         return generation;
     }
@@ -111,14 +136,11 @@ public final class EnemyRegistry {
         Map<EntityType<?>, Identifier> newByEntityType = new HashMap<>();
         for (Map.Entry<Identifier, EnemyDefinition> entry : sorted) {
             newById.put(entry.getKey(), entry.getValue());
-            Identifier previous = newByEntityType.putIfAbsent(entry.getValue().entityType(), entry.getKey());
-            if (previous != null) {
-                // Limite assumée de l'étape 1 (doc/data-driven/ennemis.md, §3) : une seule
-                // définition par type de mob pour l'IA et l'XP. Le premier par "order" gagne.
-                LOGGER.warn("Ennemis {} et {} utilisent le même entity_type ({}) : {} est retenu pour l'IA et l'XP "
-                                + "de ce type de mob (le premier par \"order\").",
-                        previous, entry.getKey(), BuiltInRegistries.ENTITY_TYPE.getKey(entry.getValue().entityType()), previous);
-            }
+            // Plusieurs ennemis peuvent partager un type de mob (zombie et "brute") : un mob
+            // issu d'un spawner porte l'identifiant de SON ennemi (ModAttachments.ENEMY_ID). Cet
+            // index par type ne sert plus que de repli, pour un mob apparu autrement (/summon,
+            // œuf) : le premier ennemi par "order" de ce type de mob.
+            newByEntityType.putIfAbsent(entry.getValue().entityType(), entry.getKey());
         }
 
         byId = Map.copyOf(newById);

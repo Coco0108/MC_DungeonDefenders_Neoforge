@@ -2709,6 +2709,13 @@ d'avant :
 | `data/dungeon_defenders/dungeon_defenders/enemy/zombie.json` | `minecraft:zombie` | `minecraft:zombie_spawn_egg` | 10 | 0 | `dungeon_defenders:melee_priority` |
 | `data/dungeon_defenders/dungeon_defenders/enemy/skeleton.json` | `minecraft:skeleton` | `minecraft:skeleton_spawn_egg` | 15 | 1 | `dungeon_defenders:ranged_crystal` (`damage_per_shot` 3, `ticks_between_shots` 20, `shoot_range` 10.0) |
 
+Depuis le 2026-11-10, trois ennemis de plus sont livrés — `brute` (zombie, 60 PV, lent, grand,
+12 dégâts), `runner` (husk, 12 PV, rapide, petit) et `marksman` (stray, tir à 14 blocs) — grâce
+à des champs optionnels (`max_health`, `movement_speed`, `scale`, `damage_per_hit`) et au
+marquage de chaque mob par l'identifiant de son ennemi (`ModAttachments.ENEMY_ID`), qui permet à
+plusieurs ennemis de partager un type de mob. Détail dans
+[data-driven/ennemis.md](data-driven/ennemis.md#extension-du-2026-11-10--stats-optionnelles-et-variantes).
+
 - **Chargement** : `EnemyRegistry` est un `SimpleJsonResourceReloadListener` (vanilla) ajouté
   via `AddServerReloadListenersEvent`, donc relu au démarrage **et à chaque `/reload`**, sans
   redémarrer. Un JSON invalide est loggé par vanilla (`Couldn't parse data file ...`) et ignoré ;

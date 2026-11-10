@@ -669,6 +669,11 @@ vérifie la CI.
       lieu de la supprimer ;
     - un `/reload` recalcule le total de vague des niveaux qui ont des spawners ;
     - le registre des spawners actifs a été corrigé (voir la ligne suivante).
+- ✅ **Variantes d'ennemis** (2026-11-10) : stats optionnelles dans le JSON d'un ennemi (PV,
+  vitesse, taille, dégâts de mêlée), et plusieurs ennemis possibles sur un même type de mob grâce
+  au marquage `ENEMY_ID`. Trois ennemis livrés en plus : brute, coureur, tireur d'élite. Voir
+  [data-driven/ennemis.md](data-driven/ennemis.md#extension-du-2026-11-10--stats-optionnelles-et-variantes).
+  Gametest `enemy_variants`. **Jamais vus en jeu** (taille, vitesse, équilibrage à juger).
 - ✅ **Les monstres ne brûlent plus au soleil** (2026-11-10) : avec l'heure figée à midi, zombies
   et squelettes auraient pris feu en permanence sur une map à ciel ouvert (ils brûlaient déjà en
   journée avant). Corrigé en remplaçant la timeline vanilla `day` par une copie sans la piste
