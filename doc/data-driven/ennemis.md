@@ -46,6 +46,48 @@ gameplay.
   `enemy_export_conversion` ;
 - le serveur de gametest logge bien `2 ennemi(s) chargé(s)` au démarrage.
 
+## Extension du 2026-11-10 : stats optionnelles et variantes
+
+Ajouté sur `feature/ennemis-variantes`, par-dessus l'étape 1. Les JSON du zombie et du squelette
+ne changent pas.
+
+**Nouveaux champs optionnels d'un ennemi.** Absents, l'attribut vanilla du mob n'est pas touché.
+
+| Champ | Plage | Effet |
+|---|---|---|
+| `max_health` | 1 à 1024 | PV max (et PV de départ) |
+| `movement_speed` | 0.01 à 2 | Vitesse de déplacement (zombie vanilla : 0.23) |
+| `scale` | 0.1 à 8 | Taille du mob (1 = normale) |
+| `behavior.damage_per_hit` (type `melee_priority`) | ≥ 0 | Dégâts par coup aux tours et au cristal ; absent = `damagePerHit` de la config |
+
+**Plusieurs ennemis peuvent partager un type de mob.** C'était la « limite assumée » du §3 ; elle
+est levée. Le spawner fait apparaître un ennemi par `EnemyDefinition#spawn`, qui pose
+l'identifiant de l'ennemi sur le mob (`ModAttachments.ENEMY_ID`, persistant) **avant** qu'il
+rejoigne le monde. L'IA, l'XP et le score se décident sur cet identifiant
+(`EnemyRegistry.idFor(Entity)`), plus sur le seul type de mob.
+
+**Un mob apparu sans spawner** (`/summon`, œuf) dont le type est celui d'un ennemi devient le
+premier ennemi de ce type (par `order`) : il est marqué et reçoit ses stats. Un zombie reste
+donc un « zombie » ; un husk devient un « coureur », un stray un « tireur d'élite » (avant, ils
+gardaient la règle par défaut). Un type de mob sans aucun ennemi garde la règle d'avant.
+
+**Trois ennemis livrés en plus**, proposés dans l'écran de config des spawners après le zombie
+et le squelette. Aucune map existante ne les utilise : ils n'apparaissent que si un créateur les
+choisit.
+
+| Fichier | Mob | PV | Vitesse | Taille | XP | Comportement |
+|---|---|---|---|---|---|---|
+| `enemy/brute.json` | zombie | 60 | 0.19 (lent) | 1.4 | 40 | mêlée, 12 dégâts par coup |
+| `enemy/runner.json` | husk | 12 | 0.34 (rapide) | 0.8 | 8 | mêlée, 3 dégâts par coup |
+| `enemy/marksman.json` | stray | 16 | (vanilla) | (vanilla) | 25 | tir : 5 dégâts toutes les 30 ticks, portée 14 |
+
+**Mini-boss** : il n'y a pas de mécanisme dédié. Une brute dans un spawner limité à une seule
+vague (champs « vague de début » et « vague de fin » identiques) fait office de vague de boss.
+Un vrai boss se crée avec un JSON de plus (`max_health` 300, `scale` 2...).
+
+Gametest `enemy_variants` : une brute apparaît avec 60 PV, son identité, son XP et son IA, alors
+qu'un zombie sans marquage reste un zombie.
+
 ## Gel de l'enum `SpawnableEnemy` jusqu'à la fusion
 
 > **Sur cette branche, l'enum n'existe plus** : il a été remplacé par les JSON. Le gel reste

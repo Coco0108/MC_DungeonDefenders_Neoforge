@@ -331,7 +331,7 @@ Chargement FML
                                           tower_shipped_values, tower_stats_validation,
                                           balance_shipped_values, balance_validation, mana_chest_respawn,
                                           world_time_frozen, score_bonuses, combat_countdown,
-                                          monsters_do_not_burn
+                                          monsters_do_not_burn, enemy_variants
                                           (DungeonDefendersGameTests, voir 05-etat-et-problemes-connus.md)
 
 Bus de jeu (NeoForge.EVENT_BUS)

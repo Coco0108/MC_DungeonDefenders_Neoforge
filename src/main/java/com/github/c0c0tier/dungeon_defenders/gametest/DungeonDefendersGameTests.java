@@ -10,6 +10,7 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEnti
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.MapConfigBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackPriorityTargetGoal;
 import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
 import com.github.c0c0tier.dungeon_defenders.init.DifficultyScaling;
 import com.github.c0c0tier.dungeon_defenders.init.EnemyBehavior;
@@ -47,7 +48,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.clock.WorldClock;
 import net.minecraft.world.clock.WorldClocks;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -105,6 +108,7 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "enemy_shipped_values", DungeonDefendersGameTests::enemyShippedValues);
         register(event, environment, "enemy_unknown_excluded_from_wave", DungeonDefendersGameTests::enemyUnknownExcludedFromWave);
         register(event, environment, "enemy_export_conversion", DungeonDefendersGameTests::enemyExportConversion);
+        register(event, environment, "enemy_variants", DungeonDefendersGameTests::enemyVariants);
         register(event, environment, "mana_chest_respawn", DungeonDefendersGameTests::manaChestRespawn);
         register(event, environment, "world_time_frozen", DungeonDefendersGameTests::worldTimeFrozen);
         register(event, environment, "monsters_do_not_burn", DungeonDefendersGameTests::monstersDoNotBurn);
@@ -209,7 +213,7 @@ public final class DungeonDefendersGameTests {
         helper.assertValueEqual(skeleton.xpValue(), 15, "XP du squelette");
         helper.assertValueEqual(skeleton.behavior(), new EnemyBehavior.RangedCrystal(3, 20, 10.0D), "IA du squelette");
 
-        helper.assertValueEqual(EnemyRegistry.xpValueFor(EntityType.HUSK), EnemyRegistry.DEFAULT_XP_VALUE, "XP d'un monstre sans JSON");
+        helper.assertValueEqual(EnemyRegistry.xpValueFor(EntityType.DROWNED), EnemyRegistry.DEFAULT_XP_VALUE, "XP d'un monstre sans JSON");
         helper.succeed();
     }
 
@@ -471,6 +475,32 @@ public final class DungeonDefendersGameTests {
                     "pas de brûlure au soleil à l'heure " + time);
         }
         WorldTime.freezeAt(level, WorldTime.USE_DEFAULT);
+        helper.succeed();
+    }
+
+    /**
+     * Deux ennemis peuvent partager un type de mob : une "brute" est un zombie, mais avec ses
+     * propres stats, sa propre XP et sa propre IA, parce qu'elle est marquée de son identifiant
+     * à l'apparition. Un zombie apparu sans spawner reste, lui, l'ennemi "zombie".
+     */
+    static void enemyVariants(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Identifier bruteId = Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "brute");
+        EnemyDefinition brute = EnemyRegistry.byId(bruteId);
+        helper.assertTrue(brute != null, "la brute livrée est chargée");
+        helper.assertValueEqual(brute.entityType(), EntityType.ZOMBIE, "la brute est un zombie");
+        helper.assertValueEqual(EnemyRegistry.idFor(EntityType.ZOMBIE), Optional.of(LegacyEnemyIds.ZOMBIE), "repli par type = zombie");
+
+        Entity spawned = brute.spawn(level, bruteId, helper.absolutePos(new BlockPos(1, 1, 1)));
+        helper.assertTrue(spawned instanceof Zombie, "une brute apparaît");
+        Zombie zombie = (Zombie) spawned;
+        helper.assertValueEqual(zombie.getMaxHealth(), 60.0F, "PV max de la brute");
+        helper.assertValueEqual(zombie.getHealth(), 60.0F, "PV de départ de la brute");
+        helper.assertValueEqual(EnemyRegistry.idFor(zombie), Optional.of(bruteId), "identité de la brute");
+        helper.assertValueEqual(EnemyRegistry.xpValueFor(zombie), 40, "XP de la brute");
+        helper.assertTrue(zombie.goalSelector.getAvailableGoals().stream()
+                .anyMatch(goal -> goal.getGoal() instanceof AttackPriorityTargetGoal), "IA de mêlée reçue");
+        zombie.discard();
         helper.succeed();
     }
 

@@ -1122,6 +1122,25 @@ Avec le même datapack :
 - [ ] Aucune exception liée à `EnemyRegistry`, `EnemyDefinitionsPayload`,
       `ClientEnemyDefinitions` ou `SpawnerBlockEntity` dans le log.
 
+## Variantes d'ennemis : brute, coureur, tireur d'élite (2026-11-10)
+
+Voir [data-driven/ennemis.md](data-driven/ennemis.md#extension-du-2026-11-10--stats-optionnelles-et-variantes).
+Vérifié par gametest ; apparence et équilibrage **jamais vus en jeu**.
+
+- [ ] Le log annonce `5 ennemi(s) chargé(s)`. Dans l'écran de config d'un spawner, le bouton
+      « cycler » propose Zombie, Squelette, **Brute, Coureur, Tireur d'élite**.
+- [ ] Spawner avec des brutes : de **grands** zombies lents, 60 PV, qui font très mal aux tours
+      et au cristal (12 par coup). Popup « +40 » avec une hache en icône.
+- [ ] Spawner avec des coureurs : de **petits** husks rapides et fragiles (12 PV), « +8 ».
+- [ ] Spawner avec des tireurs d'élite : des strays qui s'arrêtent plus loin du cristal (14
+      blocs) et tirent, « +25 ».
+- [ ] Mélanger brutes et zombies dans un même spawner : chacun garde bien ses propres stats.
+- [ ] Mini-boss : un spawner avec 1 brute, vague de début = vague de fin = 3. Elle n'apparaît
+      qu'à la vague 3, et la vague se termine quand elle meurt.
+- [ ] Les maps existantes (zombies et squelettes) se comportent exactement comme avant.
+- [ ] Me dire si la taille, la vitesse et la résistance paraissent justes : ce sont des
+      premières valeurs, modifiables dans les JSON puis `/reload`.
+
 ## Bonus de score, score final et compte à rebours (2026-11-10)
 
 Voir [02-gameplay.md](02-gameplay.md#bonus-et-multiplicateurs-de-score--initscorekeeperjava).

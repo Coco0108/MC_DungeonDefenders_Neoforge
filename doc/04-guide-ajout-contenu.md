@@ -417,7 +417,8 @@ pas le nombre de lignes (ex. cycler la valeur d'un bouton) n'a pas besoin de tou
 (depuis le 2026-09-29, voir [data-driven/ennemis.md](data-driven/ennemis.md)) :
 `data/<namespace>/dungeon_defenders/enemy/<nom>.json`, dans le mod ou dans n'importe quel
 datapack/jar de pack. Même forme que `zombie.json`/`skeleton.json` : `entity_type`, `icon`,
-`xp_value`, `order` (facultatif) et `behavior` (`dungeon_defenders:melee_priority`, ou
+`xp_value`, `order` (facultatif), les stats facultatives `max_health`/`movement_speed`/`scale`
+et `behavior` (`dungeon_defenders:melee_priority`, ou
 `dungeon_defenders:ranged_crystal` avec `damage_per_shot`/`ticks_between_shots`/`shoot_range`
 facultatifs). Plus la clé de traduction `<namespace>.enemy.<nom>` dans les fichiers de lang (sans
 elle, l'identifiant brut s'affiche). `/reload` suffit pour l'essayer, sans redémarrer. Le GUI, le

@@ -155,7 +155,9 @@ public class SpawnerBlockEntity extends BlockEntity {
             this.spawned++;
 
             BlockPos spawnPos = findSafeSpawnPos(level, pos, spawnRadius);
-            definition.entityType().spawn(level, spawnPos, EntitySpawnReason.SPAWNER);
+            // Marqué de l'identifiant de son ennemi avant de rejoindre le monde (voir
+            // EnemyDefinition#spawn) : c'est ce qui distingue une "brute" d'un zombie normal.
+            definition.spawn(level, this.enemy, spawnPos);
             return true;
         }
     }

@@ -100,7 +100,22 @@ public class ModEvents {
         // /summon d'un type sans JSON, stray, wither skeleton...) garde exactement la règle
         // d'avant la migration — distance pour tout AbstractSkeleton, mêlée sinon — pour
         // qu'aucun monstre ne perde l'IA qu'il avait.
-        EnemyBehavior behavior = EnemyRegistry.definitionFor(monster.getType())
+        // Un monstre apparu SANS spawner (/summon, œuf) dont le type de mob est celui d'un ennemi
+        // devient cet ennemi à part entière : il est marqué et reçoit ses stats, au lieu d'en
+        // avoir seulement l'IA et l'XP. Le marquage persistant évite de les réappliquer au
+        // rechargement du chunk.
+        if (monster.getData(ModAttachments.ENEMY_ID).isEmpty()) {
+            EnemyRegistry.idFor(monster.getType()).ifPresent(id -> {
+                monster.setData(ModAttachments.ENEMY_ID, id.toString());
+                EnemyDefinition definition = EnemyRegistry.byId(id);
+                if (definition != null) {
+                    definition.applyStats(monster);
+                }
+            });
+        }
+
+        // L'ennemi est celui marqué (par le spawner, ou juste au-dessus), sinon la règle d'avant.
+        EnemyBehavior behavior = EnemyRegistry.definitionFor(monster)
                 .map(EnemyDefinition::behavior)
                 .orElseGet(() -> EnemyBehavior.legacyFor(monster));
         behavior.applyGoals(monster);
@@ -310,11 +325,11 @@ public class ModEvents {
     private static void awardExperienceAndScore(Level level, Monster monster) {
         // "xp_value" du JSON de l'ennemi ; EnemyRegistry.DEFAULT_XP_VALUE (5, comme avant) pour
         // un monstre sans définition.
-        int xpValue = EnemyRegistry.xpValueFor(monster.getType());
+        int xpValue = EnemyRegistry.xpValueFor(monster);
 
         // Pas d'ennemi associé (donc pas d'icône dans le popup) si ce monstre n'a pas de
         // définition — même repli qu'avant la migration.
-        ScoreKeeper.grant(level, xpValue, ScoreSource.MONSTER_KILLED, EnemyRegistry.idFor(monster.getType()));
+        ScoreKeeper.grant(level, xpValue, ScoreSource.MONSTER_KILLED, EnemyRegistry.idFor(monster));
 
         for (Player player : level.players()) {
             grantExperience(player, xpValue);

@@ -282,6 +282,18 @@ public class ModAttachments {
                     .sync(ByteBufCodecs.VAR_INT)
                     .build());
 
+    // Identifiant de l'ennemi data-driven (init/EnemyRegistry) dont ce mob est une instance, posé
+    // par le spawner AVANT que le mob rejoigne le monde (voir EnemyDefinition#spawn) ; "" pour
+    // tout mob qui ne vient pas d'un spawner. C'est ce qui permet à plusieurs ennemis de partager
+    // un même type de mob (un zombie normal et une "brute", par exemple) : l'IA, l'XP et le score
+    // se décident sur cet identifiant, plus seulement sur le type. Persistant : un monstre
+    // rechargé avec son chunk reste l'ennemi qu'il était. Jamais synchronisé.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<String>> ENEMY_ID = ATTACHMENT_TYPES.register(
+            "enemy_id",
+            () -> AttachmentType.<String>builder(() -> "")
+                    .serialize(Codec.STRING.fieldOf("EnemyId"))
+                    .build());
+
     /**
      * Nombre de vagues de la partie en cours — celui de la map jouée, ou {@link #MAX_WAVE} par
      * défaut. À préférer à MAX_WAVE partout où il s'agit de "la dernière vague de CETTE partie".
