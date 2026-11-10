@@ -1122,6 +1122,18 @@ Avec le même datapack :
 - [ ] Aucune exception liée à `EnemyRegistry`, `EnemyDefinitionsPayload`,
       `ClientEnemyDefinitions` ou `SpawnerBlockEntity` dans le log.
 
+## Réapparition des coffres de mana (correctif du registre, 2026-11-10)
+
+`ManaChestBlockEntity` avait le même bug de registre que les spawners (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)). Corrigé et couvert par le
+gametest `mana_chest_respawn`, mais **le symptôme d'origine n'a jamais été revu en jeu**.
+
+- [ ] Sur une map posée depuis la taverne (`Arene de test`, qui contient un coffre) : ouvrir le
+      coffre en survie pendant la vague 1. Il disparaît et donne son mana.
+- [ ] Finir la vague : au retour en Construction, le coffre **réapparaît** et peut être rouvert.
+- [ ] Même chose avec un coffre posé à la main en créatif, et après avoir quitté puis rouvert le
+      monde.
+
 ## Stats des tours et réglages globaux data-driven (étapes 2 et 3)
 
 Nouveau (2026-11-10), voir [data-driven/tours.md](data-driven/tours.md) et

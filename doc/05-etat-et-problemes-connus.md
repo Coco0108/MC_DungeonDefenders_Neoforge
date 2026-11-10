@@ -777,7 +777,7 @@ Même situation pour `models/block/spike_blockade.json`, qui pointe sur
 situation encore pour `models/block/mana_chest.json`, qui pointe sur
 `minecraft:block/barrel_top`.
 
-### Les coffres ne réapparaissent pas en jeu — cause non trouvée
+### Les coffres ne réapparaissent pas en jeu — cause probable corrigée (2026-11-10), à confirmer en jeu
 
 Signalé en testant en jeu (2026-08-26). Relu en détail (`ManaChestBlock#respawnAll`,
 `PhaseTransitions#enterBuild`/`resetGameState`, `ModAttachments.ACTIVE_MANA_CHESTS`) sans
@@ -793,8 +793,14 @@ data-driven des ennemis (voir « Registre des spawners actifs » plus bas). Quan
 en remplace un autre à la même position, `LevelChunk#setBlockEntity` enregistre le nouveau puis
 appelle `setRemoved()` sur l'ancien, qui retirait la position du registre. `ManaChestBlockEntity`
 suit exactement le même patron avec `ACTIVE_MANA_CHESTS` : un coffre ainsi retiré du registre
-serait ignoré par `respawnAll`, ce qui correspondrait au symptôme. Pas corrigé ici (hors sujet de
-la migration) : à confirmer puis corriger de la même façon que `SpawnerBlockEntity#setRemoved`.
+serait ignoré par `respawnAll`, ce qui correspondrait au symptôme.
+
+**Corrigé le 2026-11-10** (`fix/registre-coffres-mana`) : `ManaChestBlockEntity#setRemoved` ne
+retire plus la position tout de suite ; le retrait est différé et n'a lieu que s'il n'y a plus
+de coffre à cette position. Le gametest `mana_chest_respawn` reproduit le remplacement d'un block
+entity par un autre : il échouait avant le correctif (coffre sorti du registre) et passe depuis.
+**Ce qui reste incertain** : que ce remplacement soit bien ce qui se produisait en jeu le
+2026-08-26. À confirmer avec la checklist de [06-a-tester.md](06-a-tester.md).
 À retester avec un scénario précis (un seul coffre, harnais de test du spawner pour changer de
 phase manuellement) pour resserrer le diagnostic la prochaine fois.
 

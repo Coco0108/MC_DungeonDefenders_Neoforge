@@ -321,7 +321,7 @@ Chargement FML
                                           enemy_legacy_format, enemy_shipped_values,
                                           enemy_unknown_excluded_from_wave, enemy_export_conversion,
                                           tower_shipped_values, tower_stats_validation,
-                                          balance_shipped_values, balance_validation
+                                          balance_shipped_values, balance_validation, mana_chest_respawn
                                           (DungeonDefendersGameTests, voir 05-etat-et-problemes-connus.md)
 
 Bus de jeu (NeoForge.EVENT_BUS)

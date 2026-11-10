@@ -3,7 +3,9 @@ package com.github.c0c0tier.dungeon_defenders.gametest;
 import com.github.c0c0tier.dungeon_defenders.Config;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
 import com.github.c0c0tier.dungeon_defenders.init.DifficultyScaling;
@@ -36,6 +38,7 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.block.Block;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
@@ -90,6 +93,7 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "enemy_shipped_values", DungeonDefendersGameTests::enemyShippedValues);
         register(event, environment, "enemy_unknown_excluded_from_wave", DungeonDefendersGameTests::enemyUnknownExcludedFromWave);
         register(event, environment, "enemy_export_conversion", DungeonDefendersGameTests::enemyExportConversion);
+        register(event, environment, "mana_chest_respawn", DungeonDefendersGameTests::manaChestRespawn);
         // Stats des tours en data-driven (doc/data-driven/tours.md).
         register(event, environment, "tower_shipped_values", DungeonDefendersGameTests::towerShippedValues);
         register(event, environment, "tower_stats_validation", DungeonDefendersGameTests::towerStatsValidation);
@@ -318,6 +322,31 @@ public final class DungeonDefendersGameTests {
         helper.assertTrue(GameBalance.parseFile("difficulty", JsonParser.parseString("{\"hard_multiplier\": 0}")).isError(), "sous le minimum");
         helper.assertTrue(GameBalance.parseFile("progression", JsonParser.parseString("{\"xp_per_level\": 99.5}")).isError(), "doit être entier");
         helper.assertTrue(GameBalance.parseFile("difficulte", JsonParser.parseString("{}")).isError(), "fichier inconnu");
+        helper.succeed();
+    }
+
+    /**
+     * Un coffre de mana posé reste dans le registre ACTIVE_MANA_CHESTS (il en disparaissait quand
+     * son block entity en remplaçait un autre à la même position, bug corrigé le 2026-11-10), et
+     * respawnAll le referme une fois ouvert.
+     */
+    static void manaChestRespawn(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pos = new BlockPos(1, 1, 1);
+        BlockPos absolute = helper.absolutePos(pos);
+        helper.setBlock(pos, ModBlocks.MANA_CHEST.get());
+        helper.assertTrue(level.getData(ModAttachments.ACTIVE_MANA_CHESTS).contains(absolute), "coffre enregistré");
+
+        // Le scénario du bug : un block entity en remplace un autre à la même position, comme
+        // quand une structure de map pose le sien par-dessus celui créé avec le bloc.
+        level.setBlockEntity(new ManaChestBlockEntity(absolute, level.getBlockState(absolute)));
+        helper.assertTrue(level.getData(ModAttachments.ACTIVE_MANA_CHESTS).contains(absolute), "toujours enregistré après remplacement");
+
+        level.setBlock(absolute, level.getBlockState(absolute).setValue(ManaChestBlock.OPENED, true), Block.UPDATE_ALL);
+        helper.assertTrue(level.getData(ModAttachments.ACTIVE_MANA_CHESTS).contains(absolute), "toujours enregistré une fois ouvert");
+
+        ManaChestBlock.respawnAll(level);
+        helper.assertFalse(level.getBlockState(absolute).getValue(ManaChestBlock.OPENED), "coffre refermé par respawnAll");
         helper.succeed();
     }
 

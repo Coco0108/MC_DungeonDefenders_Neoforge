@@ -61,8 +61,26 @@ public class ManaChestBlockEntity extends BlockEntity {
     @Override
     public void setRemoved() {
         super.setRemoved();
-        if (this.level instanceof ServerLevel) {
-            this.level.getData(ModAttachments.ACTIVE_MANA_CHESTS).remove(this.worldPosition);
+        if (this.level instanceof ServerLevel serverLevel) {
+            BlockPos pos = this.worldPosition;
+            // PAS de retrait immédiat (corrigé le 2026-11-10, même bug que
+            // SpawnerBlockEntity#setRemoved) : quand un block entity en remplace un autre à la
+            // même position (pose d'une structure de map notamment), LevelChunk#setBlockEntity
+            // appelle setLevel() sur le nouveau — qui ajoute cette position — puis setRemoved()
+            // sur l'ancien. Retirer la position ici effaçait donc l'enregistrement du
+            // remplaçant : le coffre disparaissait du registre et ManaChestBlock#respawnAll ne
+            // le faisait plus jamais réapparaître.
+            //
+            // Différé au tick suivant, puis retiré seulement s'il n'y a plus de coffre à cette
+            // position. isLoaded d'abord, pour ne jamais recharger un chunk en cours de
+            // déchargement.
+            serverLevel.getServer().execute(() -> {
+                boolean replacedByChest = serverLevel.isLoaded(pos)
+                        && serverLevel.getBlockEntity(pos) instanceof ManaChestBlockEntity;
+                if (!replacedByChest) {
+                    serverLevel.getData(ModAttachments.ACTIVE_MANA_CHESTS).remove(pos);
+                }
+            });
         }
     }
 

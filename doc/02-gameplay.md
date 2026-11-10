@@ -2287,6 +2287,13 @@ map, pas d'une seule valeur qui conviendrait à toutes.
 
 ### Disparition et réapparition visuelles — `ManaChestBlock#OPENED`, `#respawnAll`
 
+> **Registre corrigé le 2026-11-10** : `ManaChestBlockEntity#setRemoved` retirait le coffre
+> d'`ACTIVE_MANA_CHESTS` au moment où son block entity en remplaçait un autre à la même position
+> (`LevelChunk#setBlockEntity` appelle `setLevel()` sur le nouveau puis `setRemoved()` sur
+> l'ancien). `respawnAll`, qui parcourt ce registre, ne le voyait alors plus. Le retrait est
+> maintenant différé et conditionné à l'absence de coffre à cette position, comme pour
+> `SpawnerBlockEntity`.
+
 Décidé avec le joueur (2026-08-24), comme dans le jeu de référence : un coffre ouvert ne reste
 pas visible mais inerte, il **disparaît** jusqu'à la vague suivante. `OPENED` est une vraie
 propriété de `BlockState` (`BooleanProperty`, comme `HORIZONTAL_FACING` sur le Harpoon Turret) :
