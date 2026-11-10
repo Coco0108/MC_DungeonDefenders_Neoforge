@@ -78,6 +78,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── TowerInspectClientEvents.java # Regarder une tour posée : raycast, portée dessinée au sol
     │   │   ├── LineBoxRenderer.java          # Contour filaire coloré partagé (pose/suppression de tour, repérage des marqueurs)
     │   │   ├── MarkerOverlayClientEvents.java # Repérage en créatif des 5 blocs marqueurs invisibles : contour + étiquette à travers les murs
+    │   │   ├── MapOverlayState.java          # État transitoire du plan plein écran (visible, position du cristal trouvé)
+    │   │   ├── MapOverlayClientEvents.java   # Touche maintenue (MAP_OVERLAY) + scan borné du cristal de la zone actuelle
     │   │   ├── PauseMenuClientEvents.java   # Bouton "Abandonner le niveau" ajouté au menu pause (ScreenEvent.Init.Post)
     │   │   ├── ClientEnemyDefinitions.java   # Copie CLIENT des ennemis data-driven (distincte d'EnemyRegistry, voir doc/data-driven/ennemis.md)
     │   │   └── ClientDisplayConfig.java      # Spec de config CLIENT (options d'affichage HUD facultatives), branchée dans DungeonDefendersModClient
@@ -101,7 +103,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── PhaseOverlay.java             # Couche HUD affichant la phase (construction/combat) (client uniquement)
     │   │   ├── ScoreOverlay.java             # Couche HUD affichant le score de la carte, bas centre (client uniquement)
     │   │   ├── CharacterOverlay.java         # Couche HUD affichant "Nom - niv X", bas centre (client uniquement)
-    │   │   └── AbilitySlotsOverlay.java      # 4 emplacements de compétences, bas gauche, à côté des losanges (client uniquement)
+    │   │   ├── AbilitySlotsOverlay.java      # 4 emplacements de compétences, bas gauche, à côté des losanges (client uniquement)
+    │   │   └── MapOverlay.java               # Plan plein écran (touche maintenue) : rectangle + points des joueurs + cristal (client uniquement)
     │   ├── entity/
     │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
     │   │   ├── TrainingDummyEntity.java       # extends Zombie : cible immobile à vie infinie, pour mesurer les dégâts des tours
