@@ -264,6 +264,15 @@ public class ModAttachments {
                     .serialize(Codec.BOOL.fieldOf("WaveCrystalDamaged"))
                     .build());
 
+    // Vrai dès qu'une tour est détruite par les monstres pendant la vague (PV à 0, voir
+    // AbstractTowerBlockEntity#setHealth) — jamais par un retrait volontaire du joueur, qui ne
+    // passe pas par là. Même cycle de vie que les deux drapeaux ci-dessus.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> WAVE_TOWER_LOST = ATTACHMENT_TYPES.register(
+            "wave_tower_lost",
+            () -> AttachmentType.builder(() -> Boolean.FALSE)
+                    .serialize(Codec.BOOL.fieldOf("WaveTowerLost"))
+                    .build());
+
     // Multiplicateur de score de la map en cours (champ du bloc de configuration, voir
     // MapDefinition#scoreMultiplier), posé par MapInstance#startGame ; x1 à la taverne. Lu par
     // ScoreKeeper, côté serveur uniquement.

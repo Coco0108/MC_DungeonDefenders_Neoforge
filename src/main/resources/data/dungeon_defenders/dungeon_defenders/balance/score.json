@@ -3,6 +3,7 @@
   "victory_bonus": 200,
   "no_player_damage_multiplier": 1.5,
   "no_crystal_damage_multiplier": 1.5,
+  "no_tower_lost_multiplier": 1.25,
   "easy_multiplier": 0.75,
   "normal_multiplier": 1.0,
   "hard_multiplier": 1.5

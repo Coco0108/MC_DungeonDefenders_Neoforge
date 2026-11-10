@@ -20,6 +20,11 @@ public enum BalanceValue {
 
     // balance/towers.json — part du coût en mana rendue quand le joueur retire une tour.
     TOWER_REFUND_RATIO("towers", "refund_ratio", 0.5D, 0.0D, false),
+    // Amélioration des tours (AbstractTowerBlockEntity) : niveau maximum, prix d'un niveau en
+    // part du coût de pose, et bonus de PV/dégâts par niveau au-delà du premier (0.25 = +25 %).
+    TOWER_MAX_LEVEL("towers", "max_level", 4.0D, 1.0D, true),
+    TOWER_UPGRADE_COST_RATIO("towers", "upgrade_cost_ratio", 0.75D, 0.0D, false),
+    TOWER_UPGRADE_STAT_BONUS("towers", "upgrade_stat_bonus", 0.25D, 0.0D, false),
 
     // balance/progression.json — expérience nécessaire pour passer un niveau.
     XP_PER_LEVEL("progression", "xp_per_level", 100.0D, 1.0D, true),
@@ -31,6 +36,8 @@ public enum BalanceValue {
     // Multiplicateurs du bonus de vague : aucun joueur blessé / cristal intact pendant la vague.
     SCORE_NO_PLAYER_DAMAGE_MULTIPLIER("score", "no_player_damage_multiplier", 1.5D, 1.0D, false),
     SCORE_NO_CRYSTAL_DAMAGE_MULTIPLIER("score", "no_crystal_damage_multiplier", 1.5D, 1.0D, false),
+    // ... et aucune tour détruite par les monstres (une tour retirée par le joueur ne compte pas).
+    SCORE_NO_TOWER_LOST_MULTIPLIER("score", "no_tower_lost_multiplier", 1.25D, 1.0D, false),
     // Multiplicateur de TOUT gain de score selon la difficulté choisie.
     SCORE_EASY_MULTIPLIER("score", "easy_multiplier", 0.75D, 0.0D, false),
     SCORE_NORMAL_MULTIPLIER("score", "normal_multiplier", 1.0D, 0.0D, false),

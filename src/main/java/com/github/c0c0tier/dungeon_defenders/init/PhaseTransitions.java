@@ -39,6 +39,7 @@ public final class PhaseTransitions {
         // Nouvelle vague : le suivi "aucun dégât" repart de zéro (voir ScoreKeeper).
         level.setData(ModAttachments.WAVE_PLAYER_DAMAGED, false);
         level.setData(ModAttachments.WAVE_CRYSTAL_DAMAGED, false);
+        level.setData(ModAttachments.WAVE_TOWER_LOST, false);
 
         for (Player player : level.players()) {
             player.setData(ModAttachments.READY, false);

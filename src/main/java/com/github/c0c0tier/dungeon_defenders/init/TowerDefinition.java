@@ -116,6 +116,14 @@ public enum TowerDefinition {
                     .with(TowerStat.SPLASH_RADIUS, 2.0D)
                     .build());
 
+    /**
+     * Distance maximale (blocs, depuis les yeux) à laquelle un joueur vise une case ou une tour
+     * pour la poser, la retirer, l'inspecter ou l'améliorer. Partagée par le client (raycasts) et
+     * le serveur (ModNetworking), qui refusait auparavant en silence au-delà de 8 blocs alors que
+     * le client laissait viser jusqu'à 20.
+     */
+    public static final double REACH = 20.0D;
+
     /** Au-delà (ou sans stat CONE_ANGLE_DEGREES) : omnidirectionnel, cercle complet à l'aperçu. */
     public static final double FULL_CIRCLE_DEGREES = 360.0D;
 

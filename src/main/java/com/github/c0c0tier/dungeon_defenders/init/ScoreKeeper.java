@@ -55,8 +55,8 @@ public final class ScoreKeeper {
     /**
      * Bonus de fin de vague, à appeler quand la vague vient d'être nettoyée (avant de quitter la
      * phase Combat). Le bonus de base est multiplié si aucun joueur n'a pris de dégât pendant la
-     * vague, et encore si le Cristal d'Eternia n'en a pris aucun — deux conditions distinctes,
-     * cumulables. Chaque part est créditée à part, pour que le joueur voie d'où vient son score.
+     * vague, encore si le Cristal d'Eternia n'en a pris aucun, et encore si aucune tour n'a été
+     * détruite par les monstres — trois conditions distinctes, cumulables. Chaque part est créditée à part, pour que le joueur voie d'où vient son score.
      */
     public static void awardWaveCleared(Level level) {
         double base = GameBalance.get(BalanceValue.SCORE_WAVE_CLEAR_BONUS, false);
@@ -71,6 +71,11 @@ public final class ScoreKeeper {
         if (!level.getData(ModAttachments.WAVE_CRYSTAL_DAMAGED)) {
             double multiplier = GameBalance.get(BalanceValue.SCORE_NO_CRYSTAL_DAMAGE_MULTIPLIER, false);
             grant(level, running * (multiplier - 1.0D), ScoreSource.CRYSTAL_UNTOUCHED, Optional.empty());
+            running *= multiplier;
+        }
+        if (!level.getData(ModAttachments.WAVE_TOWER_LOST)) {
+            double multiplier = GameBalance.get(BalanceValue.SCORE_NO_TOWER_LOST_MULTIPLIER, false);
+            grant(level, running * (multiplier - 1.0D), ScoreSource.NO_TOWER_LOST, Optional.empty());
         }
     }
 

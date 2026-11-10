@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders.client;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.network.RemoveTowerPayload;
@@ -36,7 +37,7 @@ import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID, value = Dist.CLIENT)
 public class TowerRemovalClientEvents {
 
-    private static final double MAX_REACH = 20.0D;
+    private static final double MAX_REACH = TowerDefinition.REACH;
     private static final float LINE_WIDTH = 2.0F;
     // Distinct des couleurs vert/rouge de validité de pose (TowerPlacementClientEvents) pour
     // ne pas laisser croire aux deux modes qu'ils partagent une sémantique - orange = "cible

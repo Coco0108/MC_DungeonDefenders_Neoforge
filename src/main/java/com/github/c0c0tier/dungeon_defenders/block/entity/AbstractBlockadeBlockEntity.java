@@ -61,7 +61,8 @@ public abstract class AbstractBlockadeBlockEntity extends AbstractTowerBlockEnti
         }
 
         TowerStats stats = blockEntity.stats();
-        float contactDamage = stats.floatValue(TowerStat.CONTACT_DAMAGE);
+        // Les dégâts montent avec le niveau d'amélioration de la tour.
+        float contactDamage = (float) (stats.get(TowerStat.CONTACT_DAMAGE) * blockEntity.levelMultiplier());
         long contactIntervalTicks = stats.intValue(TowerStat.CONTACT_INTERVAL_TICKS);
         // Repousse : seulement pour les tours qui déclarent la stat (Bouncer Blockade).
         float knockbackStrength = (float) stats.getOr(TowerStat.KNOCKBACK_STRENGTH, 0.0D);

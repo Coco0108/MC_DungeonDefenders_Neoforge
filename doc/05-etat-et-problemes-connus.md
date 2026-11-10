@@ -669,6 +669,17 @@ vérifie la CI.
       lieu de la supprimer ;
     - un `/reload` recalcule le total de vague des niveaux qui ont des spawners ;
     - le registre des spawners actifs a été corrigé (voir la ligne suivante).
+- ✅ **Amélioration des tours** (2026-11-10) : touche U en regardant une tour, 4 niveaux, +25 %
+  de PV max et de dégâts par niveau, un niveau coûte 75 % du coût de pose ; le remboursement au
+  retrait compte tout le mana investi. Réglages dans `balance/towers.json`. Formule jamais
+  discutée avec le joueur : **première proposition, à ajuster**. Voir
+  [02-gameplay.md](02-gameplay.md#améliorer-une-tour--abstracttowerblockentityupgrade-networkupgradetowerpayloadjava).
+  Gametest `tower_upgrade`. **Jamais vu en jeu.**
+- ✅ **Pose et retrait de tour au-delà de 8 blocs** (2026-11-10, bug) : le client laissait viser
+  jusqu'à 20 blocs, le serveur refusait sans message au-delà de 8. Les deux partagent maintenant
+  `TowerDefinition.REACH`.
+- ✅ **Multiplicateur de score « aucune tour perdue »** (2026-11-10) : dernier élément de la
+  feuille de route du score, `no_tower_lost_multiplier` (×1.25).
 - ✅ **Variantes d'ennemis** (2026-11-10) : stats optionnelles dans le JSON d'un ennemi (PV,
   vitesse, taille, dégâts de mêlée), et plusieurs ennemis possibles sur un même type de mob grâce
   au marquage `ENEMY_ID`. Trois ennemis livrés en plus : brute, coureur, tireur d'élite. Voir
