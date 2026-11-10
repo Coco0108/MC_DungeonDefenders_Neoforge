@@ -180,6 +180,21 @@ hors de `[0, 24000[` est traitée comme « pas d'heure propre ».
 d'horloges est une donnée du serveur entier, initialisée après les niveaux. Vérifié par le
 gametest `world_time_frozen`.
 
+### Les monstres ne brûlent plus au soleil — `data/minecraft/timeline/day.json`
+
+Conséquence directe de l'heure figée, trouvée et corrigée le 2026-11-10 : à midi en permanence,
+zombies et squelettes prendraient feu sans arrêt sur une map à ciel ouvert (ils brûlaient déjà
+la moitié du temps quand le jour défilait). Le jeu décide ça par l'attribut d'environnement
+`MONSTERS_BURN`, que la timeline vanilla `day` met à vrai pendant la journée avec un
+modificateur `or` : impossible de le forcer à faux depuis la dimension ou le biome.
+
+Le mod remplace donc `data/minecraft/timeline/day.json` par une copie **sans** la piste
+`minecraft:gameplay/monsters_burn` — même principe que `data/minecraft/dimension/overworld.json`,
+et ça vaut aussi pour les mondes déjà créés (les timelines sont relues à chaque chargement). Les
+17 autres pistes (couleur du ciel, angle du soleil...) sont celles du jeu. Le fichier est
+**généré** par `tools/generer-timeline-sans-brulure.py <minecraft.jar> <fichier>`, à relancer à
+chaque changement de version de Minecraft. Gametest `monsters_do_not_burn` (il échouait avant).
+
 ## La taverne — choix de map et difficulté
 
 ### Le bloc — `block/TavernCrystalBlock.java`

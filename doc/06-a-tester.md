@@ -1172,6 +1172,8 @@ Voir [02-gameplay.md](02-gameplay.md#lheure-du-monde-figée--worldtimejava). Vé
 - [ ] Sauvegarder la map en structure et la jouer : il fait **nuit** pendant toute la partie.
 - [ ] Retour à la taverne (`/dd_leave` ou fin de partie) : l'heure par défaut revient.
 - [ ] Une map sans heure (`Arene de test`) se joue à l'heure par défaut.
+- [ ] **En plein midi, à ciel ouvert, zombies et squelettes ne prennent pas feu** (correctif
+      `data/minecraft/timeline/day.json`). Le ciel, le soleil et la lumière restent normaux.
 - [ ] En multijoueur si possible : les deux joueurs voient la même heure.
 
 ## Réapparition des coffres de mana (correctif du registre, 2026-11-10)
