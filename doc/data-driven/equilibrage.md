@@ -37,7 +37,11 @@ plat `"clé": nombre`. Liste complète (`init/BalanceValue.java`) :
 | `score.json` | `victory_bonus` | 200 | 0 | Bonus de score à la victoire |
 | `score.json` | `no_player_damage_multiplier` | 1.5 | 1 | Multiplie le bonus de vague si aucun joueur n'a été blessé |
 | `score.json` | `no_crystal_damage_multiplier` | 1.5 | 1 | Le multiplie encore si le cristal est intact |
+| `score.json` | `no_tower_lost_multiplier` | 1.25 | 1 | Le multiplie encore si aucune tour n'a été détruite par les monstres |
 | `score.json` | `easy_multiplier` / `normal_multiplier` / `hard_multiplier` | 0.75 / 1.0 / 1.5 | 0 | Multiplie tout gain de score selon la difficulté |
+| `towers.json` | `max_level` | 4 (entier) | 1 | Niveau maximum d'une tour |
+| `towers.json` | `upgrade_cost_ratio` | 0.75 | 0 | Prix d'un niveau d'amélioration, en part du coût de pose |
+| `towers.json` | `upgrade_stat_bonus` | 0.25 | 0 | Bonus de PV max et de dégâts par niveau au-delà du premier |
 | `pacing.json` | `combat_countdown_seconds` | 3 (entier) | 0 | Secondes entre le vote « prêt » unanime et le Combat (0 = immédiat) |
 
 Attention : `score.json` et `difficulty.json` ont chacun des clés `easy_multiplier`... La

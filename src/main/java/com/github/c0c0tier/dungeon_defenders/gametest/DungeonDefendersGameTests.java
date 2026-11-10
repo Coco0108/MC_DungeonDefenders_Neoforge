@@ -117,6 +117,7 @@ public final class DungeonDefendersGameTests {
         // Stats des tours en data-driven (doc/data-driven/tours.md).
         register(event, environment, "tower_shipped_values", DungeonDefendersGameTests::towerShippedValues);
         register(event, environment, "tower_stats_validation", DungeonDefendersGameTests::towerStatsValidation);
+        register(event, environment, "tower_upgrade", DungeonDefendersGameTests::towerUpgrade);
         // Réglages globaux en data-driven (doc/data-driven/equilibrage.md).
         register(event, environment, "balance_shipped_values", DungeonDefendersGameTests::balanceShippedValues);
         register(event, environment, "balance_validation", DungeonDefendersGameTests::balanceValidation);
@@ -412,6 +413,9 @@ public final class DungeonDefendersGameTests {
         level.setData(ModAttachments.DIFFICULTY, GameDifficulty.NORMAL.ordinal());
         level.setData(ModAttachments.MAP_SCORE_MULTIPLIER, 1.0F);
 
+        // Sans le multiplicateur "aucune tour perdue" pour les trois premiers cas.
+        level.setData(ModAttachments.WAVE_TOWER_LOST, true);
+
         // Vague parfaite : 50, +25 (aucun dégât subi), +37.5 arrondi à 38 (cristal intact).
         level.setData(ModAttachments.SCORE, 0);
         level.setData(ModAttachments.WAVE_PLAYER_DAMAGED, false);
@@ -430,6 +434,12 @@ public final class DungeonDefendersGameTests {
         level.setData(ModAttachments.WAVE_CRYSTAL_DAMAGED, true);
         ScoreKeeper.awardWaveCleared(level);
         helper.assertValueEqual(level.getData(ModAttachments.SCORE), 50, "aucun multiplicateur");
+
+        // Aucune tour perdue, les deux autres touchés : 50 + 12.5 arrondi à 13.
+        level.setData(ModAttachments.SCORE, 0);
+        level.setData(ModAttachments.WAVE_TOWER_LOST, false);
+        ScoreKeeper.awardWaveCleared(level);
+        helper.assertValueEqual(level.getData(ModAttachments.SCORE), 63, "aucune tour perdue");
 
         // Un kill à 10 : inchangé en Normal, x1.5 en Difficile, puis x2 par la map.
         level.setData(ModAttachments.SCORE, 0);
@@ -501,6 +511,36 @@ public final class DungeonDefendersGameTests {
         helper.assertTrue(zombie.goalSelector.getAvailableGoals().stream()
                 .anyMatch(goal -> goal.getGoal() instanceof AttackPriorityTargetGoal), "IA de mêlée reçue");
         zombie.discard();
+        helper.succeed();
+    }
+
+    /**
+     * Amélioration d'une tour avec les réglages livrés (4 niveaux, +25 % de PV/dégâts par niveau,
+     * un niveau = 75 % du coût de pose) : un Spike Blockade (30 PV, 30 de mana) monte à 38, 45
+     * puis 53 PV, chaque niveau coûte 23, et tout le mana investi est compté pour le
+     * remboursement.
+     */
+    static void towerUpgrade(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 1, 1);
+        helper.setBlock(pos, ModBlocks.SPIKE_BLOCKADE.get());
+        AbstractTowerBlockEntity tower = helper.getBlockEntity(pos, AbstractTowerBlockEntity.class);
+
+        helper.assertValueEqual(tower.getTowerLevel(), 1, "niveau à la pose");
+        helper.assertValueEqual(tower.getMaxTowerLevel(), 4, "niveau maximum");
+        helper.assertValueEqual(tower.getUpgradeCost(), 23, "prix d'un niveau");
+        helper.assertValueEqual(tower.getInvestedMana(), 30, "mana investi à la pose");
+
+        tower.damage(10);
+        helper.assertTrue(tower.upgrade(), "amélioration au niveau 2");
+        helper.assertValueEqual(tower.getMaxHealth(), 38, "PV max au niveau 2");
+        helper.assertValueEqual(tower.getHealth(), 28, "PV actuels : les 8 PV gagnés s'ajoutent, pas de soin complet");
+
+        helper.assertTrue(tower.upgrade(), "amélioration au niveau 3");
+        helper.assertTrue(tower.upgrade(), "amélioration au niveau 4");
+        helper.assertValueEqual(tower.getTowerLevel(), 4, "niveau atteint");
+        helper.assertValueEqual(tower.getMaxHealth(), 53, "PV max au niveau 4");
+        helper.assertValueEqual(tower.getInvestedMana(), 99, "mana investi : pose + 3 niveaux");
+        helper.assertFalse(tower.upgrade(), "pas d'amélioration au-delà du maximum");
         helper.succeed();
     }
 

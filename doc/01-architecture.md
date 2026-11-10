@@ -56,6 +56,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── StartGamePayload.java         # Paquet C2S (déclenche MapInstance.startGame, pas de champ)
     │   │   ├── PlaceTowerPayload.java        # Paquet C2S (tour + position + rotation, confirmation finale de la roue)
     │   │   ├── ManaChestConfigPayload.java   # Paquet C2S (BlockPos + quantité de mana du coffre)
+    │   │   ├── UpgradeTowerPayload.java      # Paquet C2S (BlockPos de la tour à améliorer, touche dédiée)
     │   │   ├── RemoveTowerPayload.java       # Paquet C2S (BlockPos de la tour à retirer, mode suppression)
     │   │   ├── LeaveMapPayload.java          # Paquet C2S sans champ (abandon du niveau depuis le menu pause)
     │   │   ├── MapConfigPayload.java         # Paquet C2S (BlockPos + réglages d'une map)
@@ -331,7 +332,7 @@ Chargement FML
                                           tower_shipped_values, tower_stats_validation,
                                           balance_shipped_values, balance_validation, mana_chest_respawn,
                                           world_time_frozen, score_bonuses, combat_countdown,
-                                          monsters_do_not_burn, enemy_variants
+                                          monsters_do_not_burn, enemy_variants, tower_upgrade
                                           (DungeonDefendersGameTests, voir 05-etat-et-problemes-connus.md)
 
 Bus de jeu (NeoForge.EVENT_BUS)

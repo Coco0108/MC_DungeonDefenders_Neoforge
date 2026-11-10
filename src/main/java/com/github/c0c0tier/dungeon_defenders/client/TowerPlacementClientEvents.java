@@ -47,7 +47,7 @@ public class TowerPlacementClientEvents {
 
     // Portée du rayon de visée, en blocs — assez pour poser à bonne distance sans viser à
     // travers toute la carte.
-    private static final double MAX_REACH = 20.0D;
+    private static final double MAX_REACH = TowerDefinition.REACH;
     private static final int CIRCLE_SEGMENTS = 32;
     // Pas private : réutilisés par TowerInspectClientEvents (portée d'une tour déjà posée).
     static final float LINE_WIDTH = 2.0F;

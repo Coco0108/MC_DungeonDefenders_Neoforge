@@ -5,9 +5,11 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEnti
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
 import com.github.c0c0tier.dungeon_defenders.init.TowerStats;
+import com.github.c0c0tier.dungeon_defenders.network.UpgradeTowerPayload;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.BlockPos;
@@ -41,7 +43,7 @@ import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID, value = Dist.CLIENT)
 public final class TowerInspectClientEvents {
 
-    private static final double MAX_REACH = 20.0D;
+    private static final double MAX_REACH = TowerDefinition.REACH;
 
     /** Ce qu'il faut pour dessiner la portée de la tour regardée. */
     private record RangeRenderState(BlockPos pos, Direction facing, double range, double coneAngleDegrees) {
@@ -73,6 +75,16 @@ public final class TowerInspectClientEvents {
         boolean onTower = hit.getType() == HitResult.Type.BLOCK
                 && level.getBlockEntity(hit.getBlockPos()) instanceof AbstractTowerBlockEntity;
         TowerInspectState.setTarget(onTower ? hit.getBlockPos().immutable() : null);
+
+        // Touche d'amélioration : n'a d'effet qu'en regardant une tour. Le serveur revérifie tout
+        // (phase, niveau maximum, mana) et répond par un message ; consumeClick est vidé même
+        // sans cible, pour qu'un appui dans le vide ne se déclenche pas plus tard.
+        while (ModKeyMappings.UPGRADE_TOWER.consumeClick()) {
+            ClientPacketListener connection = minecraft.getConnection();
+            if (onTower && connection != null) {
+                connection.send(new UpgradeTowerPayload(hit.getBlockPos().immutable()).toVanillaServerbound());
+            }
+        }
     }
 
     @SubscribeEvent

@@ -1502,6 +1502,41 @@ suppression de tour. Le dessin de la portée réutilise `renderRangeArea`/`facin
 `TowerPlacementClientEvents` (rendus accessibles au package), avec l'orientation réelle du bloc
 (`HORIZONTAL_FACING`) et les stats data-driven de la tour, donc à jour après un `/reload`.
 
+## Améliorer une tour — `AbstractTowerBlockEntity#upgrade`, `network/UpgradeTowerPayload.java`
+
+Idée du backlog (« 4 niveaux par tour, comme le jeu de référence »), faite le 2026-11-10. La
+formule n'avait jamais été discutée : celle-ci est une première proposition, entièrement
+réglable dans `balance/towers.json`.
+
+- **En jeu** : regarder une tour posée et appuyer sur **U** (`ModKeyMappings.UPGRADE_TOWER`,
+  modifiable). Sous le viseur, l'inspection affiche `Tourelle Harpon — niv. 2/4`, les PV, et
+  tant que c'est possible `[U] Améliorer : 38 mana`.
+- **Règles** (revérifiées côté serveur, `ModNetworking#handleUpgradeTower`) : en Construction ou
+  à la Taverne seulement, comme la pose ; payant sauf à la Taverne ; refus avec un message si la
+  tour est au niveau maximum ou si le mana manque.
+- **Effet** : `levelMultiplier() = 1 + (niveau − 1) × upgrade_stat_bonus`, appliqué aux **PV
+  max** et aux **dégâts** (contact des Blockades, tir des Turrets). Portée et cadence ne
+  changent pas. Les PV gagnés en PV max s'ajoutent aux PV actuels : améliorer une tour entamée
+  ne la soigne pas entièrement.
+- **Prix** : `round(coût de pose × upgrade_cost_ratio)` par niveau, le même à chaque niveau.
+- **Remboursement au retrait** : il porte désormais sur tout le mana investi
+  (`getInvestedMana()` : pose + améliorations), toujours multiplié par `refund_ratio`.
+- Le niveau est persistant (`TowerLevel`) et synchronisé avec le block entity.
+
+| Clé (`balance/towers.json`) | Défaut | Effet |
+|---|---|---|
+| `max_level` | 4 | Niveau maximum |
+| `upgrade_cost_ratio` | 0.75 | Prix d'un niveau, en part du coût de pose |
+| `upgrade_stat_bonus` | 0.25 | Bonus de PV max et de dégâts par niveau au-delà du premier |
+
+Exemple avec les valeurs livrées, Harpoon Turret (50 de mana, 20 PV, 6 dégâts) : chaque niveau
+coûte 38 ; au niveau 4, 35 PV et 10.5 dégâts, pour 164 de mana investi.
+
+**Portée de visée corrigée au passage** : le client laissait viser une case ou une tour jusqu'à
+20 blocs (`MAX_REACH`), mais le serveur appliquait à la pose et au retrait la limite de 8 blocs
+des écrans de configuration, et refusait donc **sans message** au-delà. Les deux côtés
+partagent maintenant `TowerDefinition.REACH` (20 blocs).
+
 ## La suppression de tour — `client/TowerRemovalState.java`, `client/TowerRemovalClientEvents.java`, `network/RemoveTowerPayload.java`
 
 Décidé avec le joueur (2026-08-26), sur le modèle du jeu de référence plutôt que sur le minage
@@ -3348,7 +3383,7 @@ l'instant purement un compteur affiché, voir
 
 ### Bonus et multiplicateurs de score — `init/ScoreKeeper.java`
 
-La feuille de route ci-dessous a été codée le 2026-11-10 (sauf « aucune tour détruite »).
+La feuille de route ci-dessous a été codée en entier le 2026-11-10.
 `ScoreKeeper.grant(level, base, source, ennemi)` est désormais le point de passage unique de
 tout gain de score (l'ancien `ModEvents.grantScore`). Toutes les valeurs sont dans
 `balance/score.json` :
@@ -3358,6 +3393,7 @@ tout gain de score (l'ancien `ModEvents.grantScore`). Toutes les valeurs sont da
 | `wave_clear_bonus` | 50 | Bonus quand une vague est nettoyée (y compris la dernière) |
 | `no_player_damage_multiplier` | 1.5 | Multiplie ce bonus si aucun joueur n'a pris de dégât pendant la vague |
 | `no_crystal_damage_multiplier` | 1.5 | Le multiplie encore si le cristal n'a pris aucun dégât |
+| `no_tower_lost_multiplier` | 1.25 | Le multiplie encore si aucune tour n'a été détruite par les monstres (un retrait volontaire ne compte pas) |
 | `victory_bonus` | 200 | Bonus de fin de map (victoire) |
 | `easy_multiplier` / `normal_multiplier` / `hard_multiplier` | 0.75 / 1.0 / 1.5 | Multiplie **tout** gain de score selon la difficulté |
 

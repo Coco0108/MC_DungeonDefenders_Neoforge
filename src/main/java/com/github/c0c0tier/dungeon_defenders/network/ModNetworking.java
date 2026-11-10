@@ -59,6 +59,12 @@ public class ModNetworking {
     // ordre de grandeur que la portée d'interaction avec un bloc à conteneur vanilla.
     private static final double MAX_DISTANCE_SQ = 64.0D;
 
+    // Pose, retrait et amélioration de tour : le joueur vise jusqu'à TowerDefinition.REACH blocs
+    // depuis ses yeux. La distance est mesurée ici depuis ses pieds jusqu'au centre du bloc, d'où
+    // une marge. Corrige un refus silencieux (2026-11-10) : ces trois actions utilisaient la
+    // limite de 8 blocs des écrans de configuration, alors que le client laissait viser à 20.
+    private static final double TOWER_REACH_SQ = (TowerDefinition.REACH + 3.0D) * (TowerDefinition.REACH + 3.0D);
+
     // La part du coût en mana rendue à la suppression volontaire d'une tour (touche dédiée, voir
     // handleRemoveTower) est data-driven : BalanceValue.TOWER_REFUND_RATIO, 0.5 par défaut
     // (balance/towers.json). Ne s'applique jamais à une tour détruite au combat (voir
@@ -100,6 +106,11 @@ public class ModNetworking {
                 RemoveTowerPayload.TYPE,
                 RemoveTowerPayload.STREAM_CODEC,
                 ModNetworking::handleRemoveTower
+        );
+        registrar.playToServer(
+                UpgradeTowerPayload.TYPE,
+                UpgradeTowerPayload.STREAM_CODEC,
+                ModNetworking::handleUpgradeTower
         );
         registrar.playToServer(
                 LeaveMapPayload.TYPE,
@@ -166,7 +177,7 @@ public class ModNetworking {
             }
 
             BlockPos pos = payload.pos();
-            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > MAX_DISTANCE_SQ) {
+            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > TOWER_REACH_SQ) {
                 return;
             }
 
@@ -228,7 +239,7 @@ public class ModNetworking {
             }
 
             BlockPos pos = payload.pos();
-            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > MAX_DISTANCE_SQ) {
+            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > TOWER_REACH_SQ) {
                 return;
             }
 
@@ -237,10 +248,11 @@ public class ModNetworking {
             }
 
             // Aucun remboursement à la Taverne : la pose y est déjà gratuite, rembourser
-            // reviendrait à imprimer du mana à volonté.
+            // reviendrait à imprimer du mana à volonté. Ailleurs, le remboursement porte sur tout
+            // le mana investi : la pose ET les améliorations.
             int refund = phase == GamePhase.TAVERN
                     ? 0
-                    : (int) Math.round(tower.getManaCost() * GameBalance.get(BalanceValue.TOWER_REFUND_RATIO, false));
+                    : (int) Math.round(tower.getInvestedMana() * GameBalance.get(BalanceValue.TOWER_REFUND_RATIO, false));
 
             // false : pas de drop d'item, comme une tour détruite au combat (setHealth) — la
             // touche dédiée est l'unique façon "propre" de retirer une tour, symétrique à la
@@ -255,6 +267,52 @@ public class ModNetworking {
                 player.sendSystemMessage(Component.translatable(
                         "dungeon_defenders.tower.mana_refunded", refund, newMana, ModAttachments.MAX_MANA));
             }
+        });
+    }
+
+    // Amélioration de la tour regardée (touche dédiée). Mêmes règles que la pose : Construction
+    // ou Taverne seulement, payante sauf à la Taverne.
+    private static void handleUpgradeTower(UpgradeTowerPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (!(level instanceof ServerLevel serverLevel)) {
+                return;
+            }
+
+            GamePhase phase = GamePhase.of(level);
+            if (!phase.allowsTowerBuilding()) {
+                player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.build_phase_only"));
+                return;
+            }
+
+            BlockPos pos = payload.pos();
+            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > TOWER_REACH_SQ) {
+                return;
+            }
+            if (!(serverLevel.getBlockEntity(pos) instanceof AbstractTowerBlockEntity tower)) {
+                return;
+            }
+            if (!tower.canUpgrade()) {
+                player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.upgrade_max_level"));
+                return;
+            }
+
+            int cost = phase == GamePhase.TAVERN ? 0 : tower.getUpgradeCost();
+            int currentMana = player.getData(ModAttachments.MANA);
+            if (currentMana < cost) {
+                player.sendSystemMessage(Component.translatable(
+                        "dungeon_defenders.tower.upgrade_not_enough_mana", cost, currentMana));
+                return;
+            }
+
+            tower.upgrade();
+            if (cost > 0) {
+                player.setData(ModAttachments.MANA, currentMana - cost);
+                player.syncData(ModAttachments.MANA);
+            }
+            player.sendSystemMessage(Component.translatable(
+                    "dungeon_defenders.tower.upgraded", tower.definition().displayName(), tower.getTowerLevel(), cost));
         });
     }
 

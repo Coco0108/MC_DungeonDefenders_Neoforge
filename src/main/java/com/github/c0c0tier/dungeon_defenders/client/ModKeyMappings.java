@@ -44,10 +44,19 @@ public class ModKeyMappings {
             GLFW.GLFW_KEY_X,
             CATEGORY);
 
+    // Pressée en regardant une tour posée : demande son amélioration au serveur (voir
+    // TowerInspectClientEvents). U comme "upgrade", libre en vanilla.
+    public static final KeyMapping UPGRADE_TOWER = new KeyMapping(
+            "key.dungeon_defenders.upgrade_tower",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_U,
+            CATEGORY);
+
     public static void register(RegisterKeyMappingsEvent event) {
         event.registerCategory(CATEGORY);
         event.register(TOWER_WHEEL);
         event.register(ROTATE_TOWER);
         event.register(REMOVE_TOWER_MODE);
+        event.register(UPGRADE_TOWER);
     }
 }

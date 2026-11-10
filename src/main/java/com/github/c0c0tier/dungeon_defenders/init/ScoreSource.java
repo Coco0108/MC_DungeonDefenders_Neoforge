@@ -14,7 +14,8 @@ public enum ScoreSource {
     WAVE_CLEARED,
     NO_PLAYER_DAMAGE,
     CRYSTAL_UNTOUCHED,
-    MAP_COMPLETED;
+    MAP_COMPLETED,
+    NO_TOWER_LOST;
 
     public String translationKey() {
         return "dungeon_defenders.score_source." + name().toLowerCase(Locale.ROOT);

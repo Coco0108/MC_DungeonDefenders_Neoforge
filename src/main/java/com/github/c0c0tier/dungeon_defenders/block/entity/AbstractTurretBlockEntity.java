@@ -65,8 +65,9 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
         super(type, pos, state, definition);
     }
 
+    /** Dégâts d'un tir, bonus de niveau d'amélioration compris. */
     protected float getDamage() {
-        return stats().floatValue(TowerStat.DAMAGE);
+        return (float) (stats().get(TowerStat.DAMAGE) * levelMultiplier());
     }
 
     protected double getRange() {

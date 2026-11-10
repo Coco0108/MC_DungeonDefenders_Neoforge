@@ -1122,6 +1122,33 @@ Avec le même datapack :
 - [ ] Aucune exception liée à `EnemyRegistry`, `EnemyDefinitionsPayload`,
       `ClientEnemyDefinitions` ou `SpawnerBlockEntity` dans le log.
 
+## Amélioration des tours et portée de pose (2026-11-10)
+
+Voir [02-gameplay.md](02-gameplay.md#améliorer-une-tour--abstracttowerblockentityupgrade-networkupgradetowerpayloadjava).
+Calculs vérifiés par gametest ; touche, affichage et sensations **jamais vus en jeu**.
+
+- [ ] En Construction, regarder un Harpoon Turret : « Tourelle Harpon — niv. 1/4 », ses PV, et
+      « [U] Améliorer : 38 mana ».
+- [ ] Appuyer sur **U** : message « améliorée au niveau 2 (-38 mana) », le mana baisse de 38,
+      l'affichage passe à « niv. 2/4 » et les PV max à 25.
+- [ ] Monter jusqu'au niveau 4 : la ligne « Améliorer » disparaît. Un appui de plus affiche
+      « déjà au niveau maximum ».
+- [ ] Sans assez de mana : message de refus avec le prix et le mana disponible.
+- [ ] En Combat : U affiche le refus « phase de Construction », et la ligne « Améliorer » est
+      masquée. À la Taverne : l'amélioration est gratuite.
+- [ ] Une tour niveau 4 fait nettement plus mal qu'une niveau 1 (mannequin d'entraînement) et
+      encaisse plus.
+- [ ] Retirer une tour niveau 3 : le remboursement est la moitié de tout le mana dépensé (pose +
+      2 niveaux), pas seulement de la pose.
+- [ ] Le niveau survit à une sauvegarde et un rechargement.
+- [ ] La touche apparaît dans Options > Contrôles, catégorie du mod, et peut être changée.
+- [ ] **Portée** : poser puis retirer une tour visée à 15 blocs fonctionne (avant, rien ne se
+      passait au-delà de 8 blocs).
+- [ ] Finir une vague sans perdre de tour : popup supplémentaire « Aucune tour perdue ».
+      Retirer soi-même une tour pendant la Construction ne le fait pas perdre.
+- [ ] Me dire si 4 niveaux, +25 % et 75 % du prix paraissent justes : tout se règle dans
+      `balance/towers.json`.
+
 ## Variantes d'ennemis : brute, coureur, tireur d'élite (2026-11-10)
 
 Voir [data-driven/ennemis.md](data-driven/ennemis.md#extension-du-2026-11-10--stats-optionnelles-et-variantes).
