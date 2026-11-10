@@ -14,6 +14,7 @@ import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ManaCrystalType;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
+import com.github.c0c0tier.dungeon_defenders.init.ScoreKeeper;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
 import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
 import net.minecraft.core.BlockPos;
@@ -29,6 +30,7 @@ import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -236,6 +238,20 @@ public class ModEvents {
         player.getFoodData().setSaturation(FULL_SATURATION);
     }
 
+    // Un joueur a pris un dégât pendant le Combat : plus de multiplicateur "aucun dégât subi"
+    // sur le bonus de fin de cette vague (voir ScoreKeeper). N'importe quelle source compte.
+    @SubscribeEvent
+    public static void onPlayerDamaged(LivingDamageEvent.Post event) {
+        if (!(event.getEntity() instanceof Player player) || player.level().isClientSide()
+                || event.getHealthDamage() <= 0.0F) {
+            return;
+        }
+        Level level = player.level();
+        if (level.getData(ModAttachments.GAME_PHASE) == GamePhase.COMBAT.ordinal()) {
+            level.setData(ModAttachments.WAVE_PLAYER_DAMAGED, true);
+        }
+    }
+
     @SubscribeEvent
     public static void onMonsterDeath(LivingDeathEvent event) {
         Level level = event.getEntity().level();
@@ -270,6 +286,10 @@ public class ModEvents {
             // Capturé avant enterBuild/onVictory, qui font tous les deux avancer/réinitialiser
             // current_wave : c'est la vague qu'on vient de nettoyer qui détermine la victoire,
             // pas celle qui suit.
+            // Bonus de fin de vague (et ses multiplicateurs "aucun dégât"), crédité pendant que
+            // la vague et son suivi de dégâts sont encore ceux qu'on vient de terminer.
+            ScoreKeeper.awardWaveCleared(level);
+
             boolean wasLastWave = level.getData(ModAttachments.CURRENT_WAVE) >= ModAttachments.waveCount(level);
             if (wasLastWave) {
                 PhaseTransitions.onVictory(level);
@@ -294,30 +314,10 @@ public class ModEvents {
 
         // Pas d'ennemi associé (donc pas d'icône dans le popup) si ce monstre n'a pas de
         // définition — même repli qu'avant la migration.
-        grantScore(level, xpValue, ScoreSource.MONSTER_KILLED, EnemyRegistry.idFor(monster.getType()));
+        ScoreKeeper.grant(level, xpValue, ScoreSource.MONSTER_KILLED, EnemyRegistry.idFor(monster.getType()));
 
         for (Player player : level.players()) {
             grantExperience(player, xpValue);
-        }
-    }
-
-    // Centralise tout gain de score : met à jour ModAttachments.SCORE (le total, lu par
-    // ScoreOverlay) ET diffuse un ScoreGainPayload à chaque joueur présent (le détail, lu par
-    // ScoreGainOverlay côté client — voir ce paquet pour le pourquoi des deux canaux distincts).
-    // Toute future source de score (fin de vague, fin de map, multiplicateurs — voir
-    // doc/02-gameplay.md) doit passer par ici plutôt que toucher SCORE directement, pour ne pas
-    // dupliquer cette double mise à jour ; passer Optional.empty() si le gain n'a pas
-    // d'ennemi associé (tout ce qui n'est pas un kill).
-    private static void grantScore(Level level, int amount, ScoreSource source, Optional<Identifier> enemy) {
-        int score = level.getData(ModAttachments.SCORE) + amount;
-        level.setData(ModAttachments.SCORE, score);
-        level.syncData(ModAttachments.SCORE);
-
-        for (Player player : level.players()) {
-            if (player instanceof ServerPlayer serverPlayer) {
-                serverPlayer.connection.send(
-                        new ScoreGainPayload(amount, source.ordinal(), enemy).toVanillaClientbound());
-            }
         }
     }
 

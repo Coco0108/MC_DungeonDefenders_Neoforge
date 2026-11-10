@@ -28,7 +28,20 @@ plat `"clé": nombre`. Liste complète (`init/BalanceValue.java`) :
 | `towers.json` | `refund_ratio` | 0.5 | 0 | Part du coût en mana rendue quand on retire une tour |
 | `progression.json` | `xp_per_level` | 100 (entier) | 1 | Expérience nécessaire pour passer un niveau |
 
-D'autres réglages s'ajouteront ici au fil des fonctionnalités (bonus de score, etc.).
+**Ajoutés avec les bonus de score et le compte à rebours** (2026-11-10, voir
+[02-gameplay.md](../02-gameplay.md#bonus-et-multiplicateurs-de-score--initscorekeeperjava)) :
+
+| Fichier | Clé | Défaut | Minimum | Effet |
+|---|---|---|---|---|
+| `score.json` | `wave_clear_bonus` | 50 | 0 | Bonus de score à chaque vague nettoyée |
+| `score.json` | `victory_bonus` | 200 | 0 | Bonus de score à la victoire |
+| `score.json` | `no_player_damage_multiplier` | 1.5 | 1 | Multiplie le bonus de vague si aucun joueur n'a été blessé |
+| `score.json` | `no_crystal_damage_multiplier` | 1.5 | 1 | Le multiplie encore si le cristal est intact |
+| `score.json` | `easy_multiplier` / `normal_multiplier` / `hard_multiplier` | 0.75 / 1.0 / 1.5 | 0 | Multiplie tout gain de score selon la difficulté |
+| `pacing.json` | `combat_countdown_seconds` | 3 (entier) | 0 | Secondes entre le vote « prêt » unanime et le Combat (0 = immédiat) |
+
+Attention : `score.json` et `difficulty.json` ont chacun des clés `easy_multiplier`... La
+première règle le **score**, la seconde le **nombre d'ennemis**.
 
 ## Règles
 

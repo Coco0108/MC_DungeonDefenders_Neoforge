@@ -13,13 +13,14 @@ import net.minecraft.resources.Identifier;
 // TYPE/STREAM_CODEC est enregistré dans ModNetworking (chargé des deux côtés) mais le handler
 // lui-même vit côté client uniquement (RegisterClientPayloadHandlersEvent), pour ne jamais
 // charger de classe cliente (Minecraft, Screen...) sur un serveur dédié.
-public record GameOverPayload(boolean victory) implements CustomPacketPayload {
+public record GameOverPayload(boolean victory, int finalScore) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<GameOverPayload> TYPE =
             new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "game_over"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, GameOverPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.BOOL, GameOverPayload::victory,
+            ByteBufCodecs.VAR_INT, GameOverPayload::finalScore,
             GameOverPayload::new
     );
 

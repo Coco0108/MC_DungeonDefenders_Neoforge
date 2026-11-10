@@ -36,13 +36,20 @@ public class GameOverScreen extends Screen {
     private static final int TITLE_COLOR_VICTORY = 0xFF55FF55;
     private static final int TITLE_COLOR_DEFEAT = 0xFFFF5555;
 
-    private final boolean victory;
+    private static final int SCORE_COLOR = 0xFFFFFFFF;
 
-    public GameOverScreen(boolean victory) {
+    private final boolean victory;
+    // Score de la partie, relevé par le serveur juste avant sa remise à zéro (voir
+    // PhaseTransitions#onVictory/#onDefeat) : l'attachment SCORE vaut déjà 0 quand cet écran
+    // s'ouvre.
+    private final int finalScore;
+
+    public GameOverScreen(boolean victory, int finalScore) {
         super(Component.translatable(victory
                 ? "dungeon_defenders.game.victory"
                 : "dungeon_defenders.game.defeat"));
         this.victory = victory;
+        this.finalScore = finalScore;
     }
 
     @Override
@@ -67,6 +74,9 @@ public class GameOverScreen extends Screen {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
         guiGraphics.centeredText(this.font, this.getTitle(), this.width / 2, this.height / 2 - 40,
                 this.victory ? TITLE_COLOR_VICTORY : TITLE_COLOR_DEFEAT);
+        guiGraphics.centeredText(this.font,
+                Component.translatable("dungeon_defenders.game_over.final_score", this.finalScore),
+                this.width / 2, this.height / 2 - 24, SCORE_COLOR);
     }
 
     // Relance LA MÊME map : son identifiant vient de l'attachment ModAttachments.CURRENT_MAP,

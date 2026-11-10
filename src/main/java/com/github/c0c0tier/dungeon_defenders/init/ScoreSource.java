@@ -9,7 +9,12 @@ import java.util.Locale;
 // multiplicateurs — voir doc/02-gameplay.md) ajouteront leur propre membre le moment venu,
 // transmis par ordinal comme le reste des enums réseau du mod (GamePhase, GameDifficulty...).
 public enum ScoreSource {
-    MONSTER_KILLED;
+    MONSTER_KILLED,
+    // Ajoutées le 2026-11-10 (voir ScoreKeeper). Toujours en FIN de liste : transmises par ordinal.
+    WAVE_CLEARED,
+    NO_PLAYER_DAMAGE,
+    CRYSTAL_UNTOUCHED,
+    MAP_COMPLETED;
 
     public String translationKey() {
         return "dungeon_defenders.score_source." + name().toLowerCase(Locale.ROOT);

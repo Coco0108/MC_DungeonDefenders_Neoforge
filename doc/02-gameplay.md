@@ -413,6 +413,15 @@ la progression à tout le monde (`Prêt : 2/3`), et dès que tous sont prêts,
 tout le monde (voir plus bas), pour repartir propre à la Construction suivante. Un seul joueur
 en solo se retrouve donc à devoir cliquer une fois pour lancer le combat (1/1).
 
+**Compte à rebours (2026-11-10)** : le Combat ne démarre plus à l'instant du dernier clic.
+`CombatCountdown.start(level)` lance un décompte de `combat_countdown_seconds` secondes
+(`balance/pacing.json`, **3** par défaut ; `0` = démarrage immédiat comme avant), affiché
+« Combat dans 3... » au-dessus du viseur (`client/gui/CombatCountdownOverlay.java`). Le temps
+restant vit dans `ModAttachments.COMBAT_COUNTDOWN` (ticks, synchronisé une fois par seconde,
+décrémenté par `LevelTickEvent.Post`). Un joueur qui retire son vote pendant le décompte
+l'**annule** ; il est aussi abandonné si la phase n'est plus la Construction, et remis à zéro
+par toute remise à zéro de la partie.
+
 Le harnais de test au clic droit du `SpawnerBlock` (shift + clic droit, voir plus bas) reste
 disponible en parallèle pour basculer directement de phase sans passer par le vote — pratique
 pour les tests, mais il passe aussi par `PhaseTransitions`, donc remet "prêt" à zéro pour tout
@@ -3315,7 +3324,39 @@ l'origine (voir "L'expérience custom du joueur" plus haut).
 l'instant purement un compteur affiché, voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 
-### Feuille de route du score (décidée avec le joueur, pas codée pour l'instant)
+### Bonus et multiplicateurs de score — `init/ScoreKeeper.java`
+
+La feuille de route ci-dessous a été codée le 2026-11-10 (sauf « aucune tour détruite »).
+`ScoreKeeper.grant(level, base, source, ennemi)` est désormais le point de passage unique de
+tout gain de score (l'ancien `ModEvents.grantScore`). Toutes les valeurs sont dans
+`balance/score.json` :
+
+| Clé | Défaut | Effet |
+|---|---|---|
+| `wave_clear_bonus` | 50 | Bonus quand une vague est nettoyée (y compris la dernière) |
+| `no_player_damage_multiplier` | 1.5 | Multiplie ce bonus si aucun joueur n'a pris de dégât pendant la vague |
+| `no_crystal_damage_multiplier` | 1.5 | Le multiplie encore si le cristal n'a pris aucun dégât |
+| `victory_bonus` | 200 | Bonus de fin de map (victoire) |
+| `easy_multiplier` / `normal_multiplier` / `hard_multiplier` | 0.75 / 1.0 / 1.5 | Multiplie **tout** gain de score selon la difficulté |
+
+- **Multiplicateur de la map** : le champ « multiplicateur de score » du bloc de configuration
+  existait mais n'était lu nulle part. `MapInstance#startGame` le pose dans
+  `ModAttachments.MAP_SCORE_MULTIPLIER`, et il multiplie lui aussi tout gain. Montant final :
+  `round(base × difficulté × map)`. En Normal sur une map à ×1, un kill rapporte donc
+  exactement ce qu'il rapportait avant.
+- **L'expérience n'est pas concernée** : seuls les kills en donnent, à leur valeur brute.
+- **Suivi « aucun dégât »** : deux booléens de la `Level`, `WAVE_PLAYER_DAMAGED` et
+  `WAVE_CRYSTAL_DAMAGED`, remis à faux par `enterCombat`. Le premier passe à vrai sur
+  `LivingDamageEvent.Post` d'un joueur en phase Combat (n'importe quelle source) ; le second
+  dans `EterniaCrystalBlockEntity#damage`, point de passage unique des dégâts au cristal.
+- **Chaque part est créditée à part**, donc avec son propre popup : « +50 Vague terminée »,
+  « +25 Aucun dégât subi », « +38 Cristal intact » (50 × 1.5 × 1.5 = 112.5, arrondi part par
+  part à 113).
+- **Score final** : la victoire et la défaite remettent le score à zéro. Il est donc relevé
+  juste avant et envoyé dans `GameOverPayload` ; `GameOverScreen` affiche « Score : N » sous
+  son titre. Avant, le score de la partie n'était visible nulle part une fois celle-ci finie.
+
+### Feuille de route du score (décidée avec le joueur le 2026-08-27 — codée le 2026-11-10, voir ci-dessus)
 
 Le kill est **une seule source de score parmi plusieurs prévues** — confirmé avec le joueur
 (2026-08-27) : "le score est officieusement l'XP gagnée sur ce niveau", donc toute future

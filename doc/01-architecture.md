@@ -15,6 +15,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── DungeonDefendersModClient.java    # Point d'entrée @Mod côté CLIENT uniquement
     │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA, vie max du joueur)
     │   ├── TavernSpawn.java                  # Point de spawn fixe + chargement de la structure de la taverne (monde vide)
+    │   ├── CombatCountdown.java              # Compte à rebours entre le vote "prêt" unanime et le début du Combat
     │   ├── WorldTime.java                    # Heure du monde figée (taverne, puis heure propre à chaque map) ; météo arrêtée
     │   ├── MapInstance.java                  # "La map active" : emplacement partagé, placeholder, téléportation
     │   ├── ModCommands.java                  # /dd_leave (harnais) et /dd_export (jar de pack de maps)
@@ -39,6 +40,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── TowerStat.java                # Les chiffres réglables d'une tour (PV, coût, dégâts, portée, cadence...)
     │   │   ├── TowerStats.java               # Les chiffres d'UNE tour + validation stricte d'un JSON par-dessus ses défauts
     │   │   ├── TowerStatsRegistry.java       # Stats des tours : reload listener (/reload), copies serveur ET client, synchro
+    │   │   ├── ScoreKeeper.java              # Point de passage unique des gains de score : bonus de vague/de map, multiplicateurs
     │   │   ├── BalanceValue.java             # Réglages globaux d'équilibrage (difficulté, remboursement, XP par niveau) et leurs défauts
     │   │   ├── GameBalance.java              # Réglages globaux : reload listener (/reload), copies serveur ET client, synchro
     │   │   ├── ManaCrystalType.java           # Paliers de cristaux de mana (un seul pour l'instant, extensible)
@@ -88,6 +90,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)
     │   │   ├── DiamondGauge.java             # Dessine une jauge en forme de losange (fill() empilés, sans texture)
     │   │   ├── CircleSlot.java               # Dessine un rond (fond + bordure) (fill() empilés, sans texture)
+    │   │   ├── CombatCountdownOverlay.java   # "Combat dans 3..." pendant le compte à rebours (client uniquement)
     │   │   ├── TowerInspectOverlay.java      # Nom + PV de la tour regardée, sous le viseur (client uniquement)
     │   │   ├── ManaOverlay.java              # Losange mana, bas gauche (client uniquement)
     │   │   ├── HealthOverlay.java            # Losange vie, bas gauche (client uniquement)
@@ -326,7 +329,7 @@ Chargement FML
                                           enemy_unknown_excluded_from_wave, enemy_export_conversion,
                                           tower_shipped_values, tower_stats_validation,
                                           balance_shipped_values, balance_validation, mana_chest_respawn,
-                                          world_time_frozen
+                                          world_time_frozen, score_bonuses, combat_countdown
                                           (DungeonDefendersGameTests, voir 05-etat-et-problemes-connus.md)
 
 Bus de jeu (NeoForge.EVENT_BUS)

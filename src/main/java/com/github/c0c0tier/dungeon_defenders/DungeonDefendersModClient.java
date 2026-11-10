@@ -12,6 +12,7 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.HealthOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ManaOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.PhaseOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreGainOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.CombatCountdownOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.TowerInspectOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
@@ -177,6 +178,9 @@ public class DungeonDefendersModClient {
         event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "tower_inspect_overlay"),
                 new TowerInspectOverlay());
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "combat_countdown_overlay"),
+                new CombatCountdownOverlay());
 
         // Les cœurs vanilla ne sont pas prévus pour 100 PV (ils s'étalent sur plusieurs
         // rangées) et feraient doublon avec HealthOverlay : on les masque plutôt que de
@@ -226,7 +230,7 @@ public class DungeonDefendersModClient {
         event.register(GameBalancePayload.TYPE, (payload, context) ->
                 context.enqueueWork(() -> GameBalance.replaceClient(payload)));
         event.register(GameOverPayload.TYPE, (payload, context) ->
-                context.enqueueWork(() -> Minecraft.getInstance().setScreen(new GameOverScreen(payload.victory()))));
+                context.enqueueWork(() -> Minecraft.getInstance().setScreen(new GameOverScreen(payload.victory(), payload.finalScore()))));
         // L'écran de choix de map ne s'ouvre plus directement depuis TavernCrystalBlock : ce
         // bloc est chargé aussi sur un serveur dédié, où nommer une classe cliente fait
         // planter le chargement du mod — voir OpenMapSelectionPayload.
