@@ -40,12 +40,15 @@ public class MapConfigScreen extends Screen implements MenuAccess<MapConfigMenu>
     private String orderText = String.valueOf(MapDefinition.DEFAULT_ORDER);
     private String waveCountText = String.valueOf(MapDefinition.DEFAULT_WAVE_COUNT);
     private String multiplierText = String.valueOf(MapDefinition.DEFAULT_SCORE_MULTIPLIER);
+    // Vide = pas d'heure propre à la map (heure par défaut de la config).
+    private String timeText = "";
     private boolean loadedFromBlock;
 
     private EditBox nameField;
     private EditBox orderField;
     private EditBox waveCountField;
     private EditBox multiplierField;
+    private EditBox timeField;
 
     public MapConfigScreen(MapConfigMenu menu, Inventory playerInventory, Component title) {
         super(title);
@@ -66,7 +69,7 @@ public class MapConfigScreen extends Screen implements MenuAccess<MapConfigMenu>
         }
 
         int centerX = this.width / 2;
-        int top = Math.max(24, this.height / 2 - (5 * ROW_HEIGHT) / 2);
+        int top = Math.max(24, this.height / 2 - (6 * ROW_HEIGHT) / 2);
         int y = top;
 
         this.nameField = addField(centerX, y, this.nameText, 48, null);
@@ -76,6 +79,8 @@ public class MapConfigScreen extends Screen implements MenuAccess<MapConfigMenu>
         this.waveCountField = addField(centerX, y, this.waveCountText, 3, MapConfigScreen::isInteger);
         y += ROW_HEIGHT;
         this.multiplierField = addField(centerX, y, this.multiplierText, 6, MapConfigScreen::isDecimal);
+        y += ROW_HEIGHT;
+        this.timeField = addField(centerX, y, this.timeText, 5, MapConfigScreen::isInteger);
         y += ROW_HEIGHT;
 
         this.addRenderableWidget(Button.builder(
@@ -93,6 +98,7 @@ public class MapConfigScreen extends Screen implements MenuAccess<MapConfigMenu>
         this.orderText = String.valueOf(block.getOrder());
         this.waveCountText = String.valueOf(block.getWaveCount());
         this.multiplierText = String.valueOf(block.getScoreMultiplier());
+        this.timeText = block.getTimeOfDay() == MapDefinition.DEFAULT_TIME_OF_DAY ? "" : String.valueOf(block.getTimeOfDay());
     }
 
     private @Nullable MapConfigBlockEntity resolveBlock() {
@@ -129,7 +135,9 @@ public class MapConfigScreen extends Screen implements MenuAccess<MapConfigMenu>
                     this.nameField.getValue(),
                     parseInt(this.orderField.getValue(), MapDefinition.DEFAULT_ORDER),
                     parseInt(this.waveCountField.getValue(), MapDefinition.DEFAULT_WAVE_COUNT),
-                    parseFloat(this.multiplierField.getValue())).toVanillaServerbound());
+                    parseFloat(this.multiplierField.getValue()),
+                    // Champ vide ou valeur hors plage : pas d'heure propre (revérifié côté serveur).
+                    parseInt(this.timeField.getValue(), MapDefinition.DEFAULT_TIME_OF_DAY)).toVanillaServerbound());
         }
         this.onClose();
     }
@@ -154,11 +162,12 @@ public class MapConfigScreen extends Screen implements MenuAccess<MapConfigMenu>
     public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
         int centerX = this.width / 2;
-        guiGraphics.centeredText(this.font, this.title, centerX, Math.max(8, this.height / 2 - (5 * ROW_HEIGHT) / 2 - 16), TEXT_COLOR);
+        guiGraphics.centeredText(this.font, this.title, centerX, Math.max(8, this.height / 2 - (6 * ROW_HEIGHT) / 2 - 16), TEXT_COLOR);
         label(guiGraphics, centerX, this.nameField, "dungeon_defenders.map_config.name");
         label(guiGraphics, centerX, this.orderField, "dungeon_defenders.map_config.order");
         label(guiGraphics, centerX, this.waveCountField, "dungeon_defenders.map_config.wave_count");
         label(guiGraphics, centerX, this.multiplierField, "dungeon_defenders.map_config.score_multiplier");
+        label(guiGraphics, centerX, this.timeField, "dungeon_defenders.map_config.time_of_day");
     }
 
     private void label(GuiGraphicsExtractor guiGraphics, int centerX, EditBox field, String key) {

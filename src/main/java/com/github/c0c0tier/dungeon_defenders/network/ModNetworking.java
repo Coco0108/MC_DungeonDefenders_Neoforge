@@ -289,7 +289,8 @@ public class ModNetworking {
             }
 
             if (level.getBlockEntity(pos) instanceof MapConfigBlockEntity mapConfig) {
-                mapConfig.applyConfig(payload.displayName(), payload.order(), payload.waveCount(), payload.scoreMultiplier());
+                mapConfig.applyConfig(payload.displayName(), payload.order(), payload.waveCount(),
+                        payload.scoreMultiplier(), payload.timeOfDay());
             }
         });
     }

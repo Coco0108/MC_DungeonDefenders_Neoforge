@@ -1122,6 +1122,22 @@ Avec le même datapack :
 - [ ] Aucune exception liée à `EnemyRegistry`, `EnemyDefinitionsPayload`,
       `ClientEnemyDefinitions` ou `SpawnerBlockEntity` dans le log.
 
+## Heure du monde figée et heure par map (`WorldTime`, 2026-11-10)
+
+Voir [02-gameplay.md](02-gameplay.md#lheure-du-monde-figée--worldtimejava). Vérifié par gametest,
+**jamais vu en jeu**.
+
+- [ ] Ouvrir un monde : il fait **midi**, et le soleil ne bouge plus (attendre une minute).
+      Aucune pluie.
+- [ ] `config/dungeon_defenders-common.toml` contient `defaultTimeOfDay = 6000`. Le passer à
+      `13000`, relancer : la taverne est au crépuscule.
+- [ ] En créatif, clic droit sur le bloc de configuration d'une map : le nouvel champ
+      « Heure de la map » est vide. Y mettre `18000`, valider, rouvrir : la valeur est conservée.
+- [ ] Sauvegarder la map en structure et la jouer : il fait **nuit** pendant toute la partie.
+- [ ] Retour à la taverne (`/dd_leave` ou fin de partie) : l'heure par défaut revient.
+- [ ] Une map sans heure (`Arene de test`) se joue à l'heure par défaut.
+- [ ] En multijoueur si possible : les deux joueurs voient la même heure.
+
 ## Réapparition des coffres de mana (correctif du registre, 2026-11-10)
 
 `ManaChestBlockEntity` avait le même bug de registre que les spawners (voir

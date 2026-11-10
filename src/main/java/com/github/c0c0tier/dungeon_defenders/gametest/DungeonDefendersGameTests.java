@@ -2,10 +2,12 @@ package com.github.c0c0tier.dungeon_defenders.gametest;
 
 import com.github.c0c0tier.dungeon_defenders.Config;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.WorldTime;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MapConfigBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
 import com.github.c0c0tier.dungeon_defenders.init.DifficultyScaling;
@@ -16,6 +18,7 @@ import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.LegacyEnemyIds;
+import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
@@ -26,6 +29,7 @@ import com.github.c0c0tier.dungeon_defenders.init.TowerStatsRegistry;
 import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
@@ -37,6 +41,8 @@ import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.clock.WorldClock;
+import net.minecraft.world.clock.WorldClocks;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -94,6 +100,7 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "enemy_unknown_excluded_from_wave", DungeonDefendersGameTests::enemyUnknownExcludedFromWave);
         register(event, environment, "enemy_export_conversion", DungeonDefendersGameTests::enemyExportConversion);
         register(event, environment, "mana_chest_respawn", DungeonDefendersGameTests::manaChestRespawn);
+        register(event, environment, "world_time_frozen", DungeonDefendersGameTests::worldTimeFrozen);
         // Stats des tours en data-driven (doc/data-driven/tours.md).
         register(event, environment, "tower_shipped_values", DungeonDefendersGameTests::towerShippedValues);
         register(event, environment, "tower_stats_validation", DungeonDefendersGameTests::towerStatsValidation);
@@ -347,6 +354,36 @@ public final class DungeonDefendersGameTests {
 
         ManaChestBlock.respawnAll(level);
         helper.assertFalse(level.getBlockState(absolute).getValue(ManaChestBlock.OPENED), "coffre refermé par respawnAll");
+        helper.succeed();
+    }
+
+    /**
+     * L'heure du monde se fige à la valeur demandée (heure propre d'une map), retombe sur
+     * l'heure par défaut de la config pour une valeur absente ou hors plage, et un bloc de
+     * configuration de map transporte bien son heure.
+     */
+    static void worldTimeFrozen(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Holder<WorldClock> clock = level.registryAccess().lookupOrThrow(Registries.WORLD_CLOCK).getOrThrow(WorldClocks.OVERWORLD);
+
+        WorldTime.freezeAt(level, 18000);
+        helper.assertValueEqual(level.clockManager().getTotalTicks(clock), 18000L, "heure propre à la map");
+
+        WorldTime.freezeAt(level, 99999);
+        helper.assertValueEqual(level.clockManager().getTotalTicks(clock), (long) Config.DEFAULT_TIME_OF_DAY.get(), "hors plage = défaut");
+
+        WorldTime.freezeAt(level, WorldTime.USE_DEFAULT);
+        helper.assertValueEqual(level.clockManager().getTotalTicks(clock), (long) Config.DEFAULT_TIME_OF_DAY.get(), "heure par défaut");
+
+        Identifier mapId = Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "map/test");
+        CompoundTag config = new CompoundTag();
+        config.putInt("TimeOfDay", 13000);
+        helper.assertValueEqual(MapConfigBlockEntity.toDefinition(mapId, config, false).timeOfDay(), 13000, "heure lue dans le bloc de config");
+        config.putInt("TimeOfDay", 24000);
+        helper.assertValueEqual(MapConfigBlockEntity.toDefinition(mapId, config, false).timeOfDay(),
+                MapDefinition.DEFAULT_TIME_OF_DAY, "heure invalide = pas d'heure propre");
+        helper.assertValueEqual(MapConfigBlockEntity.toDefinition(mapId, new CompoundTag(), false).timeOfDay(),
+                MapDefinition.DEFAULT_TIME_OF_DAY, "map d'avant = pas d'heure propre");
         helper.succeed();
     }
 

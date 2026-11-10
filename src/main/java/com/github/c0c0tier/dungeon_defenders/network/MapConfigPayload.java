@@ -16,7 +16,8 @@ public record MapConfigPayload(
         String displayName,
         int order,
         int waveCount,
-        float scoreMultiplier) implements CustomPacketPayload {
+        float scoreMultiplier,
+        int timeOfDay) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<MapConfigPayload> TYPE =
             new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "map_config"));
@@ -28,6 +29,7 @@ public record MapConfigPayload(
                     ByteBufCodecs.VAR_INT, MapConfigPayload::order,
                     ByteBufCodecs.VAR_INT, MapConfigPayload::waveCount,
                     ByteBufCodecs.FLOAT, MapConfigPayload::scoreMultiplier,
+                    ByteBufCodecs.INT, MapConfigPayload::timeOfDay,
                     MapConfigPayload::new);
 
     @Override

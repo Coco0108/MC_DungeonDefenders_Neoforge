@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.WorldTime;
 import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -31,11 +32,17 @@ public class MapConfigBlockEntity extends BlockEntity {
     private static final String KEY_WAVE_COUNT = "WaveCount";
     private static final String KEY_SCORE_MULTIPLIER = "ScoreMultiplier";
     private static final String KEY_FORMAT_VERSION = "FormatVersion";
+    // Ajouté le 2026-11-10 (issue #45). Clé absente = pas d'heure propre : une map publiée avant
+    // reste lisible, d'où aucune hausse de FORMAT_VERSION.
+    private static final String KEY_TIME_OF_DAY = "TimeOfDay";
 
     private String displayName = "";
     private int order = MapDefinition.DEFAULT_ORDER;
     private int waveCount = MapDefinition.DEFAULT_WAVE_COUNT;
     private float scoreMultiplier = MapDefinition.DEFAULT_SCORE_MULTIPLIER;
+    // Heure figée de la map, en ticks (0-23999), ou DEFAULT_TIME_OF_DAY (-1) pour l'heure par
+    // défaut de la config — voir WorldTime.
+    private int timeOfDay = MapDefinition.DEFAULT_TIME_OF_DAY;
 
     public MapConfigBlockEntity(BlockPos pos, BlockState state) {
         super(DungeonDefendersMod.MAP_CONFIG_BE.get(), pos, state);
@@ -50,7 +57,8 @@ public class MapConfigBlockEntity extends BlockEntity {
     public static MapDefinition toDefinition(Identifier structureId, @Nullable CompoundTag tag, boolean fromWorld) {
         if (tag == null) {
             return new MapDefinition(structureId, "", MapDefinition.DEFAULT_ORDER,
-                    MapDefinition.DEFAULT_WAVE_COUNT, MapDefinition.DEFAULT_SCORE_MULTIPLIER, fromWorld);
+                    MapDefinition.DEFAULT_WAVE_COUNT, MapDefinition.DEFAULT_SCORE_MULTIPLIER, fromWorld,
+                    MapDefinition.DEFAULT_TIME_OF_DAY);
         }
         // Chaque champ a son propre repli : un pack publié avec une version de format plus
         // ancienne n'a simplement pas les clés ajoutées depuis, et reste lisible.
@@ -60,7 +68,8 @@ public class MapConfigBlockEntity extends BlockEntity {
                 tag.getIntOr(KEY_ORDER, MapDefinition.DEFAULT_ORDER),
                 Math.max(1, tag.getIntOr(KEY_WAVE_COUNT, MapDefinition.DEFAULT_WAVE_COUNT)),
                 tag.getFloatOr(KEY_SCORE_MULTIPLIER, MapDefinition.DEFAULT_SCORE_MULTIPLIER),
-                fromWorld);
+                fromWorld,
+                sanitizeTime(tag.getIntOr(KEY_TIME_OF_DAY, MapDefinition.DEFAULT_TIME_OF_DAY)));
     }
 
     public String getDisplayName() {
@@ -79,7 +88,17 @@ public class MapConfigBlockEntity extends BlockEntity {
         return this.scoreMultiplier;
     }
 
-    public void applyConfig(String displayName, int order, int waveCount, float scoreMultiplier) {
+    public int getTimeOfDay() {
+        return this.timeOfDay;
+    }
+
+    // Toute valeur hors de [0, 24000[ veut dire "pas d'heure propre".
+    private static int sanitizeTime(int timeOfDay) {
+        return WorldTime.isValid(timeOfDay) ? timeOfDay : MapDefinition.DEFAULT_TIME_OF_DAY;
+    }
+
+    public void applyConfig(String displayName, int order, int waveCount, float scoreMultiplier, int timeOfDay) {
+        this.timeOfDay = sanitizeTime(timeOfDay);
         this.displayName = displayName;
         this.order = order;
         this.waveCount = Math.max(1, waveCount);
@@ -98,6 +117,7 @@ public class MapConfigBlockEntity extends BlockEntity {
         output.putInt(KEY_WAVE_COUNT, this.waveCount);
         output.putFloat(KEY_SCORE_MULTIPLIER, this.scoreMultiplier);
         output.putInt(KEY_FORMAT_VERSION, MapDefinition.FORMAT_VERSION);
+        output.putInt(KEY_TIME_OF_DAY, this.timeOfDay);
     }
 
     @Override
@@ -107,6 +127,7 @@ public class MapConfigBlockEntity extends BlockEntity {
         this.order = input.getIntOr(KEY_ORDER, MapDefinition.DEFAULT_ORDER);
         this.waveCount = Math.max(1, input.getIntOr(KEY_WAVE_COUNT, MapDefinition.DEFAULT_WAVE_COUNT));
         this.scoreMultiplier = input.getFloatOr(KEY_SCORE_MULTIPLIER, MapDefinition.DEFAULT_SCORE_MULTIPLIER);
+        this.timeOfDay = sanitizeTime(input.getIntOr(KEY_TIME_OF_DAY, MapDefinition.DEFAULT_TIME_OF_DAY));
     }
 
     // Synchronisé vers le client : l'écran de configuration lit la copie cliente du block

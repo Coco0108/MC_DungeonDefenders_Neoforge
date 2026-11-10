@@ -22,7 +22,8 @@ public record MapDefinition(
         int order,
         int waveCount,
         float scoreMultiplier,
-        boolean fromWorld) {
+        boolean fromWorld,
+        int timeOfDay) {
 
     /**
      * Version du format des données écrites par le bloc de configuration. Incrémenter en cas de
@@ -37,6 +38,8 @@ public record MapDefinition(
     public static final int DEFAULT_WAVE_COUNT = ModAttachments.MAX_WAVE;
     public static final float DEFAULT_SCORE_MULTIPLIER = 1.0F;
     public static final int DEFAULT_ORDER = 0;
+    /** Pas d'heure propre à la map : l'heure par défaut de la config (voir WorldTime). */
+    public static final int DEFAULT_TIME_OF_DAY = -1;
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MapDefinition> STREAM_CODEC =
             StreamCodec.composite(
@@ -46,6 +49,7 @@ public record MapDefinition(
                     ByteBufCodecs.VAR_INT, MapDefinition::waveCount,
                     ByteBufCodecs.FLOAT, MapDefinition::scoreMultiplier,
                     ByteBufCodecs.BOOL, MapDefinition::fromWorld,
+                    ByteBufCodecs.INT, MapDefinition::timeOfDay,
                     MapDefinition::new);
 
     /**

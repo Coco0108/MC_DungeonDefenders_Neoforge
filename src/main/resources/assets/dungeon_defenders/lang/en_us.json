@@ -104,6 +104,7 @@
   "dungeon_defenders.map_config.order": "Order in the pack",
   "dungeon_defenders.map_config.wave_count": "Number of waves",
   "dungeon_defenders.map_config.score_multiplier": "Score multiplier",
+  "dungeon_defenders.map_config.time_of_day": "Map time of day (0-23999, empty = default)",
   "dungeon_defenders.map_config.confirm": "Confirm",
   "dungeon_defenders.map_config.deleted": "Map %s deleted.",
   "dungeon_defenders.map_config.delete_failed": "Could not delete %s: it isn't a map saved in this world.",
