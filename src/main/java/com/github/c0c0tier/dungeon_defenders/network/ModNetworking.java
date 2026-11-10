@@ -5,7 +5,9 @@ import com.github.c0c0tier.dungeon_defenders.MapInstance;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
 import com.github.c0c0tier.dungeon_defenders.init.EnemyRegistry;
+import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -57,11 +59,10 @@ public class ModNetworking {
     // ordre de grandeur que la portée d'interaction avec un bloc à conteneur vanilla.
     private static final double MAX_DISTANCE_SQ = 64.0D;
 
-    // Part du coût en mana rendue à la suppression volontaire d'une tour (touche dédiée, voir
-    // handleRemoveTower) — valeur de test, pas encore équilibrée, comme les coûts de pose
-    // (TowerDefinition). Ne s'applique jamais à une tour détruite au combat (voir
+    // La part du coût en mana rendue à la suppression volontaire d'une tour (touche dédiée, voir
+    // handleRemoveTower) est data-driven : BalanceValue.TOWER_REFUND_RATIO, 0.5 par défaut
+    // (balance/towers.json). Ne s'applique jamais à une tour détruite au combat (voir
     // AbstractTowerBlockEntity#setHealth, qui ne passe jamais par ce chemin).
-    private static final float TOWER_MANA_REFUND_RATIO = 0.5F;
 
     @SubscribeEvent
     static void onRegisterPayloadHandlers(RegisterPayloadHandlersEvent event) {
@@ -134,6 +135,14 @@ public class ModNetworking {
         registrar.playToClient(
                 EnemyDefinitionsPayload.TYPE,
                 EnemyDefinitionsPayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                TowerStatsPayload.TYPE,
+                TowerStatsPayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                GameBalancePayload.TYPE,
+                GameBalancePayload.STREAM_CODEC
         );
     }
 
@@ -231,7 +240,7 @@ public class ModNetworking {
             // reviendrait à imprimer du mana à volonté.
             int refund = phase == GamePhase.TAVERN
                     ? 0
-                    : Math.round(tower.getManaCost() * TOWER_MANA_REFUND_RATIO);
+                    : (int) Math.round(tower.getManaCost() * GameBalance.get(BalanceValue.TOWER_REFUND_RATIO, false));
 
             // false : pas de drop d'item, comme une tour détruite au combat (setHealth) — la
             // touche dédiée est l'unique façon "propre" de retirer une tour, symétrique à la

@@ -255,6 +255,19 @@ catégorie de tour existante (mur à PV type "Blockade", ou tour à distance typ
 - Dans tous les cas, ajouter un membre à `init/TowerDefinition.java` pour que la tour
   apparaisse dans la roue (`TowerWheelScreen`) — c'est l'unique façon de la poser, voir
   `block/TowerBlockItem.java`.
+- **Ses chiffres ne s'écrivent plus dans le block entity** (depuis le 2026-11-10, voir
+  [data-driven/tours.md](data-driven/tours.md)) : le membre de `TowerDefinition` porte ses
+  **valeurs par défaut** (`TowerStats.builder().with(TowerStat.MAX_HEALTH, 30)...`), le block
+  entity passe simplement ce membre à son constructeur parent et lit `stats()`, et un fichier
+  `data/dungeon_defenders/dungeon_defenders/tower/<id>.json` reprend ces mêmes valeurs. Un
+  nouveau type de chiffre (ex. durée d'un ralentissement) = une constante de plus dans
+  `init/TowerStat.java`.
+
+**Rééquilibrer sans recompiler** : modifier `tower/<id>.json` (stats d'une tour),
+`enemy/<nom>.json` (ennemi) ou `balance/*.json` (difficulté, remboursement, XP par niveau), puis
+`/reload` en jeu. Pour essayer sans toucher au jar, mettre une copie du fichier dans un datapack
+du monde, au même chemin. Ajouter un réglage global : une ligne dans `init/BalanceValue.java`,
+sa clé dans le JSON, et `GameBalance.get(...)` à la place de la constante.
 
 ## Ajouter une donnée persistante sur le joueur (data attachment)
 

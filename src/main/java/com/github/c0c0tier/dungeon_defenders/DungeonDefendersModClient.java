@@ -22,13 +22,17 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.screen.MapSelectionScree
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScreen;
 import com.github.c0c0tier.dungeon_defenders.entity.MobHealthBarRenderer;
 import com.github.c0c0tier.dungeon_defenders.client.ClientEnemyDefinitions;
+import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStatsRegistry;
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
 import com.github.c0c0tier.dungeon_defenders.network.GameOverPayload;
 import com.github.c0c0tier.dungeon_defenders.network.OpenMapSelectionPayload;
 import com.github.c0c0tier.dungeon_defenders.network.EnemyDefinitionsPayload;
+import com.github.c0c0tier.dungeon_defenders.network.GameBalancePayload;
 import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
+import com.github.c0c0tier.dungeon_defenders.network.TowerStatsPayload;
 import com.google.common.reflect.TypeToken;
 
 import net.minecraft.client.KeyMapping;
@@ -212,6 +216,11 @@ public class DungeonDefendersModClient {
         // après chaque /reload, voir init/EnemyRegistry#onDatapackSync.
         event.register(EnemyDefinitionsPayload.TYPE, (payload, context) ->
                 context.enqueueWork(() -> ClientEnemyDefinitions.replace(payload.enemies())));
+        // Les chiffres data-driven des tours (coût, portée, PV max) : même calendrier.
+        event.register(TowerStatsPayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> TowerStatsRegistry.replaceClient(payload)));
+        event.register(GameBalancePayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> GameBalance.replaceClient(payload)));
         event.register(GameOverPayload.TYPE, (payload, context) ->
                 context.enqueueWork(() -> Minecraft.getInstance().setScreen(new GameOverScreen(payload.victory()))));
         // L'écran de choix de map ne s'ouvre plus directement depuis TavernCrystalBlock : ce

@@ -5,9 +5,11 @@ import com.github.c0c0tier.dungeon_defenders.entity.ManaCrystalEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackPriorityTargetGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
+import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
 import com.github.c0c0tier.dungeon_defenders.init.EnemyBehavior;
 import com.github.c0c0tier.dungeon_defenders.init.EnemyDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.EnemyRegistry;
+import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ManaCrystalType;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -320,14 +322,16 @@ public class ModEvents {
     }
 
     // Boucle plutôt qu'un seul passage : un futur ennemi à forte valeur d'XP pourrait franchir
-    // plusieurs paliers de niveau d'un coup. MAX_EXPERIENCE reste un plafond fixe par niveau
-    // pour l'instant (pas de barème croissant), comme les autres valeurs de test du mod.
+    // plusieurs paliers de niveau d'un coup. L'expérience par niveau reste un plafond fixe (pas
+    // de barème croissant), data-driven : BalanceValue.XP_PER_LEVEL, 100 par défaut
+    // (balance/progression.json).
     private static void grantExperience(Player player, int xpValue) {
         int experience = player.getData(ModAttachments.EXPERIENCE) + xpValue;
         int level = player.getData(ModAttachments.LEVEL);
 
-        while (experience >= ModAttachments.MAX_EXPERIENCE) {
-            experience -= ModAttachments.MAX_EXPERIENCE;
+        int xpPerLevel = Math.max(1, GameBalance.getInt(BalanceValue.XP_PER_LEVEL, false));
+        while (experience >= xpPerLevel) {
+            experience -= xpPerLevel;
             level++;
         }
 

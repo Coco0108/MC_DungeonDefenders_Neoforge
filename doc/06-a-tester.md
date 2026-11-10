@@ -1122,6 +1122,49 @@ Avec le même datapack :
 - [ ] Aucune exception liée à `EnemyRegistry`, `EnemyDefinitionsPayload`,
       `ClientEnemyDefinitions` ou `SpawnerBlockEntity` dans le log.
 
+## Stats des tours et réglages globaux data-driven (étapes 2 et 3)
+
+Nouveau (2026-11-10), voir [data-driven/tours.md](data-driven/tours.md) et
+[data-driven/equilibrage.md](data-driven/equilibrage.md). Vérifié hors jeu (build,
+`verifier-dist.py`, gametests). **Jamais vu en jeu.** Même méthode que pour les ennemis : un
+datapack du monde (`saves/<monde>/datapacks/dd_test/`, avec le `pack.mcmeta` de la section
+« Ennemis data-driven ») qui remplace un fichier du mod, puis `/reload`.
+
+**Au lancement** :
+
+- [ ] Le log contient `Stats de tours chargées : 6 sur 6` et
+      `Réglages d'équilibrage chargés : 6 sur 6`.
+- [ ] Rien n'a changé : coût affiché dans la roue, portée à la pose, dégâts et cadence des six
+      tours, PV, remboursement de moitié au retrait, barre d'expérience pleine à 100.
+
+**Stats d'une tour** (fichier
+`data/dungeon_defenders/dungeon_defenders/tower/harpoon_turret.json` dans le datapack) :
+
+- [ ] Poser un Harpoon Turret. Mettre dans le fichier `{ "mana_cost": 10, "range": 20.0,
+      "attack_interval_ticks": 5 }`, puis `/reload` : la roue affiche **10** de mana, l'aperçu de
+      portée s'agrandit, et le turret **déjà posé** tire beaucoup plus vite et plus loin.
+- [ ] Mettre `{ "max_health": 60 }`, `/reload` : le turret déjà posé affiche une barre de vie à
+      un tiers (20 PV sur 60). Un turret posé ensuite a 60 PV.
+- [ ] Erreur volontaire `{ "mana_cots": 10 }`, `/reload` : pas de crash, le log contient
+      `Stats de la tour dungeon_defenders:harpoon_turret invalides (...) : stat inconnue
+      "mana_cots" (stats de cette tour : ...)`, et la tour reprend ses valeurs par défaut (50).
+- [ ] Stat hors sujet `{ "contact_damage": 3 }` : même refus, message
+      `la stat "contact_damage" n'est pas utilisée par cette tour`.
+
+**Réglages globaux** (fichiers `.../balance/difficulty.json`, `towers.json`,
+`progression.json` dans le datapack) :
+
+- [ ] `difficulty.json` avec `{ "normal_multiplier": 2.0 }`, `/reload` en phase Construction :
+      l'aperçu au-dessus des spawners et le compteur d'ennemis de la vague **doublent**.
+- [ ] `towers.json` avec `{ "refund_ratio": 1.0 }`, `/reload` : retirer une tour rend tout son
+      coût.
+- [ ] `progression.json` avec `{ "xp_per_level": 20 }`, `/reload` : la barre d'expérience se
+      remplit cinq fois plus vite, deux zombies font passer un niveau.
+- [ ] Erreur volontaire `{ "normal_multiplierr": 2.0 }` : pas de crash, log
+      `Fichier d'équilibrage ... invalide : clé inconnue "normal_multiplierr" (clés de ce
+      fichier : ...)`, et la difficulté reprend ses valeurs par défaut.
+- [ ] Supprimer le datapack, `/reload` : tout revient aux valeurs d'origine.
+
 ## IA : contournement d'obstacle (`map/detour_ia.nbt`)
 
 Complète le test ci-dessus : celui-là vérifie qu'un monstre converge sur une **longue**

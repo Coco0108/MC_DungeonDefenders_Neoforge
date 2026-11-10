@@ -3,16 +3,25 @@ package com.github.c0c0tier.dungeon_defenders.gametest;
 import com.github.c0c0tier.dungeon_defenders.Config;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
 import com.github.c0c0tier.dungeon_defenders.init.DifficultyScaling;
 import com.github.c0c0tier.dungeon_defenders.init.EnemyBehavior;
 import com.github.c0c0tier.dungeon_defenders.init.EnemyDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.EnemyRegistry;
+import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
+import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.LegacyEnemyIds;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
+import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStats;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStatsRegistry;
+import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -32,6 +41,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.function.Consumer;
 
@@ -80,6 +90,12 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "enemy_shipped_values", DungeonDefendersGameTests::enemyShippedValues);
         register(event, environment, "enemy_unknown_excluded_from_wave", DungeonDefendersGameTests::enemyUnknownExcludedFromWave);
         register(event, environment, "enemy_export_conversion", DungeonDefendersGameTests::enemyExportConversion);
+        // Stats des tours en data-driven (doc/data-driven/tours.md).
+        register(event, environment, "tower_shipped_values", DungeonDefendersGameTests::towerShippedValues);
+        register(event, environment, "tower_stats_validation", DungeonDefendersGameTests::towerStatsValidation);
+        // Réglages globaux en data-driven (doc/data-driven/equilibrage.md).
+        register(event, environment, "balance_shipped_values", DungeonDefendersGameTests::balanceShippedValues);
+        register(event, environment, "balance_validation", DungeonDefendersGameTests::balanceValidation);
     }
 
     private static void register(RegisterGameTestsEvent event, Holder<TestEnvironmentDefinition<?>> environment,
@@ -222,6 +238,86 @@ public final class DungeonDefendersGameTests {
         helper.assertValueEqual(converted, 1, "une seule entrée à l'ancien format");
         helper.assertValueEqual(legacyEntry.getString("Enemy").orElse(""), "dungeon_defenders:skeleton", "1 -> squelette");
         helper.assertValueEqual(modernEntry.getString("Enemy").orElse(""), "dungeon_defenders:zombie", "nouveau format intact");
+        helper.succeed();
+    }
+
+    /**
+     * Les six JSON de tours livrés sont chargés et reprennent exactement les valeurs par défaut
+     * du code, c'est-à-dire celles d'avant la migration ("aucune valeur de gameplay ne change").
+     * Vérifie aussi qu'une tour posée lit bien ses chiffres par ce chemin.
+     */
+    static void towerShippedValues(GameTestHelper helper) {
+        for (TowerDefinition tower : TowerDefinition.values()) {
+            helper.assertTrue(TowerStatsRegistry.hasLoadedFile(tower), "JSON chargé pour " + tower.id());
+            helper.assertValueEqual(tower.stats(false), tower.defaultStats(), "stats de " + tower.id());
+        }
+
+        BlockPos pos = new BlockPos(1, 1, 1);
+        helper.setBlock(pos, ModBlocks.SPIKE_BLOCKADE.get());
+        AbstractTowerBlockEntity spike = helper.getBlockEntity(pos, AbstractTowerBlockEntity.class);
+        helper.assertValueEqual(spike.getMaxHealth(), 30, "PV max du Spike Blockade");
+        helper.assertValueEqual(spike.getHealth(), 30, "PV de départ du Spike Blockade");
+        helper.assertValueEqual(spike.getManaCost(), 30, "coût du Spike Blockade");
+        helper.succeed();
+    }
+
+    /**
+     * Un JSON de tour partiel garde les valeurs par défaut des stats absentes ; une stat
+     * inconnue, une stat que la tour n'utilise pas, une valeur non numérique, non entière ou
+     * sous son minimum sont refusées (la tour garde alors ses valeurs par défaut).
+     */
+    static void towerStatsValidation(GameTestHelper helper) {
+        TowerStats defaults = TowerDefinition.SPIKE_BLOCKADE.defaultStats();
+
+        TowerStats partial = TowerStats.parse(JsonParser.parseString("{\"mana_cost\": 45}"), defaults).getOrThrow();
+        helper.assertValueEqual(partial.intValue(TowerStat.MANA_COST), 45, "stat surchargée");
+        helper.assertValueEqual(partial.intValue(TowerStat.MAX_HEALTH), 30, "stat absente = défaut");
+
+        for (String invalid : List.of(
+                "{\"mana_cots\": 45}",          // faute de frappe
+                "{\"range\": 12}",              // stat de tourelle sur une blockade
+                "{\"mana_cost\": \"cher\"}",    // pas un nombre
+                "{\"max_health\": 12.5}",       // doit être entier
+                "{\"max_health\": 0}",          // sous le minimum
+                "[30, 30]")) {                  // pas un objet
+            helper.assertTrue(TowerStats.parse(JsonParser.parseString(invalid), defaults).isError(), "refusé : " + invalid);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Les JSON d'équilibrage livrés reprennent exactement les valeurs d'avant la migration, et
+     * le multiplicateur de difficulté qui en découle est inchangé (Normal, vague 3 : x1.2).
+     */
+    static void balanceShippedValues(GameTestHelper helper) {
+        for (BalanceValue value : BalanceValue.values()) {
+            helper.assertValueEqual(GameBalance.get(value, false), value.defaultValue(), "réglage " + value.networkName());
+        }
+        helper.assertValueEqual(GameDifficulty.EASY.multiplier(false), 0.75D, "Facile");
+        helper.assertValueEqual(GameDifficulty.NORMAL.multiplier(false), 1.0D, "Normal");
+        helper.assertValueEqual(GameDifficulty.HARD.multiplier(false), 1.5D, "Difficile");
+
+        ServerLevel level = helper.getLevel();
+        int previousWave = level.getData(ModAttachments.CURRENT_WAVE);
+        int previousDifficulty = level.getData(ModAttachments.DIFFICULTY);
+        level.setData(ModAttachments.CURRENT_WAVE, 3);
+        level.setData(ModAttachments.DIFFICULTY, GameDifficulty.NORMAL.ordinal());
+        helper.assertTrue(Math.abs(DifficultyScaling.getMultiplier(level) - 1.2D) < 1.0E-9D, "Normal, vague 3 : x1.2");
+        level.setData(ModAttachments.CURRENT_WAVE, previousWave);
+        level.setData(ModAttachments.DIFFICULTY, previousDifficulty);
+        helper.succeed();
+    }
+
+    /** Un fichier d'équilibrage est refusé en entier à la moindre clé ou valeur invalide. */
+    static void balanceValidation(GameTestHelper helper) {
+        Map<BalanceValue, Double> parsed = GameBalance.parseFile("difficulty",
+                JsonParser.parseString("{\"hard_multiplier\": 2.0}")).getOrThrow();
+        helper.assertValueEqual(parsed, Map.of(BalanceValue.DIFFICULTY_HARD_MULTIPLIER, 2.0D), "clé seule surchargée");
+
+        helper.assertTrue(GameBalance.parseFile("difficulty", JsonParser.parseString("{\"hard_multiplierr\": 2.0}")).isError(), "clé inconnue");
+        helper.assertTrue(GameBalance.parseFile("difficulty", JsonParser.parseString("{\"hard_multiplier\": 0}")).isError(), "sous le minimum");
+        helper.assertTrue(GameBalance.parseFile("progression", JsonParser.parseString("{\"xp_per_level\": 99.5}")).isError(), "doit être entier");
+        helper.assertTrue(GameBalance.parseFile("difficulte", JsonParser.parseString("{}")).isError(), "fichier inconnu");
         helper.succeed();
     }
 

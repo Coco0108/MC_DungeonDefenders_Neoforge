@@ -1,6 +1,8 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -19,18 +21,11 @@ import net.minecraft.world.phys.Vec3;
 // une fois au point d'impact plutôt qu'en continu autour du bloc.
 public class MortarTurretBlockEntity extends AbstractTurretBlockEntity {
 
-    public static final int MAX_HEALTH = 20;
-    // Le plus cher des quatre nouvelles tours : dégâts de zone, valeur de test comme le reste.
-    public static final int MANA_COST = 70;
-    public static final double RANGE = 14.0D;
-    private static final float DAMAGE = 8.0F;
-    // Cadence la plus lente du roster (2x Harpoon) : compense la puissance des dégâts de zone.
-    private static final long ATTACK_INTERVAL_TICKS = 60L;
-    private static final double SPLASH_RADIUS = 2.0D;
-
+    // Chiffres : data-driven, voir data/dungeon_defenders/dungeon_defenders/tower/
+    // mortar_turret.json et TowerDefinition.MORTAR_TURRET pour les valeurs par défaut. La plus
+    // chère du roster (dégâts de zone) et la cadence la plus lente (2x Harpoon), qui compense.
     public MortarTurretBlockEntity(BlockPos pos, BlockState state) {
-        super(DungeonDefendersMod.MORTAR_TURRET_BE.get(), pos, state,
-                MAX_HEALTH, MANA_COST, RANGE, 45.0D, DAMAGE, ATTACK_INTERVAL_TICKS);
+        super(DungeonDefendersMod.MORTAR_TURRET_BE.get(), pos, state, TowerDefinition.MORTAR_TURRET);
     }
 
     // Redéfinit entièrement le tir par défaut : plus de flèche cosmétique héritée de
@@ -52,7 +47,7 @@ public class MortarTurretBlockEntity extends AbstractTurretBlockEntity {
         Vec3 impact = target.position();
         level.sendParticles(ParticleTypes.EXPLOSION, impact.x, impact.y, impact.z, 4, 0.3D, 0.3D, 0.3D, 0.0D);
 
-        AABB splashArea = new AABB(target.blockPosition()).inflate(SPLASH_RADIUS);
+        AABB splashArea = new AABB(target.blockPosition()).inflate(stats().get(TowerStat.SPLASH_RADIUS));
         for (Monster monster : level.getEntitiesOfClass(Monster.class, splashArea)) {
             monster.hurt(level.damageSources().generic(), getDamage());
         }

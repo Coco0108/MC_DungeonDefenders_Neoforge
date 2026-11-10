@@ -203,7 +203,7 @@ vérifie la CI.
   **tous les joueurs présents** (partagée, décidé avec le joueur — ce sont surtout les tours
   qui tuent, pas un joueur en particulier, aucune attribution de kill n'existe). Valeur par
   monstre = le champ `xp_value` de son JSON d'ennemi (zombie 10, squelette 15, valeurs de test ; data-driven depuis le 2026-09-29). L'expérience
-  fait monter `ModAttachments.LEVEL` par paliers de `MAX_EXPERIENCE` (100, plafond fixe, pas de
+  fait monter `ModAttachments.LEVEL` par paliers de `xp_per_level` (100 par défaut, réglage data-driven depuis le 2026-11-10 ; plafond fixe, pas de
   barème croissant), avec un message système au passage de niveau. `SCORE` est remis à 0 par
   `PhaseTransitions.resetGameState` à chaque nouvelle partie ; `EXPERIENCE`/`LEVEL` persistent
   au-delà d'une carte, sans changement. Pas de bonus de statistique lié au niveau pour
@@ -669,6 +669,19 @@ vérifie la CI.
       lieu de la supprimer ;
     - un `/reload` recalcule le total de vague des niveaux qui ont des spawners ;
     - le registre des spawners actifs a été corrigé (voir la ligne suivante).
+- ✅ **Stats des tours data-driven, étape 2** (2026-11-10,
+  [data-driven/tours.md](data-driven/tours.md)) : PV, coût en mana, dégâts, cadence, portée, cône,
+  repousse, rayon de zone et projectile de chaque tour vivent dans
+  `data/<ns>/dungeon_defenders/tower/<id>.json`, relus par `/reload` et appliqués aux tours déjà
+  posées. La liste des tours et leur comportement restent en Java. Validation stricte ; fichier
+  absent ou invalide → valeurs par défaut du code, avec un message. **Aucune valeur changée**
+  (gametest `tower_shipped_values`). **Jamais testé en jeu.**
+- ✅ **Réglages globaux data-driven, étape 3** (2026-11-10,
+  [data-driven/equilibrage.md](data-driven/equilibrage.md)) : multiplicateurs de difficulté,
+  hausse par vague, part de mana remboursée au retrait d'une tour et expérience par niveau vivent
+  dans `balance/*.json` (`init/BalanceValue`, `init/GameBalance`), relus par `/reload`,
+  synchronisés au client. Mécanisme générique : ajouter un réglage = une ligne d'enum + une clé
+  JSON. **Aucune valeur changée** (gametest `balance_shipped_values`). **Jamais testé en jeu.**
 - ✅ **Registre des spawners actifs corrigé** (2026-09-29, trouvé par le gametest
   `enemy_unknown_excluded_from_wave`) : vraie cause du « total de vague bloqué à 0 » du
   2026-09-12. `LevelChunk#setBlockEntity` appelle `setLevel()` sur le nouveau block entity puis

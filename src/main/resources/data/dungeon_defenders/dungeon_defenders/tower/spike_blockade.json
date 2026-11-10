@@ -1,0 +1,7 @@
+{
+  "max_health": 30,
+  "mana_cost": 30,
+  "contact_damage": 2.0,
+  "contact_interval_ticks": 20,
+  "contact_range": 1.0
+}

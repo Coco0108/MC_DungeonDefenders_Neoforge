@@ -26,6 +26,10 @@ que les monstres tentent de détruire, et peut se défendre avec des pièges com
 6. [À tester en jeu](06-a-tester.md) — fonctionnalités écrites mais jamais lancées en jeu, checklist à cocher.
 7. [Idées & backlog](07-idees-et-backlog.md) — boîte à idées en vrac + backlog trié par catégorie/difficulté, pour lancer une fonctionnalité à la demande.
 
+**Data-driven** (équilibrer avec des JSON et `/reload`, sans recompiler) :
+[ennemis](data-driven/ennemis.md), [stats des tours](data-driven/tours.md),
+[réglages globaux](data-driven/equilibrage.md).
+
 ## Démarrage rapide
 
 ```bash

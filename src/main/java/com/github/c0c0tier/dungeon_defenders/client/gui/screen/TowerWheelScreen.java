@@ -3,6 +3,7 @@ package com.github.c0c0tier.dungeon_defenders.client.gui.screen;
 import com.github.c0c0tier.dungeon_defenders.client.ModKeyMappings;
 import com.github.c0c0tier.dungeon_defenders.client.TowerPlacementState;
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -89,7 +90,7 @@ public class TowerWheelScreen extends Screen {
             TowerDefinition hovered = this.towers.get(this.hoveredIndex);
             guiGraphics.centeredText(this.font, hovered.displayName(), centerX, this.height / 2 + RADIUS + 12, TEXT_COLOR);
             guiGraphics.centeredText(this.font,
-                    Component.translatable("dungeon_defenders.tower_wheel.mana_cost", hovered.manaCost()),
+                    Component.translatable("dungeon_defenders.tower_wheel.mana_cost", hovered.stats(true).intValue(TowerStat.MANA_COST)),
                     centerX, this.height / 2 + RADIUS + 24, TEXT_COLOR);
         }
     }

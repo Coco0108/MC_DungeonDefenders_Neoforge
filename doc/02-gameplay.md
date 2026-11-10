@@ -814,10 +814,10 @@ dégâts de contact aux monstres dont le cooldown (`WeakHashMap<Monster, Long>` 
 retenir des entités mortes/déchargées) est écoulé, **uniquement si** `dealsContactDamage` est
 actif — sinon la méthode ne fait rien.
 
-`SpikeBlockadeBlockEntity` n'est donc plus qu'une déclaration de stats : `MAX_HEALTH=30`,
-`MANA_COST=30`, `dealsContactDamage=true`, `CONTACT_DAMAGE=2.0F`,
-`CONTACT_DAMAGE_INTERVAL_TICKS=20` (1 s), `CONTACT_RANGE=1.0` — toute la logique vit dans la
-base ou la catégorie.
+`SpikeBlockadeBlockEntity` ne déclare plus que `dealsContactDamage=true` et sa
+`TowerDefinition` : toute la logique vit dans la base ou la catégorie, et ses chiffres (30 PV,
+30 de mana, 2 dégâts toutes les 20 ticks dans un rayon de 1) sont data-driven depuis le
+2026-11-10 — voir « Les chiffres data-driven des tours » plus bas.
 
 `getAiPriority()` (voir "IA des ennemis" plus haut, `AiAttackTarget`) dérive de
 `dealsContactDamage` : `true` (Spike Blockade) → `PRIORITY_MELEE_TOWER` (20, le "corps à
@@ -955,6 +955,8 @@ double, double, double, ItemStack, ItemStack)` — pas de `LivingEntity`, c'est 
 avec le même léger arc vers le haut que `RangedAttackEterniaCrystalGoal` pour compenser la
 gravité sur la distance.
 
+(Depuis le 2026-11-10 ces chiffres sont data-driven, voir « Les chiffres data-driven des
+tours » ; les valeurs ci-dessous sont celles par défaut.)
 `HarpoonTurretBlockEntity` n'est qu'une déclaration de stats : `MAX_HEALTH=20`,
 `MANA_COST=50`, `RANGE=12.0`, `CONE_ANGLE_DEGREES=45.0`, `DAMAGE=6.0F`,
 `ATTACK_INTERVAL_TICKS=30` (1,5 s) — valeurs de test, pas encore équilibrées, comme pour Spike
@@ -1261,13 +1263,45 @@ confirmation ; seul le paquet final touche le serveur.
 
 ### Le catalogue — `init/TowerDefinition.java`
 
-Enum commune client/serveur, un membre par tour posable via la roue (id, nom traduit, `Block`
-+ `Item` d'icône, portée, `coneAngleDegrees`). **Ne duplique pas le coût en mana** :
-`manaCost()` réexpose directement la constante du block entity concerné
-(`SpikeBlockadeBlockEntity.MANA_COST`, `HarpoonTurretBlockEntity.MANA_COST`), seule source
-d'autorité (déjà lue par `ModEvents.onTowerPlace`). `SPIKE_BLOCKADE` a `range=0.0` (pas de
-portée, `coneAngleDegrees` sans effet) ; `HARPOON_TURRET` a `range=12.0`,
-`coneAngleDegrees=45.0` — premier membre du catalogue à exercer réellement l'aperçu de portée.
+Enum commune client/serveur, un membre par tour posable via la roue : id, nom traduit, `Block`
++ `Item` d'icône, et ses **valeurs par défaut** (`TowerStats`). Depuis le 2026-11-10, les
+chiffres d'une tour ne sont plus des constantes de son block entity : ils sont **data-driven**
+(voir « Les chiffres data-driven des tours » ci-dessous) et se lisent par
+`tower.stats(clientSide)`. La roue et l'aperçu de portée lisent la copie **client**
+(`stats(true)`) : coût en mana, `range` (absente pour une Blockade = aucun cercle),
+`cone_angle_degrees` (absente = cercle complet).
+
+### Les chiffres data-driven des tours — `init/TowerStatsRegistry.java`, `data/<ns>/dungeon_defenders/tower/*.json`
+
+Étape 2 du passage en data-driven (plan et détail : [data-driven/tours.md](data-driven/tours.md)).
+Un fichier par tour, nommé comme son id (`tower/spike_blockade.json`...), relu au démarrage et à
+chaque `/reload`, synchronisé au client (`TowerStatsPayload`). Les six fichiers livrés reprennent
+exactement les valeurs d'avant :
+
+| Tour | `max_health` | `mana_cost` | Autres stats |
+|---|---|---|---|
+| `spike_blockade` | 30 | 30 | `contact_damage` 2, `contact_interval_ticks` 20, `contact_range` 1 |
+| `bouncer_blockade` | 25 | 25 | `contact_damage` 1, `contact_interval_ticks` 10, `contact_range` 1, `knockback_strength` 0.8 |
+| `slice_n_dice_blockade` | 35 | 40 | `contact_damage` 1, `contact_interval_ticks` 5, `contact_range` 1.5 |
+| `harpoon_turret` | 20 | 50 | `range` 12, `cone_angle_degrees` 45, `damage` 6, `attack_interval_ticks` 30 |
+| `bowling_ball_turret` | 20 | 55 | `range` 12, `cone_angle_degrees` 45, `damage` 5, `attack_interval_ticks` 40, `projectile_velocity` 1.5, `projectile_extra_distance` 4 |
+| `mortar_turret` | 20 | 70 | `range` 14, `cone_angle_degrees` 45, `damage` 8, `attack_interval_ticks` 60, `splash_radius` 2 |
+
+- **La liste des tours et leur comportement restent en Java** (une tour est un bloc + un block
+  entity). Seuls les nombres sont dans les JSON.
+- **Une tour a toujours des stats** : les valeurs écrites dans `TowerDefinition` servent de repli
+  si le fichier manque ou est invalide (message dans le log), et déclarent quelles stats la tour
+  utilise.
+- **Validation stricte** (`TowerStats.parse`) : stat inconnue, stat que cette tour n'utilise pas
+  (`range` sur une Blockade), valeur non numérique, non entière pour un entier, ou sous son
+  minimum → le fichier est refusé en entier, avec la liste des stats acceptées. Une stat absente
+  garde sa valeur par défaut.
+- **Lues à chaque usage, jamais recopiées** (`AbstractTowerBlockEntity#stats()`) : un `/reload`
+  s'applique aux tours **déjà posées**. Conséquence assumée : augmenter `max_health` fait
+  apparaître les tours existantes comme entamées (leurs PV actuels ne bougent pas).
+- **Deux copies, serveur et client**, dans `TowerStatsRegistry` (classe commune : les block
+  entities, chargés des deux côtés, y lisent leurs PV max pour la barre de vie). Un block entity
+  choisit sa copie selon `level.isClientSide()`.
 
 ### Les touches — `client/ModKeyMappings.java`
 
@@ -1446,9 +1480,10 @@ uniquement (même message `tower.build_phase_only` que la pose, symétrique), di
 `AbstractTowerBlockEntity` à la position reçue — le client n'est jamais l'autorité, même s'il a
 déjà refusé une cible invalide de son côté.
 
-Remboursement : `Math.round(tower.getManaCost() * TOWER_MANA_REFUND_RATIO)`, avec
-`TOWER_MANA_REFUND_RATIO = 0.5F` — valeur de test, pas encore équilibrée, comme les coûts de
-pose eux-mêmes (`TowerDefinition`). Plafonné à `MAX_MANA` comme tout gain de mana. La
+Remboursement : `round(tower.getManaCost() × refund_ratio)`, avec `refund_ratio = 0.5` par
+défaut — réglage data-driven depuis le 2026-11-10 (`balance/towers.json`,
+`BalanceValue.TOWER_REFUND_RATIO`), valeur de test pas encore équilibrée, comme les coûts de
+pose eux-mêmes. Plafonné à `MAX_MANA` comme tout gain de mana. La
 destruction passe par `serverLevel.destroyBlock(pos, false)` — **pas de drop d'item**, même
 convention qu'une tour détruite au combat (`AbstractTowerBlockEntity#setHealth`, `dropBlock =
 false`) : la touche dédiée est voulue comme l'unique façon "propre" de retirer une tour.
@@ -2370,7 +2405,9 @@ public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> E
 
 `MAX_EXPERIENCE = 100` est un plafond **fixe par niveau** (pas de barème croissant du type
 "niveau N demande N×100") : valeur de test, pas encore équilibrée, comme les coûts de pose des
-tours.
+tours. **Depuis le 2026-11-10, le jeu ne lit plus cette constante** mais le réglage data-driven
+`xp_per_level` (`balance/progression.json`, même valeur par défaut) — la constante ne reste que
+comme référence.
 
 ### L'affichage — `client/gui/ExperienceOverlay.java`
 
@@ -2676,6 +2713,11 @@ dans ce rayon, pour éviter que tout s'empile sur la même case), `waveStart`/`w
 
 ### Le multiplicateur de difficulté — `init/DifficultyScaling.java`
 
+> **Data-driven depuis le 2026-11-10** : les trois multiplicateurs et le « +10 % par vague »
+> décrits ci-dessous sont les valeurs par défaut de `balance/difficulty.json`
+> (`easy_multiplier`, `normal_multiplier`, `hard_multiplier`, `per_wave_increase`), lues par
+> `init/GameBalance` — voir « Les réglages globaux d'équilibrage » juste après.
+
 `effectiveTotal = round(baseCount × DifficultyScaling.getMultiplier(level))`, recalculé à
 chaque nouvelle vague (pas à chaque tick — sinon un type déjà épuisé pourrait redevenir actif
 en cours de vague si le multiplicateur changeait entre-temps). Le multiplicateur combine :
@@ -2692,6 +2734,26 @@ Comme `effectiveTotal` sert à la fois de fréquence d'apparition (`accumulator 
 effectiveTotal`) et de plafond (`spawned >= effectiveTotal`), une difficulté plus élevée
 rend un type d'ennemi **à la fois** plus nombreux et plus fréquent sur la vague — pas
 seulement plus nombreux.
+
+### Les réglages globaux d'équilibrage — `init/GameBalance.java`, `data/dungeon_defenders/dungeon_defenders/balance/*.json`
+
+Étape 3 du passage en data-driven ([data-driven/equilibrage.md](data-driven/equilibrage.md)) :
+tout nombre d'équilibrage qui n'appartient ni à un ennemi ni à une tour. Chaque réglage est une
+constante de l'enum `init/BalanceValue.java` (fichier, clé, valeur par défaut, minimum) :
+
+| Fichier | Clé | Défaut | Utilisé par |
+|---|---|---|---|
+| `balance/difficulty.json` | `easy_multiplier` / `normal_multiplier` / `hard_multiplier` | 0.75 / 1.0 / 1.5 | `GameDifficulty#multiplier` |
+| `balance/difficulty.json` | `per_wave_increase` | 0.1 | `DifficultyScaling#getMultiplier` |
+| `balance/towers.json` | `refund_ratio` | 0.5 | `ModNetworking#handleRemoveTower` |
+| `balance/progression.json` | `xp_per_level` | 100 | `ModEvents#grantExperience`, `ExperienceOverlay` |
+
+Même mécanique que les ennemis et les tours : reload listener (démarrage + `/reload`), synchro
+client (`GameBalancePayload`), deux copies distinctes. Un fichier est un objet plat
+`"clé": nombre` ; à la moindre clé inconnue ou valeur invalide, le fichier **entier** est refusé
+(message dans le log) et ses réglages gardent leur défaut. Un `/reload` recalcule aussi le total
+d'ennemis de la vague, qui dépend du multiplicateur. Ajouter un réglage = une ligne dans
+`BalanceValue` + sa clé dans le JSON.
 
 ### Le harnais de test — clic droit (maj/shift = bascule de phase)
 

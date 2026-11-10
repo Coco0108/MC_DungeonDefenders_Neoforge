@@ -9,8 +9,6 @@ import net.minecraft.world.level.Level;
 // par exemple) pourront s'ajouter ici plus tard sans changer l'appelant.
 public final class DifficultyScaling {
 
-    private static final double PER_WAVE_INCREASE = 0.1D;
-
     private DifficultyScaling() {
     }
 
@@ -18,7 +16,10 @@ public final class DifficultyScaling {
         GameDifficulty difficulty = GameDifficulty.values()[level.getData(ModAttachments.DIFFICULTY)];
         int wave = level.getData(ModAttachments.CURRENT_WAVE);
 
-        double waveFactor = 1.0D + Math.max(0, wave - 1) * PER_WAVE_INCREASE;
-        return difficulty.multiplier() * waveFactor;
+        // Les deux facteurs sont data-driven (balance/difficulty.json, voir GameBalance) ; côté
+        // client (aperçu du spawner), c'est la copie reçue du serveur qui est lue.
+        boolean clientSide = level.isClientSide();
+        double waveFactor = 1.0D + Math.max(0, wave - 1) * GameBalance.get(BalanceValue.PER_WAVE_INCREASE, clientSide);
+        return difficulty.multiplier(clientSide) * waveFactor;
     }
 }

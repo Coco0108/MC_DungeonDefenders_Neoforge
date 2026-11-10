@@ -1,5 +1,8 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
+import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStats;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.monster.Monster;
@@ -29,25 +32,18 @@ import java.util.WeakHashMap;
 // pas un mode exclusif l'un de l'autre.
 public abstract class AbstractBlockadeBlockEntity extends AbstractTowerBlockEntity {
 
+    // Comportement, pas un chiffre : reste décidé par le code de chaque tour (il fixe aussi la
+    // priorité IA). Les dégâts, leur cadence, leur rayon et la repousse viennent des stats
+    // data-driven de la tour (voir AbstractTowerBlockEntity#stats).
     private final boolean dealsContactDamage;
-    private final float contactDamage;
-    private final long contactDamageIntervalTicks;
-    private final double contactRange;
-    private final float knockbackStrength;
 
     // WeakHashMap : ne retient pas les entités mortes/déchargées, évite une fuite mémoire.
     private final Map<Monster, Long> lastContactDamageTick = new WeakHashMap<>();
 
     protected AbstractBlockadeBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state,
-            int maxHealth, int manaCost, boolean dealsContactDamage,
-            float contactDamage, long contactDamageIntervalTicks, double contactRange,
-            float knockbackStrength) {
-        super(type, pos, state, maxHealth, manaCost);
+            TowerDefinition definition, boolean dealsContactDamage) {
+        super(type, pos, state, definition);
         this.dealsContactDamage = dealsContactDamage;
-        this.contactDamage = contactDamage;
-        this.contactDamageIntervalTicks = contactDamageIntervalTicks;
-        this.contactRange = contactRange;
-        this.knockbackStrength = knockbackStrength;
     }
 
     @Override
@@ -64,19 +60,25 @@ public abstract class AbstractBlockadeBlockEntity extends AbstractTowerBlockEnti
             return;
         }
 
-        AABB contactArea = new AABB(pos).inflate(blockEntity.contactRange);
+        TowerStats stats = blockEntity.stats();
+        float contactDamage = stats.floatValue(TowerStat.CONTACT_DAMAGE);
+        long contactIntervalTicks = stats.intValue(TowerStat.CONTACT_INTERVAL_TICKS);
+        // Repousse : seulement pour les tours qui déclarent la stat (Bouncer Blockade).
+        float knockbackStrength = (float) stats.getOr(TowerStat.KNOCKBACK_STRENGTH, 0.0D);
+
+        AABB contactArea = new AABB(pos).inflate(stats.get(TowerStat.CONTACT_RANGE));
         long now = serverLevel.getGameTime();
 
         for (Monster monster : serverLevel.getEntitiesOfClass(Monster.class, contactArea)) {
             Long lastTrigger = blockEntity.lastContactDamageTick.get(monster);
-            if (lastTrigger != null && now - lastTrigger < blockEntity.contactDamageIntervalTicks) {
+            if (lastTrigger != null && now - lastTrigger < contactIntervalTicks) {
                 continue;
             }
 
             blockEntity.lastContactDamageTick.put(monster, now);
-            monster.hurt(serverLevel.damageSources().stalagmite(), blockEntity.contactDamage);
+            monster.hurt(serverLevel.damageSources().stalagmite(), contactDamage);
 
-            if (blockEntity.knockbackStrength > 0.0F) {
+            if (knockbackStrength > 0.0F) {
                 // "Position de la source moins position du monstre" (PAS l'inverse) : le
                 // vecteur passé à Entity#knockback pointe vers la source, la formule pousse
                 // alors dans le sens opposé (voir son corps : deltaMovement - normalize(xd,zd)),
@@ -86,7 +88,7 @@ public abstract class AbstractBlockadeBlockEntity extends AbstractTowerBlockEnti
                 // à partir du comportement observé plutôt que re-deviné depuis les sources.
                 double dx = (pos.getX() + 0.5D) - monster.getX();
                 double dz = (pos.getZ() + 0.5D) - monster.getZ();
-                monster.knockback(blockEntity.knockbackStrength, dx, dz);
+                monster.knockback(knockbackStrength, dx, dz);
             }
         }
     }

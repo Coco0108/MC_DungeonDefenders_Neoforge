@@ -1,5 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
+import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -47,32 +49,28 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
     // BowlingBallEntity) : sans ce décalage, aucun tir n'est jamais visible ni fonctionnel.
     private static final double MUZZLE_OFFSET = 0.6D;
 
-    private final double range;
-    private final double coneAngleDegrees;
-    private final float damage;
-    private final long attackIntervalTicks;
+    // "Jamais tiré" : assez loin dans le passé pour que la première cible trouvée soit visée
+    // sans délai, quelle que soit la cadence (data-driven, donc inconnue à la construction). PAS
+    // Long.MIN_VALUE : `now - lastFireTick` déborderait vers un nombre toujours négatif et la
+    // tour ne tirerait plus jamais (bug trouvé le 2026-08-29 en construisant le reste du roster :
+    // toute tour de cette base — donc aussi Harpoon Turret — ne tirait en réalité jamais).
+    private static final long NEVER_FIRED = Long.MIN_VALUE / 2;
 
-    private long lastFireTick;
+    // Portée, cône, dégâts et cadence viennent des stats data-driven de la tour (voir
+    // AbstractTowerBlockEntity#stats), lues à chaque tick plutôt que figées à la construction.
+    private long lastFireTick = NEVER_FIRED;
 
     protected AbstractTurretBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state,
-            int maxHealth, int manaCost, double range, double coneAngleDegrees,
-            float damage, long attackIntervalTicks) {
-        super(type, pos, state, maxHealth, manaCost);
-        this.range = range;
-        this.coneAngleDegrees = coneAngleDegrees;
-        this.damage = damage;
-        this.attackIntervalTicks = attackIntervalTicks;
-        // -attackIntervalTicks (pas Long.MIN_VALUE, la valeur d'origine) : permet de tirer dès
-        // la première cible trouvée sans délai, tout en évitant l'overflow de
-        // `now - lastFireTick` qu'un sentinel trop extrême provoque — Long.MIN_VALUE fait
-        // déborder la soustraction vers un nombre toujours négatif, empêchant tout tir pour
-        // toujours (bug trouvé en construisant le reste du roster de tours, 2026-08-29 : toute
-        // tour de cette base — donc aussi Harpoon Turret — ne tirait en réalité jamais).
-        this.lastFireTick = -attackIntervalTicks;
+            TowerDefinition definition) {
+        super(type, pos, state, definition);
     }
 
     protected float getDamage() {
-        return this.damage;
+        return stats().floatValue(TowerStat.DAMAGE);
+    }
+
+    protected double getRange() {
+        return stats().get(TowerStat.RANGE);
     }
 
     @Override
@@ -86,7 +84,7 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
         }
 
         long now = serverLevel.getGameTime();
-        if (now - turret.lastFireTick < turret.attackIntervalTicks) {
+        if (now - turret.lastFireTick < turret.stats().intValue(TowerStat.ATTACK_INTERVAL_TICKS)) {
             return;
         }
 
@@ -105,7 +103,9 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
     }
 
     private @Nullable Monster findTarget(ServerLevel level, BlockPos pos, Direction facing) {
-        AABB searchArea = new AABB(pos).inflate(this.range);
+        double range = getRange();
+        double coneAngleDegrees = stats().getOr(TowerStat.CONE_ANGLE_DEGREES, TowerDefinition.FULL_CIRCLE_DEGREES);
+        AABB searchArea = new AABB(pos).inflate(range);
         Vec3 origin = Vec3.atCenterOf(pos);
         Vec3 facingVec = new Vec3(facing.getStepX(), 0.0D, facing.getStepZ());
 
@@ -115,14 +115,14 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
         for (Monster monster : level.getEntitiesOfClass(Monster.class, searchArea)) {
             Vec3 horizontalOffset = new Vec3(monster.getX() - origin.x, 0.0D, monster.getZ() - origin.z);
             double distSq = horizontalOffset.lengthSqr();
-            if (distSq > this.range * this.range) {
+            if (distSq > range * range) {
                 continue;
             }
 
-            if (this.coneAngleDegrees < 360.0D && distSq > 1.0E-4D) {
+            if (coneAngleDegrees < TowerDefinition.FULL_CIRCLE_DEGREES && distSq > 1.0E-4D) {
                 double cos = facingVec.dot(horizontalOffset.normalize());
                 double angle = Math.toDegrees(Math.acos(Mth.clamp(cos, -1.0D, 1.0D)));
-                if (angle > this.coneAngleDegrees / 2.0D) {
+                if (angle > coneAngleDegrees / 2.0D) {
                     continue;
                 }
             }
@@ -141,7 +141,7 @@ public abstract class AbstractTurretBlockEntity extends AbstractTowerBlockEntity
     // archer. Bowling Ball Turret et Mortar Turret redéfinissent entièrement cette méthode.
     protected void fireAt(ServerLevel level, BlockPos pos, Monster target, Direction facing) {
         spawnArrow(level, pos, target, facing);
-        target.hurt(level.damageSources().generic(), this.damage);
+        target.hurt(level.damageSources().generic(), getDamage());
     }
 
     // Protected final (pas private) : Mortar Turret réutilise cette flèche cosmétique telle
