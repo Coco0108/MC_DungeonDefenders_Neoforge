@@ -28,6 +28,7 @@ public class TowerWheelScreen extends Screen {
     private static final int ICON_SIZE = 16;
     private static final int HIGHLIGHT_COLOR = 0x80FFFF55;
     private static final int TEXT_COLOR = 0xFFFFFFFF;
+    private static final int DESCRIPTION_COLOR = 0xFFC0C0C0;
 
     private final List<TowerDefinition> towers = List.of(TowerDefinition.values());
     private int hoveredIndex = -1;
@@ -92,6 +93,7 @@ public class TowerWheelScreen extends Screen {
             guiGraphics.centeredText(this.font,
                     Component.translatable("dungeon_defenders.tower_wheel.mana_cost", hovered.stats(true).intValue(TowerStat.MANA_COST)),
                     centerX, this.height / 2 + RADIUS + 24, TEXT_COLOR);
+            guiGraphics.centeredText(this.font, hovered.description(), centerX, this.height / 2 + RADIUS + 36, DESCRIPTION_COLOR);
         }
     }
 

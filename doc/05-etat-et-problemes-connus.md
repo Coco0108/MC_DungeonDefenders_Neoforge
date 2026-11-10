@@ -669,6 +669,11 @@ vérifie la CI.
       lieu de la supprimer ;
     - un `/reload` recalcule le total de vague des niveaux qui ont des spawners ;
     - le registre des spawners actifs a été corrigé (voir la ligne suivante).
+- ✅ **Inspection d'une tour posée + description dans la roue** (2026-11-10, issues #13, #15,
+  #16) : regarder une tour affiche sa portée au sol, sa barre de vie même pleine, son nom et ses
+  PV sous le viseur ; la roue affiche une phrase de description par tour. Voir
+  [02-gameplay.md](02-gameplay.md#inspecter-une-tour-posée--clienttowerinspectclienteventsjava).
+  Rendu jamais vu : **à tester en jeu**.
 - ✅ **Heure du monde figée, heure propre à chaque map** (2026-11-10, issues #44 et #45) :
   plus de cycle jour/nuit ni de météo. La taverne est à `defaultTimeOfDay` (config, midi par
   défaut) ; une map peut fixer la sienne dans son bloc de configuration (nouveau champ dans
