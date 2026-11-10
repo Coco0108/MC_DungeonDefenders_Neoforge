@@ -183,6 +183,12 @@ public final class PhaseTransitions {
                 continue;
             }
             for (SpawnerBlockEntity.SpawnEntry entry : spawner.getEntries()) {
+                // Un ennemi inconnu (pack retiré, JSON invalide...) ne fera jamais rien apparaître
+                // (voir SpawnEntry#tickAndMaybeSpawn) : le compter bloquerait la vague, qui
+                // attendrait des monstres qui ne viendront pas.
+                if (EnemyRegistry.byId(entry.enemy()) == null) {
+                    continue;
+                }
                 // Même formule que SpawnEntry.resetForWave(...) / l'aperçu du renderer, pour
                 // que ce total corresponde à ce qui sera effectivement spawné.
                 total += Math.max(1, (int) Math.round(entry.baseCount() * multiplier));

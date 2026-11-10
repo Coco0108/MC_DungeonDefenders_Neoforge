@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.entity;
 
+import com.github.c0c0tier.dungeon_defenders.client.ClientEnemyDefinitions;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.entity.HealthBarRendering;
 import com.github.c0c0tier.dungeon_defenders.block.entity.HealthLerp;
@@ -8,7 +9,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.context.ContextKey;
-import net.minecraft.world.entity.EntityType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -70,12 +70,14 @@ public final class MobHealthBarRenderer {
     }
 
     // Se déclenche pour TOUTE LivingEntity (RenderLivingEvent n'est pas filtré par type) :
-    // limité ici au zombie/squelette, seuls monstres du mod pour l'instant — pas de tag/liste
-    // partagée avec SpawnableEnemy, ça resterait à généraliser le jour où ce filtre grandit.
+    // limité aux types de mob des ennemis data-driven (les "entity_type" des JSON, reçus du
+    // serveur par ClientEnemyDefinitions). Avec les deux JSON livrés, c'est exactement
+    // zombie + squelette, le filtre codé en dur d'avant ; un futur ennemi aura sa barre sans
+    // toucher à ce fichier.
     @SubscribeEvent
     static void onRenderLiving(RenderLivingEvent.Post<?, ?, ?> event) {
         LivingEntityRenderState state = event.getRenderState();
-        if (state.entityType != EntityType.ZOMBIE && state.entityType != EntityType.SKELETON) {
+        if (!ClientEnemyDefinitions.isEnemyEntityType(state.entityType)) {
             return;
         }
 

@@ -13,8 +13,8 @@ import java.util.List;
 
 // Envoyé par SpawnerConfigScreen (client) au clic sur "Valider", appliqué côté serveur par
 // ModNetworking à SpawnerBlockEntity.applyConfig(...). La composition est une liste de
-// longueur variable (entries) : chaque ligne du GUI = un ennemi (par ordinal SpawnableEnemy)
-// + son nombre de base. Remplace entièrement la composition existante à l'application.
+// longueur variable (entries) : chaque ligne du GUI = un ennemi (par identifiant data-driven,
+// voir init/EnemyRegistry — plus par ordinal d'enum depuis le 2026-09-29) + son nombre de base. Remplace entièrement la composition existante à l'application.
 public record SpawnerConfigPayload(
         BlockPos pos,
         int intervalTicks,
@@ -24,10 +24,10 @@ public record SpawnerConfigPayload(
         List<Entry> entries
 ) implements CustomPacketPayload {
 
-    /** Une ligne de composition : quel ennemi (ordinal SpawnableEnemy) et son nombre de base. */
-    public record Entry(int enemyOrdinal, int baseCount) {
+    /** Une ligne de composition : quel ennemi (identifiant) et son nombre de base. */
+    public record Entry(Identifier enemy, int baseCount) {
         public static final StreamCodec<RegistryFriendlyByteBuf, Entry> STREAM_CODEC = StreamCodec.composite(
-                ByteBufCodecs.VAR_INT, Entry::enemyOrdinal,
+                Identifier.STREAM_CODEC, Entry::enemy,
                 ByteBufCodecs.VAR_INT, Entry::baseCount,
                 Entry::new
         );

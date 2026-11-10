@@ -1,16 +1,18 @@
 package com.github.c0c0tier.dungeon_defenders.client.gui;
 
 import com.github.c0c0tier.dungeon_defenders.client.ClientDisplayConfig;
+import com.github.c0c0tier.dungeon_defenders.client.ClientEnemyDefinitions;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
-import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.gui.GuiLayer;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,8 +41,9 @@ public class ScoreGainOverlay implements GuiLayer {
     private final List<Popup> popups = new ArrayList<>();
 
     // enemy peut être null : toute source de score sans ennemi précis (fin de vague/de map, pas
-    // encore implémentées, voir doc/02-gameplay.md) n'a simplement pas d'icône à afficher.
-    private record Popup(int amount, ScoreSource source, SpawnableEnemy enemy, long spawnTimeMs) {
+    // encore implémentées, voir doc/02-gameplay.md) n'a simplement pas d'icône à afficher. C'est
+    // l'identifiant data-driven de l'ennemi, résolu en icône au rendu (ClientEnemyDefinitions).
+    private record Popup(int amount, ScoreSource source, @Nullable Identifier enemy, long spawnTimeMs) {
     }
 
     private ScoreGainOverlay() {
@@ -51,7 +54,7 @@ public class ScoreGainOverlay implements GuiLayer {
      *
      * @param enemy null si ce gain n'a pas d'ennemi associé (pas d'icône affichée pour ce popup)
      */
-    public void addPopup(int amount, ScoreSource source, SpawnableEnemy enemy) {
+    public void addPopup(int amount, ScoreSource source, @Nullable Identifier enemy) {
         this.popups.add(new Popup(amount, source, enemy, Util.getMillis()));
     }
 
@@ -100,10 +103,14 @@ public class ScoreGainOverlay implements GuiLayer {
             // paramètre de teinte/alpha) : elle reste pleinement opaque tant que le popup est
             // affiché, puis disparaît d'un coup avec lui — simplification assumée plutôt qu'une
             // vraie transition, voir doc/02-gameplay.md.
-            if (popup.enemy() != null) {
+            // Ennemi inconnu de la copie client : pas d'icône, comme un gain sans ennemi.
+            ClientEnemyDefinitions.Entry enemy = popup.enemy() == null
+                    ? null
+                    : ClientEnemyDefinitions.get(popup.enemy()).orElse(null);
+            if (enemy != null) {
                 int iconX = textX - ICON_GAP - ICON_SIZE;
                 int iconY = y - (ICON_SIZE - minecraft.font.lineHeight) / 2;
-                guiGraphics.item(new ItemStack(popup.enemy().spawnEggItem()), iconX, iconY);
+                guiGraphics.item(new ItemStack(enemy.icon()), iconX, iconY);
             }
         }
     }

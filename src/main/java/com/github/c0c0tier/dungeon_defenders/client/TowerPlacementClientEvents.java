@@ -6,6 +6,8 @@ import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStats;
 import com.github.c0c0tier.dungeon_defenders.network.PlaceTowerPayload;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -191,8 +193,11 @@ public class TowerPlacementClientEvents {
         state.pos = pos;
         state.valid = TowerPlacementState.isTargetValid();
         state.rotation = TowerPlacementState.rotation();
-        state.range = tower.range();
-        state.coneAngleDegrees = tower.coneAngleDegrees();
+        // Copie CLIENT des stats data-driven (reçue du serveur) : pas de portée pour une
+        // Blockade (0 = aucun cercle), cône complet si la tour n'en déclare pas.
+        TowerStats stats = tower.stats(true);
+        state.range = stats.getOr(TowerStat.RANGE, 0.0D);
+        state.coneAngleDegrees = stats.getOr(TowerStat.CONE_ANGLE_DEGREES, TowerDefinition.FULL_CIRCLE_DEGREES);
         event.getRenderState().setRenderData(RENDER_KEY, state);
     }
 

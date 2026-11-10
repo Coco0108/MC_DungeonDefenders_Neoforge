@@ -5,6 +5,9 @@ import com.github.c0c0tier.dungeon_defenders.MapInstance;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
+import com.github.c0c0tier.dungeon_defenders.init.EnemyRegistry;
+import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -13,11 +16,11 @@ import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.MapRegistry;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
-import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 import net.minecraft.server.level.ServerLevel;
@@ -39,6 +42,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 // Enregistrement des paquets custom du mod. Sans "bus" explicite sur @EventBusSubscriber,
 // RegisterPayloadHandlersEvent (qui implémente IModBusEvent) part automatiquement sur le bus
@@ -54,15 +59,18 @@ public class ModNetworking {
     // ordre de grandeur que la portée d'interaction avec un bloc à conteneur vanilla.
     private static final double MAX_DISTANCE_SQ = 64.0D;
 
-    // Part du coût en mana rendue à la suppression volontaire d'une tour (touche dédiée, voir
-    // handleRemoveTower) — valeur de test, pas encore équilibrée, comme les coûts de pose
-    // (TowerDefinition). Ne s'applique jamais à une tour détruite au combat (voir
+    // La part du coût en mana rendue à la suppression volontaire d'une tour (touche dédiée, voir
+    // handleRemoveTower) est data-driven : BalanceValue.TOWER_REFUND_RATIO, 0.5 par défaut
+    // (balance/towers.json). Ne s'applique jamais à une tour détruite au combat (voir
     // AbstractTowerBlockEntity#setHealth, qui ne passe jamais par ce chemin).
-    private static final float TOWER_MANA_REFUND_RATIO = 0.5F;
 
     @SubscribeEvent
     static void onRegisterPayloadHandlers(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1");
+        // "2" depuis le passage des ennemis en data-driven (2026-09-29) : SpawnerConfigPayload et
+        // ScoreGainPayload portent désormais un identifiant au lieu d'un ordinal. Un client resté
+        // sur l'ancienne version est ainsi refusé proprement à la connexion, au lieu de décoder
+        // des paquets de forme différente.
+        PayloadRegistrar registrar = event.registrar("2");
         registrar.playToServer(
                 SpawnerConfigPayload.TYPE,
                 SpawnerConfigPayload.STREAM_CODEC,
@@ -123,6 +131,18 @@ public class ModNetworking {
         registrar.playToClient(
                 OpenMapSelectionPayload.TYPE,
                 OpenMapSelectionPayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                EnemyDefinitionsPayload.TYPE,
+                EnemyDefinitionsPayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                TowerStatsPayload.TYPE,
+                TowerStatsPayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                GameBalancePayload.TYPE,
+                GameBalancePayload.STREAM_CODEC
         );
     }
 
@@ -220,7 +240,7 @@ public class ModNetworking {
             // reviendrait à imprimer du mana à volonté.
             int refund = phase == GamePhase.TAVERN
                     ? 0
-                    : Math.round(tower.getManaCost() * TOWER_MANA_REFUND_RATIO);
+                    : (int) Math.round(tower.getManaCost() * GameBalance.get(BalanceValue.TOWER_REFUND_RATIO, false));
 
             // false : pas de drop d'item, comme une tour détruite au combat (setHealth) — la
             // touche dédiée est l'unique façon "propre" de retirer une tour, symétrique à la
@@ -355,15 +375,22 @@ public class ModNetworking {
                 return;
             }
 
+            // Ennemis déjà présents dans ce spawner : une ligne sur un ennemi inconnu (pack retiré)
+            // que le créateur n'a pas touchée doit survivre à un "Valider", sinon réenregistrer la
+            // config effacerait silencieusement l'identifiant que remettre le pack aurait restauré.
+            Set<Identifier> alreadyPresent = spawner.getEntries().stream()
+                    .map(SpawnerBlockEntity.SpawnEntry::enemy)
+                    .collect(Collectors.toSet());
+
             List<SpawnerBlockEntity.SpawnEntry> entries = new ArrayList<>();
-            SpawnableEnemy[] enemies = SpawnableEnemy.values();
             for (SpawnerConfigPayload.Entry entry : payload.entries()) {
-                // Ordinal envoyé par un client : à valider avant indexation, jamais faire confiance
-                // à une valeur reçue par le réseau pour indexer un tableau.
-                if (entry.enemyOrdinal() < 0 || entry.enemyOrdinal() >= enemies.length) {
+                // Identifiant envoyé par un client : refusé s'il ne désigne ni un ennemi chargé ni
+                // un ennemi déjà présent (même principe que l'ancien contrôle de bornes sur
+                // l'ordinal) — un client ne doit jamais pouvoir introduire un ennemi inconnu.
+                if (EnemyRegistry.byId(entry.enemy()) == null && !alreadyPresent.contains(entry.enemy())) {
                     continue;
                 }
-                entries.add(new SpawnerBlockEntity.SpawnEntry(enemies[entry.enemyOrdinal()], entry.baseCount()));
+                entries.add(new SpawnerBlockEntity.SpawnEntry(entry.enemy(), entry.baseCount()));
             }
 
             spawner.applyConfig(

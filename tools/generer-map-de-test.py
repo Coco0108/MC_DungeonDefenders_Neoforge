@@ -171,8 +171,8 @@ put(CENTER, BASE, 6, state("dungeon_defenders:spawner"), {
     "WaveEnd": 3,
     "LastCombatSessionHandled": 0,
     "Entries": [
-        {"Enemy": 0, "BaseCount": 8, "Spawned": 0, "Accumulator": 0, "EffectiveTotal": 8},
-        {"Enemy": 1, "BaseCount": 4, "Spawned": 0, "Accumulator": 0, "EffectiveTotal": 4},
+        {"Enemy": "dungeon_defenders:zombie", "BaseCount": 8, "Spawned": 0, "Accumulator": 0, "EffectiveTotal": 8},
+        {"Enemy": "dungeon_defenders:skeleton", "BaseCount": 4, "Spawned": 0, "Accumulator": 0, "EffectiveTotal": 4},
     ],
 })
 

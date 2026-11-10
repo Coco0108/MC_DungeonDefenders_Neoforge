@@ -1,5 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.client.gui;
 
+import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
+import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -31,7 +33,8 @@ public class ExperienceOverlay implements GuiLayer {
         }
 
         int currentExperience = player.getData(ModAttachments.EXPERIENCE);
-        int maxExperience = ModAttachments.MAX_EXPERIENCE;
+        // Copie CLIENT du réglage data-driven (balance/progression.json), reçue du serveur.
+        int maxExperience = GameBalance.getInt(BalanceValue.XP_PER_LEVEL, true);
 
         int barY = barTop(guiGraphics);
         int filledWidth = maxExperience <= 0 ? 0 : (int) ((long) BAR_WIDTH * currentExperience / maxExperience);

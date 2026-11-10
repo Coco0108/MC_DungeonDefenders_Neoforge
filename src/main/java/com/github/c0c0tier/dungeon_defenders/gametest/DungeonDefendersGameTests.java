@@ -3,20 +3,47 @@ package com.github.c0c0tier.dungeon_defenders.gametest;
 import com.github.c0c0tier.dungeon_defenders.Config;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
+import com.github.c0c0tier.dungeon_defenders.init.DifficultyScaling;
+import com.github.c0c0tier.dungeon_defenders.init.EnemyBehavior;
+import com.github.c0c0tier.dungeon_defenders.init.EnemyDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.EnemyRegistry;
+import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
+import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
+import com.github.c0c0tier.dungeon_defenders.init.LegacyEnemyIds;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
+import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStats;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStatsRegistry;
+import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.IntTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.EntityType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
+
+import java.util.List;
+import java.util.Map;
+import java.util.OptionalInt;
+import java.util.function.Consumer;
 
 // Premiers gametests du mod : vérifient de la logique pure de block entity/attachments, sans
 // dépendre d'un monstre, d'un joueur ou de plusieurs ticks — les scénarios les plus simples à
@@ -57,6 +84,24 @@ public final class DungeonDefendersGameTests {
                         Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "phase_transitions"),
                         DungeonDefendersGameTests::phaseTransitions,
                         new TestData<>(environment, EMPTY_STRUCTURE, MAX_TICKS, 0, true)));
+        // Passage des ennemis en data-driven (doc/data-driven/ennemis.md) : logique pure,
+        // même principe que les deux tests ci-dessus.
+        register(event, environment, "enemy_legacy_format", DungeonDefendersGameTests::enemyLegacyFormat);
+        register(event, environment, "enemy_shipped_values", DungeonDefendersGameTests::enemyShippedValues);
+        register(event, environment, "enemy_unknown_excluded_from_wave", DungeonDefendersGameTests::enemyUnknownExcludedFromWave);
+        register(event, environment, "enemy_export_conversion", DungeonDefendersGameTests::enemyExportConversion);
+        // Stats des tours en data-driven (doc/data-driven/tours.md).
+        register(event, environment, "tower_shipped_values", DungeonDefendersGameTests::towerShippedValues);
+        register(event, environment, "tower_stats_validation", DungeonDefendersGameTests::towerStatsValidation);
+        // Réglages globaux en data-driven (doc/data-driven/equilibrage.md).
+        register(event, environment, "balance_shipped_values", DungeonDefendersGameTests::balanceShippedValues);
+        register(event, environment, "balance_validation", DungeonDefendersGameTests::balanceValidation);
+    }
+
+    private static void register(RegisterGameTestsEvent event, Holder<TestEnvironmentDefinition<?>> environment,
+                                 String name, Consumer<GameTestHelper> test) {
+        Identifier id = Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, name);
+        event.registerTest(id, ModGameTestInstance.create(id, test, new TestData<>(environment, EMPTY_STRUCTURE, MAX_TICKS, 0, true)));
     }
 
     /**
@@ -98,5 +143,191 @@ public final class DungeonDefendersGameTests {
         helper.assertValueEqual(level.getData(ModAttachments.WAVE_ENEMIES_KILLED), 0, "compteur de tués après enterBuild");
 
         helper.succeed();
+    }
+
+    /**
+     * Lecture compatible de l'ancien format des spawners (doc/data-driven/ennemis.md, §5) :
+     * nombre -> identifiant via la table figée, avec marqueur de conversion ; identifiant lu tel
+     * quel ; ordinal hors table -> legacy_unknown_N ; réécriture toujours en chaîne.
+     */
+    static void enemyLegacyFormat(GameTestHelper helper) {
+        SpawnerBlockEntity.SpawnEntry zombie = parseEntry(helper, IntTag.valueOf(0));
+        helper.assertValueEqual(zombie.enemy(), LegacyEnemyIds.ZOMBIE, "ancien 0");
+        helper.assertValueEqual(zombie.convertedFromOrdinal(), OptionalInt.of(0), "0 marqué converti");
+
+        SpawnerBlockEntity.SpawnEntry skeleton = parseEntry(helper, IntTag.valueOf(1));
+        helper.assertValueEqual(skeleton.enemy(), LegacyEnemyIds.SKELETON, "ancien 1");
+
+        SpawnerBlockEntity.SpawnEntry modern = parseEntry(helper, StringTag.valueOf("dungeon_defenders:skeleton"));
+        helper.assertValueEqual(modern.enemy(), LegacyEnemyIds.SKELETON, "nouveau format");
+        helper.assertValueEqual(modern.convertedFromOrdinal(), OptionalInt.empty(), "nouveau format non marqué");
+
+        SpawnerBlockEntity.SpawnEntry unknown = parseEntry(helper, IntTag.valueOf(7));
+        helper.assertValueEqual(unknown.enemy().toString(), "dungeon_defenders:legacy_unknown_7", "ordinal hors table");
+
+        Tag written = SpawnerBlockEntity.SpawnEntry.CODEC.encodeStart(NbtOps.INSTANCE, zombie).getOrThrow();
+        helper.assertTrue(written instanceof CompoundTag compound && compound.get("Enemy") instanceof StringTag,
+                "réécriture toujours au nouveau format (chaîne)");
+        helper.succeed();
+    }
+
+    /**
+     * Les deux JSON livrés reprennent exactement les valeurs d'avant la migration (contrainte
+     * "aucune valeur de gameplay ne change") : XP 10/15, mêlée pour le zombie, tir 3 dégâts /
+     * 20 ticks / 10 blocs pour le squelette.
+     */
+    static void enemyShippedValues(GameTestHelper helper) {
+        EnemyDefinition zombie = EnemyRegistry.byId(LegacyEnemyIds.ZOMBIE);
+        EnemyDefinition skeleton = EnemyRegistry.byId(LegacyEnemyIds.SKELETON);
+        helper.assertTrue(zombie != null && skeleton != null, "les deux JSON livrés sont chargés");
+
+        helper.assertValueEqual(zombie.entityType(), EntityType.ZOMBIE, "type du zombie");
+        helper.assertValueEqual(zombie.xpValue(), 10, "XP du zombie");
+        helper.assertValueEqual(zombie.behavior(), EnemyBehavior.MeleePriority.INSTANCE, "IA du zombie");
+
+        helper.assertValueEqual(skeleton.entityType(), EntityType.SKELETON, "type du squelette");
+        helper.assertValueEqual(skeleton.xpValue(), 15, "XP du squelette");
+        helper.assertValueEqual(skeleton.behavior(), new EnemyBehavior.RangedCrystal(3, 20, 10.0D), "IA du squelette");
+
+        helper.assertValueEqual(EnemyRegistry.xpValueFor(EntityType.HUSK), EnemyRegistry.DEFAULT_XP_VALUE, "XP d'un monstre sans JSON");
+        helper.succeed();
+    }
+
+    /**
+     * Un ennemi inconnu est exclu du total de vague : sinon la vague attendrait des monstres qui
+     * ne viendront jamais (le symptôme corrigé le 2026-09-12).
+     */
+    static void enemyUnknownExcludedFromWave(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pos = new BlockPos(1, 1, 1);
+        helper.setBlock(pos, ModBlocks.SPAWNER.get());
+        SpawnerBlockEntity spawner = helper.getBlockEntity(pos, SpawnerBlockEntity.class);
+
+        level.setData(ModAttachments.CURRENT_WAVE, 1);
+        spawner.applyConfig(20, 0, 1, 1, List.of(
+                new SpawnerBlockEntity.SpawnEntry(LegacyEnemyIds.ZOMBIE, 4),
+                new SpawnerBlockEntity.SpawnEntry(Identifier.fromNamespaceAndPath("pack_absent", "goblin"), 6)));
+
+        PhaseTransitions.recomputeWaveEnemiesTotal(level);
+        int expected = Math.max(1, (int) Math.round(4 * DifficultyScaling.getMultiplier(level)));
+        helper.assertValueEqual(level.getData(ModAttachments.WAVE_ENEMIES_TOTAL), expected, "total sans l'ennemi inconnu");
+        helper.succeed();
+    }
+
+    /** /dd_export réécrit les spawners à l'ancien format, et seulement eux. */
+    static void enemyExportConversion(GameTestHelper helper) {
+        CompoundTag legacyEntry = new CompoundTag();
+        legacyEntry.putInt("Enemy", 1);
+        CompoundTag modernEntry = new CompoundTag();
+        modernEntry.putString("Enemy", "dungeon_defenders:zombie");
+        ListTag entries = new ListTag();
+        entries.add(legacyEntry);
+        entries.add(modernEntry);
+
+        CompoundTag spawnerNbt = new CompoundTag();
+        spawnerNbt.putString("id", "dungeon_defenders:spawner");
+        spawnerNbt.put("Entries", entries);
+        CompoundTag block = new CompoundTag();
+        block.put("nbt", spawnerNbt);
+        ListTag blocks = new ListTag();
+        blocks.add(block);
+        CompoundTag structure = new CompoundTag();
+        structure.put("blocks", blocks);
+
+        int converted = LegacyEnemyIds.convertStructure(structure, message -> { });
+        helper.assertValueEqual(converted, 1, "une seule entrée à l'ancien format");
+        helper.assertValueEqual(legacyEntry.getString("Enemy").orElse(""), "dungeon_defenders:skeleton", "1 -> squelette");
+        helper.assertValueEqual(modernEntry.getString("Enemy").orElse(""), "dungeon_defenders:zombie", "nouveau format intact");
+        helper.succeed();
+    }
+
+    /**
+     * Les six JSON de tours livrés sont chargés et reprennent exactement les valeurs par défaut
+     * du code, c'est-à-dire celles d'avant la migration ("aucune valeur de gameplay ne change").
+     * Vérifie aussi qu'une tour posée lit bien ses chiffres par ce chemin.
+     */
+    static void towerShippedValues(GameTestHelper helper) {
+        for (TowerDefinition tower : TowerDefinition.values()) {
+            helper.assertTrue(TowerStatsRegistry.hasLoadedFile(tower), "JSON chargé pour " + tower.id());
+            helper.assertValueEqual(tower.stats(false), tower.defaultStats(), "stats de " + tower.id());
+        }
+
+        BlockPos pos = new BlockPos(1, 1, 1);
+        helper.setBlock(pos, ModBlocks.SPIKE_BLOCKADE.get());
+        AbstractTowerBlockEntity spike = helper.getBlockEntity(pos, AbstractTowerBlockEntity.class);
+        helper.assertValueEqual(spike.getMaxHealth(), 30, "PV max du Spike Blockade");
+        helper.assertValueEqual(spike.getHealth(), 30, "PV de départ du Spike Blockade");
+        helper.assertValueEqual(spike.getManaCost(), 30, "coût du Spike Blockade");
+        helper.succeed();
+    }
+
+    /**
+     * Un JSON de tour partiel garde les valeurs par défaut des stats absentes ; une stat
+     * inconnue, une stat que la tour n'utilise pas, une valeur non numérique, non entière ou
+     * sous son minimum sont refusées (la tour garde alors ses valeurs par défaut).
+     */
+    static void towerStatsValidation(GameTestHelper helper) {
+        TowerStats defaults = TowerDefinition.SPIKE_BLOCKADE.defaultStats();
+
+        TowerStats partial = TowerStats.parse(JsonParser.parseString("{\"mana_cost\": 45}"), defaults).getOrThrow();
+        helper.assertValueEqual(partial.intValue(TowerStat.MANA_COST), 45, "stat surchargée");
+        helper.assertValueEqual(partial.intValue(TowerStat.MAX_HEALTH), 30, "stat absente = défaut");
+
+        for (String invalid : List.of(
+                "{\"mana_cots\": 45}",          // faute de frappe
+                "{\"range\": 12}",              // stat de tourelle sur une blockade
+                "{\"mana_cost\": \"cher\"}",    // pas un nombre
+                "{\"max_health\": 12.5}",       // doit être entier
+                "{\"max_health\": 0}",          // sous le minimum
+                "[30, 30]")) {                  // pas un objet
+            helper.assertTrue(TowerStats.parse(JsonParser.parseString(invalid), defaults).isError(), "refusé : " + invalid);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Les JSON d'équilibrage livrés reprennent exactement les valeurs d'avant la migration, et
+     * le multiplicateur de difficulté qui en découle est inchangé (Normal, vague 3 : x1.2).
+     */
+    static void balanceShippedValues(GameTestHelper helper) {
+        for (BalanceValue value : BalanceValue.values()) {
+            helper.assertValueEqual(GameBalance.get(value, false), value.defaultValue(), "réglage " + value.networkName());
+        }
+        helper.assertValueEqual(GameDifficulty.EASY.multiplier(false), 0.75D, "Facile");
+        helper.assertValueEqual(GameDifficulty.NORMAL.multiplier(false), 1.0D, "Normal");
+        helper.assertValueEqual(GameDifficulty.HARD.multiplier(false), 1.5D, "Difficile");
+
+        ServerLevel level = helper.getLevel();
+        int previousWave = level.getData(ModAttachments.CURRENT_WAVE);
+        int previousDifficulty = level.getData(ModAttachments.DIFFICULTY);
+        level.setData(ModAttachments.CURRENT_WAVE, 3);
+        level.setData(ModAttachments.DIFFICULTY, GameDifficulty.NORMAL.ordinal());
+        helper.assertTrue(Math.abs(DifficultyScaling.getMultiplier(level) - 1.2D) < 1.0E-9D, "Normal, vague 3 : x1.2");
+        level.setData(ModAttachments.CURRENT_WAVE, previousWave);
+        level.setData(ModAttachments.DIFFICULTY, previousDifficulty);
+        helper.succeed();
+    }
+
+    /** Un fichier d'équilibrage est refusé en entier à la moindre clé ou valeur invalide. */
+    static void balanceValidation(GameTestHelper helper) {
+        Map<BalanceValue, Double> parsed = GameBalance.parseFile("difficulty",
+                JsonParser.parseString("{\"hard_multiplier\": 2.0}")).getOrThrow();
+        helper.assertValueEqual(parsed, Map.of(BalanceValue.DIFFICULTY_HARD_MULTIPLIER, 2.0D), "clé seule surchargée");
+
+        helper.assertTrue(GameBalance.parseFile("difficulty", JsonParser.parseString("{\"hard_multiplierr\": 2.0}")).isError(), "clé inconnue");
+        helper.assertTrue(GameBalance.parseFile("difficulty", JsonParser.parseString("{\"hard_multiplier\": 0}")).isError(), "sous le minimum");
+        helper.assertTrue(GameBalance.parseFile("progression", JsonParser.parseString("{\"xp_per_level\": 99.5}")).isError(), "doit être entier");
+        helper.assertTrue(GameBalance.parseFile("difficulte", JsonParser.parseString("{}")).isError(), "fichier inconnu");
+        helper.succeed();
+    }
+
+    private static SpawnerBlockEntity.SpawnEntry parseEntry(GameTestHelper helper, Tag enemy) {
+        CompoundTag tag = new CompoundTag();
+        tag.put("Enemy", enemy);
+        tag.putInt("BaseCount", 5);
+        tag.putInt("Spawned", 0);
+        tag.putInt("Accumulator", 0);
+        tag.putInt("EffectiveTotal", 5);
+        return SpawnerBlockEntity.SpawnEntry.CODEC.parse(NbtOps.INSTANCE, tag).getOrThrow();
     }
 }

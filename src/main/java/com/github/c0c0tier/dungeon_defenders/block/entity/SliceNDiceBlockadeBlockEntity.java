@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -13,14 +14,10 @@ import net.minecraft.world.level.block.state.BlockState;
 // continu plutôt que coups espacés) et un rayon légèrement plus large.
 public class SliceNDiceBlockadeBlockEntity extends AbstractBlockadeBlockEntity {
 
-    public static final int MAX_HEALTH = 35;
-    public static final int MANA_COST = 40;
-    private static final float CONTACT_DAMAGE = 1.0F;
-    private static final long CONTACT_DAMAGE_INTERVAL_TICKS = 5L;
-    private static final double CONTACT_RANGE = 1.5D;
-
+    // Chiffres (PV, coût, dégâts, cadence, rayon) : data-driven, voir
+    // data/dungeon_defenders/dungeon_defenders/tower/slice_n_dice_blockade.json et
+    // TowerDefinition.SLICE_N_DICE_BLOCKADE pour les valeurs par défaut.
     public SliceNDiceBlockadeBlockEntity(BlockPos pos, BlockState state) {
-        super(DungeonDefendersMod.SLICE_N_DICE_BLOCKADE_BE.get(), pos, state,
-                MAX_HEALTH, MANA_COST, true, CONTACT_DAMAGE, CONTACT_DAMAGE_INTERVAL_TICKS, CONTACT_RANGE, 0.0F);
+        super(DungeonDefendersMod.SLICE_N_DICE_BLOCKADE_BE.get(), pos, state, TowerDefinition.SLICE_N_DICE_BLOCKADE, true);
     }
 }

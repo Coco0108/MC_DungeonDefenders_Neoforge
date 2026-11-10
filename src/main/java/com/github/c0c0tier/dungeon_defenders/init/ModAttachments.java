@@ -22,6 +22,8 @@ public class ModAttachments {
 
     // Expérience custom maximale par défaut (rien à voir avec l'XP vanilla). Valeur
     // provisoire tant que la façon d'en gagner/monter de niveau n'est pas définie.
+    // N'est plus lue par le jeu depuis le 2026-11-10 : l'expérience par niveau est data-driven
+    // (BalanceValue.XP_PER_LEVEL, même valeur par défaut). Gardée comme référence du défaut.
     public static final int MAX_EXPERIENCE = 100;
 
     // Nombre de vagues par défaut. Valeur provisoire tant que le déroulement d'une partie

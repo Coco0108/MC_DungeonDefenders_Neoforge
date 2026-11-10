@@ -1,0 +1,6 @@
+{
+  "easy_multiplier": 0.75,
+  "normal_multiplier": 1.0,
+  "hard_multiplier": 1.5,
+  "per_wave_increase": 0.1
+}

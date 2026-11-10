@@ -1,5 +1,8 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
+import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStats;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -25,19 +28,32 @@ import net.minecraft.world.level.storage.ValueOutput;
 // détail des paliers).
 public abstract class AbstractTowerBlockEntity extends BlockEntity implements AiAttackTarget {
 
-    private final int maxHealth;
-    // Coût en mana à la pose, consommé par ModEvents.onTowerPlace (générique à toute la
-    // catégorie, pas seulement Blockade).
-    private final int manaCost;
+    // Quelle tour du catalogue est ce block entity : c'est par elle qu'il lit ses chiffres
+    // (PV max, coût, dégâts, portée...), data-driven depuis le 2026-11-10 — voir
+    // init/TowerStatsRegistry. Jamais recopiés dans des champs : un /reload s'applique ainsi aux
+    // tours déjà posées, sans les reposer.
+    private final TowerDefinition definition;
 
     private int health;
 
     protected AbstractTowerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state,
-            int maxHealth, int manaCost) {
+            TowerDefinition definition) {
         super(type, pos, state);
-        this.maxHealth = maxHealth;
-        this.manaCost = manaCost;
-        this.health = maxHealth;
+        this.definition = definition;
+        this.health = getMaxHealth();
+    }
+
+    public TowerDefinition definition() {
+        return this.definition;
+    }
+
+    /**
+     * Les chiffres en vigueur pour cette tour, du bon côté : la copie client si ce block entity
+     * vit dans un monde client, celle du serveur sinon (y compris avant d'avoir une Level, le
+     * temps de sa construction).
+     */
+    protected TowerStats stats() {
+        return this.definition.stats(this.level != null && this.level.isClientSide());
     }
 
     public int getHealth() {
@@ -45,11 +61,12 @@ public abstract class AbstractTowerBlockEntity extends BlockEntity implements Ai
     }
 
     public int getMaxHealth() {
-        return this.maxHealth;
+        return stats().intValue(TowerStat.MAX_HEALTH);
     }
 
+    /** Coût en mana à la pose, consommé par ModEvents.onTowerPlace (générique à toute catégorie). */
     public int getManaCost() {
-        return this.manaCost;
+        return stats().intValue(TowerStat.MANA_COST);
     }
 
     @Override
@@ -106,6 +123,6 @@ public abstract class AbstractTowerBlockEntity extends BlockEntity implements Ai
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        this.health = input.getIntOr("Health", this.maxHealth);
+        this.health = input.getIntOr("Health", getMaxHealth());
     }
 }

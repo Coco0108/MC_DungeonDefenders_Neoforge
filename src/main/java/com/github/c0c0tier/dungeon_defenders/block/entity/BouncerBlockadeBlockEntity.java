@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -19,25 +20,18 @@ import net.minecraft.world.level.block.state.BlockState;
 // l'intensité d'une seule poussée, pas sa fréquence.
 public class BouncerBlockadeBlockEntity extends AbstractBlockadeBlockEntity {
 
-    public static final int MAX_HEALTH = 25;
-    // Valeur de test, pas encore équilibrée, comme le reste des coûts de pose du mod — moins
-    // cher que Spike Blockade (30) puisque l'essentiel de son intérêt n'est pas les dégâts.
-    public static final int MANA_COST = 25;
-    private static final float CONTACT_DAMAGE = 1.0F;
-    // La "vitesse d'attaque" du Bouncer : un monstre au contact ne peut être endommagé/repoussé
-    // qu'une fois par intervalle, pas en continu — voir le commentaire de classe ci-dessus.
-    private static final long CONTACT_DAMAGE_INTERVAL_TICKS = 10L;
-    private static final double CONTACT_RANGE = 1.0D;
-    // 0.8F testé en jeu (2026-08-29) : quasi imperceptible — mais le sens du vecteur était
-    // inversé à ce moment-là (les monstres étaient attirés, pas repoussés, voir
-    // AbstractBlockadeBlockEntity), donc cette impression n'était pas fiable. Remonté à 1.6F
-    // dans la foulée, sens corrigé ensuite : une fois la repousse effectivement fonctionnelle
-    // dans le bon sens, 1.6F s'est avéré trop fort — remis à 0.8F, sa valeur d'origine.
-    private static final float KNOCKBACK_STRENGTH = 0.8F;
-
+    // Chiffres (PV, coût, dégâts, cadence, rayon) : data-driven, voir
+    // data/dungeon_defenders/dungeon_defenders/tower/bouncer_blockade.json et
+    // TowerDefinition.BOUNCER_BLOCKADE pour les valeurs par défaut.
+    //
+    // contact_interval_ticks (10) est la "vitesse d'attaque" du Bouncer : un monstre au contact ne
+    // peut être endommagé/repoussé qu'une fois par intervalle, pas en continu.
+    //
+    // knockback_strength (0.8) : testé en jeu le 2026-08-29. Jugé quasi imperceptible alors que
+    // le sens du vecteur était inversé (les monstres étaient attirés, voir
+    // AbstractBlockadeBlockEntity) ; remonté à 1.6 puis, le sens corrigé, 1.6 s'est avéré trop
+    // fort — remis à 0.8, sa valeur d'origine.
     public BouncerBlockadeBlockEntity(BlockPos pos, BlockState state) {
-        super(DungeonDefendersMod.BOUNCER_BLOCKADE_BE.get(), pos, state,
-                MAX_HEALTH, MANA_COST, true, CONTACT_DAMAGE, CONTACT_DAMAGE_INTERVAL_TICKS, CONTACT_RANGE,
-                KNOCKBACK_STRENGTH);
+        super(DungeonDefendersMod.BOUNCER_BLOCKADE_BE.get(), pos, state, TowerDefinition.BOUNCER_BLOCKADE, true);
     }
 }
