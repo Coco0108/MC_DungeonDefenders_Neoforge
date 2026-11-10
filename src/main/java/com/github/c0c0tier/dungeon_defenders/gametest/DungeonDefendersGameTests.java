@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.gametest;
 
+import com.github.c0c0tier.dungeon_defenders.CombatCountdown;
 import com.github.c0c0tier.dungeon_defenders.Config;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.WorldTime;
@@ -22,6 +23,8 @@ import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
+import com.github.c0c0tier.dungeon_defenders.init.ScoreKeeper;
+import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
 import com.github.c0c0tier.dungeon_defenders.init.TowerStats;
@@ -51,6 +54,7 @@ import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.function.Consumer;
 
@@ -101,6 +105,8 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "enemy_export_conversion", DungeonDefendersGameTests::enemyExportConversion);
         register(event, environment, "mana_chest_respawn", DungeonDefendersGameTests::manaChestRespawn);
         register(event, environment, "world_time_frozen", DungeonDefendersGameTests::worldTimeFrozen);
+        register(event, environment, "score_bonuses", DungeonDefendersGameTests::scoreBonuses);
+        register(event, environment, "combat_countdown", DungeonDefendersGameTests::combatCountdown);
         // Stats des tours en data-driven (doc/data-driven/tours.md).
         register(event, environment, "tower_shipped_values", DungeonDefendersGameTests::towerShippedValues);
         register(event, environment, "tower_stats_validation", DungeonDefendersGameTests::towerStatsValidation);
@@ -384,6 +390,67 @@ public final class DungeonDefendersGameTests {
                 MapDefinition.DEFAULT_TIME_OF_DAY, "heure invalide = pas d'heure propre");
         helper.assertValueEqual(MapConfigBlockEntity.toDefinition(mapId, new CompoundTag(), false).timeOfDay(),
                 MapDefinition.DEFAULT_TIME_OF_DAY, "map d'avant = pas d'heure propre");
+        helper.succeed();
+    }
+
+    /**
+     * Bonus de fin de vague et ses multiplicateurs "aucun dégât" (valeurs livrées : 50, x1.5,
+     * x1.5), multiplicateur de difficulté et multiplicateur de la map sur tout gain de score.
+     */
+    static void scoreBonuses(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int previousScore = level.getData(ModAttachments.SCORE);
+        int previousDifficulty = level.getData(ModAttachments.DIFFICULTY);
+        float previousMapMultiplier = level.getData(ModAttachments.MAP_SCORE_MULTIPLIER);
+        level.setData(ModAttachments.DIFFICULTY, GameDifficulty.NORMAL.ordinal());
+        level.setData(ModAttachments.MAP_SCORE_MULTIPLIER, 1.0F);
+
+        // Vague parfaite : 50, +25 (aucun dégât subi), +37.5 arrondi à 38 (cristal intact).
+        level.setData(ModAttachments.SCORE, 0);
+        level.setData(ModAttachments.WAVE_PLAYER_DAMAGED, false);
+        level.setData(ModAttachments.WAVE_CRYSTAL_DAMAGED, false);
+        ScoreKeeper.awardWaveCleared(level);
+        helper.assertValueEqual(level.getData(ModAttachments.SCORE), 113, "vague parfaite");
+
+        // Joueur blessé, cristal intact : 50 + 25.
+        level.setData(ModAttachments.SCORE, 0);
+        level.setData(ModAttachments.WAVE_PLAYER_DAMAGED, true);
+        ScoreKeeper.awardWaveCleared(level);
+        helper.assertValueEqual(level.getData(ModAttachments.SCORE), 75, "joueur blessé, cristal intact");
+
+        // Les deux touchés : le bonus de base seul.
+        level.setData(ModAttachments.SCORE, 0);
+        level.setData(ModAttachments.WAVE_CRYSTAL_DAMAGED, true);
+        ScoreKeeper.awardWaveCleared(level);
+        helper.assertValueEqual(level.getData(ModAttachments.SCORE), 50, "aucun multiplicateur");
+
+        // Un kill à 10 : inchangé en Normal, x1.5 en Difficile, puis x2 par la map.
+        level.setData(ModAttachments.SCORE, 0);
+        helper.assertValueEqual(ScoreKeeper.grant(level, 10, ScoreSource.MONSTER_KILLED, Optional.empty()), 10, "kill en Normal");
+        level.setData(ModAttachments.DIFFICULTY, GameDifficulty.HARD.ordinal());
+        helper.assertValueEqual(ScoreKeeper.grant(level, 10, ScoreSource.MONSTER_KILLED, Optional.empty()), 15, "kill en Difficile");
+        level.setData(ModAttachments.MAP_SCORE_MULTIPLIER, 2.0F);
+        helper.assertValueEqual(ScoreKeeper.grant(level, 10, ScoreSource.MONSTER_KILLED, Optional.empty()), 30, "kill en Difficile, map x2");
+
+        level.setData(ModAttachments.SCORE, previousScore);
+        level.setData(ModAttachments.DIFFICULTY, previousDifficulty);
+        level.setData(ModAttachments.MAP_SCORE_MULTIPLIER, previousMapMultiplier);
+        level.setData(ModAttachments.WAVE_PLAYER_DAMAGED, false);
+        level.setData(ModAttachments.WAVE_CRYSTAL_DAMAGED, false);
+        helper.succeed();
+    }
+
+    /** Le vote unanime lance un décompte (3 s livrées = 60 ticks) qu'un vote retiré annule. */
+    static void combatCountdown(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        helper.assertValueEqual(GameBalance.getInt(BalanceValue.COMBAT_COUNTDOWN_SECONDS, false), 3, "durée livrée");
+
+        CombatCountdown.start(level);
+        helper.assertValueEqual(level.getData(ModAttachments.COMBAT_COUNTDOWN), 60, "décompte lancé");
+        helper.assertTrue(CombatCountdown.isRunning(level), "décompte en cours");
+
+        CombatCountdown.cancel(level);
+        helper.assertValueEqual(level.getData(ModAttachments.COMBAT_COUNTDOWN), 0, "décompte annulé");
         helper.succeed();
     }
 

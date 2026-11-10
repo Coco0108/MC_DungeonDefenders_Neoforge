@@ -246,6 +246,42 @@ public class ModAttachments {
                     .sync(ByteBufCodecs.BOOL)
                     .build());
 
+    // Suivi "aucun dégât" de la vague en cours, pour les multiplicateurs du bonus de fin de vague
+    // (ScoreKeeper#awardWaveCleared) : remis à faux à chaque début de Combat
+    // (PhaseTransitions#enterCombat), mis à vrai par le premier dégât reçu par un joueur
+    // (ModEvents#onPlayerDamaged) ou par le Cristal d'Eternia (EterniaCrystalBlockEntity#damage).
+    // Persistants (une sauvegarde en plein combat ne doit pas offrir une vague "parfaite"), jamais
+    // synchronisés : comptabilité serveur.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> WAVE_PLAYER_DAMAGED = ATTACHMENT_TYPES.register(
+            "wave_player_damaged",
+            () -> AttachmentType.builder(() -> Boolean.FALSE)
+                    .serialize(Codec.BOOL.fieldOf("WavePlayerDamaged"))
+                    .build());
+
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> WAVE_CRYSTAL_DAMAGED = ATTACHMENT_TYPES.register(
+            "wave_crystal_damaged",
+            () -> AttachmentType.builder(() -> Boolean.FALSE)
+                    .serialize(Codec.BOOL.fieldOf("WaveCrystalDamaged"))
+                    .build());
+
+    // Multiplicateur de score de la map en cours (champ du bloc de configuration, voir
+    // MapDefinition#scoreMultiplier), posé par MapInstance#startGame ; x1 à la taverne. Lu par
+    // ScoreKeeper, côté serveur uniquement.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Float>> MAP_SCORE_MULTIPLIER = ATTACHMENT_TYPES.register(
+            "map_score_multiplier",
+            () -> AttachmentType.builder(() -> 1.0F)
+                    .serialize(Codec.FLOAT.fieldOf("MapScoreMultiplier"))
+                    .build());
+
+    // Ticks restants avant le début du Combat (voir CombatCountdown), 0 = aucun décompte en
+    // cours. Synchronisé pour l'affichage (CombatCountdownOverlay), pas persistant : un monde
+    // rechargé repart de toute façon de la taverne.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> COMBAT_COUNTDOWN = ATTACHMENT_TYPES.register(
+            "combat_countdown",
+            () -> AttachmentType.builder(() -> 0)
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
     /**
      * Nombre de vagues de la partie en cours — celui de la map jouée, ou {@link #MAX_WAVE} par
      * défaut. À préférer à MAX_WAVE partout où il s'agit de "la dernière vague de CETTE partie".

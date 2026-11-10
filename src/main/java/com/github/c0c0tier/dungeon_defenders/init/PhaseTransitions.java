@@ -36,6 +36,10 @@ public final class PhaseTransitions {
         level.setData(ModAttachments.WAVE_ENEMIES_KILLED, 0);
         level.syncData(ModAttachments.WAVE_ENEMIES_KILLED);
 
+        // Nouvelle vague : le suivi "aucun dégât" repart de zéro (voir ScoreKeeper).
+        level.setData(ModAttachments.WAVE_PLAYER_DAMAGED, false);
+        level.setData(ModAttachments.WAVE_CRYSTAL_DAMAGED, false);
+
         for (Player player : level.players()) {
             player.setData(ModAttachments.READY, false);
             player.syncData(ModAttachments.READY);
@@ -76,9 +80,12 @@ public final class PhaseTransitions {
      * boutons "Rejouer"/"Retour à la taverne") — voir doc/02-gameplay.md.
      */
     public static void onVictory(Level level) {
+        ScoreKeeper.awardMapCompleted(level);
+        // Relevé AVANT la remise à zéro : c'est le score final affiché par GameOverScreen.
+        int finalScore = level.getData(ModAttachments.SCORE);
         resetGameState(level, GamePhase.BUILD);
         for (Player player : level.players()) {
-            sendGameOverScreen(player, true);
+            sendGameOverScreen(player, true, finalScore);
         }
     }
 
@@ -89,9 +96,10 @@ public final class PhaseTransitions {
      * lui-même n'est pas replacé automatiquement — même remarque que pour {@link #onVictory}.
      */
     public static void onDefeat(Level level) {
+        int finalScore = level.getData(ModAttachments.SCORE);
         resetGameState(level, GamePhase.BUILD);
         for (Player player : level.players()) {
-            sendGameOverScreen(player, false);
+            sendGameOverScreen(player, false, finalScore);
         }
     }
 
@@ -109,6 +117,7 @@ public final class PhaseTransitions {
         // valeur héritée de la partie précédente n'aurait aucun sens dans le HUD.
         level.setData(ModAttachments.MAP_WAVE_COUNT, ModAttachments.MAX_WAVE);
         level.syncData(ModAttachments.MAP_WAVE_COUNT);
+        level.setData(ModAttachments.MAP_SCORE_MULTIPLIER, 1.0F);
         resetGameState(level, GamePhase.TAVERN);
     }
 
@@ -132,9 +141,9 @@ public final class PhaseTransitions {
     // logique serveur) : le cast est donc toujours valide en pratique, gardé quand même par
     // sécurité plutôt que supposé, même principe que les `instanceof ServerLevel` ailleurs
     // dans le mod.
-    private static void sendGameOverScreen(Player player, boolean victory) {
+    private static void sendGameOverScreen(Player player, boolean victory, int finalScore) {
         if (player instanceof ServerPlayer serverPlayer) {
-            serverPlayer.connection.send(new GameOverPayload(victory).toVanillaClientbound());
+            serverPlayer.connection.send(new GameOverPayload(victory, finalScore).toVanillaClientbound());
         }
     }
 
@@ -154,6 +163,10 @@ public final class PhaseTransitions {
         // d'une carte — pas touchés ici.
         level.setData(ModAttachments.SCORE, 0);
         level.syncData(ModAttachments.SCORE);
+
+        // Un décompte en cours n'a plus de sens après une remise à zéro (abandon, défaite...).
+        level.setData(ModAttachments.COMBAT_COUNTDOWN, 0);
+        level.syncData(ModAttachments.COMBAT_COUNTDOWN);
 
         recomputeWaveEnemiesTotal(level);
         ManaChestBlock.respawnAll(level);

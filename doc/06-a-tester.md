@@ -1122,6 +1122,27 @@ Avec le même datapack :
 - [ ] Aucune exception liée à `EnemyRegistry`, `EnemyDefinitionsPayload`,
       `ClientEnemyDefinitions` ou `SpawnerBlockEntity` dans le log.
 
+## Bonus de score, score final et compte à rebours (2026-11-10)
+
+Voir [02-gameplay.md](02-gameplay.md#bonus-et-multiplicateurs-de-score--initscorekeeperjava).
+Calculs vérifiés par gametests ; l'affichage n'a **jamais été vu en jeu**.
+
+- [ ] En Construction, cliquer sur le cristal (seul) : « Combat dans 3... » s'affiche au-dessus
+      du viseur, descend à 2 puis 1, puis le Combat démarre.
+- [ ] À deux joueurs : pendant le décompte, un joueur reclique sur le cristal (retire son vote).
+      Le décompte **s'annule**.
+- [ ] Finir une vague sans être touché et sans que le cristal le soit : trois popups de score,
+      « +50 Vague terminée », « +25 Aucun dégât subi », « +38 Cristal intact » (en Normal).
+- [ ] Se faire toucher pendant la vague suivante : plus de popup « Aucun dégât subi ». Laisser
+      un monstre toucher le cristal : plus de popup « Cristal intact ».
+- [ ] Gagner la map : popup « +200 Map terminée », puis l'écran de fin affiche **« Score : N »**
+      avec le total de la partie (pas 0). Pareil après une défaite, sans le bonus.
+- [ ] En Difficile, un zombie rapporte **15** de score au lieu de 10 (l'expérience reste à 10).
+- [ ] Sur une map dont le bloc de configuration a un multiplicateur de score de 2 : tous les
+      gains sont doublés.
+- [ ] Datapack : `balance/pacing.json` avec `{ "combat_countdown_seconds": 0 }`, `/reload` : le
+      Combat démarre dès le dernier vote, comme avant.
+
 ## Inspecter une tour posée et description dans la roue (2026-11-10)
 
 Tout est du rendu client, donc **rien n'a pu être vérifié hors jeu** au-delà de la compilation.

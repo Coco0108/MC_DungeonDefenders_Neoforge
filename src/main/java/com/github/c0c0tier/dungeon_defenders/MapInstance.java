@@ -72,6 +72,9 @@ public final class MapInstance {
 
         // Mémorisée pour le bouton "Rejouer" de l'écran de fin de partie, qui doit relancer LA
         // MÊME map alors que l'écran de choix est fermé depuis longtemps côté client.
+        // Multiplicateur de score propre à la map (bloc de configuration), lu par ScoreKeeper.
+        level.setData(ModAttachments.MAP_SCORE_MULTIPLIER,
+                map != null ? map.scoreMultiplier() : MapDefinition.DEFAULT_SCORE_MULTIPLIER);
         level.setData(ModAttachments.CURRENT_MAP, map != null ? map.structureId().toString() : "");
         level.syncData(ModAttachments.CURRENT_MAP);
 

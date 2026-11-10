@@ -71,6 +71,11 @@ public class EterniaCrystalBlockEntity extends BlockEntity implements AiAttackTa
     /** Retire {@code amount} PV au cristal. */
     @Override
     public void damage(int amount) {
+        // Le cristal a été touché pendant cette vague : plus de multiplicateur "cristal intact"
+        // sur le bonus de fin de vague (voir ScoreKeeper).
+        if (amount > 0 && this.level != null && !this.level.isClientSide()) {
+            this.level.setData(ModAttachments.WAVE_CRYSTAL_DAMAGED, true);
+        }
         this.setCrystalHealth(this.crystalHealth - amount);
     }
 

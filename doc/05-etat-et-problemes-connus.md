@@ -669,6 +669,15 @@ vérifie la CI.
       lieu de la supprimer ;
     - un `/reload` recalcule le total de vague des niveaux qui ont des spawners ;
     - le registre des spawners actifs a été corrigé (voir la ligne suivante).
+- ✅ **Bonus et multiplicateurs de score, score final, compte à rebours** (2026-11-10) : bonus
+  de fin de vague et de fin de map, multiplicateurs « aucun dégât subi » et « cristal intact »,
+  multiplicateur de difficulté, et le multiplicateur de score de la map (qui existait dans le
+  bloc de configuration sans être lu). Score final affiché sur l'écran de fin. Compte à rebours
+  de 3 s entre le vote « prêt » et le Combat. Toutes les valeurs dans `balance/score.json` et
+  `balance/pacing.json`. Voir
+  [02-gameplay.md](02-gameplay.md#bonus-et-multiplicateurs-de-score--initscorekeeperjava).
+  Gametests `score_bonuses` et `combat_countdown`. **Jamais vu en jeu.** Reste de la feuille de
+  route : le multiplicateur « aucune tour détruite ».
 - ✅ **Inspection d'une tour posée + description dans la roue** (2026-11-10, issues #13, #15,
   #16) : regarder une tour affiche sa portée au sol, sa barre de vie même pleine, son nom et ses
   PV sous le viseur ; la roue affiche une phrase de description par tour. Voir
