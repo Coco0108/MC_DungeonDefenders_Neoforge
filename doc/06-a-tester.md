@@ -1326,6 +1326,28 @@ Vérifié hors jeu par simulation (BFS), pas seulement par relecture des coordon
 - [ ] Rouvrir l'écran du spawner après validation, puis après un redémarrage du monde : le pas
       saisi est conservé.
 
+## Aperçu de map capturé en jeu (2026-11-16)
+
+Code de rendu écrit sans pouvoir le voir tourner : c'est le point le plus susceptible de
+mal se passer. En cas de plantage, le log du client est ce qu'il me faut.
+
+- [ ] En créatif, clic droit sur le cristal de la taverne : un bouton « Prendre l'aperçu »
+      sous « Supprimer ». Grisé sur une map livrée avec le mod, actif sur une map créée en jeu.
+      Absent en survie.
+- [ ] Cliquer dessus : l'écran se ferme et un rappel « Aperçu de … : cadrez puis appuyez sur
+      F9 » reste affiché au-dessus de la hotbar.
+- [ ] F9 accroupi : « Capture d'aperçu annulée », le rappel disparaît.
+- [ ] Réarmer, cadrer, F9 : le HUD disparaît un court instant puis revient, message « Aperçu
+      enregistré pour … ».
+- [ ] Rouvrir l'écran de choix : l'image de la map est la capture, **sans** HUD ni main
+      dessus, à l'endroit, pas étirée (recadrée au centre si la fenêtre n'est pas en 16:9).
+- [ ] Le fichier existe : `<monde>/dungeon_defenders/previews/<namespace>/<id>.png`, 128×72.
+- [ ] Redémarrer le monde et rouvrir l'écran : l'aperçu est toujours là.
+- [ ] `/dd_export <namespace>` annonce 1 aperçu, et le jar contient
+      `assets/<namespace>/textures/gui/maps/<id>.png`.
+- [ ] À deux joueurs : le second voit l'aperçu en ouvrant l'écran de choix.
+- [ ] Si le HUD restait masqué après une capture : F1 le rétablit, et me le signaler.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

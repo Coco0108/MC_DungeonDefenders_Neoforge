@@ -21,6 +21,7 @@ import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.LegacyEnemyIds;
 import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.MapPreviews;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
@@ -109,6 +110,7 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "enemy_unknown_excluded_from_wave", DungeonDefendersGameTests::enemyUnknownExcludedFromWave);
         register(event, environment, "enemy_export_conversion", DungeonDefendersGameTests::enemyExportConversion);
         register(event, environment, "spawner_wave_step", DungeonDefendersGameTests::spawnerWaveStep);
+        register(event, environment, "map_preview_storage", DungeonDefendersGameTests::mapPreviewStorage);
         register(event, environment, "enemy_variants", DungeonDefendersGameTests::enemyVariants);
         register(event, environment, "mana_chest_respawn", DungeonDefendersGameTests::manaChestRespawn);
         register(event, environment, "world_time_frozen", DungeonDefendersGameTests::worldTimeFrozen);
@@ -262,6 +264,38 @@ public final class DungeonDefendersGameTests {
         for (int wave = 1; wave <= 6; wave++) {
             helper.assertValueEqual(spawner.isActiveOnWave(wave), wave >= 2 && wave <= 5, "vague " + wave + " avec un pas de 1");
         }
+        helper.succeed();
+    }
+
+    /**
+     * Rangement des aperçus de map côté serveur : une image valide fait l'aller-retour, tout le
+     * reste est refusé (mauvaise signature, trop lourde, identifiant qui n'est pas une map ou
+     * qui sortirait du dossier des aperçus).
+     */
+    static void mapPreviewStorage(GameTestHelper helper) {
+        net.minecraft.server.MinecraftServer server = helper.getLevel().getServer();
+        byte[] png = new byte[64];
+        byte[] signature = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
+        System.arraycopy(signature, 0, png, 0, signature.length);
+
+        Identifier map = Identifier.fromNamespaceAndPath("gametest_pack", "map/apercu_de_test");
+        helper.assertTrue(MapPreviews.load(server, map).isEmpty(), "aucun aperçu avant l'enregistrement");
+        helper.assertTrue(MapPreviews.save(server, map, png), "image valide acceptée");
+        helper.assertTrue(java.util.Arrays.equals(MapPreviews.load(server, map).orElse(null), png), "aller-retour identique");
+        try {
+            java.nio.file.Files.deleteIfExists(MapPreviews.file(server, map).orElseThrow());
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(e);
+        }
+
+        helper.assertFalse(MapPreviews.save(server, map, new byte[64]), "signature PNG absente");
+        byte[] tooLarge = new byte[MapPreviews.MAX_BYTES + 1];
+        System.arraycopy(signature, 0, tooLarge, 0, signature.length);
+        helper.assertFalse(MapPreviews.save(server, map, tooLarge), "image trop lourde");
+        helper.assertFalse(MapPreviews.save(server, Identifier.fromNamespaceAndPath("gametest_pack", "taverne"), png),
+                "identifiant qui n'est pas une map");
+        helper.assertTrue(MapPreviews.file(server, Identifier.fromNamespaceAndPath("gametest_pack", "map/../../../evasion")).isEmpty(),
+                "chemin sortant du dossier des aperçus");
         helper.succeed();
     }
 

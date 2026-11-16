@@ -1,5 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.client.gui.screen;
 
+import com.github.c0c0tier.dungeon_defenders.client.ClientMapPreviews;
+import com.github.c0c0tier.dungeon_defenders.client.MapPreviewCapture;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -62,6 +64,7 @@ public class MapSelectionScreen extends Screen {
     private final List<Button> packButtons = new ArrayList<>();
 
     private Button deleteButton;
+    private Button previewButton;
 
     private int selectedPackIndex;
     private int selectedMapIndex;
@@ -151,8 +154,27 @@ public class MapSelectionScreen extends Screen {
                             button -> confirmDelete())
                     .bounds(centerX - PLAY_BUTTON_WIDTH / 2, playY + PLAY_BUTTON_HEIGHT + 4, PLAY_BUTTON_WIDTH, PLAY_BUTTON_HEIGHT)
                     .build());
+            // Même condition que la suppression : seule une map créée en jeu peut recevoir un
+            // aperçu capturé, celle d'un jar embarque déjà le sien.
+            this.previewButton = this.addRenderableWidget(Button.builder(
+                            Component.translatable("dungeon_defenders.map_selection.take_preview"),
+                            button -> armPreviewCapture())
+                    .bounds(centerX - PLAY_BUTTON_WIDTH / 2, playY + 2 * (PLAY_BUTTON_HEIGHT + 4), PLAY_BUTTON_WIDTH, PLAY_BUTTON_HEIGHT)
+                    .build());
             updateDeleteButton();
         }
+    }
+
+    // Arme la capture pour la map affichée et ferme l'écran : le mappeur va se placer, cadrer,
+    // puis appuyer sur la touche de capture (voir MapPreviewCapture).
+    private void armPreviewCapture() {
+        List<MapDefinition> maps = currentPackMaps();
+        if (maps.isEmpty()) {
+            return;
+        }
+        MapDefinition map = currentMap();
+        MapPreviewCapture.arm(map.structureId(), map.mapDisplayName());
+        this.onClose();
     }
 
     private static boolean isCreative() {
@@ -168,6 +190,10 @@ public class MapSelectionScreen extends Screen {
         if (this.deleteButton != null) {
             List<MapDefinition> maps = currentPackMaps();
             this.deleteButton.active = !maps.isEmpty() && currentMap().isDeletable();
+        }
+        if (this.previewButton != null) {
+            List<MapDefinition> maps = currentPackMaps();
+            this.previewButton.active = !maps.isEmpty() && currentMap().fromWorld();
         }
     }
 
@@ -312,7 +338,7 @@ public class MapSelectionScreen extends Screen {
         }
 
         MapDefinition currentMap = currentMap();
-        guiGraphics.blit(currentMap.previewTexture(), this.imageX, this.imageY, IMAGE_WIDTH, IMAGE_HEIGHT, 0.0F, 0.0F, 1.0F, 1.0F);
+        guiGraphics.blit(ClientMapPreviews.textureFor(currentMap), this.imageX, this.imageY, IMAGE_WIDTH, IMAGE_HEIGHT, 0.0F, 0.0F, 1.0F, 1.0F);
         guiGraphics.centeredText(this.font, currentMap.mapDisplayName(),
                 this.imageX + IMAGE_WIDTH / 2, this.imageY + IMAGE_HEIGHT + 8, TEXT_COLOR);
         // Position dans le pack : sans ça, rien n'indique qu'il y a d'autres maps derrière les
