@@ -16,7 +16,11 @@ import com.github.c0c0tier.dungeon_defenders.entity.Corrosion;
 import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import com.github.c0c0tier.dungeon_defenders.block.entity.BoulderThrowerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.CrystalSpireBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.GeyserBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.IronBarricadeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MudTotemBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.MagnetCoilBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.PistonSlammerBlockEntity;
@@ -139,6 +143,7 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "alchemist_support_towers", DungeonDefendersGameTests::alchemistSupportTowers);
         register(event, environment, "alchemist_damage_towers", DungeonDefendersGameTests::alchemistDamageTowers);
         register(event, environment, "engineer_towers", DungeonDefendersGameTests::engineerTowers);
+        register(event, environment, "geomancer_towers", DungeonDefendersGameTests::geomancerTowers);
         // Réglages globaux en data-driven (doc/data-driven/equilibrage.md).
         register(event, environment, "balance_shipped_values", DungeonDefendersGameTests::balanceShippedValues);
         register(event, environment, "balance_validation", DungeonDefendersGameTests::balanceValidation);
@@ -803,6 +808,73 @@ public final class DungeonDefendersGameTests {
         helper.assertTrue(slammed.getHealth() < slammed.getMaxHealth(), "monstre blessé par le Marteau-pilon");
         helper.assertTrue(slammed.getDeltaMovement().z < 0.0D, "monstre repoussé loin du Marteau-pilon");
         slammed.discard();
+        helper.succeed();
+    }
+
+    /**
+     * Tours du Géomancien : la Haie de ronces blesse son voisin quand elle encaisse un coup ; le
+     * Totem de boue enlise ; le Geyser blesse et projette en l'air ; le Lance-rochers choisit le
+     * monstre le plus costaud, pas le plus proche ; l'éclair de la Flèche de cristal rebondit
+     * avec des dégâts décroissants et n'atteint pas un monstre trop éloigné. La Pierre de vie
+     * (soin des joueurs) n'est pas couverte ici : il faut un vrai joueur.
+     */
+    static void geomancerTowers(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+
+        BlockPos hedgePos = new BlockPos(1, 1, 1);
+        helper.setBlock(hedgePos, ModBlocks.THORN_HEDGE.get());
+        Zombie attacker = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(1, 1, 2));
+        helper.assertValueEqual(attacker.getHealth(), attacker.getMaxHealth(), "la haie ne pique pas d'elle-même");
+        helper.getBlockEntity(hedgePos, AbstractTowerBlockEntity.class).damage(5);
+        helper.assertTrue(attacker.getHealth() < attacker.getMaxHealth(), "la haie rend le coup");
+        attacker.discard();
+
+        BlockPos totemPos = new BlockPos(1, 1, 5);
+        helper.setBlock(totemPos, ModBlocks.MUD_TOTEM.get());
+        Zombie rooted = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(3, 1, 5));
+        helper.getBlockEntity(totemPos, MudTotemBlockEntity.class).serverTick(level);
+        MobEffectInstance root = rooted.getEffect(MobEffects.SLOWNESS);
+        helper.assertTrue(root != null && root.getAmplifier() == 6, "monstre enlisé par le Totem de boue");
+        rooted.discard();
+
+        BlockPos geyserPos = new BlockPos(6, 1, 1);
+        helper.setBlock(geyserPos, ModBlocks.GEYSER.get());
+        Zombie launched = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(6, 1, 3));
+        helper.getBlockEntity(geyserPos, GeyserBlockEntity.class).serverTick(level);
+        helper.assertTrue(launched.getHealth() < launched.getMaxHealth(), "monstre blessé par le Geyser");
+        helper.assertTrue(launched.getDeltaMovement().y > 0.5D, "monstre projeté en l'air");
+        launched.discard();
+
+        // Le monstre proche est affaibli, le lointain est intact : c'est le lointain qui est visé.
+        BlockPos throwerPos = new BlockPos(10, 1, 1);
+        helper.setBlock(throwerPos, ModBlocks.BOULDER_THROWER.get());
+        Zombie weakNear = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(10, 1, 3));
+        Zombie toughFar = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(10, 1, 8));
+        weakNear.setHealth(8.0F);
+        helper.getBlockEntity(throwerPos, BoulderThrowerBlockEntity.class).serverTick(level);
+        helper.assertValueEqual(weakNear.getHealth(), 8.0F, "le monstre affaibli n'est pas visé");
+        helper.assertTrue(toughFar.getHealth() < toughFar.getMaxHealth(), "le monstre le plus costaud est visé");
+        weakNear.discard();
+        toughFar.discard();
+
+        // Trois monstres à 3 blocs d'intervalle (rebond de 4), un quatrième 9 blocs plus loin.
+        BlockPos spirePos = new BlockPos(14, 1, 1);
+        helper.setBlock(spirePos, ModBlocks.CRYSTAL_SPIRE.get());
+        Zombie first = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(14, 1, 4));
+        Zombie second = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(14, 1, 7));
+        Zombie third = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(14, 1, 10));
+        Zombie tooFar = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(14, 1, 19));
+        helper.getBlockEntity(spirePos, CrystalSpireBlockEntity.class).serverTick(level);
+        float firstLoss = first.getMaxHealth() - first.getHealth();
+        float secondLoss = second.getMaxHealth() - second.getHealth();
+        float thirdLoss = third.getMaxHealth() - third.getHealth();
+        helper.assertTrue(firstLoss > secondLoss && secondLoss > thirdLoss && thirdLoss > 0.0F,
+                "dégâts décroissants à chaque rebond : " + firstLoss + ", " + secondLoss + ", " + thirdLoss);
+        helper.assertValueEqual(tooFar.getHealth(), tooFar.getMaxHealth(), "pas de rebond au-delà de la distance de saut");
+        first.discard();
+        second.discard();
+        third.discard();
+        tooFar.discard();
         helper.succeed();
     }
 

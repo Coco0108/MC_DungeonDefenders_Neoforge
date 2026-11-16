@@ -185,6 +185,31 @@ public class DungeonDefendersModClient {
                 DungeonDefendersMod.PISTON_SLAMMER_BE.get(),
                 TowerHealthBarRenderer::new
         );
+        // Roster de du Géomancien.
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.THORN_HEDGE_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.MUD_TOTEM_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.GEYSER_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.BOULDER_THROWER_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.CRYSTAL_SPIRE_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.LIFESTONE_BE.get(),
+                TowerHealthBarRenderer::new
+        );
         // Réutilise tel quel le renderer vanilla de l'orbe d'XP (pas final, paramétré sur
         // ExperienceOrb) : le cristal de mana aura donc l'air d'une orbe d'XP verte/jaune, pas
         // encore de couleur "mana" dédiée — voir doc/05-etat-et-problemes-connus.md.

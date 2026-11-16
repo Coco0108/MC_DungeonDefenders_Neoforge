@@ -5,9 +5,11 @@ import com.github.c0c0tier.dungeon_defenders.ability.BurstAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.CatalysisAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.ChannelAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.CircularSliceAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.EarthquakeAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.EmergencyRepairAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.ForceFieldAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.FrostFlaskAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.StoneSkinAbility;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -64,7 +66,19 @@ public enum HeroDefinition {
             TowerDefinition.PISTON_SLAMMER,
             TowerDefinition.MAGNET_COIL,
             TowerDefinition.REPAIR_STATION),
-            EmergencyRepairAbility.INSTANCE, ForceFieldAbility.INSTANCE);
+            EmergencyRepairAbility.INSTANCE, ForceFieldAbility.INSTANCE),
+
+    // Quatrième héros (2026-11-16), de conception propre au mod : la terre. Il contrôle le
+    // terrain (enliser, projeter), frappe fort sur peu de cibles, et sa Pierre de vie est la
+    // seule tour qui soigne les joueurs.
+    GEOMANCER("geomancer", List.of(
+            TowerDefinition.THORN_HEDGE,
+            TowerDefinition.MUD_TOTEM,
+            TowerDefinition.GEYSER,
+            TowerDefinition.BOULDER_THROWER,
+            TowerDefinition.CRYSTAL_SPIRE,
+            TowerDefinition.LIFESTONE),
+            EarthquakeAbility.INSTANCE, StoneSkinAbility.INSTANCE);
 
     /** Héros attribué à un joueur qui n'a jamais choisi — voir ModAttachments.HERO. */
     public static final HeroDefinition DEFAULT = SQUIRE;

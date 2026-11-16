@@ -1598,6 +1598,32 @@ jeu.
       perdent plus de vie ; le mana descend très vite.
 - [ ] Avis attendu : noms, rôles, chiffres.
 
+## Héros Géomancien, ses six tours et ses deux sorts (2026-11-16)
+
+Branche `feature/heros-geomancien` (contient aussi l'Alchimiste et l'Ingénieur). Effets couverts
+par le gametest `geomancer_towers`, sauf la Pierre de vie ; rien vu en jeu.
+
+- [ ] Touche `H` : quatre héros proposés ; la roue du Géomancien contient ses 6 tours.
+- [ ] **Haie de ronces** : les monstres qui la frappent perdent de la vie à chaque coup ; elle
+      ne blesse pas un monstre qui passe à côté sans la toucher.
+- [ ] **Totem de boue** : toutes les 4 s, les monstres à portée s'arrêtent net 1,5 s
+      (éclaboussures), puis repartent.
+- [ ] **Geyser** : les monstres proches sont projetés à 3-4 blocs de haut et retombent blessés.
+      À signaler s'ils retombent derrière un mur ou restent coincés.
+- [ ] **Lance-rochers** : avec une brute et des zombies à portée, c'est la brute qui est visée ;
+      elle s'arrête une seconde à chaque coup.
+- [ ] **Flèche de cristal** : sur un groupe serré, étincelles sur plusieurs monstres à la fois ;
+      sur un monstre seul, un seul touché.
+- [ ] **Pierre de vie** (pas de test automatique) : blessé, se tenir à moins de 6 blocs rend 1
+      cœur toutes les 2 s, avec un cœur au-dessus de la tête ; rien à pleine vie.
+- [ ] **Séisme** (sort 1) : les monstres autour de toi sautent en l'air et sont blessés ;
+      recharge de 10 s affichée.
+- [ ] **Peau de pierre** (sort 2, maintenue) : tu encaisses nettement moins, tu marches plus
+      lentement, et l'effet cesse en relâchant.
+- [ ] Les quatre héros : passer de l'un à l'autre entre deux vagues ; les tours déjà posées par
+      l'ancien héros restent et fonctionnent.
+- [ ] Avis attendu : noms, rôles, chiffres ; y a-t-il un héros clairement trop fort ou inutile ?
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

@@ -1,0 +1,8 @@
+{
+  "max_health": 25,
+  "mana_cost": 55,
+  "range": 3.0,
+  "damage": 3.0,
+  "attack_interval_ticks": 100,
+  "knockback_strength": 0.9
+}

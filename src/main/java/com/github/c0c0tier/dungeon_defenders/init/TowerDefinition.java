@@ -277,6 +277,89 @@ public enum TowerDefinition {
                     .with(TowerStat.DAMAGE, 4.0D)
                     .with(TowerStat.ATTACK_INTERVAL_TICKS, 50)
                     .with(TowerStat.KNOCKBACK_STRENGTH, 1.0D)
+                    .build()),
+
+    // --- Roster de du Géomancien (2026-11-16) : tours de conception propre au mod. ---
+
+    THORN_HEDGE(
+            "thorn_hedge",
+            () -> ModBlocks.THORN_HEDGE.get(),
+            () -> ModBlocks.THORN_HEDGE_ITEM.get(),
+            // Mur qui rend les coups : chaque coup encaissé blesse les monstres collés à lui.
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 40)
+                    .with(TowerStat.MANA_COST, 40)
+                    .with(TowerStat.CONTACT_DAMAGE, 3.0D)
+                    .with(TowerStat.CONTACT_RANGE, 1.5D)
+                    .build()),
+
+    MUD_TOTEM(
+            "mud_totem",
+            () -> ModBlocks.MUD_TOTEM.get(),
+            () -> ModBlocks.MUD_TOTEM_ITEM.get(),
+            // Immobilise par à-coups : linger_ticks d'enlisement toutes les attack_interval_ticks.
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 20)
+                    .with(TowerStat.MANA_COST, 50)
+                    .with(TowerStat.RANGE, 5.0D)
+                    .with(TowerStat.ATTACK_INTERVAL_TICKS, 80)
+                    .with(TowerStat.LINGER_TICKS, 30)
+                    .build()),
+
+    GEYSER(
+            "geyser",
+            () -> ModBlocks.GEYSER.get(),
+            () -> ModBlocks.GEYSER_ITEM.get(),
+            // Projette les monstres en l'air (knockback_strength = élan vertical) : dégâts + chute.
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 25)
+                    .with(TowerStat.MANA_COST, 55)
+                    .with(TowerStat.RANGE, 3.0D)
+                    .with(TowerStat.DAMAGE, 3.0D)
+                    .with(TowerStat.ATTACK_INTERVAL_TICKS, 100)
+                    .with(TowerStat.KNOCKBACK_STRENGTH, 0.9D)
+                    .build()),
+
+    BOULDER_THROWER(
+            "boulder_thrower",
+            () -> ModBlocks.BOULDER_THROWER.get(),
+            () -> ModBlocks.BOULDER_THROWER_ITEM.get(),
+            // Vise le monstre le plus costaud à portée, tout autour : gros coup + étourdissement.
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 20)
+                    .with(TowerStat.MANA_COST, 75)
+                    .with(TowerStat.RANGE, 12.0D)
+                    .with(TowerStat.DAMAGE, 12.0D)
+                    .with(TowerStat.ATTACK_INTERVAL_TICKS, 70)
+                    .with(TowerStat.LINGER_TICKS, 20)
+                    .build()),
+
+    CRYSTAL_SPIRE(
+            "crystal_spire",
+            () -> ModBlocks.CRYSTAL_SPIRE.get(),
+            () -> ModBlocks.CRYSTAL_SPIRE_ITEM.get(),
+            // Éclair qui rebondit de monstre en monstre (splash_radius = distance d'un rebond).
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 20)
+                    .with(TowerStat.MANA_COST, 65)
+                    .with(TowerStat.RANGE, 8.0D)
+                    .with(TowerStat.DAMAGE, 5.0D)
+                    .with(TowerStat.ATTACK_INTERVAL_TICKS, 30)
+                    .with(TowerStat.SPLASH_RADIUS, 4.0D)
+                    .with(TowerStat.CHAIN_TARGETS, 4)
+                    .build()),
+
+    LIFESTONE(
+            "lifestone",
+            () -> ModBlocks.LIFESTONE.get(),
+            () -> ModBlocks.LIFESTONE_ITEM.get(),
+            // Soigne les joueurs à portée (heal_amount PV par intervalle).
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 15)
+                    .with(TowerStat.MANA_COST, 60)
+                    .with(TowerStat.RANGE, 6.0D)
+                    .with(TowerStat.HEAL_AMOUNT, 2)
+                    .with(TowerStat.ATTACK_INTERVAL_TICKS, 40)
                     .build());
 
     /**
