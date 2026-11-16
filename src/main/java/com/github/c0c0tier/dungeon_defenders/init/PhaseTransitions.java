@@ -193,7 +193,7 @@ public final class PhaseTransitions {
             if (!(level.getBlockEntity(pos) instanceof SpawnerBlockEntity spawner)) {
                 continue;
             }
-            if (currentWave < spawner.getWaveStart() || currentWave > spawner.getWaveEnd()) {
+            if (!spawner.isActiveOnWave(currentWave)) {
                 continue;
             }
             for (SpawnerBlockEntity.SpawnEntry entry : spawner.getEntries()) {

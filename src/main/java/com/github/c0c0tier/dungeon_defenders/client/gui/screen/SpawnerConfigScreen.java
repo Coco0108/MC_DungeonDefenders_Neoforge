@@ -56,6 +56,7 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
     private String radiusText;
     private String waveStartText;
     private String waveEndText;
+    private String waveStepText;
     private final List<RowState> rows = new ArrayList<>();
     private boolean loadedFromSpawner;
 
@@ -64,6 +65,7 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
     private EditBox radiusField;
     private EditBox waveStartField;
     private EditBox waveEndField;
+    private EditBox waveStepField;
 
     // Widgets de lignes, parallèles à `rows` (recréés à chaque rebuild).
     private final List<EditBox> rowCountFields = new ArrayList<>();
@@ -106,6 +108,7 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
         this.radiusText = String.valueOf(spawner != null ? spawner.getSpawnRadius() : 0);
         this.waveStartText = String.valueOf(spawner != null ? spawner.getWaveStart() : 1);
         this.waveEndText = String.valueOf(spawner != null ? spawner.getWaveEnd() : defaultWaveEnd());
+        this.waveStepText = String.valueOf(spawner != null ? spawner.getWaveStep() : 1);
 
         this.rows.clear();
         if (spawner != null) {
@@ -125,7 +128,7 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
         this.rowCycleButtons.clear();
 
         boolean showAdd = firstUnusedEnemy() != null;
-        int totalRows = 4 + this.rows.size() + (showAdd ? 1 : 0) + 1;
+        int totalRows = 5 + this.rows.size() + (showAdd ? 1 : 0) + 1;
         int centerX = this.width / 2;
         int top = Math.max(24, this.height / 2 - (totalRows * ROW_HEIGHT) / 2);
         int y = top;
@@ -137,6 +140,8 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
         this.waveStartField = addScalarField(centerX, y, this.waveStartText);
         y += ROW_HEIGHT;
         this.waveEndField = addScalarField(centerX, y, this.waveEndText);
+        y += ROW_HEIGHT;
+        this.waveStepField = addScalarField(centerX, y, this.waveStepText);
         y += ROW_HEIGHT;
 
         for (int i = 0; i < this.rows.size(); i++) {
@@ -259,6 +264,7 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
         this.radiusText = this.radiusField.getValue();
         this.waveStartText = this.waveStartField.getValue();
         this.waveEndText = this.waveEndField.getValue();
+        this.waveStepText = this.waveStepField.getValue();
         for (int i = 0; i < this.rows.size(); i++) {
             this.rows.get(i).countText = this.rowCountFields.get(i).getValue();
         }
@@ -275,6 +281,7 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
         drawLabel(guiGraphics, "dungeon_defenders.spawner.config_radius", centerX, this.radiusField.getY());
         drawLabel(guiGraphics, "dungeon_defenders.spawner.config_wave_start", centerX, this.waveStartField.getY());
         drawLabel(guiGraphics, "dungeon_defenders.spawner.config_wave_end", centerX, this.waveEndField.getY());
+        drawLabel(guiGraphics, "dungeon_defenders.spawner.config_wave_step", centerX, this.waveStepField.getY());
     }
 
     private void drawLabel(GuiGraphicsExtractor guiGraphics, String key, int centerX, int fieldY) {
@@ -295,6 +302,7 @@ public class SpawnerConfigScreen extends Screen implements MenuAccess<SpawnerCon
                 parseOr(this.radiusText, 0),
                 parseOr(this.waveStartText, 1),
                 parseOr(this.waveEndText, defaultWaveEnd()),
+                parseOr(this.waveStepText, 1),
                 entries
         );
 
