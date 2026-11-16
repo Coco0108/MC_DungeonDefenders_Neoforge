@@ -204,7 +204,9 @@ vérifie la CI.
   qui tuent, pas un joueur en particulier, aucune attribution de kill n'existe). Valeur par
   monstre = le champ `xp_value` de son JSON d'ennemi (zombie 10, squelette 15, valeurs de test ; data-driven depuis le 2026-09-29). L'expérience
   fait monter `ModAttachments.LEVEL` par paliers de `xp_per_level` (100 par défaut, réglage data-driven depuis le 2026-11-10 ; plafond fixe, pas de
-  barème croissant), avec un message système au passage de niveau. `SCORE` est remis à 0 par
+  barème croissant), avec, au passage de niveau, un message système, une bannière à l'écran, un son et des
+  particules (2026-11-16, `ProgressionFeedbackOverlay`, jamais vus en jeu) ; chaque gain d'XP
+  affiche aussi un « +X XP » près de la barre. `SCORE` est remis à 0 par
   `PhaseTransitions.resetGameState` à chaque nouvelle partie ; `EXPERIENCE`/`LEVEL` persistent
   au-delà d'une carte, sans changement. Pas de bonus de statistique lié au niveau pour
   l'instant (voir "Ce qui reste"). Détail dans

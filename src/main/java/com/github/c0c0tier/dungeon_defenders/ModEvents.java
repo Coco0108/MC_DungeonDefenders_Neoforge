@@ -22,10 +22,13 @@ import com.github.c0c0tier.dungeon_defenders.init.ScoreKeeper;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
 import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
@@ -57,6 +60,8 @@ public class ModEvents {
     // que d'essayer d'annuler chaque source d'exhaustion une par une.
     private static final int FULL_FOOD_LEVEL = 20;
     private static final float FULL_SATURATION = 20.0F;
+    private static final float LEVEL_UP_SOUND_VOLUME = 0.75F;
+    private static final int LEVEL_UP_PARTICLE_COUNT = 30;
 
     // Portée de suivi (attribut vanilla FOLLOW_RANGE) donnée à tout monstre équipé de l'IA du
     // mod : c'est ce même attribut que le pathfinder vanilla utilise pour borner la recherche
@@ -411,7 +416,22 @@ public class ModEvents {
 
         if (leveledUp) {
             player.sendSystemMessage(Component.translatable("dungeon_defenders.level.up", level));
+            celebrateLevelUp(player);
         }
+    }
+
+    // Son et particules du passage de niveau, joués par le serveur pour que TOUS les joueurs
+    // proches les perçoivent (la bannière à l'écran, elle, n'est que pour le joueur concerné —
+    // voir ProgressionFeedbackOverlay). Le son vanilla de passage de niveau est repris tel quel.
+    private static void celebrateLevelUp(Player player) {
+        if (!(player.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        serverLevel.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, LEVEL_UP_SOUND_VOLUME, 1.0F);
+        serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER,
+                player.getX(), player.getY() + player.getBbHeight() / 2.0D, player.getZ(),
+                LEVEL_UP_PARTICLE_COUNT, 0.4D, 0.6D, 0.4D, 0.0D);
     }
 
     // Les monstres de ce mod n'ont thématiquement aucune raison de donner de la vraie XP

@@ -14,6 +14,7 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.MapOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.PhaseOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreGainOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.CombatCountdownOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.ProgressionFeedbackOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.TowerInspectOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
@@ -186,6 +187,9 @@ public class DungeonDefendersModClient {
         event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "combat_countdown_overlay"),
                 new CombatCountdownOverlay());
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "progression_feedback_overlay"),
+                new ProgressionFeedbackOverlay());
         // Plein écran ; comme le fond couvre tout l'écran, l'ordre exact d'empilement avec les
         // autres registerAboveAll n'a pas d'impact visible même si un autre layer passait
         // dessus par endroits.
