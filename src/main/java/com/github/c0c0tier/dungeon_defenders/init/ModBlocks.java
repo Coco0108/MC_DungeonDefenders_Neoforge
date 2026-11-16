@@ -30,6 +30,12 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.LongshotTurretBlockEnt
 import com.github.c0c0tier.dungeon_defenders.block.entity.MagnetCoilBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.RepairStationBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.PistonSlammerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ThornHedgeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MudTotemBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.GeyserBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.BoulderThrowerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.CrystalSpireBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.LifestoneBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.item.ManaFillWandItem;
 import com.github.c0c0tier.dungeon_defenders.item.ManaTestWandItem;
 import net.minecraft.world.item.BlockItem;
@@ -194,6 +200,50 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> PISTON_SLAMMER_ITEM =
             ITEMS.registerItem("piston_slammer", properties -> new TowerBlockItem(PISTON_SLAMMER.get(), properties));
+
+    // Roster de du Géomancien (2026-11-16) : tours de conception propre au mod, voir
+    // doc/02-gameplay.md. Même bloc générique que celles de l'Alchimiste.
+    public static final DeferredBlock<SimpleTowerBlock> THORN_HEDGE = BLOCKS.registerBlock("thorn_hedge",
+            properties -> new SimpleTowerBlock(properties, ThornHedgeBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> THORN_HEDGE_ITEM =
+            ITEMS.registerItem("thorn_hedge", properties -> new TowerBlockItem(THORN_HEDGE.get(), properties));
+
+    public static final DeferredBlock<SimpleTowerBlock> MUD_TOTEM = BLOCKS.registerBlock("mud_totem",
+            properties -> new SimpleTowerBlock(properties, MudTotemBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> MUD_TOTEM_ITEM =
+            ITEMS.registerItem("mud_totem", properties -> new TowerBlockItem(MUD_TOTEM.get(), properties));
+
+    public static final DeferredBlock<SimpleTowerBlock> GEYSER = BLOCKS.registerBlock("geyser",
+            properties -> new SimpleTowerBlock(properties, GeyserBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> GEYSER_ITEM =
+            ITEMS.registerItem("geyser", properties -> new TowerBlockItem(GEYSER.get(), properties));
+
+    public static final DeferredBlock<SimpleTowerBlock> BOULDER_THROWER = BLOCKS.registerBlock("boulder_thrower",
+            properties -> new SimpleTowerBlock(properties, BoulderThrowerBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> BOULDER_THROWER_ITEM =
+            ITEMS.registerItem("boulder_thrower", properties -> new TowerBlockItem(BOULDER_THROWER.get(), properties));
+
+    public static final DeferredBlock<SimpleTowerBlock> CRYSTAL_SPIRE = BLOCKS.registerBlock("crystal_spire",
+            properties -> new SimpleTowerBlock(properties, CrystalSpireBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> CRYSTAL_SPIRE_ITEM =
+            ITEMS.registerItem("crystal_spire", properties -> new TowerBlockItem(CRYSTAL_SPIRE.get(), properties));
+
+    public static final DeferredBlock<SimpleTowerBlock> LIFESTONE = BLOCKS.registerBlock("lifestone",
+            properties -> new SimpleTowerBlock(properties, LifestoneBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> LIFESTONE_ITEM =
+            ITEMS.registerItem("lifestone", properties -> new TowerBlockItem(LIFESTONE.get(), properties));
 
     // 4. Baguette de test : retire 10 de mana au clic droit, pour vérifier le HUD (mana)
     public static final DeferredItem<ManaTestWandItem> MANA_TEST_WAND =

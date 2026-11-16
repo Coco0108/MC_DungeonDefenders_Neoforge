@@ -1,0 +1,6 @@
+{
+  "max_health": 40,
+  "mana_cost": 40,
+  "contact_damage": 3.0,
+  "contact_range": 1.5
+}

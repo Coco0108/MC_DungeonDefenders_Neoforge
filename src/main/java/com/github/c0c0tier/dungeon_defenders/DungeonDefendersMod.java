@@ -18,6 +18,12 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.LongshotTurretBlockEnt
 import com.github.c0c0tier.dungeon_defenders.block.entity.MagnetCoilBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.RepairStationBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.PistonSlammerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ThornHedgeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MudTotemBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.GeyserBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.BoulderThrowerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.CrystalSpireBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.LifestoneBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.MortarTurretBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SliceNDiceBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
@@ -183,6 +189,43 @@ public class DungeonDefendersMod {
             BLOCK_ENTITIES.register("piston_slammer", () -> new BlockEntityType<>(
                     PistonSlammerBlockEntity::new,
                     ModBlocks.PISTON_SLAMMER.get()
+            ));
+
+    // Roster de du Géomancien (2026-11-16), voir ModBlocks.
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ThornHedgeBlockEntity>> THORN_HEDGE_BE =
+            BLOCK_ENTITIES.register("thorn_hedge", () -> new BlockEntityType<>(
+                    ThornHedgeBlockEntity::new,
+                    ModBlocks.THORN_HEDGE.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MudTotemBlockEntity>> MUD_TOTEM_BE =
+            BLOCK_ENTITIES.register("mud_totem", () -> new BlockEntityType<>(
+                    MudTotemBlockEntity::new,
+                    ModBlocks.MUD_TOTEM.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<GeyserBlockEntity>> GEYSER_BE =
+            BLOCK_ENTITIES.register("geyser", () -> new BlockEntityType<>(
+                    GeyserBlockEntity::new,
+                    ModBlocks.GEYSER.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BoulderThrowerBlockEntity>> BOULDER_THROWER_BE =
+            BLOCK_ENTITIES.register("boulder_thrower", () -> new BlockEntityType<>(
+                    BoulderThrowerBlockEntity::new,
+                    ModBlocks.BOULDER_THROWER.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CrystalSpireBlockEntity>> CRYSTAL_SPIRE_BE =
+            BLOCK_ENTITIES.register("crystal_spire", () -> new BlockEntityType<>(
+                    CrystalSpireBlockEntity::new,
+                    ModBlocks.CRYSTAL_SPIRE.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<LifestoneBlockEntity>> LIFESTONE_BE =
+            BLOCK_ENTITIES.register("lifestone", () -> new BlockEntityType<>(
+                    LifestoneBlockEntity::new,
+                    ModBlocks.LIFESTONE.get()
             ));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TrainingDummyBlockEntity>> TRAINING_DUMMY_BE =

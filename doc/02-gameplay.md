@@ -2577,6 +2577,48 @@ l'autre repousse) — c'est au joueur de s'en servir, par exemple pour faire rev
 dans le rayon du Marteau. Équilibrage théorique ; point à surveiller : la Barricade (60 PV qui
 remontent seuls) face au Spike Blockade de l'Écuyer (30 PV).
 
+## Le Géomancien — quatrième héros (`HeroDefinition.GEOMANCER`)
+
+Ajouté le 2026-11-16, à la suite de l'Ingénieur. **Conception propre au mod**, proposée par
+Claude, **jamais vue en jeu**.
+
+**Identité** : la terre. Il contrôle le terrain (enliser, projeter en l'air), frappe fort sur peu
+de cibles, et possède la seule tour qui soigne les joueurs.
+
+| Tour | Rôle | Stats livrées |
+|---|---|---|
+| **Haie de ronces** `thorn_hedge` | Mur qui **rend les coups** : chaque coup encaissé blesse les monstres collés à lui. | 40 PV, 40 mana, `contact_damage` 3, `contact_range` 1.5 |
+| **Totem de boue** `mud_totem` | **Enlise** sur place les monstres de son rayon, 1,5 s toutes les 4 s. | 20 PV, 50 mana, `range` 5, `attack_interval_ticks` 80, `linger_ticks` 30 |
+| **Geyser** `geyser` | **Projette en l'air** les monstres proches : dégâts, puis chute. | 25 PV, 55 mana, `range` 3, `damage` 3, `attack_interval_ticks` 100, `knockback_strength` 0.9 (élan vertical) |
+| **Lance-rochers** `boulder_thrower` | Vise le monstre **le plus costaud** à portée, tout autour : gros coup et étourdissement d'une seconde. | 20 PV, 75 mana, `range` 12, `damage` 12, `attack_interval_ticks` 70, `linger_ticks` 20 |
+| **Flèche de cristal** `crystal_spire` | Éclair qui **rebondit** de monstre en monstre, 70 % des dégâts à chaque rebond. | 20 PV, 65 mana, `range` 8, `damage` 5, `attack_interval_ticks` 30, `splash_radius` 4 (distance d'un rebond), `chain_targets` 4 |
+| **Pierre de vie** `lifestone` | **Soigne les joueurs** dans son rayon. | 15 PV, 60 mana, `range` 6, `heal_amount` 2, `attack_interval_ticks` 40 |
+
+| Sort | Type | Effet |
+|---|---|---|
+| **Séisme** (sort 1) | salve, 60 mana, 10 s de recharge | 5 dégâts et projection en l'air de tous les monstres à 6 blocs du joueur. |
+| **Peau de pierre** (sort 2) | maintenue, 1 mana/tick | Résistance III (−60 % de dégâts subis) et Lenteur I tant que la touche est tenue. |
+
+Côté code : cinq tours à impulsions ; la Haie hérite directement de `AbstractTowerBlockEntity` et
+utilise le nouveau crochet `onDamaged` (appelé par `damage` quand la tour tient encore) plus
+`onDestroyedByMonsters` pour piquer une dernière fois en tombant.
+
+Limites : un monstre enlisé ou étourdi (Lenteur VII) ne bouge plus mais **frappe encore** ce qui
+est à sa portée ; un monstre projeté par le Geyser peut retomber derrière un mur. La Pierre de vie
+n'a pas de gametest (il faut un vrai joueur). Équilibrage théorique.
+
+## Les quatre héros en un coup d'œil
+
+| Héros | Origine | Rôle |
+|---|---|---|
+| Écuyer | plan d'origine du joueur | murs et tourelles, tenir un couloir |
+| Alchimiste | conception propre au mod | soutien : ralentir, fragiliser, renforcer, mana |
+| Ingénieur | conception propre au mod | tourelles spécialisées, faire durer la défense |
+| Géomancien | conception propre au mod | contrôle du terrain, gros coups, soin des joueurs |
+
+Chacun a six tours et deux sorts ; Soin et Réparation restent communs. Le gametest `hero_rosters`
+vérifie que chaque tour appartient à un seul héros et que chaque héros en a six.
+
 ## Le mana du joueur
 
 Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore) **et** la

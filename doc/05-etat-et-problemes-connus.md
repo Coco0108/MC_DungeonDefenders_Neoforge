@@ -786,6 +786,13 @@ vérifie la CI.
   `AbstractTowerBlockEntity`. Détail dans
   [02-gameplay.md](02-gameplay.md#lingénieur--troisième-héros-herodefinitionengineer). Gametest
   `engineer_towers`. **Jamais vu en jeu**, équilibrage théorique.
+- ✅ **Héros Géomancien, six tours et deux sorts** (2026-11-16, branche
+  `feature/heros-geomancien`) : quatrième héros, de conception propre au mod. Tours : Haie de
+  ronces, Totem de boue, Geyser, Lance-rochers, Flèche de cristal, Pierre de vie ; sorts : Séisme,
+  Peau de pierre. Ajoute le crochet `onDamaged` à `AbstractTowerBlockEntity`. Détail dans
+  [02-gameplay.md](02-gameplay.md#le-géomancien--quatrième-héros-herodefinitiongeomancer).
+  Gametest `geomancer_towers` (la Pierre de vie n'est pas couverte). **Jamais vu en jeu**,
+  équilibrage théorique. Le jeu compte donc **quatre héros et 24 tours**.
 - ✅ **Barre de vie sur toutes les tours** (2026-11-16) : `TowerHealthBarRenderer` n'était
   enregistré que pour Spike Blockade et Harpoon Turret ; les quatre autres tours de l'Écuyer n'en
   avaient donc jamais eu. Corrigé dans `DungeonDefendersModClient#onRegisterRenderers`.
