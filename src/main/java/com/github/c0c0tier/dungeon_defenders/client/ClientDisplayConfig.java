@@ -23,6 +23,14 @@ public class ClientDisplayConfig {
             .comment("Afficher le \"+X\" flottant en bas à droite de l'écran à chaque gain de score.")
             .define("showScoreGainPopup", true);
 
+    public static final ModConfigSpec.BooleanValue SHOW_EXPERIENCE_GAIN_POPUP = BUILDER
+            .comment("Afficher le \"+X XP\" flottant à côté de la barre d'expérience à chaque gain.")
+            .define("showExperienceGainPopup", true);
+
+    public static final ModConfigSpec.BooleanValue SHOW_LEVEL_UP_BANNER = BUILDER
+            .comment("Afficher la bannière \"Niveau X !\" à l'écran à chaque passage de niveau.")
+            .define("showLevelUpBanner", true);
+
     // Masqué par défaut (contrairement aux autres options, activées par défaut) : c'est bien
     // l'absence de contour qui est le comportement voulu, l'option n'existe que pour le
     // remettre — voir BlockOutlineClientEvents.

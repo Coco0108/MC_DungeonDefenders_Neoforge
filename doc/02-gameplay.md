@@ -2533,6 +2533,31 @@ Contrairement à `ManaOverlay`/`HealthOverlay`, reste une **barre horizontale** 
 (jauge + texte `Experience: X/Y` à sa droite, clé `dungeon_defenders.hud.experience`), en
 vert, tout en bas de l'écran, sous les deux losanges.
 
+### Les retours de progression — `client/gui/ProgressionFeedbackOverlay.java`
+
+Ajoutés le 2026-11-16 (deux idées du backlog). Deux retours, une seule couche HUD :
+
+- **« +X XP »** : monte et s'efface en 1,2 s, juste à droite du libellé « Expérience : x/y »,
+  sur la même ligne — donc sans recouvrir les losanges ni les emplacements de compétences.
+  Deux gains à moins de 0,4 s d'écart (plusieurs monstres tués par la même salve) sont
+  **cumulés** dans le même popup au lieu de s'empiler.
+- **« Niveau X ! »** : bannière jaune, deux fois la taille du texte normal, au quart haut de
+  l'écran pendant 2,5 s (fondu sur les 0,6 dernières secondes).
+
+**Aucun paquet réseau** : `EXPERIENCE` et `LEVEL` sont déjà synchronisés par attachment, la
+couche compare simplement leur valeur d'une image à l'autre. Le gain se reconstitue sans
+ambiguïté parce que l'XP ne fait que monter : `passages de niveau × XP par niveau + différence
+d'XP`. Une valeur qui baisse n'affiche rien. Le repère est remis à zéro quand le joueur suivi
+change (reconnexion, autre monde), sinon rejoindre une partie au niveau 5 afficherait la
+bannière.
+
+Côté serveur, `ModEvents#celebrateLevelUp` joue le son vanilla de passage de niveau et une
+gerbe de particules vertes autour du joueur : contrairement à la bannière, **tous les joueurs
+proches** les perçoivent. Le message système dans le chat est conservé.
+
+Deux options d'affichage, activées par défaut : `showExperienceGainPopup` et
+`showLevelUpBanner` (`ClientDisplayConfig`).
+
 ## Le groupe bas-gauche — mana, vie, expérience
 
 `ManaOverlay`, `HealthOverlay` et `ExperienceOverlay` forment un groupe positionné dans le
