@@ -2619,6 +2619,37 @@ n'a pas de gametest (il faut un vrai joueur). Équilibrage théorique.
 Chacun a six tours et deux sorts ; Soin et Réparation restent communs. Le gametest `hero_rosters`
 vérifie que chaque tour appartient à un seul héros et que chaque héros en a six.
 
+## Les armes de héros — `item/HeroWeaponItem.java`, `item/HeroWeapons.java`
+
+Ajoutées le 2026-11-16 (choix du joueur : « Armes de héros », avant le butin et les stats).
+Jusque-là le joueur n'avait rien pour se battre lui-même, à part ses sorts. **Jamais vu en jeu.**
+
+| Héros | Arme | Attaque de base |
+|---|---|---|
+| Écuyer | **Épée d'écuyer** `squire_sword` | Mêlée vanilla au clic gauche (stats d'une épée en fer : 6 dégâts). |
+| Alchimiste | **Sacoche de fioles** `alchemist_flasks` | Clic droit : éclate à l'endroit visé (16 blocs), 3 dégâts dans un rayon de 2,5. Recharge 0,7 s. |
+| Ingénieur | **Pistolet à rivets** `engineer_rivet_gun` | Clic droit : 4 dégâts au monstre visé, jusqu'à 24 blocs. Recharge 0,4 s. |
+| Géomancien | **Bâton de géomancien** `geomancer_staff` | Clic droit : 3 dégâts dans un rayon de 1,5 à 10 blocs, et Lenteur I pendant 2 s. Recharge 0,8 s. |
+
+- **L'arme fait partie du héros**, comme ses tours : `HeroWeapons#ensure` la donne et retire celle
+  des autres héros à la connexion, à la réapparition et au changement de héros. Elle ne se jette
+  pas (`ItemTossEvent` annulé) et ne tombe pas à la mort (`LivingDropsEvent`). L'arme d'un autre
+  héros, prise en créatif, refuse de tirer. Elle n'est dans aucun onglet créatif.
+- **Tir instantané, sans projectile** : un rayon part des yeux, s'arrête au premier bloc plein ou
+  au premier monstre, et l'effet s'applique à ce point ; une traînée de particules dessine le
+  tir. Pas d'entité ni de renderer, donc tout est couvert par le gametest `hero_weapons`. Les
+  marqueurs invisibles (zone interdite, spawner) ne l'arrêtent pas ; une tour, si.
+- **Recharge** : celle des objets vanilla (voile sur l'icône de la barre d'accès rapide).
+- **Le niveau du personnage sert enfin à quelque chose** : tout ce qu'un joueur inflige à un
+  monstre (arme, épée, sorts) est multiplié par `1 + player_damage_per_level × (niveau − 1)`,
+  soit +5 % par niveau (`ModEvents#onPlayerDamageLevelBonus`). Les tours ne sont pas concernées.
+- **L'icône d'un héros** dans l'écran de choix est maintenant son arme, plus sa première tour.
+- Chiffres dans `balance/weapons.json` ([equilibrage.md](data-driven/equilibrage.md)).
+
+Limites : textures vanilla (épée en fer, fiole d'XP, arbalète, bâton de blaze). Pas encore de
+butin ni d'armes aux stats variables : c'est l'étape suivante, si le joueur la veut. Le clic
+droit pendant le mode pose de tour n'a pas été essayé.
+
 ## Le mana du joueur
 
 Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore) **et** la

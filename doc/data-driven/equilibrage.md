@@ -44,6 +44,18 @@ plat `"clé": nombre`. Liste complète (`init/BalanceValue.java`) :
 | `towers.json` | `upgrade_stat_bonus` | 0.25 | 0 | Bonus de PV max et de dégâts par niveau au-delà du premier |
 | `pacing.json` | `combat_countdown_seconds` | 3 (entier) | 0 | Secondes entre le vote « prêt » unanime et le Combat (0 = immédiat) |
 
+**Ajoutés avec les armes de héros** (2026-11-16, voir
+[02-gameplay.md](../02-gameplay.md#les-armes-de-héros--itemheroweaponitemjava-itemheroweaponsjava)) :
+
+| Fichier | Clé | Défaut | Minimum | Effet |
+|---|---|---|---|---|
+| `weapons.json` | `flask_damage` / `flask_range` / `flask_radius` / `flask_cooldown_ticks` | 3 / 16 / 2.5 / 14 | 0 / 1 / 0 / 1 | Sacoche de fioles (Alchimiste) : dégâts, portée, rayon de la zone, ticks entre deux tirs |
+| `weapons.json` | `rivet_damage` / `rivet_range` / `rivet_cooldown_ticks` | 4 / 24 / 8 | 0 / 1 / 1 | Pistolet à rivets (Ingénieur) : une seule cible |
+| `weapons.json` | `staff_damage` / `staff_range` / `staff_radius` / `staff_cooldown_ticks` | 3 / 10 / 1.5 / 16 | 0 / 1 / 0 / 1 | Bâton de géomancien |
+| `weapons.json` | `player_damage_per_level` | 0.05 | 0 | Bonus de dégâts de tout ce qu'un joueur inflige, par niveau au-delà du premier |
+
+L'épée de l'Écuyer n'est pas ici : c'est une épée vanilla (stats d'une épée en fer).
+
 Attention : `score.json` et `difficulty.json` ont chacun des clés `easy_multiplier`... La
 première règle le **score**, la seconde le **nombre d'ennemis**.
 

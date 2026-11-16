@@ -16,6 +16,7 @@ import net.minecraft.world.item.Item;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Supplier;
 
 // Catalogue des héros jouables — même rôle que TowerDefinition pour les tours : un membre par
 // héros, commun au client (écran de choix, filtrage de la roue) et au serveur (validation de
@@ -41,7 +42,7 @@ public enum HeroDefinition {
             TowerDefinition.HARPOON_TURRET,
             TowerDefinition.BOWLING_BALL_TURRET,
             TowerDefinition.MORTAR_TURRET),
-            CircularSliceAbility.INSTANCE, BloodRageAbility.INSTANCE),
+            CircularSliceAbility.INSTANCE, BloodRageAbility.INSTANCE, () -> ModBlocks.SQUIRE_SWORD.get()),
 
     // Deuxième héros (2026-11-16), de conception propre au mod : ni ses tours ni ses sorts ne
     // viennent du jeu de référence. Un héros de soutien : ses tours ralentissent, fragilisent,
@@ -54,7 +55,7 @@ public enum HeroDefinition {
             TowerDefinition.FLASK_LAUNCHER,
             TowerDefinition.CATALYST_PYLON,
             TowerDefinition.MANA_CONDENSER),
-            FrostFlaskAbility.INSTANCE, CatalysisAbility.INSTANCE),
+            FrostFlaskAbility.INSTANCE, CatalysisAbility.INSTANCE, () -> ModBlocks.ALCHEMIST_FLASKS.get()),
 
     // Troisième héros (2026-11-16), lui aussi de conception propre au mod : des machines. Deux
     // tourelles aux profils opposés, et de quoi faire durer une défense (mur qui se répare,
@@ -66,7 +67,7 @@ public enum HeroDefinition {
             TowerDefinition.PISTON_SLAMMER,
             TowerDefinition.MAGNET_COIL,
             TowerDefinition.REPAIR_STATION),
-            EmergencyRepairAbility.INSTANCE, ForceFieldAbility.INSTANCE),
+            EmergencyRepairAbility.INSTANCE, ForceFieldAbility.INSTANCE, () -> ModBlocks.ENGINEER_RIVET_GUN.get()),
 
     // Quatrième héros (2026-11-16), de conception propre au mod : la terre. Il contrôle le
     // terrain (enliser, projeter), frappe fort sur peu de cibles, et sa Pierre de vie est la
@@ -78,7 +79,7 @@ public enum HeroDefinition {
             TowerDefinition.BOULDER_THROWER,
             TowerDefinition.CRYSTAL_SPIRE,
             TowerDefinition.LIFESTONE),
-            EarthquakeAbility.INSTANCE, StoneSkinAbility.INSTANCE);
+            EarthquakeAbility.INSTANCE, StoneSkinAbility.INSTANCE, () -> ModBlocks.GEOMANCER_STAFF.get());
 
     /** Héros attribué à un joueur qui n'a jamais choisi — voir ModAttachments.HERO. */
     public static final HeroDefinition DEFAULT = SQUIRE;
@@ -87,8 +88,11 @@ public enum HeroDefinition {
     private final List<TowerDefinition> towers;
     private final BurstAbility spell1;
     private final ChannelAbility spell2;
+    private final Supplier<? extends Item> weapon;
 
-    HeroDefinition(String id, List<TowerDefinition> towers, BurstAbility spell1, ChannelAbility spell2) {
+    HeroDefinition(String id, List<TowerDefinition> towers, BurstAbility spell1, ChannelAbility spell2,
+            Supplier<? extends Item> weapon) {
+        this.weapon = weapon;
         this.id = id;
         this.towers = towers;
         this.spell1 = spell1;
@@ -122,9 +126,14 @@ public enum HeroDefinition {
         return Component.translatable("dungeon_defenders.hero." + this.id + ".description");
     }
 
-    /** Icône de l'écran de choix : la première tour du héros, faute de portrait dédié. */
+    /** L'arme du héros, donnée automatiquement au joueur (item/HeroWeapons). */
+    public Item weapon() {
+        return this.weapon.get();
+    }
+
+    /** Icône de l'écran de choix : l'arme du héros, faute de portrait dédié. */
     public Item icon() {
-        return this.towers.getFirst().icon();
+        return weapon();
     }
 
     public String translationKey() {

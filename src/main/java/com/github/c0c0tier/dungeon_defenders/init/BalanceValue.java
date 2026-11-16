@@ -45,7 +45,24 @@ public enum BalanceValue {
 
     // balance/pacing.json — secondes entre le vote "prêt" unanime et le début du Combat
     // (CombatCountdown). 0 = démarrage immédiat.
-    COMBAT_COUNTDOWN_SECONDS("pacing", "combat_countdown_seconds", 3.0D, 0.0D, true);
+    COMBAT_COUNTDOWN_SECONDS("pacing", "combat_countdown_seconds", 3.0D, 0.0D, true),
+
+    // balance/weapons.json — armes de héros (item/HeroWeaponItem) : dégâts, portée du tir, rayon
+    // de la zone touchée et recharge entre deux tirs.
+    WEAPON_FLASK_DAMAGE("weapons", "flask_damage", 3.0D, 0.0D, false),
+    WEAPON_FLASK_RANGE("weapons", "flask_range", 16.0D, 1.0D, false),
+    WEAPON_FLASK_RADIUS("weapons", "flask_radius", 2.5D, 0.0D, false),
+    WEAPON_FLASK_COOLDOWN_TICKS("weapons", "flask_cooldown_ticks", 14.0D, 1.0D, true),
+    WEAPON_RIVET_DAMAGE("weapons", "rivet_damage", 4.0D, 0.0D, false),
+    WEAPON_RIVET_RANGE("weapons", "rivet_range", 24.0D, 1.0D, false),
+    WEAPON_RIVET_COOLDOWN_TICKS("weapons", "rivet_cooldown_ticks", 8.0D, 1.0D, true),
+    WEAPON_STAFF_DAMAGE("weapons", "staff_damage", 3.0D, 0.0D, false),
+    WEAPON_STAFF_RANGE("weapons", "staff_range", 10.0D, 1.0D, false),
+    WEAPON_STAFF_RADIUS("weapons", "staff_radius", 1.5D, 0.0D, false),
+    WEAPON_STAFF_COOLDOWN_TICKS("weapons", "staff_cooldown_ticks", 16.0D, 1.0D, true),
+    // Bonus de dégâts de TOUT ce qu'un joueur inflige (arme, épée, sorts) par niveau au-delà du
+    // premier : 0.05 = +5 % par niveau. C'est ce qui donne un effet au niveau du personnage.
+    PLAYER_DAMAGE_PER_LEVEL("weapons", "player_damage_per_level", 0.05D, 0.0D, false);
 
     private final String file;
     private final String key;

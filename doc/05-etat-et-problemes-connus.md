@@ -793,6 +793,13 @@ vérifie la CI.
   [02-gameplay.md](02-gameplay.md#le-géomancien--quatrième-héros-herodefinitiongeomancer).
   Gametest `geomancer_towers` (la Pierre de vie n'est pas couverte). **Jamais vu en jeu**,
   équilibrage théorique. Le jeu compte donc **quatre héros et 24 tours**.
+- ✅ **Armes de héros et bonus de niveau** (2026-11-16, branche `feature/armes-de-heros`) : une
+  arme par héros, donnée automatiquement et jamais perdue (`item/HeroWeapons`) ; épée de mêlée
+  pour l'Écuyer, tir instantané au clic droit pour les trois autres (`item/HeroWeaponItem`,
+  chiffres dans `balance/weapons.json`) ; le niveau du personnage augmente les dégâts infligés
+  par le joueur (+5 % par niveau). Détail dans
+  [02-gameplay.md](02-gameplay.md#les-armes-de-héros--itemheroweaponitemjava-itemheroweaponsjava).
+  Gametest `hero_weapons`. **Jamais vu en jeu.**
 - ✅ **Barre de vie sur toutes les tours** (2026-11-16) : `TowerHealthBarRenderer` n'était
   enregistré que pour Spike Blockade et Harpoon Turret ; les quatre autres tours de l'Écuyer n'en
   avaient donc jamais eu. Corrigé dans `DungeonDefendersModClient#onRegisterRenderers`.

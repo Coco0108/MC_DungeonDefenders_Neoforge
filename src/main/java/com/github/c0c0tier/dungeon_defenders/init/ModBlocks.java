@@ -36,9 +36,12 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.GeyserBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.BoulderThrowerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.CrystalSpireBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.LifestoneBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.item.HeroWeaponItem;
 import com.github.c0c0tier.dungeon_defenders.item.ManaFillWandItem;
 import com.github.c0c0tier.dungeon_defenders.item.ManaTestWandItem;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ToolMaterial;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -244,6 +247,21 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> LIFESTONE_ITEM =
             ITEMS.registerItem("lifestone", properties -> new TowerBlockItem(LIFESTONE.get(), properties));
+
+    // Armes de héros (2026-11-16) : une par héros, donnée automatiquement (item/HeroWeapons).
+    // L'Écuyer a une épée de mêlée vanilla (stats d'une épée en fer) ; les trois autres tirent au
+    // clic droit, voir HeroWeaponItem.
+    public static final DeferredItem<Item> SQUIRE_SWORD =
+            ITEMS.registerItem("squire_sword", properties -> new Item(properties.sword(ToolMaterial.IRON, 3.0F, -2.4F)));
+
+    public static final DeferredItem<HeroWeaponItem> ALCHEMIST_FLASKS =
+            ITEMS.registerItem("alchemist_flasks", properties -> new HeroWeaponItem(properties.stacksTo(1), HeroWeaponItem.Kind.FLASK));
+
+    public static final DeferredItem<HeroWeaponItem> ENGINEER_RIVET_GUN =
+            ITEMS.registerItem("engineer_rivet_gun", properties -> new HeroWeaponItem(properties.stacksTo(1), HeroWeaponItem.Kind.RIVET));
+
+    public static final DeferredItem<HeroWeaponItem> GEOMANCER_STAFF =
+            ITEMS.registerItem("geomancer_staff", properties -> new HeroWeaponItem(properties.stacksTo(1), HeroWeaponItem.Kind.STAFF));
 
     // 4. Baguette de test : retire 10 de mana au clic droit, pour vérifier le HUD (mana)
     public static final DeferredItem<ManaTestWandItem> MANA_TEST_WAND =
