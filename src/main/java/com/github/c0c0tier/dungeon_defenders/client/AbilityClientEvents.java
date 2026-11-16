@@ -54,6 +54,14 @@ public final class AbilityClientEvents {
     static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
 
+        // Hors monde (menu principal, déconnexion) : aucune recharge ni canalisation ne doit
+        // survivre jusqu'à la partie suivante. En jeu, la recharge s'écoule même écran ouvert.
+        if (minecraft.player == null || minecraft.level == null) {
+            ClientAbilityState.reset();
+        } else if (!minecraft.isPaused()) {
+            ClientAbilityState.tick();
+        }
+
         // Un écran qui s'ouvre (menu pause, roue des tours...) interrompt toute canalisation en
         // cours plutôt que de la laisser continuer hors de vue du joueur — capturer une touche
         // pendant qu'un écran est ouvert n'aurait de toute façon aucun sens.
@@ -71,6 +79,7 @@ public final class AbilityClientEvents {
         boolean healDown = ModKeyMappings.ABILITY_HEAL.isDown();
         if (healDown != healActive) {
             healActive = healDown;
+            ClientAbilityState.setChanneling(AbilitySlot.HEAL, healDown);
             if (healDown) {
                 sendStart(AbilitySlot.HEAL, null);
             } else {
@@ -81,6 +90,7 @@ public final class AbilityClientEvents {
         boolean spell2Down = ModKeyMappings.ABILITY_SPELL_2.isDown();
         if (spell2Down != spell2Active) {
             spell2Active = spell2Down;
+            ClientAbilityState.setChanneling(AbilitySlot.SPELL_2, spell2Down);
             if (spell2Down) {
                 sendStart(AbilitySlot.SPELL_2, null);
             } else {
@@ -101,6 +111,7 @@ public final class AbilityClientEvents {
             BlockPos target = raycastTowerTarget(player, level);
             if (target != null) {
                 repairChannelActive = true;
+                ClientAbilityState.setChanneling(AbilitySlot.REPAIR, true);
                 sendStart(AbilitySlot.REPAIR, target);
             }
             // Aucune tour visée à l'instant de l'appui : pas de canalisation, il faudra
@@ -108,6 +119,7 @@ public final class AbilityClientEvents {
             // maintien, pour une sémantique simple et prévisible.
         } else if (!down && repairKeyWasDown && repairChannelActive) {
             repairChannelActive = false;
+            ClientAbilityState.setChanneling(AbilitySlot.REPAIR, false);
             sendStop();
         }
         repairKeyWasDown = down;
@@ -137,6 +149,7 @@ public final class AbilityClientEvents {
         spell2Active = false;
         repairChannelActive = false;
         repairKeyWasDown = false;
+        ClientAbilityState.clearChanneling();
         if (anyActive) {
             sendStop();
         }

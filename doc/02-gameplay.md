@@ -1288,6 +1288,28 @@ destruction passe par `serverLevel.destroyBlock(pos, false)` — **pas de drop d
 convention qu'une tour détruite au combat (`AbstractTowerBlockEntity#setHealth`, `dropBlock =
 false`) : la touche dédiée est voulue comme l'unique façon "propre" de retirer une tour.
 
+### L'état des compétences sur le HUD — `client/ClientAbilityState.java`, `AbilityCooldownPayload`
+
+Ajouté le 2026-11-16 (idée #39). Chaque emplacement de `AbilitySlotsOverlay` montre désormais :
+
+| État | Affichage | D'où vient l'information |
+|---|---|---|
+| En recharge (salve) | voile sombre qui descend + secondes restantes | `AbilityCooldownPayload`, envoyé par le serveur quand la salve part |
+| En canalisation | bordure jaune clair | le client lui-même (`AbilityClientEvents`, à l'envoi du Start/Stop) |
+| Mana insuffisant | emplacement entièrement grisé | l'attachment `MANA` synchronisé, comparé au coût (salve) ou au coût par tick (maintenue) |
+
+Le serveur reste **seul juge** de la recharge (`AbilityCooldowns`) : le paquet ne porte qu'une
+durée à afficher, que le client décompte en ticks locaux (`ClientAbilityState#tick`). On envoie
+une durée et non un instant de fin parce que l'horloge du monde n'est pas un repère fiable côté
+client (elle est figée sur les branches récentes, et resynchronisée par à-coups).
+
+Seules les compétences en salve ont une recharge, comme dans le jeu de référence : les trois
+compétences maintenues ne sont limitées que par le mana.
+
+**Limite connue** : la bordure de canalisation reflète ce que le client a *demandé*. Si le
+serveur arrête la canalisation de lui-même (mana épuisé, PV pleins, coup reçu pendant le soin)
+alors que la touche est encore enfoncée, la bordure reste allumée jusqu'au relâchement.
+
 ### Ce qui n'est PAS fait, volontairement
 
 - Pas de confirmation ("es-tu sûr ?") avant suppression — un clic suffit, comme la pose.
@@ -1502,9 +1524,6 @@ sens.
 
 ### Ce qui n'est PAS fait, volontairement
 
-- **Aucun retour visuel de recharge** sur Circular Slice (pas de minuterie affichée sur son
-  icône), aucune mise en avant du slot pendant une canalisation, aucun grisé quand le mana
-  manque — `AbilitySlotsOverlay` affiche les icônes, rien de plus pour l'instant.
 - **Aucun message** quand une canalisation démarrée s'arrête immédiatement au premier tick
   (cible déjà à PV pleins, par exemple) — silencieux, pas de distinction avec "n'a jamais
   démarré".
