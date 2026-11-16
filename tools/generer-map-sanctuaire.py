@@ -287,10 +287,10 @@ def spawner(pos, zombies, skeletons):
         "WaveEnd": 5,
         "LastCombatSessionHandled": 0,
         "Entries": [
-            {"Enemy": 0, "BaseCount": zombies, "Spawned": 0, "Accumulator": 0, "EffectiveTotal": zombies},
-            {"Enemy": 1, "BaseCount": skeletons, "Spawned": 0, "Accumulator": 0, "EffectiveTotal": skeletons},
+            {"Enemy": "dungeon_defenders:zombie", "BaseCount": zombies, "Spawned": 0, "Accumulator": 0, "EffectiveTotal": zombies},
+            {"Enemy": "dungeon_defenders:skeleton", "BaseCount": skeletons, "Spawned": 0, "Accumulator": 0, "EffectiveTotal": skeletons},
         ] if skeletons > 0 else [
-            {"Enemy": 0, "BaseCount": zombies, "Spawned": 0, "Accumulator": 0, "EffectiveTotal": zombies},
+            {"Enemy": "dungeon_defenders:zombie", "BaseCount": zombies, "Spawned": 0, "Accumulator": 0, "EffectiveTotal": zombies},
         ],
     })
 

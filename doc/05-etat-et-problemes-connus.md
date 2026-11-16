@@ -764,6 +764,10 @@ vérifie la CI.
   vérifications portent sur la cohérence du fichier, pas sur le rendu visuel réel. Détail dans
   [02-gameplay.md](02-gameplay.md#une-deuxième-map-plus-travaillée--mapruins_sanctuarynbt).
 
+  **2026-11-16** : ses spawners sont régénérés au format data-driven (`dungeon_defenders:zombie`,
+  `dungeon_defenders:skeleton`) — plus de ligne « converti » dans le log à chaque partie. Fait
+  sur `test/tout-ensemble` seulement : la PR #41 d'origine, antérieure au data-driven, garde
+  l'ancien format (toujours lisible).
 - ✅ **Système de héros — identité et filtrage des tours** (`init/HeroDefinition.java`,
   `client/gui/screen/HeroSelectionScreen.java`, 2026-09-03) : décidé avec le joueur de construire
   **un héros complet** plutôt que les tours des quatre — la classe de base une fois, les
