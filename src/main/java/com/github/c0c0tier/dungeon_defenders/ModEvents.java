@@ -1,5 +1,8 @@
 package com.github.c0c0tier.dungeon_defenders;
 
+import com.github.c0c0tier.dungeon_defenders.ability.AbilityRegistry;
+import com.github.c0c0tier.dungeon_defenders.ability.ChannelAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.PlayerAbilityChannels;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ManaCrystalEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
@@ -10,6 +13,7 @@ import com.github.c0c0tier.dungeon_defenders.init.EnemyBehavior;
 import com.github.c0c0tier.dungeon_defenders.init.EnemyDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.EnemyRegistry;
 import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
+import com.github.c0c0tier.dungeon_defenders.init.AbilitySlot;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ManaCrystalType;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -62,6 +66,9 @@ public class ModEvents {
     // SeekEterniaCrystalGoal, qui a justement besoin de pouvoir calculer un chemin sur toute la
     // distance, quelle que soit la taille de la map.
     private static final double MONSTER_FOLLOW_RANGE = 128.0D;
+    // Fréquence de synchronisation du mana pendant une canalisation (voir tickAbilityChannel) —
+    // toutes les 4 ticks, assez réactif pour un HUD sans envoyer vingt paquets par seconde.
+    private static final long MANA_SYNC_INTERVAL_TICKS = 4L;
 
     @SubscribeEvent
     public static void onMonsterSpawn(EntityJoinLevelEvent event) {
@@ -251,6 +258,51 @@ public class ModEvents {
 
         player.getFoodData().setFoodLevel(FULL_FOOD_LEVEL);
         player.getFoodData().setSaturation(FULL_SATURATION);
+
+        if (player instanceof ServerPlayer serverPlayer) {
+            tickAbilityChannel(serverPlayer);
+        }
+    }
+
+    // Fait avancer la canalisation en cours du joueur, s'il y en a une — voir
+    // PlayerAbilityChannels/ChannelAbility pour le raisonnement complet (pourquoi le serveur
+    // est seul juge de quand ça s'arrête).
+    private static void tickAbilityChannel(ServerPlayer player) {
+        AbilitySlot slot = PlayerAbilityChannels.activeSlot(player.getUUID());
+        if (slot == null) {
+            return;
+        }
+
+        ChannelAbility ability = AbilityRegistry.resolveChannel(player, slot);
+        BlockPos target = PlayerAbilityChannels.activeTarget(player.getUUID());
+
+        if (ability == null || !ability.canContinue(player, target)) {
+            PlayerAbilityChannels.stop(player.getUUID());
+            return;
+        }
+
+        ability.applyTick(player, target);
+
+        // Synchroniser le mana à chaque tick de canalisation serait vingt paquets par seconde
+        // pour rien — un intervalle de quelques ticks reste largement assez réactif pour un
+        // HUD.
+        if (player.level().getGameTime() % MANA_SYNC_INTERVAL_TICKS == 0) {
+            player.syncData(ModAttachments.MANA);
+        }
+    }
+
+    // Interrompt le soin dès qu'un coup est encaissé — comportement confirmé pour Heal Self
+    // dans le jeu de référence (voir HealAbility), volontairement PAS étendu à Repair ni Blood
+    // Rage, qu'aucune source ne documente comme interrompues par des dégâts.
+    @SubscribeEvent
+    public static void onPlayerDamagedInterruptHeal(LivingDamageEvent.Post event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || event.getHealthDamage() <= 0.0F) {
+            return;
+        }
+        if (PlayerAbilityChannels.activeSlot(player.getUUID()) == AbilitySlot.HEAL) {
+            PlayerAbilityChannels.stop(player.getUUID());
+            player.sendSystemMessage(Component.translatable("dungeon_defenders.ability.heal_interrupted"));
+        }
     }
 
     // Un joueur a pris un dégât pendant le Combat : plus de multiplicateur "aucun dégât subi"
