@@ -19,6 +19,7 @@ import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
 import com.github.c0c0tier.dungeon_defenders.init.AbilitySlot;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ManaCrystalType;
+import com.github.c0c0tier.dungeon_defenders.init.HeroStat;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreKeeper;
@@ -253,6 +254,8 @@ public class ModEvents {
             // À chaque connexion, pas seulement la première : couvre aussi une sauvegarde
             // d'avant les armes de héros.
             HeroWeapons.ensure(player);
+            // Vitalité et Rapidité : modificateurs transitoires, à reposer à chaque connexion.
+            HeroStat.applyAttributes(player);
         }
         if (player.level().isClientSide() || player.getData(ModAttachments.FIRST_SPAWN_HANDLED)) {
             return;
@@ -343,6 +346,9 @@ public class ModEvents {
     public static void onPlayerRespawnGiveWeapon(PlayerEvent.PlayerRespawnEvent event) {
         if (!event.getEntity().level().isClientSide()) {
             HeroWeapons.ensure(event.getEntity());
+            HeroStat.applyAttributes(event.getEntity());
+            // Le joueur réapparaît avec les PV max vanilla : on le remet à son vrai maximum.
+            event.getEntity().setHealth(event.getEntity().getMaxHealth());
         }
     }
 
@@ -380,7 +386,9 @@ public class ModEvents {
     /** Multiplicateur de dégâts d'un joueur selon son niveau : x1 au niveau 1. */
     public static double playerDamageMultiplier(Player player) {
         int level = Math.max(1, player.getData(ModAttachments.LEVEL));
-        return 1.0D + (level - 1) * GameBalance.get(BalanceValue.PLAYER_DAMAGE_PER_LEVEL, false);
+        double levelBonus = 1.0D + (level - 1) * GameBalance.get(BalanceValue.PLAYER_DAMAGE_PER_LEVEL, false);
+        // ... multiplié par la caractéristique Puissance (init/HeroStat).
+        return levelBonus * (1.0D + HeroStat.POWER.bonus(player));
     }
 
     // Corrosion (Projecteur d'acide de l'Alchimiste) : un monstre marqué subit plus de dégâts,
@@ -497,6 +505,10 @@ public class ModEvents {
 
         if (leveledUp) {
             player.sendSystemMessage(Component.translatable("dungeon_defenders.level.up", level));
+            int points = HeroStat.available(player);
+            if (points > 0) {
+                player.sendSystemMessage(Component.translatable("dungeon_defenders.stats.points_to_spend", points));
+            }
             celebrateLevelUp(player);
         }
     }

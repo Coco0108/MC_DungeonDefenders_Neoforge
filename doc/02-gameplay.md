@@ -2650,6 +2650,39 @@ Limites : textures vanilla (épée en fer, fiole d'XP, arbalète, bâton de blaz
 butin ni d'armes aux stats variables : c'est l'étape suivante, si le joueur la veut. Le clic
 droit pendant le mode pose de tour n'a pas été essayé.
 
+## Les caractéristiques — `init/HeroStat.java`, `client/gui/screen/HeroStatsScreen.java`
+
+Ajoutées le 2026-11-16. Chaque niveau gagné donne **un point**, à répartir dans l'écran des
+caractéristiques (touche **K**). **Jamais vu en jeu.**
+
+| Caractéristique | Effet par point | Comment |
+|---|---|---|
+| **Vitalité** | +2 PV max | modificateur d'attribut vanilla `MAX_HEALTH` |
+| **Puissance** | +3 % de dégâts infligés par le joueur (arme, épée, sorts) | `ModEvents#playerDamageMultiplier`, multiplié au bonus de niveau |
+| **Rapidité** | +2 % de vitesse de déplacement | modificateur d'attribut vanilla `MOVEMENT_SPEED` |
+| **Maîtrise des tours** | +3 % de dégâts des tours que le joueur pose | `AbstractTowerBlockEntity#ownerBonus` |
+
+- **Les points appartiennent au joueur**, pas au héros : changer de héros ne les remet pas à zéro.
+  Stockés dans l'attachment `HERO_STATS` (une liste d'entiers), synchronisé.
+- **Plafond** : 20 points par caractéristique. **Tout reprendre** est gratuit, mais refusé
+  pendant le Combat.
+- **Maîtrise des tours : un instantané.** Le bonus du poseur est relevé à la pose et réécrit à
+  chaque amélioration (avec celui de l'améliorateur s'il est meilleur). Des points dépensés
+  ensuite ne profitent donc pas aux tours déjà posées avant leur prochaine amélioration. Il ne
+  touche que les dégâts : pas le soin, le ralentissement ni le mana des tours de soutien.
+- Vitalité et Rapidité sont des modificateurs **transitoires**, reposés à chaque connexion et
+  réapparition (`HeroStat#applyAttributes`) : modifier `progression.json` ne laisse aucun reliquat.
+- Au passage de niveau, un message rappelle les points à répartir.
+- Chiffres dans `balance/progression.json` ([equilibrage.md](data-driven/equilibrage.md)).
+
+### Correctif lié : la progression survivait mal à la mort
+
+Aucun attachment joueur n'était marqué `copyOnDeath`. NeoForge ne recopie alors rien sur le joueur
+qui réapparaît : **mourir remettait le personnage au niveau 1, sans expérience, en Écuyer**.
+Corrigé le 2026-11-16 pour `EXPERIENCE`, `LEVEL`, `HERO`, `CHARACTER_NAME`, `FIRST_SPAWN_HANDLED`
+et `HERO_STATS`. Le mana n'est pas concerné (il repart plein). Trouvé à la lecture du code, pas
+observé en jeu : à confirmer en mourant une fois.
+
 ## Le mana du joueur
 
 Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore) **et** la

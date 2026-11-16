@@ -11,6 +11,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
+import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -53,6 +54,7 @@ public class ModAttachments {
             () -> AttachmentType.builder(() -> 0)
                     .serialize(Codec.INT.fieldOf("Experience"))
                     .sync(ByteBufCodecs.VAR_INT)
+                    .copyOnDeath()
                     .build());
 
     // Vague en cours : commence à 1, persistante, synchronisée au client pour le HUD.
@@ -182,6 +184,7 @@ public class ModAttachments {
             "first_spawn_handled",
             () -> AttachmentType.builder(() -> Boolean.FALSE)
                     .serialize(Codec.BOOL.fieldOf("FirstSpawnHandled"))
+                    .copyOnDeath()
                     .build());
 
     // Niveau du personnage : état du joueur (contrairement au score), commence à 1,
@@ -191,6 +194,7 @@ public class ModAttachments {
             () -> AttachmentType.builder(() -> 1)
                     .serialize(Codec.INT.fieldOf("Level"))
                     .sync(ByteBufCodecs.VAR_INT)
+                    .copyOnDeath()
                     .build());
 
     // Nom de personnage : distinct du pseudo Minecraft, éditable indépendamment (pas encore
@@ -209,6 +213,22 @@ public class ModAttachments {
                             ordinal -> HeroDefinition.values()[ordinal].name()
                     ).fieldOf("Hero"))
                     .sync(ByteBufCodecs.VAR_INT)
+                    .copyOnDeath()
+                    .build());
+
+    // Points répartis dans les caractéristiques (init/HeroStat) : un entier par caractéristique,
+    // dans l'ordre de l'enum. Persistant, synchronisé (l'écran et les bonus côté client en ont
+    // besoin), conservé à la mort.
+    //
+    // copyOnDeath : ajouté le 2026-11-16 ici ET sur EXPERIENCE, LEVEL, HERO, CHARACTER_NAME et
+    // FIRST_SPAWN_HANDLED. Sans lui, NeoForge ne recopie pas un attachment sur le joueur qui
+    // réapparaît : mourir remettait le personnage au niveau 1, sans XP, en Écuyer.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<List<Integer>>> HERO_STATS = ATTACHMENT_TYPES.register(
+            "hero_stats",
+            () -> AttachmentType.<List<Integer>>builder(() -> List.of())
+                    .serialize(Codec.INT.listOf().fieldOf("HeroStats"))
+                    .sync(ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()))
+                    .copyOnDeath()
                     .build());
 
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<String>> CHARACTER_NAME = ATTACHMENT_TYPES.register(
@@ -216,6 +236,7 @@ public class ModAttachments {
             () -> AttachmentType.builder(holder -> holder instanceof Player player ? player.getGameProfile().name() : "")
                     .serialize(Codec.STRING.fieldOf("CharacterName"))
                     .sync(ByteBufCodecs.STRING_UTF8)
+                    .copyOnDeath()
                     .build());
 
     // Difficulté de la partie : état de la Level (comme current_wave), censée être choisie

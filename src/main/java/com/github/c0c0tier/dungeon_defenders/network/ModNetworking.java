@@ -17,6 +17,7 @@ import com.github.c0c0tier.dungeon_defenders.init.AbilitySlot;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.HeroStat;
 import com.github.c0c0tier.dungeon_defenders.item.HeroWeapons;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.block.entity.MapConfigBlockEntity;
@@ -159,6 +160,11 @@ public class ModNetworking {
                 ModNetworking::handleActivateBurstAbility
         );
         registrar.playToServer(
+                SpendStatPointPayload.TYPE,
+                SpendStatPointPayload.STREAM_CODEC,
+                ModNetworking::handleSpendStatPoint
+        );
+        registrar.playToServer(
                 UploadMapPreviewPayload.TYPE,
                 UploadMapPreviewPayload.STREAM_CODEC,
                 ModNetworking::handleUploadMapPreview
@@ -265,6 +271,9 @@ public class ModNetworking {
             boolean cancelled = EventHooks.onBlockPlace(player, before, Direction.UP);
             if (cancelled) {
                 before.restore(Block.UPDATE_ALL);
+            } else if (serverLevel.getBlockEntity(pos) instanceof AbstractTowerBlockEntity placed) {
+                // Maîtrise des tours du poseur (init/HeroStat).
+                placed.setOwnerBonus(1.0D + HeroStat.TOWER_MASTERY.bonus(player));
             }
         });
     }
@@ -358,6 +367,9 @@ public class ModNetworking {
             }
 
             tower.upgrade();
+            // L'amélioration remet aussi à jour la Maîtrise des tours, avec celle de l'améliorateur
+            // si elle est meilleure.
+            tower.setOwnerBonus(Math.max(tower.ownerBonus(), 1.0D + HeroStat.TOWER_MASTERY.bonus(player)));
             if (cost > 0) {
                 player.setData(ModAttachments.MANA, currentMana - cost);
                 player.syncData(ModAttachments.MANA);
@@ -484,6 +496,34 @@ public class ModNetworking {
     // Choix de héros. Refusé en Combat : changer de classe au milieu d'une vague reviendrait à
     // se retrouver avec des tours posées qu'on ne peut plus poser, et à esquiver toute notion de
     // choix. La Construction (et plus tard la taverne) est le bon moment.
+    // Envoyé par HeroStatsScreen. Dépenser un point est permis à tout moment ; tout reprendre est
+    // refusé pendant le Combat, pour qu'on ne change pas de profil au milieu d'une vague.
+    private static void handleSpendStatPoint(SpendStatPointPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (level.isClientSide()) {
+                return;
+            }
+
+            if (payload.statOrdinal() == SpendStatPointPayload.RESET) {
+                if (level.getData(ModAttachments.GAME_PHASE) == GamePhase.COMBAT.ordinal()) {
+                    player.sendSystemMessage(Component.translatable("dungeon_defenders.stats.reset_not_in_combat"));
+                    return;
+                }
+                HeroStat.reset(player);
+                return;
+            }
+
+            HeroStat[] stats = HeroStat.values();
+            if (payload.statOrdinal() < 0 || payload.statOrdinal() >= stats.length) {
+                return;
+            }
+            // Refus silencieux : l'écran grise déjà le bouton, seul un paquet forgé arrive ici.
+            stats[payload.statOrdinal()].spend(player);
+        });
+    }
+
     private static void handleSelectHero(SelectHeroPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = context.player();

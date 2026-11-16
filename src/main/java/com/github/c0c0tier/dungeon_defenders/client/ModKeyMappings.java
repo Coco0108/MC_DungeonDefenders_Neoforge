@@ -79,6 +79,13 @@ public class ModKeyMappings {
             GLFW.GLFW_KEY_H,
             CATEGORY);
 
+    // Ouvre l'écran des caractéristiques (HeroStatsScreen). K est libre côté vanilla.
+    public static final KeyMapping HERO_STATS = new KeyMapping(
+            "key.dungeon_defenders.hero_stats",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_K,
+            CATEGORY);
+
     // Les quatre emplacements de compétence — touches 1 à 4, l'ordre du HUD (voir
     // AbilitySlotsOverlay) et de init.AbilitySlot : soin, sort 1, sort 2, réparation. Les
     // touches vanilla de hotbar utilisent les mêmes codes physiques, mais la hotbar est déjà
@@ -130,6 +137,7 @@ public class ModKeyMappings {
         event.register(UPGRADE_TOWER);
         event.register(MAP_OVERLAY);
         event.register(HERO_SELECTION);
+        event.register(HERO_STATS);
         event.register(ABILITY_HEAL);
         event.register(ABILITY_SPELL_1);
         event.register(ABILITY_SPELL_2);
