@@ -160,6 +160,31 @@ public class DungeonDefendersModClient {
                 DungeonDefendersMod.FLASK_LAUNCHER_BE.get(),
                 TowerHealthBarRenderer::new
         );
+        // Roster de l'Ingénieur.
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.IRON_BARRICADE_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.REPEATER_TURRET_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.LONGSHOT_TURRET_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.MAGNET_COIL_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.REPAIR_STATION_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.PISTON_SLAMMER_BE.get(),
+                TowerHealthBarRenderer::new
+        );
         // Réutilise tel quel le renderer vanilla de l'orbe d'XP (pas final, paramétré sur
         // ExperienceOrb) : le cristal de mana aura donc l'air d'une orbe d'XP verte/jaune, pas
         // encore de couleur "mana" dédiée — voir doc/05-etat-et-problemes-connus.md.

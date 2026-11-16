@@ -195,6 +195,88 @@ public enum TowerDefinition {
                     .with(TowerStat.ATTACK_INTERVAL_TICKS, 80)
                     .with(TowerStat.SPLASH_RADIUS, 2.0D)
                     .with(TowerStat.LINGER_TICKS, 60)
+                    .build()),
+
+    // --- Roster de l'Ingénieur (2026-11-16) : tours de conception propre au mod. ---
+
+    IRON_BARRICADE(
+            "iron_barricade",
+            () -> ModBlocks.IRON_BARRICADE.get(),
+            () -> ModBlocks.IRON_BARRICADE_ITEM.get(),
+            // Mur passif très solide, qui se répare seul (heal_amount PV par intervalle).
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 60)
+                    .with(TowerStat.MANA_COST, 45)
+                    .with(TowerStat.HEAL_AMOUNT, 1)
+                    .with(TowerStat.ATTACK_INTERVAL_TICKS, 40)
+                    .build()),
+
+    REPEATER_TURRET(
+            "repeater_turret",
+            () -> ModBlocks.REPEATER_TURRET.get(),
+            () -> ModBlocks.REPEATER_TURRET_ITEM.get(),
+            // Cadence très élevée, petits dégâts, portée moyenne.
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 20)
+                    .with(TowerStat.MANA_COST, 55)
+                    .with(TowerStat.RANGE, 9.0D)
+                    .with(TowerStat.CONE_ANGLE_DEGREES, 60.0D)
+                    .with(TowerStat.DAMAGE, 1.5D)
+                    .with(TowerStat.ATTACK_INTERVAL_TICKS, 6)
+                    .build()),
+
+    LONGSHOT_TURRET(
+            "longshot_turret",
+            () -> ModBlocks.LONGSHOT_TURRET.get(),
+            () -> ModBlocks.LONGSHOT_TURRET_ITEM.get(),
+            // Cône très étroit, très longue portée, gros dégâts, cadence lente.
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 15)
+                    .with(TowerStat.MANA_COST, 75)
+                    .with(TowerStat.RANGE, 24.0D)
+                    .with(TowerStat.CONE_ANGLE_DEGREES, 20.0D)
+                    .with(TowerStat.DAMAGE, 18.0D)
+                    .with(TowerStat.ATTACK_INTERVAL_TICKS, 80)
+                    .build()),
+
+    MAGNET_COIL(
+            "magnet_coil",
+            () -> ModBlocks.MAGNET_COIL.get(),
+            () -> ModBlocks.MAGNET_COIL_ITEM.get(),
+            // Attire les monstres vers elle (knockback_strength = force de l'attraction).
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 25)
+                    .with(TowerStat.MANA_COST, 50)
+                    .with(TowerStat.RANGE, 5.0D)
+                    .with(TowerStat.ATTACK_INTERVAL_TICKS, 10)
+                    .with(TowerStat.KNOCKBACK_STRENGTH, 0.35D)
+                    .build()),
+
+    REPAIR_STATION(
+            "repair_station",
+            () -> ModBlocks.REPAIR_STATION.get(),
+            () -> ModBlocks.REPAIR_STATION_ITEM.get(),
+            // Répare les tours voisines (heal_amount PV par intervalle).
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 20)
+                    .with(TowerStat.MANA_COST, 70)
+                    .with(TowerStat.RANGE, 4.0D)
+                    .with(TowerStat.HEAL_AMOUNT, 2)
+                    .with(TowerStat.ATTACK_INTERVAL_TICKS, 40)
+                    .build()),
+
+    PISTON_SLAMMER(
+            "piston_slammer",
+            () -> ModBlocks.PISTON_SLAMMER.get(),
+            () -> ModBlocks.PISTON_SLAMMER_ITEM.get(),
+            // Onde de choc tout autour : dégâts et forte repousse.
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 30)
+                    .with(TowerStat.MANA_COST, 60)
+                    .with(TowerStat.RANGE, 3.0D)
+                    .with(TowerStat.DAMAGE, 4.0D)
+                    .with(TowerStat.ATTACK_INTERVAL_TICKS, 50)
+                    .with(TowerStat.KNOCKBACK_STRENGTH, 1.0D)
                     .build());
 
     /**

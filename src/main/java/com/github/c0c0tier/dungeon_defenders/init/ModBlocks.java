@@ -24,6 +24,12 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.VolatileVatBlockEntity
 import com.github.c0c0tier.dungeon_defenders.block.entity.CatalystPylonBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaCondenserBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.FlaskLauncherBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.IronBarricadeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.RepeaterTurretBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.LongshotTurretBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MagnetCoilBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.RepairStationBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.PistonSlammerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.item.ManaFillWandItem;
 import com.github.c0c0tier.dungeon_defenders.item.ManaTestWandItem;
 import net.minecraft.world.item.BlockItem;
@@ -144,6 +150,50 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> FLASK_LAUNCHER_ITEM =
             ITEMS.registerItem("flask_launcher", properties -> new TowerBlockItem(FLASK_LAUNCHER.get(), properties));
+
+    // Roster de l'Ingénieur (2026-11-16) : tours de conception propre au mod, voir
+    // doc/02-gameplay.md. Même bloc générique que celles de l'Alchimiste.
+    public static final DeferredBlock<SimpleTowerBlock> IRON_BARRICADE = BLOCKS.registerBlock("iron_barricade",
+            properties -> new SimpleTowerBlock(properties, IronBarricadeBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> IRON_BARRICADE_ITEM =
+            ITEMS.registerItem("iron_barricade", properties -> new TowerBlockItem(IRON_BARRICADE.get(), properties));
+
+    public static final DeferredBlock<DirectionalTowerBlock> REPEATER_TURRET = BLOCKS.registerBlock("repeater_turret",
+            properties -> new DirectionalTowerBlock(properties, RepeaterTurretBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> REPEATER_TURRET_ITEM =
+            ITEMS.registerItem("repeater_turret", properties -> new TowerBlockItem(REPEATER_TURRET.get(), properties));
+
+    public static final DeferredBlock<DirectionalTowerBlock> LONGSHOT_TURRET = BLOCKS.registerBlock("longshot_turret",
+            properties -> new DirectionalTowerBlock(properties, LongshotTurretBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> LONGSHOT_TURRET_ITEM =
+            ITEMS.registerItem("longshot_turret", properties -> new TowerBlockItem(LONGSHOT_TURRET.get(), properties));
+
+    public static final DeferredBlock<SimpleTowerBlock> MAGNET_COIL = BLOCKS.registerBlock("magnet_coil",
+            properties -> new SimpleTowerBlock(properties, MagnetCoilBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> MAGNET_COIL_ITEM =
+            ITEMS.registerItem("magnet_coil", properties -> new TowerBlockItem(MAGNET_COIL.get(), properties));
+
+    public static final DeferredBlock<SimpleTowerBlock> REPAIR_STATION = BLOCKS.registerBlock("repair_station",
+            properties -> new SimpleTowerBlock(properties, RepairStationBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> REPAIR_STATION_ITEM =
+            ITEMS.registerItem("repair_station", properties -> new TowerBlockItem(REPAIR_STATION.get(), properties));
+
+    public static final DeferredBlock<SimpleTowerBlock> PISTON_SLAMMER = BLOCKS.registerBlock("piston_slammer",
+            properties -> new SimpleTowerBlock(properties, PistonSlammerBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> PISTON_SLAMMER_ITEM =
+            ITEMS.registerItem("piston_slammer", properties -> new TowerBlockItem(PISTON_SLAMMER.get(), properties));
 
     // 4. Baguette de test : retire 10 de mana au clic droit, pour vérifier le HUD (mana)
     public static final DeferredItem<ManaTestWandItem> MANA_TEST_WAND =

@@ -42,7 +42,14 @@ public enum TowerStat {
     // Mana du cristal en plus lâché par un monstre mort à portée : Condenseur de mana.
     BONUS_MANA("bonus_mana", true, 0.0D),
     // Durée de la flaque laissée par un tir : Lance-fioles.
-    LINGER_TICKS("linger_ticks", true, 1.0D);
+    LINGER_TICKS("linger_ticks", true, 1.0D),
+
+    // Tours de l'Ingénieur et du Géomancien (2026-11-16).
+    // PV rendus par intervalle : à soi-même (Barricade blindée), aux tours voisines (Station de
+    // réparation) ou aux joueurs proches (Pierre de vie).
+    HEAL_AMOUNT("heal_amount", true, 0.0D),
+    // Nombre de monstres touchés par un même éclair, le premier compris : Flèche de cristal.
+    CHAIN_TARGETS("chain_targets", true, 1.0D);
 
     private final String jsonName;
     private final boolean integer;

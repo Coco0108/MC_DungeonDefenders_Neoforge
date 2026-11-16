@@ -16,7 +16,11 @@ import com.github.c0c0tier.dungeon_defenders.entity.Corrosion;
 import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import com.github.c0c0tier.dungeon_defenders.block.entity.IronBarricadeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MagnetCoilBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.PistonSlammerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.RepairStationBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.MapConfigBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackPriorityTargetGoal;
@@ -134,6 +138,7 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "hero_rosters", DungeonDefendersGameTests::heroRosters);
         register(event, environment, "alchemist_support_towers", DungeonDefendersGameTests::alchemistSupportTowers);
         register(event, environment, "alchemist_damage_towers", DungeonDefendersGameTests::alchemistDamageTowers);
+        register(event, environment, "engineer_towers", DungeonDefendersGameTests::engineerTowers);
         // Réglages globaux en data-driven (doc/data-driven/equilibrage.md).
         register(event, environment, "balance_shipped_values", DungeonDefendersGameTests::balanceShippedValues);
         register(event, environment, "balance_validation", DungeonDefendersGameTests::balanceValidation);
@@ -747,6 +752,58 @@ public final class DungeonDefendersGameTests {
             target.discard();
             helper.succeed();
         });
+    }
+
+    /**
+     * Tours de l'Ingénieur : la Barricade blindée se répare seule ; la Station de réparation
+     * soigne sa voisine mais pas elle-même, sans dépasser les PV max ; un bouclier (Champ de
+     * force) annule les dégâts ; la Bobine magnétique tire un monstre vers elle ; le Marteau-pilon
+     * blesse et repousse.
+     */
+    static void engineerTowers(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+
+        BlockPos barricadePos = new BlockPos(1, 1, 1);
+        helper.setBlock(barricadePos, ModBlocks.IRON_BARRICADE.get());
+        IronBarricadeBlockEntity barricade = helper.getBlockEntity(barricadePos, IronBarricadeBlockEntity.class);
+        barricade.damage(10);
+        helper.assertValueEqual(barricade.getHealth(), 50, "barricade entamée");
+        barricade.serverTick(level);
+        helper.assertValueEqual(barricade.getHealth(), 51, "la barricade se répare seule");
+
+        barricade.applyShield(level.getGameTime() + 100);
+        barricade.damage(30);
+        helper.assertValueEqual(barricade.getHealth(), 51, "aucun dégât sous bouclier");
+
+        BlockPos stationPos = new BlockPos(1, 1, 4);
+        BlockPos spikePos = new BlockPos(3, 1, 4);
+        helper.setBlock(stationPos, ModBlocks.REPAIR_STATION.get());
+        helper.setBlock(spikePos, ModBlocks.SPIKE_BLOCKADE.get());
+        RepairStationBlockEntity station = helper.getBlockEntity(stationPos, RepairStationBlockEntity.class);
+        AbstractTowerBlockEntity spike = helper.getBlockEntity(spikePos, AbstractTowerBlockEntity.class);
+        station.damage(5);
+        spike.damage(1);
+        station.serverTick(level);
+        helper.assertValueEqual(spike.getHealth(), 30, "tour voisine réparée, sans dépasser ses PV max");
+        helper.assertValueEqual(station.getHealth(), 15, "la station ne se répare pas elle-même");
+
+        BlockPos coilPos = new BlockPos(6, 1, 1);
+        helper.setBlock(coilPos, ModBlocks.MAGNET_COIL.get());
+        Zombie pulled = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(6, 1, 4));
+        pulled.setOnGround(true);
+        helper.getBlockEntity(coilPos, MagnetCoilBlockEntity.class).serverTick(level);
+        helper.assertTrue(pulled.getDeltaMovement().z < 0.0D, "monstre tiré vers la bobine (z décroissant)");
+        pulled.discard();
+
+        BlockPos slammerPos = new BlockPos(4, 1, 7);
+        helper.setBlock(slammerPos, ModBlocks.PISTON_SLAMMER.get());
+        Zombie slammed = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(4, 1, 5));
+        slammed.setOnGround(true);
+        helper.getBlockEntity(slammerPos, PistonSlammerBlockEntity.class).serverTick(level);
+        helper.assertTrue(slammed.getHealth() < slammed.getMaxHealth(), "monstre blessé par le Marteau-pilon");
+        helper.assertTrue(slammed.getDeltaMovement().z < 0.0D, "monstre repoussé loin du Marteau-pilon");
+        slammed.discard();
+        helper.succeed();
     }
 
     private static SpawnerBlockEntity.SpawnEntry parseEntry(GameTestHelper helper, Tag enemy) {

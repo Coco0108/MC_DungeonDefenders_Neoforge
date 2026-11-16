@@ -2544,6 +2544,39 @@ d'autres, les siennes ou celles d'un Écuyer en multijoueur.
   portée) peut rendre le mana trop abondant.
 
 
+## L'Ingénieur — troisième héros (`HeroDefinition.ENGINEER`)
+
+Ajouté le 2026-11-16, à la suite de l'Alchimiste, sur le même patron. **Conception propre au
+mod**, proposée par Claude, **jamais vue en jeu**.
+
+**Identité** : des machines. Deux tourelles aux profils opposés pour les dégâts, et tout ce qu'il
+faut pour faire **durer** une défense.
+
+| Tour | Rôle | Stats livrées |
+|---|---|---|
+| **Barricade blindée** `iron_barricade` | Mur passif très solide qui **se répare seul**. | 60 PV, 45 mana, `heal_amount` 1, `attack_interval_ticks` 40 |
+| **Tourelle à répétition** `repeater_turret` | Turret classique : cadence très élevée, petits dégâts. | 20 PV, 55 mana, `range` 9, `cone_angle_degrees` 60, `damage` 1.5, `attack_interval_ticks` 6 |
+| **Tourelle longue portée** `longshot_turret` | Turret classique : cône très étroit, portée double, gros tir lent. | 15 PV, 75 mana, `range` 24, `cone_angle_degrees` 20, `damage` 18, `attack_interval_ticks` 80 |
+| **Marteau-pilon** `piston_slammer` | Frappe le sol : blesse et **repousse** tout ce qui l'entoure. Première ligne. | 30 PV, 60 mana, `range` 3, `damage` 4, `attack_interval_ticks` 50, `knockback_strength` 1 |
+| **Bobine magnétique** `magnet_coil` | Aucun dégât : **attire** les monstres vers elle. | 25 PV, 50 mana, `range` 5, `attack_interval_ticks` 10, `knockback_strength` 0.35 |
+| **Station de réparation** `repair_station` | **Répare** les tours voisines, pas elle-même. | 20 PV, 70 mana, `range` 4, `heal_amount` 2, `attack_interval_ticks` 40 |
+
+| Sort | Type | Effet |
+|---|---|---|
+| **Réparation d'urgence** (sort 1) | salve, 70 mana, 20 s de recharge | Rend la moitié de leurs PV max aux tours à 10 blocs. |
+| **Champ de force** (sort 2) | maintenue, 3 mana/tick | Les tours à 8 blocs n'encaissent aucun dégât tant que la touche est tenue. |
+
+Côté code : les deux tourelles sont des `AbstractTurretBlockEntity` sans une ligne de
+comportement (seules leurs stats diffèrent du Harpoon Turret) ; les quatre autres sont des tours
+à impulsions. Deux ajouts à `AbstractTowerBlockEntity` : `repair(int)` et le **bouclier
+temporaire** (`applyShield`/`isShielded`, vérifié dans `damage`), sur le modèle du bonus de
+dégâts. `SimpleTowerBlock` fait désormais tourner aussi les Turrets et les Blockades.
+
+Limites : la Bobine et le Marteau-pilon se contrarient s'ils sont côte à côte (l'un attire,
+l'autre repousse) — c'est au joueur de s'en servir, par exemple pour faire revenir les monstres
+dans le rayon du Marteau. Équilibrage théorique ; point à surveiller : la Barricade (60 PV qui
+remontent seuls) face au Spike Blockade de l'Écuyer (30 PV).
+
 ## Le mana du joueur
 
 Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore) **et** la

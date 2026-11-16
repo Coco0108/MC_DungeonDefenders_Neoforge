@@ -12,6 +12,12 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.VolatileVatBlockEntity
 import com.github.c0c0tier.dungeon_defenders.block.entity.CatalystPylonBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaCondenserBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.FlaskLauncherBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.IronBarricadeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.RepeaterTurretBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.LongshotTurretBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MagnetCoilBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.RepairStationBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.PistonSlammerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.MortarTurretBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SliceNDiceBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
@@ -140,6 +146,43 @@ public class DungeonDefendersMod {
             BLOCK_ENTITIES.register("flask_launcher", () -> new BlockEntityType<>(
                     FlaskLauncherBlockEntity::new,
                     ModBlocks.FLASK_LAUNCHER.get()
+            ));
+
+    // Roster de l'Ingénieur (2026-11-16), voir ModBlocks.
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<IronBarricadeBlockEntity>> IRON_BARRICADE_BE =
+            BLOCK_ENTITIES.register("iron_barricade", () -> new BlockEntityType<>(
+                    IronBarricadeBlockEntity::new,
+                    ModBlocks.IRON_BARRICADE.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<RepeaterTurretBlockEntity>> REPEATER_TURRET_BE =
+            BLOCK_ENTITIES.register("repeater_turret", () -> new BlockEntityType<>(
+                    RepeaterTurretBlockEntity::new,
+                    ModBlocks.REPEATER_TURRET.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<LongshotTurretBlockEntity>> LONGSHOT_TURRET_BE =
+            BLOCK_ENTITIES.register("longshot_turret", () -> new BlockEntityType<>(
+                    LongshotTurretBlockEntity::new,
+                    ModBlocks.LONGSHOT_TURRET.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MagnetCoilBlockEntity>> MAGNET_COIL_BE =
+            BLOCK_ENTITIES.register("magnet_coil", () -> new BlockEntityType<>(
+                    MagnetCoilBlockEntity::new,
+                    ModBlocks.MAGNET_COIL.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<RepairStationBlockEntity>> REPAIR_STATION_BE =
+            BLOCK_ENTITIES.register("repair_station", () -> new BlockEntityType<>(
+                    RepairStationBlockEntity::new,
+                    ModBlocks.REPAIR_STATION.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PistonSlammerBlockEntity>> PISTON_SLAMMER_BE =
+            BLOCK_ENTITIES.register("piston_slammer", () -> new BlockEntityType<>(
+                    PistonSlammerBlockEntity::new,
+                    ModBlocks.PISTON_SLAMMER.get()
             ));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TrainingDummyBlockEntity>> TRAINING_DUMMY_BE =
