@@ -586,6 +586,13 @@ HUD et cas transverses :
 - [ ] En creatif, appuyer sur 1-4 : la competence se declenche ET le slot de hotbar change
       (effet de bord assume, voir doc/02-gameplay.md) — a confirmer que ce n'est pas genant en
       pratique.
+- [ ] **Recharge sur le HUD** : lancer Circular Slice (2) → son emplacement se couvre d'un
+      voile sombre qui descend en ~3 secondes, avec les secondes restantes (3, 2, 1) au centre.
+- [ ] **Canalisation sur le HUD** : maintenir 1, 3 ou 4 (4 en visant une tour) → la bordure de
+      l'emplacement passe au jaune clair, et revient au noir au relachement.
+- [ ] **Mana insuffisant sur le HUD** : a 0 mana, les quatre emplacements sont grises ; avec
+      moins de 60 mana, celui de Circular Slice est grise et les trois autres non.
+- [ ] Se deconnecter pendant une recharge puis rejoindre : aucun voile residuel.
 - [ ] Aucune exception liee a `ability.*`, `ModEvents.tickAbilityChannel`,
       `ModEvents.onPlayerDamaged`, ou aux 3 nouveaux paquets (`StartChannelAbilityPayload`,
       `StopChannelAbilityPayload`, `ActivateBurstAbilityPayload`).

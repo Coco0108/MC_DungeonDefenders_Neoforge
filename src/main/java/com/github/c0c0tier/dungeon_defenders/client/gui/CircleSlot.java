@@ -17,6 +17,24 @@ final class CircleSlot {
         renderDisc(guiGraphics, centerX, centerY, radius - 2, fillColor);
     }
 
+    /**
+     * Voile posé par-dessus un emplacement : couvre la part basse {@code fraction} (0 à 1) du
+     * disque intérieur. Sert à la recharge (le voile descend à mesure qu'elle s'écoule) et, à
+     * fraction 1, au grisé d'une compétence inutilisable.
+     */
+    static void renderVeil(GuiGraphicsExtractor guiGraphics, int centerX, int centerY, int radius, float fraction, int color) {
+        int inner = radius - 2;
+        int firstRow = inner - Math.round(Math.clamp(fraction, 0.0F, 1.0F) * (inner * 2 + 1)) + 1;
+        for (int dy = Math.max(firstRow, -inner); dy <= inner; dy++) {
+            int halfWidth = (int) Math.round(Math.sqrt((double) (inner * inner - dy * dy)));
+            if (halfWidth <= 0) {
+                continue;
+            }
+            int y = centerY + dy;
+            guiGraphics.fill(centerX - halfWidth, y, centerX + halfWidth, y + 1, color);
+        }
+    }
+
     private static void renderDisc(GuiGraphicsExtractor guiGraphics, int centerX, int centerY, int radius, int color) {
         for (int dy = -radius; dy <= radius; dy++) {
             int halfWidth = (int) Math.round(Math.sqrt((double) (radius * radius - dy * dy)));
