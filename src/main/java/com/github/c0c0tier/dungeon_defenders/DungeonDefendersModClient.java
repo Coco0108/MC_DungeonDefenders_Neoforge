@@ -30,6 +30,8 @@ import com.github.c0c0tier.dungeon_defenders.init.TowerStatsRegistry;
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
+import com.github.c0c0tier.dungeon_defenders.client.ClientAbilityState;
+import com.github.c0c0tier.dungeon_defenders.network.AbilityCooldownPayload;
 import com.github.c0c0tier.dungeon_defenders.network.GameOverPayload;
 import com.github.c0c0tier.dungeon_defenders.network.OpenMapSelectionPayload;
 import com.github.c0c0tier.dungeon_defenders.network.EnemyDefinitionsPayload;
@@ -245,6 +247,8 @@ public class DungeonDefendersModClient {
         // planter le chargement du mod — voir OpenMapSelectionPayload.
         event.register(OpenMapSelectionPayload.TYPE, (payload, context) ->
                 context.enqueueWork(() -> Minecraft.getInstance().setScreen(new MapSelectionScreen(payload.maps()))));
+        event.register(AbilityCooldownPayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> ClientAbilityState.startCooldown(payload.slotOrdinal(), payload.cooldownTicks())));
     }
 
     private static void handleScoreGain(ScoreGainPayload payload, IPayloadContext context) {

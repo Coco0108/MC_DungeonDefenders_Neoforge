@@ -183,6 +183,10 @@ public class ModNetworking {
                 GameBalancePayload.TYPE,
                 GameBalancePayload.STREAM_CODEC
         );
+        registrar.playToClient(
+                AbilityCooldownPayload.TYPE,
+                AbilityCooldownPayload.STREAM_CODEC
+        );
     }
 
     private static void handlePlaceTower(PlaceTowerPayload payload, IPayloadContext context) {
@@ -545,6 +549,9 @@ public class ModNetworking {
             serverPlayer.setData(ModAttachments.MANA, currentMana - ability.manaCost());
             serverPlayer.syncData(ModAttachments.MANA);
             AbilityCooldowns.markUsed(serverPlayer.getUUID(), slot, now);
+            // Affichage seulement (voir AbilityCooldownPayload) : la recharge reste jugée ici.
+            serverPlayer.connection.send(
+                    new AbilityCooldownPayload(slot.ordinal(), ability.cooldownTicks()).toVanillaClientbound());
             ability.activate(serverPlayer);
         });
     }

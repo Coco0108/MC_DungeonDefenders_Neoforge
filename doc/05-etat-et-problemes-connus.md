@@ -788,7 +788,8 @@ vérifie la CI.
   jamais le client. Touches **1-4**, premier usage de `KeyMapping#isDown()` (maintenue) dans le
   mod plutôt que `consumeClick()`. **Simplifications assumées** : Circular Slice touche une
   fois au lieu de deux, la cible de Repair est fixée à l'appui (pas de re-visée en cours de
-  canalisation), aucun retour visuel de recharge/canalisation sur le HUD. **Jamais vérifié en
+  canalisation). Le HUD affiche la recharge, la canalisation en cours et le manque de mana
+  depuis le 2026-11-16 (`ClientAbilityState`, `AbilityCooldownPayload`). **Jamais vérifié en
   jeu.** Détail dans [02-gameplay.md](02-gameplay.md#les-compétences--ability-initabilityslotjava).
 
 ## Corrections apportées
