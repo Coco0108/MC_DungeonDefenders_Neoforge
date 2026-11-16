@@ -35,6 +35,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild/enterTavern/startNewGame : transitions centralisées
     │   │   ├── MapDefinition.java            # Une map jouable (structure + nom + ordre + vagues + multiplicateur) ; le namespace fait office de pack
     │   │   ├── MapRegistry.java              # Découverte des maps parmi TOUTES les structures disponibles (monde, datapacks, jars)
+    │   │   ├── MapPreviews.java              # Aperçus des maps créées en jeu : rangement dans la sauvegarde, validation (taille, PNG, chemin)
     │   │   ├── ModChunkTickets.java          # Force-chargement (et tick) de la zone de map pendant une partie
     │   │   ├── TowerDefinition.java          # Catalogue des tours posables via la roue (voir client/gui/screen/TowerWheelScreen.java)
     │   │   ├── TowerStat.java                # Les chiffres réglables d'une tour (PV, coût, dégâts, portée, cadence...)
@@ -81,6 +82,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── StopChannelAbilityPayload.java  # Paquet C2S sans champ (fin d'une compétence maintenue)
     │   │   ├── ActivateBurstAbilityPayload.java # Paquet C2S (emplacement, déclenchement d'une compétence en salve)
     │   │   ├── AbilityCooldownPayload.java   # Paquet S2C (emplacement + durée de recharge, pour l'affichage du HUD)
+    │   │   ├── UploadMapPreviewPayload.java  # Paquet C2S (id de structure + PNG de l'aperçu capturé)
+    │   │   ├── MapPreviewPayload.java        # Paquet S2C (id de structure + PNG), avant l'ouverture de l'écran de choix
     │   │   ├── GameOverPayload.java          # Paquet S2C (victoire/défaite, ouvre GameOverScreen)
     │   │   ├── ScoreGainPayload.java         # Paquet S2C (montant + source du gain + identifiant de l'ennemi tué, alimente ScoreGainOverlay)
     │   │   ├── EnemyDefinitionsPayload.java  # Paquet S2C (ennemis data-driven : id, entity_type, icône, ordre), à la connexion et après /reload
@@ -101,6 +104,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── MapOverlayState.java          # État transitoire du plan plein écran (visible, position du cristal trouvé)
     │   │   ├── MapOverlayClientEvents.java   # Touche maintenue (MAP_OVERLAY) + scan borné du cristal de la zone actuelle
     │   │   ├── PauseMenuClientEvents.java   # Bouton "Abandonner le niveau" ajouté au menu pause (ScreenEvent.Init.Post)
+    │   │   ├── MapPreviewCapture.java        # Capture de l'aperçu : armement, touche, HUD masqué, recadrage 128x72, envoi
+    │   │   ├── ClientMapPreviews.java        # Aperçus reçus du serveur, chargés en textures dynamiques
     │   │   ├── ClientEnemyDefinitions.java   # Copie CLIENT des ennemis data-driven (distincte d'EnemyRegistry, voir doc/data-driven/ennemis.md)
     │   │   ├── AbilityClientEvents.java      # Touches 1-4 : Start/Stop des compétences maintenues, salve pour le sort 1
     │   │   ├── ClientAbilityState.java       # État d'affichage des compétences : recharge en cours, emplacement canalisé

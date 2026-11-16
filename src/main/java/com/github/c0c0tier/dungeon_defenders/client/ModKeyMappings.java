@@ -113,6 +113,15 @@ public class ModKeyMappings {
     /** Indexé par {@code AbilitySlot.ordinal()} — même ordre que le HUD : soin, sort 1, sort 2, réparation. */
     public static final KeyMapping[] ABILITY_KEYS = {ABILITY_HEAL, ABILITY_SPELL_1, ABILITY_SPELL_2, ABILITY_REPAIR};
 
+    // Déclenche la capture d'aperçu d'une map, une fois armée depuis l'écran de choix (voir
+    // MapPreviewCapture). F9 : libre en vanilla, et hors des touches de jeu — c'est un outil de
+    // mappeur, utilisé rarement.
+    public static final KeyMapping CAPTURE_MAP_PREVIEW = new KeyMapping(
+            "key.dungeon_defenders.capture_map_preview",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_F9,
+            CATEGORY);
+
     public static void register(RegisterKeyMappingsEvent event) {
         event.registerCategory(CATEGORY);
         event.register(TOWER_WHEEL);
@@ -125,5 +134,6 @@ public class ModKeyMappings {
         event.register(ABILITY_SPELL_1);
         event.register(ABILITY_SPELL_2);
         event.register(ABILITY_REPAIR);
+        event.register(CAPTURE_MAP_PREVIEW);
     }
 }

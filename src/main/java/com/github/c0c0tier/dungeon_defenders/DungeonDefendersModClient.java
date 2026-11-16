@@ -33,7 +33,9 @@ import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
 import com.github.c0c0tier.dungeon_defenders.client.ClientAbilityState;
 import com.github.c0c0tier.dungeon_defenders.network.AbilityCooldownPayload;
+import com.github.c0c0tier.dungeon_defenders.client.ClientMapPreviews;
 import com.github.c0c0tier.dungeon_defenders.network.GameOverPayload;
+import com.github.c0c0tier.dungeon_defenders.network.MapPreviewPayload;
 import com.github.c0c0tier.dungeon_defenders.network.OpenMapSelectionPayload;
 import com.github.c0c0tier.dungeon_defenders.network.EnemyDefinitionsPayload;
 import com.github.c0c0tier.dungeon_defenders.network.GameBalancePayload;
@@ -235,6 +237,7 @@ public class DungeonDefendersModClient {
     @SubscribeEvent
     static void onRegisterClientPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
         event.register(ScoreGainPayload.TYPE, DungeonDefendersModClient::handleScoreGain);
+        event.register(MapPreviewPayload.TYPE, DungeonDefendersModClient::handleMapPreview);
         // Les ennemis data-driven (icônes, noms, ordre, types de mob) : reçus à la connexion et
         // après chaque /reload, voir init/EnemyRegistry#onDatapackSync.
         event.register(EnemyDefinitionsPayload.TYPE, (payload, context) ->
@@ -253,6 +256,11 @@ public class DungeonDefendersModClient {
                 context.enqueueWork(() -> Minecraft.getInstance().setScreen(new MapSelectionScreen(payload.maps()))));
         event.register(AbilityCooldownPayload.TYPE, (payload, context) ->
                 context.enqueueWork(() -> ClientAbilityState.startCooldown(payload.slotOrdinal(), payload.cooldownTicks())));
+    }
+
+    // Aperçu d'une map créée en jeu : chargé comme texture dynamique (voir ClientMapPreviews).
+    private static void handleMapPreview(MapPreviewPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> ClientMapPreviews.put(payload.structureId(), payload.png()));
     }
 
     private static void handleScoreGain(ScoreGainPayload payload, IPayloadContext context) {

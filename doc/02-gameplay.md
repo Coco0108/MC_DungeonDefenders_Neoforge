@@ -2002,9 +2002,8 @@ Le **nom du pack** n'est stocké nulle part — la commande écrit donc une vale
 du namespace (`cavernes_oubliees` → « Cavernes Oubliees ») que l'auteur corrige dans le fichier
 de langue. Mieux vaut un fichier à retoucher qu'une clé de traduction crue affichée aux joueurs.
 
-Les **aperçus** sont cherchés dans `<monde>/dungeon_defenders/previews/<ns>/<id>.png`. Rien ne
-les y écrit encore — c'est l'emplacement que remplira la capture en jeu (phase 2), prévu dès
-maintenant pour que cette commande n'ait pas à changer ensuite.
+Les **aperçus** sont cherchés dans `<monde>/dungeon_defenders/previews/<ns>/<id>.png`, là où
+la capture en jeu les écrit (voir « L'aperçu d'une map, capturé en jeu »).
 
 Réservée au niveau de permission « gamemaster » : c'est un outil de créateur.
 
@@ -2015,11 +2014,55 @@ l'oublie.
 
 ### Ce qui n'est PAS fait dans cette étape
 
-- **Pas d'aperçu capturé en jeu** : une map créée en jeu affiche la texture "manquante" tant
-  qu'aucun PNG ne lui est fourni. La capture d'écran est la phase suivante.
+- Une map créée en jeu affiche la texture "manquante" **tant que son aperçu n'a pas été
+  capturé** (voir la section suivante).
 - **Pas de commande d'export** vers un jar prêt à publier (phase 3).
 - **Pas de réinitialisation entre deux tentatives** (tours retirées, PV du cristal) — PR séparée
   juste après, décidé avec le joueur pour ne pas gonfler celle-ci.
+
+
+## L'aperçu d'une map, capturé en jeu — `client/MapPreviewCapture.java`, `init/MapPreviews.java`
+
+Ajouté le 2026-11-16 (phase 2 du chantier « maps en jeu », déroulé validé le 2026-09-02).
+
+### Côté mappeur
+
+1. Clic droit sur le cristal de la taverne, en **créatif** : sous « Supprimer », un bouton
+   **« Prendre l'aperçu »**, actif seulement sur une map créée en jeu (celle d'un jar embarque
+   déjà son image).
+2. Le bouton **arme** la capture pour la map affichée et ferme l'écran. Un rappel reste
+   affiché au-dessus de la hotbar : « Aperçu de … : cadrez puis appuyez sur F9 ».
+3. On va se placer, on cadre, on appuie sur **F9** (touche réglable). Le HUD est masqué le
+   temps de trois ticks, l'image est lue, recadrée au centre en 16:9, réduite à **128×72**.
+4. **F9 accroupi** annule.
+
+Le bouton est dans l'écran de choix, et non dans le bloc de configuration de la map, parce que
+c'est le seul endroit qui connaît l'**identifiant de structure** : le bloc de configuration,
+posé dans la map, ignore sous quel nom le bloc de structure la sauvegardera.
+
+### Le trajet de l'image
+
+- Le client envoie `UploadMapPreviewPayload` (identifiant + PNG).
+- Le serveur (`ModNetworking#handleUploadMapPreview`) revérifie : créatif, identifiant de map,
+  map **de la sauvegarde**, taille et signature PNG. Il écrit
+  `<monde>/dungeon_defenders/previews/<ns>/<id>.png` (`MapPreviews#save`, qui borne aussi le
+  chemin au dossier des aperçus : un identifiant peut contenir « .. »).
+- Il renvoie l'image aux autres joueurs connectés (`MapPreviewPayload`), et à chaque joueur
+  qui ouvre ensuite l'écran de choix, **avant** le paquet qui ouvre l'écran
+  (`TavernCrystalBlock`).
+- Le client la charge en texture dynamique (`ClientMapPreviews`) ; l'écran de choix affiche
+  celle-ci si elle existe, sinon la ressource du pack.
+- `/dd_export` l'embarque dans le jar, comme prévu depuis la phase 3.
+
+### Limites
+
+- **30 000 octets au plus** : le jeu plafonne un paquet client → serveur à 32 767 octets. À
+  128×72 une capture pèse d'ordinaire 5 à 15 Ko ; au-delà, le client refuse avec un message
+  plutôt que d'envoyer un paquet que le serveur rejetterait en déconnectant le joueur.
+- Supprimer une map ne supprime pas son aperçu (fichier orphelin de quelques Ko, sans effet).
+- Si la lecture de l'image n'aboutissait jamais, le HUD resterait masqué : **F1** le rétablit.
+- Gametest `map_preview_storage` pour le rangement côté serveur. La capture elle-même (rendu,
+  recadrage, texture) n'est **vérifiable qu'en jeu**.
 
 ## Abandonner un niveau — `client/PauseMenuClientEvents.java`, `network/LeaveMapPayload.java`
 

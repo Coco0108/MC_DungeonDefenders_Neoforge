@@ -797,6 +797,11 @@ vérifie la CI.
   canalisation). Le HUD affiche la recharge, la canalisation en cours et le manque de mana
   depuis le 2026-11-16 (`ClientAbilityState`, `AbilityCooldownPayload`). **Jamais vérifié en
   jeu.** Détail dans [02-gameplay.md](02-gameplay.md#les-compétences--ability-initabilityslotjava).
+- ✅ **Aperçu de map capturé en jeu** (2026-11-16) : bouton « Prendre l'aperçu » de l'écran de
+  choix (créatif), touche F9, image 128×72 rangée dans la sauvegarde, diffusée aux joueurs et
+  embarquée par `/dd_export`. Rangement serveur couvert par le gametest `map_preview_storage` ;
+  **la capture elle-même n'a jamais été vue en jeu** (code de rendu écrit sans pouvoir le
+  regarder tourner). Détail dans [02-gameplay.md](02-gameplay.md).
 - ✅ **Vagues périodiques** (2026-11-16) : un spawner peut ne s'activer qu'une vague sur N
   (`waveStep`), ce qui donne la vague de boss périodique sans nouveau mécanisme. Gametest
   `spawner_wave_step`. **Jamais vérifié en jeu.**
