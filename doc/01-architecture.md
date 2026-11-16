@@ -92,6 +92,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── DiamondGauge.java             # Dessine une jauge en forme de losange (fill() empilés, sans texture)
     │   │   ├── CircleSlot.java               # Dessine un rond (fond + bordure) (fill() empilés, sans texture)
     │   │   ├── CombatCountdownOverlay.java   # "Combat dans 3..." pendant le compte à rebours (client uniquement)
+    │   │   ├── ProgressionFeedbackOverlay.java # "+X XP" près de la barre d'expérience et bannière "Niveau X !" (client uniquement)
     │   │   ├── TowerInspectOverlay.java      # Nom + PV de la tour regardée, sous le viseur (client uniquement)
     │   │   ├── ManaOverlay.java              # Losange mana, bas gauche (client uniquement)
     │   │   ├── HealthOverlay.java            # Losange vie, bas gauche (client uniquement)

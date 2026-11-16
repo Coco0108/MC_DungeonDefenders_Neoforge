@@ -1299,6 +1299,21 @@ Vérifié hors jeu par simulation (BFS), pas seulement par relecture des coordon
       visiblement bloqué/tremblant indéfiniment contre le mur ou la falaise (signerait un
       chemin que le pathfinder ne sait pas calculer malgré la vérification hors jeu).
 
+## Retours de progression : popup d'XP et passage de niveau (2026-11-16)
+
+- [ ] Tuer un monstre : un « +X XP » vert apparaît à droite du libellé « Expérience : x/y »,
+      monte légèrement et s'efface en un peu plus d'une seconde. Il ne recouvre ni les losanges
+      ni les emplacements de compétences.
+- [ ] Tuer plusieurs monstres d'un coup (mortier, boule de bowling) : un seul popup, avec le
+      total, plutôt que plusieurs textes superposés.
+- [ ] Franchir un niveau : bannière jaune « Niveau X ! » en haut de l'écran pendant ~2,5 s, son
+      de passage de niveau, particules vertes autour du joueur, et le message du chat toujours là.
+- [ ] À deux joueurs : l'autre joueur entend le son et voit les particules, mais pas la bannière.
+- [ ] Se déconnecter puis rejoindre avec un personnage déjà monté en niveau : ni popup ni
+      bannière à la connexion.
+- [ ] Options > Mods > configuration : décocher « popup de gain d'expérience » puis « bannière
+      de passage de niveau » les masque chacun indépendamment.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni
