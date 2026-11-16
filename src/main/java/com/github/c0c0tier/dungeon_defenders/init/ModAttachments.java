@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.init;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.loot.LootWeapon;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -11,7 +12,9 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -228,6 +231,27 @@ public class ModAttachments {
             () -> AttachmentType.<List<Integer>>builder(() -> List.of())
                     .serialize(Codec.INT.listOf().fieldOf("HeroStats"))
                     .sync(ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()))
+                    .copyOnDeath()
+                    .build());
+
+    // Inventaire de la Forge (loot/Equipment) : tout le butin rangé par le joueur. Il lui
+    // appartient (aucun bloc ne le stocke), persiste, survit à la mort, et est synchronisé pour
+    // l'écran de la Forge.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<List<LootWeapon>>> FORGE_INVENTORY = ATTACHMENT_TYPES.register(
+            "forge_inventory",
+            () -> AttachmentType.<List<LootWeapon>>builder(() -> List.of())
+                    .serialize(LootWeapon.CODEC.listOf().fieldOf("ForgeInventory"))
+                    .sync(LootWeapon.STREAM_CODEC.apply(ByteBufCodecs.list()))
+                    .copyOnDeath()
+                    .build());
+
+    // Arme de butin équipée, PAR HÉROS (clé : HeroDefinition#id) : changer de héros ne déséquipe
+    // rien. Un héros absent de la table a simplement son arme de base.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Map<String, LootWeapon>>> EQUIPPED_WEAPONS = ATTACHMENT_TYPES.register(
+            "equipped_weapons",
+            () -> AttachmentType.<Map<String, LootWeapon>>builder(() -> Map.of())
+                    .serialize(Codec.unboundedMap(Codec.STRING, LootWeapon.CODEC).fieldOf("EquippedWeapons"))
+                    .sync(ByteBufCodecs.map(HashMap::new, ByteBufCodecs.STRING_UTF8, LootWeapon.STREAM_CODEC))
                     .copyOnDeath()
                     .build());
 

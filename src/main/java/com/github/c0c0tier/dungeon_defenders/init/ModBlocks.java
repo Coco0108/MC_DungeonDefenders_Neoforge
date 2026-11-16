@@ -5,6 +5,7 @@ import com.github.c0c0tier.dungeon_defenders.block.BouncerBlockadeBlock;
 import com.github.c0c0tier.dungeon_defenders.block.BowlingBallTurretBlock;
 import com.github.c0c0tier.dungeon_defenders.block.DirectionalTowerBlock;
 import com.github.c0c0tier.dungeon_defenders.block.EterniaCrystalBlock;
+import com.github.c0c0tier.dungeon_defenders.block.ForgeBlock;
 import com.github.c0c0tier.dungeon_defenders.block.HarpoonTurretBlock;
 import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
 import com.github.c0c0tier.dungeon_defenders.block.MapConfigBlock;
@@ -345,6 +346,14 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> MAP_CONFIG_ITEM =
             ITEMS.registerSimpleBlockItem("map_config", MAP_CONFIG);
+
+    // 12. Forge : meuble de la taverne, ouvre l'inventaire du joueur (voir ForgeBlock).
+    public static final DeferredBlock<ForgeBlock> FORGE = BLOCKS.registerBlock("forge",
+            ForgeBlock::new,
+            properties -> properties.strength(3.5F));
+
+    public static final DeferredItem<BlockItem> FORGE_ITEM =
+            ITEMS.registerSimpleBlockItem("forge", FORGE);
 
     // Connexion au bus d'événements
     public static void register(IEventBus modEventBus) {

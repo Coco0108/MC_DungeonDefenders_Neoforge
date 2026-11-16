@@ -7,6 +7,9 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEnti
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaCondenserBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.Corrosion;
 import com.github.c0c0tier.dungeon_defenders.entity.ManaCrystalEntity;
+import com.github.c0c0tier.dungeon_defenders.loot.Equipment;
+import com.github.c0c0tier.dungeon_defenders.loot.LootWeapon;
+import com.github.c0c0tier.dungeon_defenders.loot.LootGenerator;
 import com.github.c0c0tier.dungeon_defenders.item.HeroWeapons;
 import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackPriorityTargetGoal;
@@ -19,6 +22,7 @@ import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
 import com.github.c0c0tier.dungeon_defenders.init.AbilitySlot;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ManaCrystalType;
+import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.HeroStat;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
@@ -256,6 +260,7 @@ public class ModEvents {
             HeroWeapons.ensure(player);
             // Vitalité et Rapidité : modificateurs transitoires, à reposer à chaque connexion.
             HeroStat.applyAttributes(player);
+            Equipment.applyAttributes(player);
         }
         if (player.level().isClientSide() || player.getData(ModAttachments.FIRST_SPAWN_HANDLED)) {
             return;
@@ -339,6 +344,29 @@ public class ModEvents {
         }
     }
 
+    // Récompense de vague nettoyée : wave_clear_drops armes par joueur, chacune pour SON héros.
+    // Posées à ses pieds en cours de partie ; rangées directement dans l'inventaire de la Forge
+    // après la dernière vague, puisque la victoire renvoie tout le monde à la taverne et qu'un
+    // objet resté au sol de la map serait perdu.
+    private static void awardWaveClearLoot(Level level, boolean lastWave) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        int drops = GameBalance.getInt(BalanceValue.LOOT_WAVE_CLEAR_DROPS, false);
+        int wave = level.getData(ModAttachments.CURRENT_WAVE);
+        for (Player player : serverLevel.players()) {
+            for (int i = 0; i < drops; i++) {
+                LootWeapon weapon = LootGenerator.roll(serverLevel.getRandom(), HeroDefinition.of(player),
+                        LootGenerator.rollRarity(serverLevel.getRandom()), wave);
+                if (lastWave) {
+                    Equipment.store(player, weapon);
+                } else {
+                    LootGenerator.drop(serverLevel, player.position(), weapon);
+                }
+            }
+        }
+    }
+
     // --- ARMES DE HÉROS (item/HeroWeapons) ---
 
     // Un joueur qui réapparaît retrouve son arme (elle n'est pas lâchée à la mort, voir plus bas).
@@ -347,6 +375,7 @@ public class ModEvents {
         if (!event.getEntity().level().isClientSide()) {
             HeroWeapons.ensure(event.getEntity());
             HeroStat.applyAttributes(event.getEntity());
+            Equipment.applyAttributes(event.getEntity());
             // Le joueur réapparaît avec les PV max vanilla : on le remet à son vrai maximum.
             event.getEntity().setHealth(event.getEntity().getMaxHealth());
         }
@@ -388,7 +417,8 @@ public class ModEvents {
         int level = Math.max(1, player.getData(ModAttachments.LEVEL));
         double levelBonus = 1.0D + (level - 1) * GameBalance.get(BalanceValue.PLAYER_DAMAGE_PER_LEVEL, false);
         // ... multiplié par la caractéristique Puissance (init/HeroStat).
-        return levelBonus * (1.0D + HeroStat.POWER.bonus(player));
+        // ... et par l'arme de butin équipée (loot/Equipment).
+        return levelBonus * (1.0D + HeroStat.POWER.bonus(player)) * Equipment.damageMultiplier(player);
     }
 
     // Corrosion (Projecteur d'acide de l'Alchimiste) : un monstre marqué subit plus de dégâts,
@@ -435,6 +465,14 @@ public class ModEvents {
             return;
         }
 
+        // Butin : un monstre tué en Combat a une petite chance de lâcher une arme, pour le héros
+        // d'un des joueurs présents (loot/LootGenerator).
+        if (level instanceof ServerLevel lootLevel
+                && lootLevel.getRandom().nextDouble() < GameBalance.get(BalanceValue.LOOT_DROP_CHANCE, false)) {
+            LootGenerator.drop(lootLevel, monster.position(),
+                    LootGenerator.rollFor(lootLevel, level.getData(ModAttachments.CURRENT_WAVE)));
+        }
+
         int killed = level.getData(ModAttachments.WAVE_ENEMIES_KILLED) + 1;
         level.setData(ModAttachments.WAVE_ENEMIES_KILLED, killed);
         level.syncData(ModAttachments.WAVE_ENEMIES_KILLED);
@@ -452,6 +490,8 @@ public class ModEvents {
             ScoreKeeper.awardWaveCleared(level);
 
             boolean wasLastWave = level.getData(ModAttachments.CURRENT_WAVE) >= ModAttachments.waveCount(level);
+            // Avant le changement de phase : la récompense a la force de la vague qu'on termine.
+            awardWaveClearLoot(level, wasLastWave);
             if (wasLastWave) {
                 PhaseTransitions.onVictory(level);
             } else {

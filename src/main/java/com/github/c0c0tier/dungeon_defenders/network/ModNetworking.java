@@ -18,6 +18,7 @@ import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.HeroStat;
+import com.github.c0c0tier.dungeon_defenders.loot.Equipment;
 import com.github.c0c0tier.dungeon_defenders.item.HeroWeapons;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.block.entity.MapConfigBlockEntity;
@@ -36,6 +37,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -160,6 +162,16 @@ public class ModNetworking {
                 ModNetworking::handleActivateBurstAbility
         );
         registrar.playToServer(
+                LootPickupPayload.TYPE,
+                LootPickupPayload.STREAM_CODEC,
+                ModNetworking::handleLootPickup
+        );
+        registrar.playToServer(
+                ForgeActionPayload.TYPE,
+                ForgeActionPayload.STREAM_CODEC,
+                ModNetworking::handleForgeAction
+        );
+        registrar.playToServer(
                 SpendStatPointPayload.TYPE,
                 SpendStatPointPayload.STREAM_CODEC,
                 ModNetworking::handleSpendStatPoint
@@ -204,6 +216,10 @@ public class ModNetworking {
         registrar.playToClient(
                 MapPreviewPayload.TYPE,
                 MapPreviewPayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                OpenForgePayload.TYPE,
+                OpenForgePayload.STREAM_CODEC
         );
     }
 
@@ -273,7 +289,7 @@ public class ModNetworking {
                 before.restore(Block.UPDATE_ALL);
             } else if (serverLevel.getBlockEntity(pos) instanceof AbstractTowerBlockEntity placed) {
                 // Maîtrise des tours du poseur (init/HeroStat).
-                placed.setOwnerBonus(1.0D + HeroStat.TOWER_MASTERY.bonus(player));
+                placed.setOwnerBonus(1.0D + HeroStat.TOWER_MASTERY.bonus(player) + Equipment.towerDamageBonus(player));
             }
         });
     }
@@ -369,7 +385,8 @@ public class ModNetworking {
             tower.upgrade();
             // L'amélioration remet aussi à jour la Maîtrise des tours, avec celle de l'améliorateur
             // si elle est meilleure.
-            tower.setOwnerBonus(Math.max(tower.ownerBonus(), 1.0D + HeroStat.TOWER_MASTERY.bonus(player)));
+            tower.setOwnerBonus(Math.max(tower.ownerBonus(),
+                    1.0D + HeroStat.TOWER_MASTERY.bonus(player) + Equipment.towerDamageBonus(player)));
             if (cost > 0) {
                 player.setData(ModAttachments.MANA, currentMana - cost);
                 player.syncData(ModAttachments.MANA);
@@ -524,6 +541,45 @@ public class ModNetworking {
         });
     }
 
+    // Ranger ou équiper un objet de butin au sol (touches du client, voir LootPickupClientEvents).
+    private static void handleLootPickup(LootPickupPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            if (player.level().isClientSide()) {
+                return;
+            }
+            // Identifiant d'entité reçu du réseau : n'importe quoi peut arriver, Equipment#pickUp
+            // vérifie que c'est bien du butin à portée.
+            if (player.level().getEntity(payload.entityId()) instanceof ItemEntity itemEntity) {
+                Equipment.pickUp(player, itemEntity, payload.equip());
+            }
+        });
+    }
+
+    // Actions de l'écran de la Forge. Pas de vérification de distance au bloc : l'inventaire
+    // appartient au joueur, et s'équiper depuis l'inventaire n'est permis que hors Combat pour
+    // que la Forge reste un lieu où l'on passe ENTRE les vagues.
+    private static void handleForgeAction(ForgeActionPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (level.isClientSide()) {
+                return;
+            }
+            if (level.getData(ModAttachments.GAME_PHASE) == GamePhase.COMBAT.ordinal()) {
+                player.sendSystemMessage(Component.translatable("dungeon_defenders.forge.not_in_combat"));
+                return;
+            }
+            switch (payload.action()) {
+                case ForgeActionPayload.EQUIP -> Equipment.equipFromInventory(player, payload.index());
+                case ForgeActionPayload.DISCARD -> Equipment.discard(player, payload.index());
+                case ForgeActionPayload.UNEQUIP -> Equipment.unequip(player);
+                default -> {
+                }
+            }
+        });
+    }
+
     private static void handleSelectHero(SelectHeroPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = context.player();
@@ -547,6 +603,8 @@ public class ModNetworking {
             player.syncData(ModAttachments.HERO);
             // L'arme suit le héros : l'ancienne disparaît, la nouvelle arrive.
             HeroWeapons.ensure(player);
+            // Chaque héros a sa propre arme de butin équipée : ses bonus suivent le changement.
+            Equipment.applyAttributes(player);
             player.sendSystemMessage(Component.translatable(
                     "dungeon_defenders.hero.selected", heroes[payload.heroOrdinal()].displayName()));
         });
