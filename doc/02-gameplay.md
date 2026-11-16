@@ -1324,7 +1324,7 @@ chiffres d'une tour ne sont plus des constantes de son block entity : ils sont *
 
 Étape 2 du passage en data-driven (plan et détail : [data-driven/tours.md](data-driven/tours.md)).
 Un fichier par tour, nommé comme son id (`tower/spike_blockade.json`...), relu au démarrage et à
-chaque `/reload`, synchronisé au client (`TowerStatsPayload`). Les six fichiers livrés reprennent
+chaque `/reload`, synchronisé au client (`TowerStatsPayload`). Les six fichiers de l'Écuyer reprennent
 exactement les valeurs d'avant :
 
 | Tour | `max_health` | `mana_cost` | Autres stats |
@@ -1335,6 +1335,9 @@ exactement les valeurs d'avant :
 | `harpoon_turret` | 20 | 50 | `range` 12, `cone_angle_degrees` 45, `damage` 6, `attack_interval_ticks` 30 |
 | `bowling_ball_turret` | 20 | 55 | `range` 12, `cone_angle_degrees` 45, `damage` 5, `attack_interval_ticks` 40, `projectile_velocity` 1.5, `projectile_extra_distance` 4 |
 | `mortar_turret` | 20 | 70 | `range` 14, `cone_angle_degrees` 45, `damage` 8, `attack_interval_ticks` 60, `splash_radius` 2 |
+
+Les six tours de l'Alchimiste (2026-11-16) ont leur propre tableau :
+[L'Alchimiste](#lalchimiste--deuxième-héros-herodefinitionalchemist).
 
 - **La liste des tours et leur comportement restent en Java** (une tour est un bloc + un block
   entity). Seuls les nombres sont dans les JSON.
@@ -2477,6 +2480,69 @@ sens.
 - Pas de nettoyage de `PlayerAbilityChannels`/`AbilityCooldowns` à la déconnexion — limite
   acceptée, négligeable sur un serveur privé (voir le commentaire de classe de
   `PlayerAbilityChannels`).
+
+## L'Alchimiste — deuxième héros (`HeroDefinition.ALCHEMIST`)
+
+Ajouté le 2026-11-16, à la demande du joueur (« Héros et tours »). **Conception propre au mod** :
+ni ses tours ni ses sorts ne sont repris du jeu de référence, contrairement au roster de l'Écuyer.
+Tout est proposé par Claude et **jamais vu en jeu** — noms, rôles et chiffres sont à corriger
+librement (les chiffres sans recompiler, voir `tower/*.json`).
+
+**Identité** : un héros de soutien. L'Écuyer bloque et frappe ; l'Alchimiste ralentit, fragilise,
+renforce les tours voisines et fait rentrer du mana. Ses tours valent surtout **combinées** à
+d'autres, les siennes ou celles d'un Écuyer en multijoueur.
+
+| Tour | Rôle | Stats livrées |
+|---|---|---|
+| **Cuve instable** `volatile_vat` | Mur passif et fragile (priorité IA « block », les monstres de mêlée s'y jettent). **Explose** quand les monstres la détruisent : dégâts à tout ce qui l'entoure. Rien si on la retire soi-même. | 15 PV, 35 mana, `damage` 12, `splash_radius` 3 |
+| **Alambic givrant** `frost_still` | Aucun dégât. **Ralentit** tous les monstres de son rayon (Lenteur, réappliquée deux fois par seconde). | 20 PV, 40 mana, `range` 5, `effect_level` 2 |
+| **Projecteur d'acide** `acid_sprayer` | Arrose **tous** les monstres d'un cône court et large (orientable). Dégâts faibles, mais pose la **corrosion** : +30 % de dégâts subis, de toutes les sources, pendant 3 s. | 20 PV, 60 mana, `range` 6, `cone_angle_degrees` 90, `damage` 1, `attack_interval_ticks` 20, `vulnerability_percent` 30 |
+| **Lance-fioles** `flask_launcher` | Tire tout autour de lui. La fiole laisse une **flaque** qui blesse deux fois par seconde tout monstre qui s'y tient. | 20 PV, 65 mana, `range` 10, `damage` 2 (par passage), `attack_interval_ticks` 80, `splash_radius` 2, `linger_ticks` 60 |
+| **Pylône catalyseur** `catalyst_pylon` | N'attaque pas. **+25 % de dégâts** aux tours voisines, quel que soit leur héros. | 15 PV, 80 mana, `range` 4, `boost_percent` 25 |
+| **Condenseur de mana** `mana_condenser` | Tour d'économie : un monstre qui meurt dans son rayon lâche **un cristal de mana en plus**. | 15 PV, 60 mana, `range` 5, `bonus_mana` 5 |
+
+| Sort | Type | Effet |
+|---|---|---|
+| **Fiole de givre** (sort 1) | salve, 50 mana, 8 s de recharge | Se brise à l'endroit visé (16 blocs max) : 4 dégâts et Lenteur VI pendant 3 s dans un rayon de 4. |
+| **Catalyse** (sort 2) | maintenue, 2 mana/tick | Les tours à 8 blocs du joueur font +50 % de dégâts tant que la touche est tenue. |
+
+### Comment c'est construit
+
+- **`AbstractPulseTowerBlockEntity`** : troisième catégorie de tours, « à impulsions ». La tour
+  agit à intervalle régulier sur tout ce qui l'entoure, au lieu de viser une cible (Turret) ou de
+  piquer au contact (Blockade). Une tour concrète ne fournit que `pulseIntervalTicks()` et
+  `pulse()`. Alambic, Projecteur, Lance-fioles et Pylône en héritent ; la Cuve et le Condenseur
+  héritent directement de `AbstractTowerBlockEntity` (ils ne font rien à chaque tick).
+- **`SimpleTowerBlock` / `DirectionalTowerBlock`** : un seul bloc générique pour les six tours,
+  le block entity est passé au constructeur. Les six tours de l'Écuyer ont chacune leur classe de
+  bloc, identiques à une ligne près ; elles n'ont pas été migrées (aucun gain en jeu).
+- **Bonus de dégâts temporaire** (`AbstractTowerBlockEntity#applyDamageBoost`,
+  `damageMultiplier()`) : posé pour quelques ticks et renouvelé par le Pylône et par la Catalyse,
+  il expire seul. **Les bonus ne se cumulent pas**, le plus fort l'emporte — deux pylônes côte à
+  côte ne servent à rien, c'est voulu. Il s'applique à toutes les tours, Écuyer compris
+  (`AbstractTurretBlockEntity#getDamage`, dégâts de contact des Blockades). Purement serveur :
+  l'inspection d'une tour ne l'affiche pas.
+- **Corrosion** (`entity/Corrosion.java`) : table en mémoire monstre → multiplicateur, appliquée
+  dans `ModEvents#onCorrodedMonsterHurt` (`LivingIncomingDamageEvent`). Elle vaut pour les coups
+  du joueur et les sorts, pas seulement pour les tours.
+- **Condenseur** : les condenseurs s'inscrivent dans une table par monde
+  (`ManaCondenserBlockEntity#bonusManaAt`), lue par `ModEvents#onMonsterDeath`. Pas de cumul non
+  plus : un monstre compte pour le meilleur condenseur qui le couvre.
+- **Amélioration (touche U)** : comme pour les autres tours, +25 % de PV et de dégâts par niveau.
+  Pour les deux tours sans dégâts qui auraient sinon été inutiles à améliorer, le niveau augmente
+  aussi le bonus du Pylône et le mana du Condenseur. L'Alambic ne gagne que des PV.
+- **`TowerScan#towersNear`** : trouve les tours autour d'un point en parcourant les block
+  entities des chunks, pas chaque case du volume.
+
+### Limites connues
+
+- Textures : placeholders vanilla (glace bleue, tonneau, améthyste, lapis, table de forgeron,
+  distributeur).
+- Les flaques du Lance-fioles et la corrosion ne sont pas sauvegardées (elles durent 3 s).
+- La Fiole de givre vise le premier bloc sous le viseur ; dans le vide, elle éclate à 16 blocs.
+- Équilibrage entièrement théorique. Point à surveiller : le Condenseur (5 de mana par mort à
+  portée) peut rendre le mana trop abondant.
+
 
 ## Le mana du joueur
 

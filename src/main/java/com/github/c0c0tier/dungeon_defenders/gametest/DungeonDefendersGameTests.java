@@ -7,6 +7,15 @@ import com.github.c0c0tier.dungeon_defenders.WorldTime;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.AcidSprayerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.CatalystPylonBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.FlaskLauncherBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.FrostStillBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ManaCondenserBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.entity.Corrosion;
+import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.MapConfigBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
@@ -121,6 +130,10 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "tower_shipped_values", DungeonDefendersGameTests::towerShippedValues);
         register(event, environment, "tower_stats_validation", DungeonDefendersGameTests::towerStatsValidation);
         register(event, environment, "tower_upgrade", DungeonDefendersGameTests::towerUpgrade);
+        // Héros Alchimiste et ses tours (doc/02-gameplay.md).
+        register(event, environment, "hero_rosters", DungeonDefendersGameTests::heroRosters);
+        register(event, environment, "alchemist_support_towers", DungeonDefendersGameTests::alchemistSupportTowers);
+        register(event, environment, "alchemist_damage_towers", DungeonDefendersGameTests::alchemistDamageTowers);
         // Réglages globaux en data-driven (doc/data-driven/equilibrage.md).
         register(event, environment, "balance_shipped_values", DungeonDefendersGameTests::balanceShippedValues);
         register(event, environment, "balance_validation", DungeonDefendersGameTests::balanceValidation);
@@ -327,7 +340,7 @@ public final class DungeonDefendersGameTests {
     }
 
     /**
-     * Les six JSON de tours livrés sont chargés et reprennent exactement les valeurs par défaut
+     * Les JSON de tours livrés sont chargés et reprennent exactement les valeurs par défaut
      * du code, c'est-à-dire celles d'avant la migration ("aucune valeur de gameplay ne change").
      * Vérifie aussi qu'une tour posée lit bien ses chiffres par ce chemin.
      */
@@ -602,6 +615,138 @@ public final class DungeonDefendersGameTests {
         helper.assertValueEqual(tower.getInvestedMana(), 99, "mana investi : pose + 3 niveaux");
         helper.assertFalse(tower.upgrade(), "pas d'amélioration au-delà du maximum");
         helper.succeed();
+    }
+
+    /**
+     * Chaque tour du catalogue appartient à exactement un héros, chaque héros en a six, et le
+     * bloc de chaque tour crée bien un block entity de CETTE tour (une erreur de câblage dans
+     * ModBlocks ou DungeonDefendersMod donnerait les stats d'une autre).
+     */
+    static void heroRosters(GameTestHelper helper) {
+        for (TowerDefinition tower : TowerDefinition.values()) {
+            long owners = java.util.Arrays.stream(HeroDefinition.values()).filter(hero -> hero.canPlace(tower)).count();
+            helper.assertValueEqual(owners, 1L, "nombre de héros pouvant poser " + tower.id());
+
+            BlockPos pos = new BlockPos(1, 1, 1);
+            helper.setBlock(pos, tower.block());
+            AbstractTowerBlockEntity blockEntity = helper.getBlockEntity(pos, AbstractTowerBlockEntity.class);
+            helper.assertValueEqual(blockEntity.definition(), tower, "tour du block entity de " + tower.id());
+            helper.assertValueEqual(blockEntity.getHealth(), tower.defaultStats().intValue(TowerStat.MAX_HEALTH),
+                    "PV de départ de " + tower.id());
+        }
+        for (HeroDefinition hero : HeroDefinition.values()) {
+            helper.assertValueEqual(hero.towers().size(), 6, "nombre de tours de " + hero.id());
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Tours de soutien de l'Alchimiste : l'Alambic givrant ralentit un monstre à portée ; le
+     * Pylône catalyseur donne +25 % de dégâts à une tour voisine (pas à lui-même), un bonus plus
+     * faible ne remplace pas un plus fort, et le bonus monte avec le niveau du pylône ; le
+     * Condenseur de mana ne compte que pour les morts dans son rayon, et plus du tout une fois
+     * retiré.
+     */
+    static void alchemistSupportTowers(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+
+        BlockPos stillPos = new BlockPos(1, 1, 1);
+        helper.setBlock(stillPos, ModBlocks.FROST_STILL.get());
+        Zombie zombie = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(3, 1, 1));
+        helper.getBlockEntity(stillPos, FrostStillBlockEntity.class).serverTick(level);
+        MobEffectInstance slowness = zombie.getEffect(MobEffects.SLOWNESS);
+        helper.assertTrue(slowness != null, "monstre ralenti par l'Alambic givrant");
+        helper.assertValueEqual(slowness.getAmplifier(), 1, "Lenteur II (effect_level 2)");
+        zombie.discard();
+
+        BlockPos pylonPos = new BlockPos(1, 1, 3);
+        BlockPos spikePos = new BlockPos(3, 1, 3);
+        helper.setBlock(pylonPos, ModBlocks.CATALYST_PYLON.get());
+        helper.setBlock(spikePos, ModBlocks.SPIKE_BLOCKADE.get());
+        CatalystPylonBlockEntity pylon = helper.getBlockEntity(pylonPos, CatalystPylonBlockEntity.class);
+        AbstractTowerBlockEntity spike = helper.getBlockEntity(spikePos, AbstractTowerBlockEntity.class);
+        helper.assertValueEqual(spike.damageMultiplier(), 1.0D, "aucun bonus avant l'impulsion");
+        pylon.serverTick(level);
+        helper.assertValueEqual(spike.damageMultiplier(), 1.25D, "bonus du pylône sur la tour voisine");
+        helper.assertValueEqual(pylon.damageMultiplier(), 1.0D, "le pylône ne se renforce pas lui-même");
+        spike.applyDamageBoost(1.1D, level.getGameTime() + 100);
+        helper.assertValueEqual(spike.damageMultiplier(), 1.25D, "un bonus plus faible ne remplace pas le plus fort");
+        spike.applyDamageBoost(1.5D, level.getGameTime() + 100);
+        helper.assertValueEqual(spike.damageMultiplier(), 1.5D, "un bonus plus fort l'emporte");
+
+        BlockPos condenserPos = new BlockPos(5, 1, 1);
+        helper.setBlock(condenserPos, ModBlocks.MANA_CONDENSER.get());
+        Vec3 near = helper.absoluteVec(new Vec3(5.5D, 1.0D, 3.5D));
+        Vec3 far = helper.absoluteVec(new Vec3(5.5D, 1.0D, 30.5D));
+        helper.assertValueEqual(ManaCondenserBlockEntity.bonusManaAt(level, near), 5, "bonus de mana à portée");
+        helper.assertValueEqual(ManaCondenserBlockEntity.bonusManaAt(level, far), 0, "aucun bonus hors de portée");
+        helper.getBlockEntity(condenserPos, AbstractTowerBlockEntity.class).upgrade();
+        helper.assertValueEqual(ManaCondenserBlockEntity.bonusManaAt(level, near), 6, "bonus au niveau 2 (5 x 1,25 arrondi)");
+        helper.setBlock(condenserPos, net.minecraft.world.level.block.Blocks.AIR);
+        helper.assertValueEqual(ManaCondenserBlockEntity.bonusManaAt(level, near), 0, "plus de bonus une fois le condenseur retiré");
+        helper.succeed();
+    }
+
+    /**
+     * Tours offensives de l'Alchimiste : la corrosion du Projecteur d'acide fait subir plus de
+     * dégâts qu'à un monstre témoin, et seulement dans son cône ; la Cuve instable blesse ses
+     * voisins quand elle est détruite au combat, pas quand on la retire ; le Lance-fioles pose
+     * une flaque sur un monstre à portée.
+     */
+    static void alchemistDamageTowers(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+
+        // Projecteur orienté au nord (par défaut) : le monstre au nord est arrosé, pas celui au sud.
+        BlockPos sprayerPos = new BlockPos(3, 1, 4);
+        helper.setBlock(sprayerPos, ModBlocks.ACID_SPRAYER.get());
+        Zombie sprayed = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(3, 1, 1));
+        Zombie behind = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(3, 1, 6));
+        helper.getBlockEntity(sprayerPos, AcidSprayerBlockEntity.class).serverTick(level);
+        helper.assertTrue(sprayed.getHealth() < sprayed.getMaxHealth(), "monstre dans le cône blessé");
+        helper.assertValueEqual(behind.getHealth(), behind.getMaxHealth(), "monstre derrière le projecteur épargné");
+        helper.assertValueEqual(Corrosion.factor(sprayed), 1.3D, "corrosion posée (+30 %)");
+        helper.assertValueEqual(Corrosion.factor(behind), 1.0D, "pas de corrosion hors du cône");
+
+        // Même coup sur un monstre corrodé et sur un témoin : le corrodé perd plus de PV.
+        Zombie corroded = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(6, 1, 1));
+        Zombie control = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(6, 1, 3));
+        Corrosion.apply(corroded, 1.5D, level.getGameTime() + 100);
+        corroded.hurtServer(level, level.damageSources().generic(), 6.0F);
+        control.hurtServer(level, level.damageSources().generic(), 6.0F);
+        float corrodedLoss = corroded.getMaxHealth() - corroded.getHealth();
+        float controlLoss = control.getMaxHealth() - control.getHealth();
+        helper.assertTrue(controlLoss > 0.0F, "le témoin est blessé");
+        helper.assertTrue(Math.abs(corrodedLoss - controlLoss * 1.5F) < 0.01F,
+                "corrodé : " + corrodedLoss + " PV perdus, attendu 1,5 x " + controlLoss);
+        sprayed.discard();
+        behind.discard();
+        corroded.discard();
+        control.discard();
+
+        // Cuve instable : retirée à la main, rien ; détruite par des dégâts, explosion.
+        BlockPos vatPos = new BlockPos(1, 1, 1);
+        Zombie neighbour = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(1, 1, 2));
+        helper.setBlock(vatPos, ModBlocks.VOLATILE_VAT.get());
+        helper.setBlock(vatPos, net.minecraft.world.level.block.Blocks.AIR);
+        helper.assertValueEqual(neighbour.getHealth(), neighbour.getMaxHealth(), "aucune explosion au retrait");
+        helper.setBlock(vatPos, ModBlocks.VOLATILE_VAT.get());
+        helper.getBlockEntity(vatPos, AbstractTowerBlockEntity.class).damage(1000);
+        helper.assertTrue(neighbour.getHealth() < neighbour.getMaxHealth(), "explosion à la destruction au combat");
+        helper.assertBlockPresent(net.minecraft.world.level.block.Blocks.AIR, vatPos);
+        neighbour.discard();
+
+        BlockPos launcherPos = new BlockPos(5, 1, 5);
+        helper.setBlock(launcherPos, ModBlocks.FLASK_LAUNCHER.get());
+        FlaskLauncherBlockEntity launcher = helper.getBlockEntity(launcherPos, FlaskLauncherBlockEntity.class);
+        launcher.serverTick(level);
+        helper.assertValueEqual(launcher.activePuddles(), 0, "pas de tir sans cible");
+        Zombie target = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(5, 1, 2));
+        // serverTick limite lui-même la cadence : on appelle pulse par le tick du jeu suivant.
+        helper.runAfterDelay(12, () -> {
+            helper.assertValueEqual(launcher.activePuddles(), 1, "une flaque posée sur la cible");
+            target.discard();
+            helper.succeed();
+        });
     }
 
     private static SpawnerBlockEntity.SpawnEntry parseEntry(GameTestHelper helper, Tag enemy) {

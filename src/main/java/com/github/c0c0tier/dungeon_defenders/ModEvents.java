@@ -4,6 +4,8 @@ import com.github.c0c0tier.dungeon_defenders.ability.AbilityRegistry;
 import com.github.c0c0tier.dungeon_defenders.ability.ChannelAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.PlayerAbilityChannels;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ManaCondenserBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.entity.Corrosion;
 import com.github.c0c0tier.dungeon_defenders.entity.ManaCrystalEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackPriorityTargetGoal;
@@ -39,6 +41,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -324,6 +327,20 @@ public class ModEvents {
         }
     }
 
+    // Corrosion (Projecteur d'acide de l'Alchimiste) : un monstre marqué subit plus de dégâts,
+    // quelle qu'en soit la source. Incoming et non Post : c'est le seul moment où le montant
+    // peut encore être modifié.
+    @SubscribeEvent
+    public static void onCorrodedMonsterHurt(LivingIncomingDamageEvent event) {
+        if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof Monster monster)) {
+            return;
+        }
+        double factor = Corrosion.factor(monster);
+        if (factor != 1.0D) {
+            event.setAmount((float) (event.getAmount() * factor));
+        }
+    }
+
     @SubscribeEvent
     public static void onMonsterDeath(LivingDeathEvent event) {
         Level level = event.getEntity().level();
@@ -336,6 +353,14 @@ public class ModEvents {
         if (level instanceof ServerLevel serverLevel) {
             serverLevel.addFreshEntity(new ManaCrystalEntity(
                     serverLevel, monster.getX(), monster.getY(), monster.getZ(), ManaCrystalType.SMALL.value()));
+
+            // Condenseur de mana (Alchimiste) : un cristal en plus si le monstre meurt dans le
+            // rayon d'un condenseur.
+            int bonusMana = ManaCondenserBlockEntity.bonusManaAt(serverLevel, monster.position());
+            if (bonusMana > 0) {
+                serverLevel.addFreshEntity(new ManaCrystalEntity(
+                        serverLevel, monster.getX(), monster.getY(), monster.getZ(), bonusMana));
+            }
         }
 
         awardExperienceAndScore(level, monster);

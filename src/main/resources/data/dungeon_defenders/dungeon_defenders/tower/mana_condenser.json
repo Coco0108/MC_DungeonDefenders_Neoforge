@@ -1,0 +1,6 @@
+{
+  "max_health": 15,
+  "mana_cost": 60,
+  "range": 5.0,
+  "bonus_mana": 5
+}

@@ -10,8 +10,8 @@ import org.jspecify.annotations.Nullable;
 import java.util.function.Supplier;
 
 // Catalogue des tours posables via la roue (TowerWheelScreen) — un membre par tour, commun au
-// client (affichage de la roue/de l'aperçu) et au serveur (validation de PlaceTowerPayload). Pas
-// de filtrage par héros, ce système n'existe pas encore.
+// client (affichage de la roue/de l'aperçu) et au serveur (validation de PlaceTowerPayload). Quel
+// héros peut poser quelle tour : voir HeroDefinition.
 //
 // **Chiffres data-driven depuis le 2026-11-10** (doc/data-driven/tours.md) : PV, coût en mana,
 // dégâts, portée, cadence... vivent dans data/<namespace>/dungeon_defenders/tower/<id>.json,
@@ -114,6 +114,87 @@ public enum TowerDefinition {
                     .with(TowerStat.DAMAGE, 8.0D)
                     .with(TowerStat.ATTACK_INTERVAL_TICKS, 60)
                     .with(TowerStat.SPLASH_RADIUS, 2.0D)
+                    .build()),
+
+    // --- Roster de l'Alchimiste (2026-11-16) : tours de conception propre au mod. ---
+
+    FROST_STILL(
+            "frost_still",
+            () -> ModBlocks.FROST_STILL.get(),
+            () -> ModBlocks.FROST_STILL_ITEM.get(),
+            // Aucun dégât : ralentit tout ce qui passe dans son rayon.
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 20)
+                    .with(TowerStat.MANA_COST, 40)
+                    .with(TowerStat.RANGE, 5.0D)
+                    .with(TowerStat.EFFECT_LEVEL, 2)
+                    .build()),
+
+    ACID_SPRAYER(
+            "acid_sprayer",
+            () -> ModBlocks.ACID_SPRAYER.get(),
+            () -> ModBlocks.ACID_SPRAYER_ITEM.get(),
+            // Cône court et large, tous les monstres touchés à la fois : dégâts faibles, mais
+            // +30 % de dégâts subis de toutes les sources pendant 3 s.
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 20)
+                    .with(TowerStat.MANA_COST, 60)
+                    .with(TowerStat.RANGE, 6.0D)
+                    .with(TowerStat.CONE_ANGLE_DEGREES, 90.0D)
+                    .with(TowerStat.DAMAGE, 1.0D)
+                    .with(TowerStat.ATTACK_INTERVAL_TICKS, 20)
+                    .with(TowerStat.VULNERABILITY_PERCENT, 30.0D)
+                    .build()),
+
+    VOLATILE_VAT(
+            "volatile_vat",
+            () -> ModBlocks.VOLATILE_VAT.get(),
+            () -> ModBlocks.VOLATILE_VAT_ITEM.get(),
+            // Mur fragile : c'est sa destruction qui paie (explosion). Pas de stat RANGE, donc
+            // pas de cercle à la pose, comme les autres murs.
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 15)
+                    .with(TowerStat.MANA_COST, 35)
+                    .with(TowerStat.DAMAGE, 12.0D)
+                    .with(TowerStat.SPLASH_RADIUS, 3.0D)
+                    .build()),
+
+    CATALYST_PYLON(
+            "catalyst_pylon",
+            () -> ModBlocks.CATALYST_PYLON.get(),
+            () -> ModBlocks.CATALYST_PYLON_ITEM.get(),
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 15)
+                    .with(TowerStat.MANA_COST, 80)
+                    .with(TowerStat.RANGE, 4.0D)
+                    .with(TowerStat.BOOST_PERCENT, 25.0D)
+                    .build()),
+
+    MANA_CONDENSER(
+            "mana_condenser",
+            () -> ModBlocks.MANA_CONDENSER.get(),
+            () -> ModBlocks.MANA_CONDENSER_ITEM.get(),
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 15)
+                    .with(TowerStat.MANA_COST, 60)
+                    .with(TowerStat.RANGE, 5.0D)
+                    .with(TowerStat.BONUS_MANA, 5)
+                    .build()),
+
+    FLASK_LAUNCHER(
+            "flask_launcher",
+            () -> ModBlocks.FLASK_LAUNCHER.get(),
+            () -> ModBlocks.FLASK_LAUNCHER_ITEM.get(),
+            // Omnidirectionnel (aucune stat de cône). Dégâts PAR passage de la flaque, deux fois
+            // par seconde pendant linger_ticks.
+            TowerStats.builder()
+                    .with(TowerStat.MAX_HEALTH, 20)
+                    .with(TowerStat.MANA_COST, 65)
+                    .with(TowerStat.RANGE, 10.0D)
+                    .with(TowerStat.DAMAGE, 2.0D)
+                    .with(TowerStat.ATTACK_INTERVAL_TICKS, 80)
+                    .with(TowerStat.SPLASH_RADIUS, 2.0D)
+                    .with(TowerStat.LINGER_TICKS, 60)
                     .build());
 
     /**

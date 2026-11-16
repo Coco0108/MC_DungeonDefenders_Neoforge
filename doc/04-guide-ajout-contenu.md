@@ -252,6 +252,18 @@ catégorie de tour existante (mur à PV type "Blockade", ou tour à distance typ
   une orientation, déclarer `BlockStateProperties.HORIZONTAL_FACING` sur le bloc (voir
   `HarpoonTurretBlock` — la rotation choisie dans la roue est déjà appliquée automatiquement par
   `ModNetworking.handlePlaceTower`, rien à faire côté réseau).
+- **Tour à impulsions** (soutien, effet de zone répété) : étendre
+  `block/entity/AbstractPulseTowerBlockEntity.java` et ne fournir que `pulseIntervalTicks()` et
+  `pulse()` (voir `FrostStillBlockEntity`, le plus court). `monstersInRange`/`monstersInCone`
+  donnent les monstres concernés.
+- **Pas de classe de bloc à écrire** depuis le 2026-11-16 : enregistrer la tour avec
+  `new SimpleTowerBlock(properties, MaTourBlockEntity::new)` (ou `DirectionalTowerBlock` si elle
+  s'oriente), comme les six tours de l'Alchimiste dans `ModBlocks`.
+- Enregistrer son `BlockEntityType` dans `DungeonDefendersMod` **et** sa barre de vie dans
+  `DungeonDefendersModClient#onRegisterRenderers` (`TowerHealthBarRenderer::new`) — oubli resté
+  inaperçu pour quatre tours de l'Écuyer jusqu'au 2026-11-16.
+- L'ajouter à la liste de tours d'un héros dans `init/HeroDefinition.java` : le gametest
+  `hero_rosters` échoue si une tour n'appartient à aucun héros, ou si un héros n'en a pas six.
 - Dans tous les cas, ajouter un membre à `init/TowerDefinition.java` pour que la tour
   apparaisse dans la roue (`TowerWheelScreen`) — c'est l'unique façon de la poser, voir
   `block/TowerBlockItem.java`.

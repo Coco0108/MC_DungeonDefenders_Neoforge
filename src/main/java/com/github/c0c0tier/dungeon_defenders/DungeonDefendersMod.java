@@ -6,6 +6,12 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEnt
 import com.github.c0c0tier.dungeon_defenders.block.entity.HarpoonTurretBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.MapConfigBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.FrostStillBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.AcidSprayerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.VolatileVatBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.CatalystPylonBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ManaCondenserBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.FlaskLauncherBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.MortarTurretBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SliceNDiceBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
@@ -97,6 +103,43 @@ public class DungeonDefendersMod {
             BLOCK_ENTITIES.register("mortar_turret", () -> new BlockEntityType<>(
                     MortarTurretBlockEntity::new,
                     ModBlocks.MORTAR_TURRET.get()
+            ));
+
+    // Roster de l'Alchimiste (2026-11-16), voir ModBlocks.
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<FrostStillBlockEntity>> FROST_STILL_BE =
+            BLOCK_ENTITIES.register("frost_still", () -> new BlockEntityType<>(
+                    FrostStillBlockEntity::new,
+                    ModBlocks.FROST_STILL.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AcidSprayerBlockEntity>> ACID_SPRAYER_BE =
+            BLOCK_ENTITIES.register("acid_sprayer", () -> new BlockEntityType<>(
+                    AcidSprayerBlockEntity::new,
+                    ModBlocks.ACID_SPRAYER.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<VolatileVatBlockEntity>> VOLATILE_VAT_BE =
+            BLOCK_ENTITIES.register("volatile_vat", () -> new BlockEntityType<>(
+                    VolatileVatBlockEntity::new,
+                    ModBlocks.VOLATILE_VAT.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CatalystPylonBlockEntity>> CATALYST_PYLON_BE =
+            BLOCK_ENTITIES.register("catalyst_pylon", () -> new BlockEntityType<>(
+                    CatalystPylonBlockEntity::new,
+                    ModBlocks.CATALYST_PYLON.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ManaCondenserBlockEntity>> MANA_CONDENSER_BE =
+            BLOCK_ENTITIES.register("mana_condenser", () -> new BlockEntityType<>(
+                    ManaCondenserBlockEntity::new,
+                    ModBlocks.MANA_CONDENSER.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<FlaskLauncherBlockEntity>> FLASK_LAUNCHER_BE =
+            BLOCK_ENTITIES.register("flask_launcher", () -> new BlockEntityType<>(
+                    FlaskLauncherBlockEntity::new,
+                    ModBlocks.FLASK_LAUNCHER.get()
             ));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TrainingDummyBlockEntity>> TRAINING_DUMMY_BE =

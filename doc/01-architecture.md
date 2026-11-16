@@ -58,6 +58,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── RepairAbility.java            # Générique à tout héros : 1 mana = 1 PV de tour/tick, cible visée au clic
     │   │   ├── CircularSliceAbility.java     # Sort 1 de l'Écuyer : dégâts + repousse en cercle, valeurs du jeu de référence
     │   │   ├── BloodRageAbility.java         # Sort 2 de l'Écuyer : buff Speed+Strength tant que maintenue
+    │   │   ├── FrostFlaskAbility.java        # Sort 1 de l'Alchimiste : gèle les monstres autour du point visé
+    │   │   ├── CatalysisAbility.java         # Sort 2 de l'Alchimiste : +50 % de dégâts aux tours proches tant que maintenue
     │   │   ├── AbilityRegistry.java          # Résout la ChannelAbility d'un (joueur, emplacement) — partagé réseau/tick
     │   │   ├── PlayerAbilityChannels.java    # Canalisation active de chaque joueur (état runtime serveur, non persisté)
     │   │   └── AbilityCooldowns.java         # Dernier usage d'une BurstAbility, par joueur et par emplacement
@@ -136,6 +138,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── MapOverlay.java               # Plan plein écran (touche maintenue) : rectangle + points des joueurs + cristal (client uniquement)
     │   ├── entity/
     │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
+    │   │   ├── Corrosion.java                 # Marque en mémoire : un monstre corrodé subit plus de dégâts (Projecteur d'acide)
     │   │   ├── TrainingDummyEntity.java       # extends Zombie : cible immobile à vie infinie, pour mesurer les dégâts des tours
     │   │   ├── MobHealthBarRenderer.java      # RenderLivingEvent.Post : barre de vie zombie/squelette, cachée à PV pleins/hors portée (client)
     │   │   ├── BowlingBallEntity.java         # extends Arrow : perforation réelle (Bowling Ball Turret), voir 02-gameplay.md
@@ -155,6 +158,8 @@ MC_DungeonDefenders_Neoforge/
     │       ├── HarpoonTurretBlock.java       # Tower "Turret" : HORIZONTAL_FACING + tir en cône, cible unique
     │       ├── BowlingBallTurretBlock.java   # Tower "Turret" : tir perforant (BowlingBallEntity)
     │       ├── MortarTurretBlock.java        # Tower "Turret" : dégâts de zone à l'impact
+    │       ├── SimpleTowerBlock.java         # Bloc de tour générique (block entity passé au constructeur) : les six tours de l'Alchimiste
+    │       ├── DirectionalTowerBlock.java    # SimpleTowerBlock + HORIZONTAL_FACING (Projecteur d'acide)
     │       ├── TowerBlockItem.java           # Item commun à toute tour (Blockade, Turret...) : useOn() ne pose plus rien (roue uniquement)
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
@@ -177,6 +182,14 @@ MC_DungeonDefenders_Neoforge/
     │           ├── HarpoonTurretBlockEntity.java           # Sous-classe : fixe les stats du Harpoon Turret (voir 02-gameplay.md)
     │           ├── BowlingBallTurretBlockEntity.java       # Sous-classe : fireAt surchargé, lance une BowlingBallEntity
     │           ├── MortarTurretBlockEntity.java            # Sous-classe : fireAt surchargé, dégâts de zone via AABB
+    │           ├── AbstractPulseTowerBlockEntity.java      # Catégorie "à impulsions" : agit à intervalle régulier sur tout ce qui l'entoure
+    │           ├── FrostStillBlockEntity.java              # Alchimiste : ralentit les monstres à portée
+    │           ├── AcidSprayerBlockEntity.java             # Alchimiste : arrose un cône, pose la corrosion
+    │           ├── FlaskLauncherBlockEntity.java           # Alchimiste : laisse des flaques brûlantes
+    │           ├── CatalystPylonBlockEntity.java           # Alchimiste : bonus de dégâts aux tours voisines
+    │           ├── VolatileVatBlockEntity.java             # Alchimiste : mur qui explose à sa destruction
+    │           ├── ManaCondenserBlockEntity.java           # Alchimiste : mana en plus pour les morts à portée
+    │           ├── TowerScan.java                          # Recherche des tours autour d'un point (par chunks)
     │           ├── TowerHealthBarRenderState.java          # Instantané pour le rendu (client)
     │           ├── TowerHealthBarRenderer.java             # Barre de vie 3D générique à toute tour, cachée à PV pleins/hors portée (client)
     │           ├── HealthLerp.java                         # Animation temps réel d'un ratio de PV (client, partagée cristal/tours)
@@ -199,7 +212,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── data/dungeon_defenders/loot_table/blocks/*.json  # Un par bloc (drop de lui-même)
     │   ├── data/dungeon_defenders/structure/gametest/empty.nbt  # Gabarit 3x3x3 sans bloc, partagé par les gametests
     │   ├── data/dungeon_defenders/dungeon_defenders/enemy/*.json  # Ennemis data-driven (zombie, skeleton), relus par /reload
-    │   ├── data/dungeon_defenders/dungeon_defenders/tower/*.json    # Stats data-driven des 6 tours, relues par /reload
+    │   ├── data/dungeon_defenders/dungeon_defenders/tower/*.json    # Stats data-driven des 12 tours, relues par /reload
     │   ├── data/dungeon_defenders/dungeon_defenders/balance/*.json  # Réglages globaux (difficulty, towers, progression), relus par /reload
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
     │   ├── data/minecraft/timeline/day.json        # Timeline "day" vanilla SANS la brûlure des monstres au soleil (générée, voir tools/)

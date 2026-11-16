@@ -770,6 +770,18 @@ vérifie la CI.
   `dungeon_defenders:skeleton`) — plus de ligne « converti » dans le log à chaque partie. Fait
   sur `test/tout-ensemble` seulement : la PR #41 d'origine, antérieure au data-driven, garde
   l'ancien format (toujours lisible).
+- ✅ **Héros Alchimiste, six tours et deux sorts** (2026-11-16, branche
+  `feature/heros-alchimiste`) : deuxième héros, **de conception propre au mod** (rien n'est repris
+  du jeu de référence). Tours : Cuve instable, Alambic givrant, Projecteur d'acide, Lance-fioles,
+  Pylône catalyseur, Condenseur de mana ; sorts : Fiole de givre, Catalyse. Nouvelle catégorie
+  de tours « à impulsions » (`AbstractPulseTowerBlockEntity`), bonus de dégâts temporaire sur
+  toute tour (`applyDamageBoost`), corrosion (`entity/Corrosion`). Détail dans
+  [02-gameplay.md](02-gameplay.md#lalchimiste--deuxième-héros-herodefinitionalchemist). Couvert
+  par trois gametests (`hero_rosters`, `alchemist_support_towers`, `alchemist_damage_towers`).
+  **Jamais vu en jeu**, équilibrage théorique.
+- ✅ **Barre de vie sur toutes les tours** (2026-11-16) : `TowerHealthBarRenderer` n'était
+  enregistré que pour Spike Blockade et Harpoon Turret ; les quatre autres tours de l'Écuyer n'en
+  avaient donc jamais eu. Corrigé dans `DungeonDefendersModClient#onRegisterRenderers`.
 - ✅ **Système de héros — identité et filtrage des tours** (`init/HeroDefinition.java`,
   `client/gui/screen/HeroSelectionScreen.java`, 2026-09-03) : décidé avec le joueur de construire
   **un héros complet** plutôt que les tours des quatre — la classe de base une fois, les
