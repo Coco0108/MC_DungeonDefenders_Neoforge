@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders;
 
 import com.github.c0c0tier.dungeon_defenders.init.LegacyEnemyIds;
 import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.MapPreviews;
 import com.github.c0c0tier.dungeon_defenders.init.MapRegistry;
 import com.mojang.logging.LogUtils;
 import net.minecraft.nbt.CompoundTag;
@@ -39,11 +40,10 @@ public final class MapExporter {
     public static final String EXPORT_DIR = "dungeon_defenders_export";
 
     /**
-     * Emplacement où sont cherchées les images d'aperçu, dans la sauvegarde. Rien ne les y écrit
-     * encore (la capture en jeu est la phase suivante) : l'export les embarque si elles existent,
-     * pour que cette commande n'ait pas à changer le jour où la capture arrivera.
+     * Emplacement où sont cherchées les images d'aperçu, dans la sauvegarde. Elles y sont
+     * écrites par la capture en jeu (voir MapPreviews) ; l'export embarque celles qui existent.
      */
-    private static final String PREVIEW_DIR = "dungeon_defenders/previews";
+    private static final String PREVIEW_DIR = MapPreviews.DIRECTORY;
 
     private MapExporter() {
     }

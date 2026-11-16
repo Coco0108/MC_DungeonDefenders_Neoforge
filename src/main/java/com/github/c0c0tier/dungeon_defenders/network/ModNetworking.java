@@ -18,6 +18,8 @@ import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
 import com.mojang.logging.LogUtils;
+import com.github.c0c0tier.dungeon_defenders.init.MapPreviews;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
@@ -127,6 +129,11 @@ public class ModNetworking {
                 DeleteMapPayload.STREAM_CODEC,
                 ModNetworking::handleDeleteMap
         );
+        registrar.playToServer(
+                UploadMapPreviewPayload.TYPE,
+                UploadMapPreviewPayload.STREAM_CODEC,
+                ModNetworking::handleUploadMapPreview
+        );
         // Sans handler ici : paquets clientbound du mod, le handler vit côté client
         // uniquement (DungeonDefendersModClient#onRegisterClientPayloadHandlers), pour ne
         // jamais charger de classe cliente (Minecraft, Screen...) sur un serveur dédié — cette
@@ -154,6 +161,10 @@ public class ModNetworking {
         registrar.playToClient(
                 GameBalancePayload.TYPE,
                 GameBalancePayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                MapPreviewPayload.TYPE,
+                MapPreviewPayload.STREAM_CODEC
         );
     }
 
@@ -371,6 +382,39 @@ public class ModNetworking {
             player.sendSystemMessage(Component.translatable(deleted
                     ? "dungeon_defenders.map_config.deleted"
                     : "dungeon_defenders.map_config.delete_failed", payload.structureId().toString()));
+        });
+    }
+
+    // Aperçu capturé par un mappeur (voir client/MapPreviewCapture). Mêmes garde-fous que la
+    // suppression : créatif seulement, et uniquement pour une map créée en jeu — celle d'un jar
+    // est une ressource en lecture seule, son aperçu vient de son pack. L'image est revalidée
+    // (taille, signature PNG) et le chemin borné au dossier des aperçus par MapPreviews.
+    private static void handleUploadMapPreview(UploadMapPreviewPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            if (!(player.level() instanceof ServerLevel serverLevel) || !player.isCreative()) {
+                return;
+            }
+            Identifier structureId = payload.structureId();
+            if (!MapDefinition.isMapStructure(structureId)
+                    || !MapRegistry.isFromWorld(serverLevel.getStructureManager(), structureId)) {
+                return;
+            }
+
+            boolean saved = MapPreviews.save(serverLevel.getServer(), structureId, payload.png());
+            player.sendSystemMessage(Component.translatable(saved
+                    ? "dungeon_defenders.map_preview.saved"
+                    : "dungeon_defenders.map_preview.failed", structureId.toString()));
+            if (!saved) {
+                return;
+            }
+            // Les autres joueurs connectés reçoivent le nouvel aperçu tout de suite ; l'auteur
+            // l'a déjà chargé de son côté.
+            for (ServerPlayer other : serverLevel.getServer().getPlayerList().getPlayers()) {
+                if (other != player) {
+                    other.connection.send(new MapPreviewPayload(structureId, payload.png()).toVanillaClientbound());
+                }
+            }
         });
     }
 

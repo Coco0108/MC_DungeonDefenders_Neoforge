@@ -734,6 +734,11 @@ vérifie la CI.
   de spawner à cette position. Même patron suspect pour les coffres de mana, voir « Les coffres
   ne réapparaissent pas en jeu ».
 
+- ✅ **Aperçu de map capturé en jeu** (2026-11-16) : bouton « Prendre l'aperçu » de l'écran de
+  choix (créatif), touche F9, image 128×72 rangée dans la sauvegarde, diffusée aux joueurs et
+  embarquée par `/dd_export`. Rangement serveur couvert par le gametest `map_preview_storage` ;
+  **la capture elle-même n'a jamais été vue en jeu** (code de rendu écrit sans pouvoir le
+  regarder tourner). Détail dans [02-gameplay.md](02-gameplay.md).
 - ✅ **Vagues périodiques** (2026-11-16) : un spawner peut ne s'activer qu'une vague sur N
   (`waveStep`), ce qui donne la vague de boss périodique sans nouveau mécanisme. Gametest
   `spawner_wave_step`. **Jamais vérifié en jeu.**

@@ -52,11 +52,21 @@ public class ModKeyMappings {
             GLFW.GLFW_KEY_U,
             CATEGORY);
 
+    // Déclenche la capture d'aperçu d'une map, une fois armée depuis l'écran de choix (voir
+    // MapPreviewCapture). F9 : libre en vanilla, et hors des touches de jeu — c'est un outil de
+    // mappeur, utilisé rarement.
+    public static final KeyMapping CAPTURE_MAP_PREVIEW = new KeyMapping(
+            "key.dungeon_defenders.capture_map_preview",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_F9,
+            CATEGORY);
+
     public static void register(RegisterKeyMappingsEvent event) {
         event.registerCategory(CATEGORY);
         event.register(TOWER_WHEEL);
         event.register(ROTATE_TOWER);
         event.register(REMOVE_TOWER_MODE);
         event.register(UPGRADE_TOWER);
+        event.register(CAPTURE_MAP_PREVIEW);
     }
 }

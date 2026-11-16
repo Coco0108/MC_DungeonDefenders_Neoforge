@@ -35,6 +35,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild/enterTavern/startNewGame : transitions centralisées
     │   │   ├── MapDefinition.java            # Une map jouable (structure + nom + ordre + vagues + multiplicateur) ; le namespace fait office de pack
     │   │   ├── MapRegistry.java              # Découverte des maps parmi TOUTES les structures disponibles (monde, datapacks, jars)
+    │   │   ├── MapPreviews.java              # Aperçus des maps créées en jeu : rangement dans la sauvegarde, validation (taille, PNG, chemin)
     │   │   ├── ModChunkTickets.java          # Force-chargement (et tick) de la zone de map pendant une partie
     │   │   ├── TowerDefinition.java          # Catalogue des tours posables via la roue (voir client/gui/screen/TowerWheelScreen.java)
     │   │   ├── TowerStat.java                # Les chiffres réglables d'une tour (PV, coût, dégâts, portée, cadence...)
@@ -61,6 +62,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── LeaveMapPayload.java          # Paquet C2S sans champ (abandon du niveau depuis le menu pause)
     │   │   ├── MapConfigPayload.java         # Paquet C2S (BlockPos + réglages d'une map)
     │   │   ├── DeleteMapPayload.java         # Paquet C2S (id de structure à supprimer de la sauvegarde)
+    │   │   ├── UploadMapPreviewPayload.java  # Paquet C2S (id de structure + PNG de l'aperçu capturé)
+    │   │   ├── MapPreviewPayload.java        # Paquet S2C (id de structure + PNG), avant l'ouverture de l'écran de choix
     │   │   ├── GameOverPayload.java          # Paquet S2C (victoire/défaite, ouvre GameOverScreen)
     │   │   ├── ScoreGainPayload.java         # Paquet S2C (montant + source du gain + identifiant de l'ennemi tué, alimente ScoreGainOverlay)
     │   │   ├── EnemyDefinitionsPayload.java  # Paquet S2C (ennemis data-driven : id, entity_type, icône, ordre), à la connexion et après /reload
@@ -79,6 +82,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── LineBoxRenderer.java          # Contour filaire coloré partagé (pose/suppression de tour, repérage des marqueurs)
     │   │   ├── MarkerOverlayClientEvents.java # Repérage en créatif des 5 blocs marqueurs invisibles : contour + étiquette à travers les murs
     │   │   ├── PauseMenuClientEvents.java   # Bouton "Abandonner le niveau" ajouté au menu pause (ScreenEvent.Init.Post)
+    │   │   ├── MapPreviewCapture.java        # Capture de l'aperçu : armement, touche, HUD masqué, recadrage 128x72, envoi
+    │   │   ├── ClientMapPreviews.java        # Aperçus reçus du serveur, chargés en textures dynamiques
     │   │   ├── ClientEnemyDefinitions.java   # Copie CLIENT des ennemis data-driven (distincte d'EnemyRegistry, voir doc/data-driven/ennemis.md)
     │   │   └── ClientDisplayConfig.java      # Spec de config CLIENT (options d'affichage HUD facultatives), branchée dans DungeonDefendersModClient
     │   ├── client/gui/screen/
