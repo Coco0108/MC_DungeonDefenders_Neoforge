@@ -800,6 +800,14 @@ vérifie la CI.
   par le joueur (+5 % par niveau). Détail dans
   [02-gameplay.md](02-gameplay.md#les-armes-de-héros--itemheroweaponitemjava-itemheroweaponsjava).
   Gametest `hero_weapons`. **Jamais vu en jeu.**
+- ✅ **Caractéristiques à répartir** (2026-11-16, branche `feature/points-de-stats`) : un point
+  par niveau, quatre caractéristiques (Vitalité, Puissance, Rapidité, Maîtrise des tours), écran
+  touche K (`HeroStatsScreen`), chiffres dans `balance/progression.json`. Détail dans
+  [02-gameplay.md](02-gameplay.md#les-caractéristiques--initherostatjava-clientguiscreenherostatsscreenjava).
+  Gametest `hero_stat_points` ; l'écran lui-même n'a jamais été affiché. **Jamais vu en jeu.**
+- ✅ **Progression conservée à la mort** (2026-11-16) : `copyOnDeath` manquait sur tous les
+  attachments joueur — mourir remettait niveau, expérience et héros à zéro. Corrigé, **à
+  confirmer en jeu**.
 - ✅ **Barre de vie sur toutes les tours** (2026-11-16) : `TowerHealthBarRenderer` n'était
   enregistré que pour Spike Blockade et Harpoon Turret ; les quatre autres tours de l'Écuyer n'en
   avaient donc jamais eu. Corrigé dans `DungeonDefendersModClient#onRegisterRenderers`.

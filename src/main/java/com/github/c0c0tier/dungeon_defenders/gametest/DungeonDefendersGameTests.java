@@ -3,6 +3,7 @@ package com.github.c0c0tier.dungeon_defenders.gametest;
 import com.github.c0c0tier.dungeon_defenders.CombatCountdown;
 import com.github.c0c0tier.dungeon_defenders.Config;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.ModEvents;
 import com.github.c0c0tier.dungeon_defenders.WorldTime;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
@@ -14,6 +15,7 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.FrostStillBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaCondenserBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.Corrosion;
 import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.HeroStat;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import com.github.c0c0tier.dungeon_defenders.block.entity.BoulderThrowerBlockEntity;
@@ -70,6 +72,7 @@ import net.minecraft.world.clock.WorldClock;
 import net.minecraft.world.clock.WorldClocks;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -151,6 +154,7 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "geomancer_towers", DungeonDefendersGameTests::geomancerTowers);
         // Armes de héros (doc/02-gameplay.md).
         register(event, environment, "hero_weapons", DungeonDefendersGameTests::heroWeapons);
+        register(event, environment, "hero_stat_points", DungeonDefendersGameTests::heroStatPoints);
         // Réglages globaux en data-driven (doc/data-driven/equilibrage.md).
         register(event, environment, "balance_shipped_values", DungeonDefendersGameTests::balanceShippedValues);
         register(event, environment, "balance_validation", DungeonDefendersGameTests::balanceValidation);
@@ -958,6 +962,51 @@ public final class DungeonDefendersGameTests {
         helper.assertTrue(slowed.getHealth() < slowed.getMaxHealth(), "bâton : monstre blessé");
         helper.assertTrue(slowed.hasEffect(MobEffects.SLOWNESS), "bâton : monstre ralenti");
         slowed.discard();
+        helper.succeed();
+    }
+
+    /**
+     * Caractéristiques : un point par niveau au-delà du premier ; la Vitalité augmente les PV
+     * max, la Puissance les dégâts du joueur (en plus du bonus de niveau), la Rapidité la
+     * vitesse ; plus de point, plus de dépense ; tout reprendre rend les points et retire les
+     * bonus. La Maîtrise des tours du poseur multiplie les dégâts d'une tour, jamais sous x1.
+     */
+    static void heroStatPoints(GameTestHelper helper) {
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        float baseHealth = player.getMaxHealth();
+        double baseSpeed = player.getAttributeValue(Attributes.MOVEMENT_SPEED);
+
+        helper.assertValueEqual(HeroStat.available(player), 0, "aucun point au niveau 1");
+        helper.assertFalse(HeroStat.VITALITY.spend(player), "pas de dépense sans point");
+
+        player.setData(ModAttachments.LEVEL, 5);
+        helper.assertValueEqual(HeroStat.available(player), 4, "quatre points au niveau 5");
+        helper.assertTrue(HeroStat.VITALITY.spend(player), "premier point de Vitalité");
+        helper.assertTrue(HeroStat.VITALITY.spend(player), "second point de Vitalité");
+        helper.assertTrue(HeroStat.POWER.spend(player), "point de Puissance");
+        helper.assertTrue(HeroStat.SWIFTNESS.spend(player), "point de Rapidité");
+        helper.assertFalse(HeroStat.TOWER_MASTERY.spend(player), "plus de point à dépenser");
+        helper.assertValueEqual(HeroStat.available(player), 0, "tous les points dépensés");
+
+        helper.assertValueEqual(player.getMaxHealth(), baseHealth + 4.0F, "Vitalité : +2 PV max par point");
+        helper.assertTrue(Math.abs(player.getAttributeValue(Attributes.MOVEMENT_SPEED) - baseSpeed * 1.02D) < 1.0E-9D,
+                "Rapidité : +2 % de vitesse par point");
+        // Niveau 5 : x1,20 ; un point de Puissance : x1,03.
+        helper.assertTrue(Math.abs(ModEvents.playerDamageMultiplier(player) - 1.2D * 1.03D) < 1.0E-9D,
+                "Puissance multipliée au bonus de niveau");
+
+        HeroStat.reset(player);
+        helper.assertValueEqual(HeroStat.available(player), 4, "points rendus");
+        helper.assertValueEqual(player.getMaxHealth(), baseHealth, "PV max revenus à la normale");
+        helper.assertTrue(Math.abs(ModEvents.playerDamageMultiplier(player) - 1.2D) < 1.0E-9D, "Puissance retirée");
+
+        BlockPos pos = new BlockPos(1, 1, 1);
+        helper.setBlock(pos, ModBlocks.SPIKE_BLOCKADE.get());
+        AbstractTowerBlockEntity tower = helper.getBlockEntity(pos, AbstractTowerBlockEntity.class);
+        tower.setOwnerBonus(1.3D);
+        helper.assertValueEqual(tower.damageMultiplier(), 1.3D, "Maîtrise des tours du poseur");
+        tower.setOwnerBonus(0.5D);
+        helper.assertValueEqual(tower.damageMultiplier(), 1.0D, "jamais sous x1");
         helper.succeed();
     }
 

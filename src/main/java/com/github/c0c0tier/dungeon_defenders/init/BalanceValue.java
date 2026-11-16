@@ -29,6 +29,15 @@ public enum BalanceValue {
     // balance/progression.json — expérience nécessaire pour passer un niveau.
     XP_PER_LEVEL("progression", "xp_per_level", 100.0D, 1.0D, true),
 
+    // Caractéristiques (init/HeroStat) : points gagnés par niveau, plafond par caractéristique,
+    // et ce que rapporte un point (PV pour la Vitalité ; 0.03 = +3 % pour les autres).
+    STAT_POINTS_PER_LEVEL("progression", "stat_points_per_level", 1.0D, 0.0D, true),
+    STAT_MAX_POINTS("progression", "stat_max_points", 20.0D, 0.0D, true),
+    STAT_VITALITY_HEALTH_PER_POINT("progression", "vitality_health_per_point", 2.0D, 0.0D, false),
+    STAT_POWER_DAMAGE_PER_POINT("progression", "power_damage_per_point", 0.03D, 0.0D, false),
+    STAT_SWIFTNESS_SPEED_PER_POINT("progression", "swiftness_speed_per_point", 0.02D, 0.0D, false),
+    STAT_TOWER_MASTERY_DAMAGE_PER_POINT("progression", "tower_mastery_damage_per_point", 0.03D, 0.0D, false),
+
     // balance/score.json — voir ScoreKeeper.
     // Bonus de score quand une vague est nettoyée, puis quand la map est gagnée.
     SCORE_WAVE_CLEAR_BONUS("score", "wave_clear_bonus", 50.0D, 0.0D, false),

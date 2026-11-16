@@ -1648,6 +1648,24 @@ Branche `feature/armes-de-heros` (contient les quatre héros). Couvert par le ga
 - [ ] L'écran de choix de héros montre l'arme comme icône de chaque héros.
 - [ ] Avis attendu : clic droit pour tirer (ou clic gauche ?), dégâts, cadence.
 
+## Caractéristiques à répartir et progression conservée à la mort (2026-11-16)
+
+Branche `feature/points-de-stats` (contient tout le reste). Calculs couverts par le gametest
+`hero_stat_points` ; l'écran n'a jamais été affiché.
+
+- [ ] **Mourir une fois** (correctif) : niveau, expérience et héros sont conservés au retour.
+      Avant, on revenait niveau 1 en Écuyer.
+- [ ] Touche `K` : l'écran s'ouvre, « Points à répartir : 0 » au niveau 1, boutons `+` grisés.
+- [ ] Passer un niveau : message « 1 point(s) de caractéristique à répartir (touche K) ».
+- [ ] `+` sur **Vitalité** : la barre de vie du HUD passe à 22 PV max ; les textes ne se
+      chevauchent pas et le compteur de points descend.
+- [ ] **Puissance** : un monstre meurt en un peu moins de coups.
+- [ ] **Rapidité** : on court un peu plus vite (peu visible avec un seul point).
+- [ ] **Maîtrise des tours** : une tour posée APRÈS avoir mis des points tue plus vite qu'une
+      tour posée avant ; améliorer l'ancienne (`U`) lui donne le bonus.
+- [ ] « Tout reprendre » : les points reviennent, les PV max redescendent ; refusé en Combat.
+- [ ] Les points survivent à une déconnexion, à la mort et à un changement de héros.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

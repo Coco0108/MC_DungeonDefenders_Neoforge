@@ -126,9 +126,25 @@ public abstract class AbstractTowerBlockEntity extends BlockEntity implements Ai
         return this.level != null && this.level.getGameTime() < this.boostUntil ? this.boostFactor : 1.0D;
     }
 
-    /** Multiplicateur à appliquer aux DÉGÂTS : niveau d'amélioration et bonus temporaire. */
+    // --- MAÎTRISE DES TOURS DU POSEUR ---
+    // Caractéristique "Maîtrise des tours" (init/HeroStat) du joueur qui a posé la tour, relevée
+    // à la pose puis à chaque amélioration (ModNetworking). C'est un instantané : des points
+    // dépensés plus tard ne profitent aux tours déjà posées qu'à leur prochaine amélioration.
+    // Persisté (la tour doit le garder après un redémarrage), jamais synchronisé.
+    private double ownerBonus = 1.0D;
+
+    public void setOwnerBonus(double ownerBonus) {
+        this.ownerBonus = Math.max(1.0D, ownerBonus);
+        setChanged();
+    }
+
+    public double ownerBonus() {
+        return this.ownerBonus;
+    }
+
+    /** Multiplicateur à appliquer aux DÉGÂTS : niveau, maîtrise du poseur et bonus temporaire. */
     public double damageMultiplier() {
-        return levelMultiplier() * damageBoost();
+        return levelMultiplier() * this.ownerBonus * damageBoost();
     }
 
     /**
@@ -256,6 +272,7 @@ public abstract class AbstractTowerBlockEntity extends BlockEntity implements Ai
         super.saveAdditional(output);
         output.putInt("Health", this.health);
         output.putInt("TowerLevel", this.towerLevel);
+        output.putDouble("OwnerBonus", this.ownerBonus);
     }
 
     @Override
@@ -264,5 +281,6 @@ public abstract class AbstractTowerBlockEntity extends BlockEntity implements Ai
         // Le niveau d'abord : il entre dans le calcul des PV max, donc du repli des PV.
         this.towerLevel = Math.max(1, input.getIntOr("TowerLevel", 1));
         this.health = input.getIntOr("Health", getMaxHealth());
+        this.ownerBonus = Math.max(1.0D, input.getDoubleOr("OwnerBonus", 1.0D));
     }
 }

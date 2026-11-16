@@ -46,6 +46,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── GameBalance.java              # Réglages globaux : reload listener (/reload), copies serveur ET client, synchro
     │   │   ├── ManaCrystalType.java           # Paliers de cristaux de mana (un seul pour l'instant, extensible)
     │   │   └── ModEntities.java               # DeferredRegister.Entities (cristal de mana, mannequin d'entraînement)
+    │   │   ├── HeroStat.java                 # Caractéristiques à répartir (Vitalité, Puissance, Rapidité, Maîtrise des tours) et leurs effets
     │   │   ├── HeroDefinition.java           # Catalogue des héros : ses tours, ses deux sorts (spell1/spell2), son libellé
     │   │   ├── AbilitySlot.java              # Les 4 emplacements de compétence (HEAL, SPELL_1, SPELL_2, REPAIR), même ordre que le HUD
     │   │   ├── ManaCrystalType.java           # Paliers de cristaux de mana (un seul pour l'instant, extensible)
@@ -84,6 +85,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── MapConfigPayload.java         # Paquet C2S (BlockPos + réglages d'une map)
     │   │   ├── DeleteMapPayload.java         # Paquet C2S (id de structure à supprimer de la sauvegarde)
     │   │   ├── SelectHeroPayload.java        # Paquet C2S (héros choisi dans HeroSelectionScreen)
+    │   │   ├── SpendStatPointPayload.java    # Paquet C2S (point de caractéristique dépensé, ou tout reprendre)
     │   │   ├── StartChannelAbilityPayload.java # Paquet C2S (emplacement + cible optionnelle, début d'une compétence maintenue)
     │   │   ├── StopChannelAbilityPayload.java  # Paquet C2S sans champ (fin d'une compétence maintenue)
     │   │   ├── ActivateBurstAbilityPayload.java # Paquet C2S (emplacement, déclenchement d'une compétence en salve)
@@ -122,6 +124,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── MapSelectionScreen.java       # Écran de choix : packs / map / difficulté (liste reçue du serveur)
     │   │   ├── MapConfigScreen.java          # Écran de configuration d'une map (créatif uniquement)
     │   │   ├── HeroSelectionScreen.java      # Écran de choix de héros (touche H, client uniquement, pas de Menu)
+    │   │   ├── HeroStatsScreen.java          # Écran des caractéristiques (touche K, client uniquement, pas de Menu)
     │   │   └── TowerWheelScreen.java         # Roue radiale de sélection des tours (client uniquement, pas de Menu)
     │   ├── client/gui/
     │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)

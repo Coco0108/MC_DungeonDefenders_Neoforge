@@ -2,6 +2,7 @@ package com.github.c0c0tier.dungeon_defenders.client;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.HeroSelectionScreen;
+import com.github.c0c0tier.dungeon_defenders.client.gui.screen.HeroStatsScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.TowerWheelScreen;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -69,6 +70,11 @@ public class TowerPlacementClientEvents {
         if (ModKeyMappings.HERO_SELECTION.consumeClick() && minecraft.screen == null
                 && !TowerPlacementState.isActive() && !TowerRemovalState.isActive()) {
             minecraft.setScreen(new HeroSelectionScreen());
+        }
+
+        if (ModKeyMappings.HERO_STATS.consumeClick() && minecraft.screen == null
+                && !TowerPlacementState.isActive() && !TowerRemovalState.isActive()) {
+            minecraft.setScreen(new HeroStatsScreen());
         }
 
         if (ModKeyMappings.TOWER_WHEEL.consumeClick() && minecraft.screen == null

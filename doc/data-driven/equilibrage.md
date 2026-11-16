@@ -54,6 +54,18 @@ plat `"clé": nombre`. Liste complète (`init/BalanceValue.java`) :
 | `weapons.json` | `staff_damage` / `staff_range` / `staff_radius` / `staff_cooldown_ticks` | 3 / 10 / 1.5 / 16 | 0 / 1 / 0 / 1 | Bâton de géomancien |
 | `weapons.json` | `player_damage_per_level` | 0.05 | 0 | Bonus de dégâts de tout ce qu'un joueur inflige, par niveau au-delà du premier |
 
+**Ajoutés avec les caractéristiques** (2026-11-16, voir
+[02-gameplay.md](../02-gameplay.md#les-caractéristiques--initherostatjava-clientguiscreenherostatsscreenjava)) :
+
+| Fichier | Clé | Défaut | Minimum | Effet |
+|---|---|---|---|---|
+| `progression.json` | `stat_points_per_level` | 1 (entier) | 0 | Points de caractéristique gagnés par niveau |
+| `progression.json` | `stat_max_points` | 20 (entier) | 0 | Plafond de points dans une même caractéristique |
+| `progression.json` | `vitality_health_per_point` | 2 | 0 | PV max par point de Vitalité |
+| `progression.json` | `power_damage_per_point` | 0.03 | 0 | Dégâts du joueur par point de Puissance (0.03 = +3 %) |
+| `progression.json` | `swiftness_speed_per_point` | 0.02 | 0 | Vitesse par point de Rapidité |
+| `progression.json` | `tower_mastery_damage_per_point` | 0.03 | 0 | Dégâts des tours posées par point de Maîtrise des tours |
+
 L'épée de l'Écuyer n'est pas ici : c'est une épée vanilla (stats d'une épée en fer).
 
 Attention : `score.json` et `difficulty.json` ont chacun des clés `easy_multiplier`... La
