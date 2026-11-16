@@ -2822,8 +2822,8 @@ un. `serverTick(...)` :
 
 1. Sort immédiatement si `ModAttachments.GAME_PHASE != COMBAT` — le spawner ne tourne qu'en
    combat.
-2. Sort aussi si `CURRENT_WAVE` est en dehors de `[waveStart, waveEnd]` — un spawner peut être
-   configuré pour ne s'activer que sur une plage de vagues.
+2. Sort aussi si le spawner ne participe pas à `CURRENT_WAVE` (`isActiveOnWave`) : en dehors
+   de `[waveStart, waveEnd]`, ou pas sur son pas (`waveStep`, voir plus bas).
 3. Si une nouvelle session de combat a commencé depuis le dernier passage
    (`lastCombatSessionHandled` vs `ModAttachments.COMBAT_SESSION`, voir "Le déroulement d'une
    vague" plus bas), recalcule le plafond de chaque type (`resetForWave`, voir plus bas) et
@@ -2858,7 +2858,16 @@ vivant à cette position (vérifié par le gametest `enemy_unknown_excluded_from
 **Paramètres configurables par spawner**, en plus de la composition : `intervalTicks` (défaut
 20), `spawnRadius` (défaut 0 — spawn pile au-dessus du bloc ; au-delà, une position aléatoire
 dans ce rayon, pour éviter que tout s'empile sur la même case), `waveStart`/`waveEnd` (défaut
-1 à `MAX_WAVE`). Tous persistants. Pas encore de GUI pour les éditer en jeu — en cours, voir
+1 à `MAX_WAVE`), `waveStep` (défaut 1). Tous persistants.
+
+**Vagues périodiques — `waveStep`** (2026-11-16). Le spawner s'active une vague sur
+`waveStep`, en comptant depuis `waveStart` : avec `waveStart = 4`, `waveEnd = 12`,
+`waveStep = 4`, il tourne aux vagues 4, 8 et 12. C'est le mécanisme de la **vague de boss
+périodique** : un spawner de brutes réglé ainsi, à côté des spawners ordinaires. Un pas de 1
+est le comportement d'avant ; une map sauvegardée avant l'ajout du champ se lit avec un pas
+de 1. `SpawnerBlockEntity#isActiveOnWave` est la seule source de vérité, utilisée à la fois
+par le tick du spawner et par le calcul du total d'ennemis de la vague (`PhaseTransitions`)
+— gametest `spawner_wave_step`. Champ « Une vague sur » dans l'écran de configuration. Pas encore de GUI pour les éditer en jeu — en cours, voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 
 ### Le multiplicateur de difficulté — `init/DifficultyScaling.java`

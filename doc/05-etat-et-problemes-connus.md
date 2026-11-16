@@ -734,6 +734,10 @@ vérifie la CI.
   de spawner à cette position. Même patron suspect pour les coffres de mana, voir « Les coffres
   ne réapparaissent pas en jeu ».
 
+- ✅ **Vagues périodiques** (2026-11-16) : un spawner peut ne s'activer qu'une vague sur N
+  (`waveStep`), ce qui donne la vague de boss périodique sans nouveau mécanisme. Gametest
+  `spawner_wave_step`. **Jamais vérifié en jeu.**
+
 ## Corrections apportées
 
 Les points suivants figuraient dans la première version de cette page et sont réglés.

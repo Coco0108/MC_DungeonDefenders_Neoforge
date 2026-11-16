@@ -21,6 +21,7 @@ public record SpawnerConfigPayload(
         int spawnRadius,
         int waveStart,
         int waveEnd,
+        int waveStep,
         List<Entry> entries
 ) implements CustomPacketPayload {
 
@@ -42,6 +43,7 @@ public record SpawnerConfigPayload(
             ByteBufCodecs.VAR_INT, SpawnerConfigPayload::spawnRadius,
             ByteBufCodecs.VAR_INT, SpawnerConfigPayload::waveStart,
             ByteBufCodecs.VAR_INT, SpawnerConfigPayload::waveEnd,
+            ByteBufCodecs.VAR_INT, SpawnerConfigPayload::waveStep,
             ByteBufCodecs.collection(ArrayList::new, Entry.STREAM_CODEC), SpawnerConfigPayload::entries,
             SpawnerConfigPayload::new
     );

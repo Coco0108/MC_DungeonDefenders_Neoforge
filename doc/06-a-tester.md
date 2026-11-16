@@ -1314,6 +1314,18 @@ Vérifié hors jeu par simulation (BFS), pas seulement par relecture des coordon
 - [ ] Options > Mods > configuration : décocher « popup de gain d'expérience » puis « bannière
       de passage de niveau » les masque chacun indépendamment.
 
+## Vagues périodiques du spawner (« une vague sur N », 2026-11-16)
+
+- [ ] Clic droit sur un spawner en créatif : un nouveau champ « Une vague sur (1 = toutes) »
+      apparaît sous « dernière vague », avec 1 par défaut, y compris sur un spawner d'une map
+      existante.
+- [ ] Poser un second spawner avec une brute, première vague 2, dernière vague 5, une vague
+      sur 2 : la brute apparaît aux vagues 2 et 4, pas aux vagues 1, 3 et 5.
+- [ ] Le compteur « Ennemis : x/y » du HUD compte la brute aux vagues 2 et 4 seulement, et la
+      vague se termine bien aux vagues où elle n'apparaît pas.
+- [ ] Rouvrir l'écran du spawner après validation, puis après un redémarrage du monde : le pas
+      saisi est conservé.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

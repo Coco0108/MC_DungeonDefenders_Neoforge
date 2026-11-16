@@ -81,9 +81,10 @@ choisit.
 | `enemy/runner.json` | husk | 12 | 0.34 (rapide) | 0.8 | 8 | mêlée, 3 dégâts par coup |
 | `enemy/marksman.json` | stray | 16 | (vanilla) | (vanilla) | 25 | tir : 5 dégâts toutes les 30 ticks, portée 14 |
 
-**Mini-boss** : il n'y a pas de mécanisme dédié. Une brute dans un spawner limité à une seule
-vague (champs « vague de début » et « vague de fin » identiques) fait office de vague de boss.
-Un vrai boss se crée avec un JSON de plus (`max_health` 300, `scale` 2...).
+**Mini-boss** : pas de type d'ennemi dédié, c'est le spawner qui fait la vague de boss. Une
+brute dans un spawner réglé sur « une vague sur 4 » (première vague 4) revient aux vagues 4, 8,
+12… ; limité à une seule vague, il fait un boss unique. Voir `waveStep` dans
+[02-gameplay.md](../02-gameplay.md).
 
 Gametest `enemy_variants` : une brute apparaît avec 60 PV, son identité, son XP et son IA, alors
 qu'un zombie sans marquage reste un zombie.

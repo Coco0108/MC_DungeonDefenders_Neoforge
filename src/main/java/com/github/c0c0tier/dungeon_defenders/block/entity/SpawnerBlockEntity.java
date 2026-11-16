@@ -215,6 +215,10 @@ public class SpawnerBlockEntity extends BlockEntity {
     private int spawnRadius;
     private int waveStart = 1;
     private int waveEnd = ModAttachments.MAX_WAVE;
+    // Périodicité : 1 = toutes les vagues de la plage (comportement historique), N = une vague
+    // sur N à partir de waveStart. C'est ce qui permet une vague de boss « toutes les 4 vagues »
+    // avec un seul spawner (waveStart 4, pas 4), sans en poser un par vague concernée.
+    private int waveStep = 1;
     // 0 = aucune session de combat traitée pour l'instant ; force un premier resetForWave à
     // l'entrée en combat, puisque COMBAT_SESSION démarre à 0 mais est déjà incrémentée à 1
     // avant que le premier serverTick en combat ne s'exécute (voir PhaseTransitions#enterCombat).
@@ -313,6 +317,23 @@ public class SpawnerBlockEntity extends BlockEntity {
         return this.waveEnd;
     }
 
+    public int getWaveStep() {
+        return this.waveStep;
+    }
+
+    /** @return vrai si ce spawner participe à la vague donnée : dans sa plage, et sur son pas. */
+    public boolean isActiveOnWave(int wave) {
+        return isActiveOnWave(wave, this.waveStart, this.waveEnd, this.waveStep);
+    }
+
+    /** Même règle, sans block entity : seule source de vérité, testable isolément. */
+    public static boolean isActiveOnWave(int wave, int waveStart, int waveEnd, int waveStep) {
+        if (wave < waveStart || wave > waveEnd) {
+            return false;
+        }
+        return (wave - waveStart) % Math.max(1, waveStep) == 0;
+    }
+
     /** @return la composition actuelle du spawner (copie défensive), pour que l'écran de config l'affiche. */
     public List<SpawnEntry> getEntries() {
         return List.copyOf(this.entries);
@@ -328,11 +349,13 @@ public class SpawnerBlockEntity extends BlockEntity {
      * à la première version (qui attendait la prochaine vague) : reconfigurer un spawner
      * doit se voir tout de suite dans le GUI comme en jeu.
      */
-    public void applyConfig(int intervalTicks, int spawnRadius, int waveStart, int waveEnd, List<SpawnEntry> newEntries) {
+    public void applyConfig(int intervalTicks, int spawnRadius, int waveStart, int waveEnd, int waveStep,
+            List<SpawnEntry> newEntries) {
         this.intervalTicks = Math.max(1, intervalTicks);
         this.spawnRadius = Math.max(0, spawnRadius);
         this.waveStart = Math.max(1, waveStart);
         this.waveEnd = Math.max(this.waveStart, waveEnd);
+        this.waveStep = Math.max(1, waveStep);
         if (!newEntries.isEmpty()) {
             this.entries = new ArrayList<>(newEntries);
         }
@@ -363,7 +386,7 @@ public class SpawnerBlockEntity extends BlockEntity {
         }
 
         int currentWave = serverLevel.getData(ModAttachments.CURRENT_WAVE);
-        if (currentWave < blockEntity.waveStart || currentWave > blockEntity.waveEnd) {
+        if (!blockEntity.isActiveOnWave(currentWave)) {
             return;
         }
 
@@ -417,6 +440,7 @@ public class SpawnerBlockEntity extends BlockEntity {
         output.putInt("SpawnRadius", this.spawnRadius);
         output.putInt("WaveStart", this.waveStart);
         output.putInt("WaveEnd", this.waveEnd);
+        output.putInt("WaveStep", this.waveStep);
         output.putInt("LastCombatSessionHandled", this.lastCombatSessionHandled);
 
         ValueOutput.TypedOutputList<SpawnEntry> list = output.list("Entries", SpawnEntry.CODEC);
@@ -432,6 +456,8 @@ public class SpawnerBlockEntity extends BlockEntity {
         this.spawnRadius = input.getIntOr("SpawnRadius", 0);
         this.waveStart = input.getIntOr("WaveStart", 1);
         this.waveEnd = input.getIntOr("WaveEnd", ModAttachments.MAX_WAVE);
+        // Absent des maps publiées avant l'ajout du champ : 1, soit le comportement d'avant.
+        this.waveStep = Math.max(1, input.getIntOr("WaveStep", 1));
         this.lastCombatSessionHandled = input.getIntOr("LastCombatSessionHandled", 0);
 
         ValueInput.TypedInputList<SpawnEntry> savedEntries = input.listOrEmpty("Entries", SpawnEntry.CODEC);

@@ -108,6 +108,7 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "enemy_shipped_values", DungeonDefendersGameTests::enemyShippedValues);
         register(event, environment, "enemy_unknown_excluded_from_wave", DungeonDefendersGameTests::enemyUnknownExcludedFromWave);
         register(event, environment, "enemy_export_conversion", DungeonDefendersGameTests::enemyExportConversion);
+        register(event, environment, "spawner_wave_step", DungeonDefendersGameTests::spawnerWaveStep);
         register(event, environment, "enemy_variants", DungeonDefendersGameTests::enemyVariants);
         register(event, environment, "mana_chest_respawn", DungeonDefendersGameTests::manaChestRespawn);
         register(event, environment, "world_time_frozen", DungeonDefendersGameTests::worldTimeFrozen);
@@ -229,13 +230,38 @@ public final class DungeonDefendersGameTests {
         SpawnerBlockEntity spawner = helper.getBlockEntity(pos, SpawnerBlockEntity.class);
 
         level.setData(ModAttachments.CURRENT_WAVE, 1);
-        spawner.applyConfig(20, 0, 1, 1, List.of(
+        spawner.applyConfig(20, 0, 1, 1, 1, List.of(
                 new SpawnerBlockEntity.SpawnEntry(LegacyEnemyIds.ZOMBIE, 4),
                 new SpawnerBlockEntity.SpawnEntry(Identifier.fromNamespaceAndPath("pack_absent", "goblin"), 6)));
 
         PhaseTransitions.recomputeWaveEnemiesTotal(level);
         int expected = Math.max(1, (int) Math.round(4 * DifficultyScaling.getMultiplier(level)));
         helper.assertValueEqual(level.getData(ModAttachments.WAVE_ENEMIES_TOTAL), expected, "total sans l'ennemi inconnu");
+        helper.succeed();
+    }
+
+    /**
+     * Périodicité d'un spawner : « une vague sur N » à partir de sa première vague, dans sa
+     * plage. Un pas de 1 (ou absent d'une ancienne map) redonne le comportement d'avant.
+     */
+    static void spawnerWaveStep(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 1, 1);
+        helper.setBlock(pos, ModBlocks.SPAWNER.get());
+        SpawnerBlockEntity spawner = helper.getBlockEntity(pos, SpawnerBlockEntity.class);
+
+        // Vague de boss toutes les 4 vagues, de la 4 à la 12.
+        spawner.applyConfig(20, 0, 4, 12, 4, List.of(new SpawnerBlockEntity.SpawnEntry(LegacyEnemyIds.ZOMBIE, 1)));
+        for (int wave = 1; wave <= 14; wave++) {
+            boolean expected = wave == 4 || wave == 8 || wave == 12;
+            helper.assertValueEqual(spawner.isActiveOnWave(wave), expected, "vague " + wave + " avec un pas de 4");
+        }
+
+        // Pas de 1 : toute la plage, rien en dehors. Un pas nul ou négatif est ramené à 1.
+        spawner.applyConfig(20, 0, 2, 5, 0, List.of(new SpawnerBlockEntity.SpawnEntry(LegacyEnemyIds.ZOMBIE, 1)));
+        helper.assertValueEqual(spawner.getWaveStep(), 1, "pas ramené à 1");
+        for (int wave = 1; wave <= 6; wave++) {
+            helper.assertValueEqual(spawner.isActiveOnWave(wave), wave >= 2 && wave <= 5, "vague " + wave + " avec un pas de 1");
+        }
         helper.succeed();
     }
 
