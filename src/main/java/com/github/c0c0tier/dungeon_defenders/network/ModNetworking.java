@@ -616,6 +616,7 @@ public class ModNetworking {
                     payload.spawnRadius(),
                     payload.waveStart(),
                     payload.waveEnd(),
+                    payload.waveStep(),
                     entries
             );
 
