@@ -7,6 +7,7 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEnti
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaCondenserBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.Corrosion;
 import com.github.c0c0tier.dungeon_defenders.entity.ManaCrystalEntity;
+import com.github.c0c0tier.dungeon_defenders.item.HeroWeapons;
 import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackPriorityTargetGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
@@ -36,11 +37,14 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -245,6 +249,11 @@ public class ModEvents {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         Player player = event.getEntity();
+        if (!player.level().isClientSide()) {
+            // À chaque connexion, pas seulement la première : couvre aussi une sauvegarde
+            // d'avant les armes de héros.
+            HeroWeapons.ensure(player);
+        }
         if (player.level().isClientSide() || player.getData(ModAttachments.FIRST_SPAWN_HANDLED)) {
             return;
         }
@@ -325,6 +334,53 @@ public class ModEvents {
         if (level.getData(ModAttachments.GAME_PHASE) == GamePhase.COMBAT.ordinal()) {
             level.setData(ModAttachments.WAVE_PLAYER_DAMAGED, true);
         }
+    }
+
+    // --- ARMES DE HÉROS (item/HeroWeapons) ---
+
+    // Un joueur qui réapparaît retrouve son arme (elle n'est pas lâchée à la mort, voir plus bas).
+    @SubscribeEvent
+    public static void onPlayerRespawnGiveWeapon(PlayerEvent.PlayerRespawnEvent event) {
+        if (!event.getEntity().level().isClientSide()) {
+            HeroWeapons.ensure(event.getEntity());
+        }
+    }
+
+    // L'arme d'un héros ne se jette pas : l'objet au sol est annulé et l'arme rendue.
+    @SubscribeEvent
+    public static void onHeroWeaponTossed(ItemTossEvent event) {
+        if (HeroWeapons.isHeroWeapon(event.getEntity().getItem().getItem())) {
+            event.setCanceled(true);
+            HeroWeapons.ensure(event.getPlayer());
+        }
+    }
+
+    // ... et ne tombe pas à la mort du joueur : sinon un autre joueur pourrait la ramasser.
+    @SubscribeEvent
+    public static void onPlayerDropsHeroWeapon(LivingDropsEvent event) {
+        if (event.getEntity() instanceof Player) {
+            event.getDrops().removeIf(drop -> HeroWeapons.isHeroWeapon(drop.getItem().getItem()));
+        }
+    }
+
+    // Bonus de niveau : tout ce qu'un joueur inflige à un monstre (arme, épée, sorts) est
+    // multiplié par 1 + player_damage_per_level x (niveau - 1). Les tours ne sont pas concernées
+    // (leurs dégâts n'ont pas de joueur pour source). Priorité haute : avant la corrosion, pour
+    // que les deux bonus se multiplient dans un ordre fixe.
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void onPlayerDamageLevelBonus(LivingIncomingDamageEvent event) {
+        if (event.getEntity().level().isClientSide()
+                || !(event.getEntity() instanceof Monster)
+                || !(event.getSource().getEntity() instanceof Player player)) {
+            return;
+        }
+        event.setAmount((float) (event.getAmount() * playerDamageMultiplier(player)));
+    }
+
+    /** Multiplicateur de dégâts d'un joueur selon son niveau : x1 au niveau 1. */
+    public static double playerDamageMultiplier(Player player) {
+        int level = Math.max(1, player.getData(ModAttachments.LEVEL));
+        return 1.0D + (level - 1) * GameBalance.get(BalanceValue.PLAYER_DAMAGE_PER_LEVEL, false);
     }
 
     // Corrosion (Projecteur d'acide de l'Alchimiste) : un monstre marqué subit plus de dégâts,

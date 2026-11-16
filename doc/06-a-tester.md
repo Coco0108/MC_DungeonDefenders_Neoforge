@@ -1624,6 +1624,30 @@ par le gametest `geomancer_towers`, sauf la Pierre de vie ; rien vu en jeu.
       l'ancien héros restent et fonctionnent.
 - [ ] Avis attendu : noms, rôles, chiffres ; y a-t-il un héros clairement trop fort ou inutile ?
 
+## Armes de héros et bonus de niveau (2026-11-16)
+
+Branche `feature/armes-de-heros` (contient les quatre héros). Couvert par le gametest
+`hero_weapons` ; rien vu en jeu.
+
+- [ ] En se connectant, l'arme du héros est dans l'inventaire (une épée pour l'Écuyer).
+- [ ] Changer de héros (`H`) : l'ancienne arme disparaît, la nouvelle arrive, un seul exemplaire.
+- [ ] Jeter l'arme (`A`/`Q`) : elle revient aussitôt, rien ne tombe au sol.
+- [ ] Mourir puis réapparaître : l'arme est là, aucune arme au sol à l'endroit de la mort.
+- [ ] **Sacoche de fioles** (clic droit) : traînée violette, éclat à l'endroit visé, plusieurs
+      monstres proches blessés d'un coup.
+- [ ] **Pistolet à rivets** : un monstre lointain (20 blocs) perd de la vie ; tir rapide.
+- [ ] **Bâton de géomancien** : courte portée, le monstre touché ralentit 2 s.
+- [ ] La recharge se voit sur l'icône de l'arme ; impossible de tirer pendant.
+- [ ] Tirer à travers une zone interdite (marqueur invisible) fonctionne ; une tour ou un mur
+      arrête le tir.
+- [ ] Clic droit avec l'arme **pendant le mode pose de tour** : la pose reste prioritaire, à
+      signaler sinon.
+- [ ] En créatif, l'arme d'un autre héros (`/give @s dungeon_defenders:engineer_rivet_gun`)
+      refuse de tirer avec un message.
+- [ ] Bonus de niveau : au niveau 5, un monstre meurt en moins de coups qu'au niveau 1.
+- [ ] L'écran de choix de héros montre l'arme comme icône de chaque héros.
+- [ ] Avis attendu : clic droit pour tirer (ou clic gauche ?), dégâts, cadence.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

@@ -48,6 +48,8 @@ import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
 import com.github.c0c0tier.dungeon_defenders.init.TowerStats;
 import com.github.c0c0tier.dungeon_defenders.init.TowerStatsRegistry;
+import com.github.c0c0tier.dungeon_defenders.item.HeroWeaponItem;
+import com.github.c0c0tier.dungeon_defenders.item.HeroWeapons;
 import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -69,6 +71,9 @@ import net.minecraft.world.clock.WorldClocks;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.zombie.Zombie;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -144,6 +149,8 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "alchemist_damage_towers", DungeonDefendersGameTests::alchemistDamageTowers);
         register(event, environment, "engineer_towers", DungeonDefendersGameTests::engineerTowers);
         register(event, environment, "geomancer_towers", DungeonDefendersGameTests::geomancerTowers);
+        // Armes de héros (doc/02-gameplay.md).
+        register(event, environment, "hero_weapons", DungeonDefendersGameTests::heroWeapons);
         // Réglages globaux en data-driven (doc/data-driven/equilibrage.md).
         register(event, environment, "balance_shipped_values", DungeonDefendersGameTests::balanceShippedValues);
         register(event, environment, "balance_validation", DungeonDefendersGameTests::balanceValidation);
@@ -875,6 +882,78 @@ public final class DungeonDefendersGameTests {
         second.discard();
         third.discard();
         tooFar.discard();
+        helper.succeed();
+    }
+
+    /**
+     * Armes de héros : chaque héros a la sienne ; changer de héros retire l'ancienne et donne la
+     * nouvelle, en un seul exemplaire ; le Pistolet à rivets blesse le monstre visé ; le bonus de
+     * niveau (+5 % par niveau) s'applique ; la Sacoche de fioles blesse une zone mais pas un
+     * monstre éloigné ; le Bâton ralentit.
+     */
+    static void heroWeapons(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+
+        java.util.Set<Item> weapons = new java.util.HashSet<>();
+        for (HeroDefinition hero : HeroDefinition.values()) {
+            helper.assertTrue(weapons.add(hero.weapon()), "arme propre à " + hero.id());
+            helper.assertTrue(HeroWeapons.isHeroWeapon(hero.weapon()), "arme reconnue pour " + hero.id());
+        }
+
+        player.setData(ModAttachments.HERO, HeroDefinition.ENGINEER.ordinal());
+        HeroWeapons.ensure(player);
+        helper.assertValueEqual(player.getInventory().countItem(ModBlocks.ENGINEER_RIVET_GUN.get()), 1, "arme de l'Ingénieur donnée");
+        player.setData(ModAttachments.HERO, HeroDefinition.ALCHEMIST.ordinal());
+        HeroWeapons.ensure(player);
+        HeroWeapons.ensure(player);
+        helper.assertValueEqual(player.getInventory().countItem(ModBlocks.ENGINEER_RIVET_GUN.get()), 0, "ancienne arme retirée");
+        helper.assertValueEqual(player.getInventory().countItem(ModBlocks.ALCHEMIST_FLASKS.get()), 1, "nouvelle arme en un seul exemplaire");
+
+        // Le joueur regarde vers +z (lacet 0), à hauteur d'homme ; les monstres sont devant lui.
+        Vec3 stand = helper.absoluteVec(new Vec3(2.5D, 1.0D, 2.5D));
+        player.setPos(stand.x, stand.y, stand.z);
+        player.setYRot(0.0F);
+        player.setXRot(0.0F);
+        BlockPos front = new BlockPos(2, 1, 7);
+        // La zone de test est entourée de barrières invisibles, qui arrêteraient le tir comme
+        // n'importe quel bloc : on dégage un couloir devant le joueur.
+        for (BlockPos pos : BlockPos.betweenClosed(new BlockPos(1, 1, 0), new BlockPos(4, 3, 16))) {
+            helper.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR);
+        }
+
+        HeroWeaponItem rivetGun = ModBlocks.ENGINEER_RIVET_GUN.get();
+        Zombie target = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, front);
+        rivetGun.fire(level, player);
+        float baseLoss = target.getMaxHealth() - target.getHealth();
+        helper.assertTrue(baseLoss > 0.0F, "le Pistolet à rivets blesse le monstre visé");
+        target.discard();
+
+        player.setData(ModAttachments.LEVEL, 5);
+        Zombie second = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, front);
+        rivetGun.fire(level, player);
+        float boostedLoss = second.getMaxHealth() - second.getHealth();
+        helper.assertTrue(Math.abs(boostedLoss - baseLoss * 1.2F) < 0.01F,
+                "niveau 5 : " + boostedLoss + " PV perdus, attendu 1,2 x " + baseLoss);
+        second.discard();
+        player.setData(ModAttachments.LEVEL, 1);
+
+        Zombie center = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, front);
+        Zombie beside = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(3, 1, 8));
+        Zombie away = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(2, 1, 14));
+        ModBlocks.ALCHEMIST_FLASKS.get().fire(level, player);
+        helper.assertTrue(center.getHealth() < center.getMaxHealth(), "fiole : monstre visé blessé");
+        helper.assertTrue(beside.getHealth() < beside.getMaxHealth(), "fiole : voisin blessé (zone)");
+        helper.assertValueEqual(away.getHealth(), away.getMaxHealth(), "fiole : monstre éloigné épargné");
+        center.discard();
+        beside.discard();
+        away.discard();
+
+        Zombie slowed = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, front);
+        ModBlocks.GEOMANCER_STAFF.get().fire(level, player);
+        helper.assertTrue(slowed.getHealth() < slowed.getMaxHealth(), "bâton : monstre blessé");
+        helper.assertTrue(slowed.hasEffect(MobEffects.SLOWNESS), "bâton : monstre ralenti");
+        slowed.discard();
         helper.succeed();
     }
 

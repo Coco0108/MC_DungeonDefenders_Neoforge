@@ -1,0 +1,7 @@
+{
+  "comment": "Placeholder : texture vanilla en attendant une texture dédiée.",
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "minecraft:item/iron_sword"
+  }
+}

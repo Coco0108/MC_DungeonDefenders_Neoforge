@@ -17,6 +17,7 @@ import com.github.c0c0tier.dungeon_defenders.init.AbilitySlot;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
+import com.github.c0c0tier.dungeon_defenders.item.HeroWeapons;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.block.entity.MapConfigBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
@@ -504,6 +505,8 @@ public class ModNetworking {
 
             player.setData(ModAttachments.HERO, payload.heroOrdinal());
             player.syncData(ModAttachments.HERO);
+            // L'arme suit le héros : l'ancienne disparaît, la nouvelle arrive.
+            HeroWeapons.ensure(player);
             player.sendSystemMessage(Component.translatable(
                     "dungeon_defenders.hero.selected", heroes[payload.heroOrdinal()].displayName()));
         });
