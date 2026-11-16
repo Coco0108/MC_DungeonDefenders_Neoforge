@@ -1,6 +1,8 @@
 package com.github.c0c0tier.dungeon_defenders.block;
 
+import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractPulseTowerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTurretBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -71,8 +73,9 @@ public class SimpleTowerBlock extends BaseEntityBlock {
         return SHAPE;
     }
 
-    // Pas de BlockEntityType à comparer (le bloc ne le connaît pas) : le ticker s'adresse à
-    // toute tour "à impulsions" et ne fait rien pour les autres (Cuve instable, Condenseur).
+    // Pas de BlockEntityType à comparer (le bloc ne le connaît pas) : le ticker reconnaît la
+    // catégorie de la tour (impulsions, Turret, Blockade) et ne fait rien pour celles qui
+    // n'agissent pas à chaque tick (Cuve instable, Condenseur).
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
         if (level.isClientSide()) {
@@ -81,6 +84,10 @@ public class SimpleTowerBlock extends BaseEntityBlock {
         return (tickLevel, pos, tickState, blockEntity) -> {
             if (blockEntity instanceof AbstractPulseTowerBlockEntity tower && tickLevel instanceof ServerLevel serverLevel) {
                 tower.serverTick(serverLevel);
+            } else if (blockEntity instanceof AbstractTurretBlockEntity turret) {
+                AbstractTurretBlockEntity.serverTick(tickLevel, pos, tickState, turret);
+            } else if (blockEntity instanceof AbstractBlockadeBlockEntity blockade) {
+                AbstractBlockadeBlockEntity.serverTick(tickLevel, pos, tickState, blockade);
             }
         };
     }

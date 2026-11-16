@@ -779,6 +779,13 @@ vérifie la CI.
   [02-gameplay.md](02-gameplay.md#lalchimiste--deuxième-héros-herodefinitionalchemist). Couvert
   par trois gametests (`hero_rosters`, `alchemist_support_towers`, `alchemist_damage_towers`).
   **Jamais vu en jeu**, équilibrage théorique.
+- ✅ **Héros Ingénieur, six tours et deux sorts** (2026-11-16, branche `feature/heros-ingenieur`) :
+  troisième héros, de conception propre au mod. Tours : Barricade blindée, Tourelle à répétition,
+  Tourelle longue portée, Marteau-pilon, Bobine magnétique, Station de réparation ; sorts :
+  Réparation d'urgence, Champ de force. Ajoute `repair` et le bouclier temporaire à
+  `AbstractTowerBlockEntity`. Détail dans
+  [02-gameplay.md](02-gameplay.md#lingénieur--troisième-héros-herodefinitionengineer). Gametest
+  `engineer_towers`. **Jamais vu en jeu**, équilibrage théorique.
 - ✅ **Barre de vie sur toutes les tours** (2026-11-16) : `TowerHealthBarRenderer` n'était
   enregistré que pour Spike Blockade et Harpoon Turret ; les quatre autres tours de l'Écuyer n'en
   avaient donc jamais eu. Corrigé dans `DungeonDefendersModClient#onRegisterRenderers`.

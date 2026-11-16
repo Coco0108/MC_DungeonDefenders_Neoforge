@@ -1,0 +1,9 @@
+{
+  "comment": "Placeholder : réutilise des textures vanilla en attendant une texture dédiée.",
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "top": "minecraft:block/lodestone_top",
+    "front": "minecraft:block/target_top",
+    "side": "minecraft:block/target_side"
+  }
+}

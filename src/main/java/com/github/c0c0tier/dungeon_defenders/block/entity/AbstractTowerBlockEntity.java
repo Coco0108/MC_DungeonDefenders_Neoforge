@@ -172,10 +172,40 @@ public abstract class AbstractTowerBlockEntity extends BlockEntity implements Ai
     @Override
     public abstract int getAiPriority();
 
-    /** Retire {@code amount} PV à la tour. */
+    // --- BOUCLIER TEMPORAIRE ---
+    // Posé par le sort Champ de force de l'Ingénieur, même principe que le bonus de dégâts : il
+    // est renouvelé tant que le sort agit et expire seul. Tant qu'il tient, les coups des
+    // monstres ne retirent aucun PV. Purement serveur.
+    private long shieldUntil = Long.MIN_VALUE / 2;
+
+    /** Rend la tour insensible aux dégâts jusqu'au tick {@code untilGameTime}. */
+    public void applyShield(long untilGameTime) {
+        this.shieldUntil = Math.max(this.shieldUntil, untilGameTime);
+    }
+
+    public boolean isShielded() {
+        return this.level != null && this.level.getGameTime() < this.shieldUntil;
+    }
+
+    /** Rend {@code amount} PV à la tour, sans dépasser ses PV max. */
+    public void repair(int amount) {
+        setHealth(Math.min(getMaxHealth(), this.health + amount));
+    }
+
+    /** Retire {@code amount} PV à la tour (rien si un bouclier la protège). */
     @Override
     public void damage(int amount) {
+        if (isShielded()) {
+            return;
+        }
         setHealth(this.health - amount);
+        if (this.level instanceof ServerLevel serverLevel && !isRemoved()) {
+            onDamaged(serverLevel);
+        }
+    }
+
+    /** Appelé côté serveur après un coup encaissé, si la tour tient encore. Rien par défaut. */
+    protected void onDamaged(ServerLevel level) {
     }
 
     public void setHealth(int health) {

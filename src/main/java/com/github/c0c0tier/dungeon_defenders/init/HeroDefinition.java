@@ -5,6 +5,8 @@ import com.github.c0c0tier.dungeon_defenders.ability.BurstAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.CatalysisAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.ChannelAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.CircularSliceAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.EmergencyRepairAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.ForceFieldAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.FrostFlaskAbility;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
@@ -50,7 +52,19 @@ public enum HeroDefinition {
             TowerDefinition.FLASK_LAUNCHER,
             TowerDefinition.CATALYST_PYLON,
             TowerDefinition.MANA_CONDENSER),
-            FrostFlaskAbility.INSTANCE, CatalysisAbility.INSTANCE);
+            FrostFlaskAbility.INSTANCE, CatalysisAbility.INSTANCE),
+
+    // Troisième héros (2026-11-16), lui aussi de conception propre au mod : des machines. Deux
+    // tourelles aux profils opposés, et de quoi faire durer une défense (mur qui se répare,
+    // station de réparation, sorts qui soignent ou protègent les tours).
+    ENGINEER("engineer", List.of(
+            TowerDefinition.IRON_BARRICADE,
+            TowerDefinition.REPEATER_TURRET,
+            TowerDefinition.LONGSHOT_TURRET,
+            TowerDefinition.PISTON_SLAMMER,
+            TowerDefinition.MAGNET_COIL,
+            TowerDefinition.REPAIR_STATION),
+            EmergencyRepairAbility.INSTANCE, ForceFieldAbility.INSTANCE);
 
     /** Héros attribué à un joueur qui n'a jamais choisi — voir ModAttachments.HERO. */
     public static final HeroDefinition DEFAULT = SQUIRE;

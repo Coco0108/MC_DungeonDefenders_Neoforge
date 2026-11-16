@@ -16,6 +16,12 @@
     "dungeon_defenders:volatile_vat",
     "dungeon_defenders:catalyst_pylon",
     "dungeon_defenders:mana_condenser",
-    "dungeon_defenders:flask_launcher"
+    "dungeon_defenders:flask_launcher",
+    "dungeon_defenders:iron_barricade",
+    "dungeon_defenders:repeater_turret",
+    "dungeon_defenders:longshot_turret",
+    "dungeon_defenders:magnet_coil",
+    "dungeon_defenders:repair_station",
+    "dungeon_defenders:piston_slammer"
   ]
 }

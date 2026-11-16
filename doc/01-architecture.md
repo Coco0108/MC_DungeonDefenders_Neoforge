@@ -60,6 +60,8 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── BloodRageAbility.java         # Sort 2 de l'Écuyer : buff Speed+Strength tant que maintenue
     │   │   ├── FrostFlaskAbility.java        # Sort 1 de l'Alchimiste : gèle les monstres autour du point visé
     │   │   ├── CatalysisAbility.java         # Sort 2 de l'Alchimiste : +50 % de dégâts aux tours proches tant que maintenue
+    │   │   ├── EmergencyRepairAbility.java   # Sort 1 de l'Ingénieur : rend la moitié de leurs PV aux tours proches
+    │   │   ├── ForceFieldAbility.java        # Sort 2 de l'Ingénieur : tours proches invulnérables tant que maintenue
     │   │   ├── AbilityRegistry.java          # Résout la ChannelAbility d'un (joueur, emplacement) — partagé réseau/tick
     │   │   ├── PlayerAbilityChannels.java    # Canalisation active de chaque joueur (état runtime serveur, non persisté)
     │   │   └── AbilityCooldowns.java         # Dernier usage d'une BurstAbility, par joueur et par emplacement
@@ -189,6 +191,12 @@ MC_DungeonDefenders_Neoforge/
     │           ├── CatalystPylonBlockEntity.java           # Alchimiste : bonus de dégâts aux tours voisines
     │           ├── VolatileVatBlockEntity.java             # Alchimiste : mur qui explose à sa destruction
     │           ├── ManaCondenserBlockEntity.java           # Alchimiste : mana en plus pour les morts à portée
+    │           ├── IronBarricadeBlockEntity.java           # Ingénieur : mur qui se répare seul
+    │           ├── RepeaterTurretBlockEntity.java          # Ingénieur : Turret à cadence élevée (stats seulement)
+    │           ├── LongshotTurretBlockEntity.java          # Ingénieur : Turret à longue portée (stats seulement)
+    │           ├── PistonSlammerBlockEntity.java           # Ingénieur : onde de choc, dégâts et repousse
+    │           ├── MagnetCoilBlockEntity.java              # Ingénieur : attire les monstres
+    │           ├── RepairStationBlockEntity.java           # Ingénieur : répare les tours voisines
     │           ├── TowerScan.java                          # Recherche des tours autour d'un point (par chunks)
     │           ├── TowerHealthBarRenderState.java          # Instantané pour le rendu (client)
     │           ├── TowerHealthBarRenderer.java             # Barre de vie 3D générique à toute tour, cachée à PV pleins/hors portée (client)
@@ -212,7 +220,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── data/dungeon_defenders/loot_table/blocks/*.json  # Un par bloc (drop de lui-même)
     │   ├── data/dungeon_defenders/structure/gametest/empty.nbt  # Gabarit 3x3x3 sans bloc, partagé par les gametests
     │   ├── data/dungeon_defenders/dungeon_defenders/enemy/*.json  # Ennemis data-driven (zombie, skeleton), relus par /reload
-    │   ├── data/dungeon_defenders/dungeon_defenders/tower/*.json    # Stats data-driven des 12 tours, relues par /reload
+    │   ├── data/dungeon_defenders/dungeon_defenders/tower/*.json    # Stats data-driven des 18 tours, relues par /reload
     │   ├── data/dungeon_defenders/dungeon_defenders/balance/*.json  # Réglages globaux (difficulty, towers, progression), relus par /reload
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
     │   ├── data/minecraft/timeline/day.json        # Timeline "day" vanilla SANS la brûlure des monstres au soleil (générée, voir tools/)

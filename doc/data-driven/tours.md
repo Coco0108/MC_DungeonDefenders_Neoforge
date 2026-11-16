@@ -56,6 +56,8 @@ objet plat `"stat": nombre`. Exemple réel, `tower/bowling_ball_turret.json` :
 | `boost_percent` | décimal | 0 | Pylône catalyseur (dégâts des tours voisines en plus, en %) |
 | `bonus_mana` | entier | 0 | Condenseur de mana (mana du cristal en plus) |
 | `linger_ticks` | entier | 1 | Lance-fioles (durée de la flaque) |
+| `heal_amount` | entier | 0 | Barricade blindée, Station de réparation (PV rendus par intervalle) |
+| `chain_targets` | entier | 1 | réservé au héros suivant |
 
 Les tours de l'Alchimiste (2026-11-16) réutilisent aussi `range`, `cone_angle_degrees`, `damage`,
 `attack_interval_ticks` et `splash_radius`.
@@ -76,7 +78,7 @@ Les valeurs livrées sont dans le tableau de
   - `Stats de la tour dungeon_defenders:spike_blockade invalides (...) : stat inconnue "mana_cots" (stats de cette tour : ...) — les valeurs par défaut du code sont utilisées.`
   - `Aucun fichier de stats pour la tour ... : les valeurs par défaut du code sont utilisées.`
 - **Un fichier qui ne correspond à aucune tour** est ignoré, avec un avertissement.
-- **Au démarrage et à chaque `/reload`**, le log indique `Stats de tours chargées : 12 sur 12`.
+- **Au démarrage et à chaque `/reload`**, le log indique `Stats de tours chargées : 18 sur 18`.
 
 ## `/reload` et tours déjà posées
 

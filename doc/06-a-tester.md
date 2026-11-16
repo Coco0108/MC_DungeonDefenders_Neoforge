@@ -1575,6 +1575,29 @@ de remplissage de mana évitent de lancer une vraie partie.
 - [ ] Avis attendu : les noms, les rôles et les chiffres. Le Condenseur rend-il le mana trop
       facile ?
 
+## Héros Ingénieur, ses six tours et ses deux sorts (2026-11-16)
+
+Branche `feature/heros-ingenieur`. Effets couverts par le gametest `engineer_towers`, rien vu en
+jeu.
+
+- [ ] Touche `H` : l'Ingénieur est proposé ; sa roue contient ses 6 tours.
+- [ ] **Barricade blindée** : entamée par les monstres, ses PV remontent seuls (1 PV toutes les
+      2 s) ; les monstres de mêlée s'y attaquent en priorité.
+- [ ] **Tourelle à répétition** : flèches en rafale (environ 3 par seconde), cône de 60°.
+- [ ] **Tourelle longue portée** : cône très étroit à la pose, tire à plus de 20 blocs, un tir
+      toutes les 4 s qui tue un zombie d'un coup.
+- [ ] **Marteau-pilon** : son de piston et nuage quand un monstre approche ; les monstres sont
+      blessés et projetés en arrière.
+- [ ] **Bobine magnétique** : les monstres à portée dévient vers elle et piétinent autour.
+      À signaler si l'effet est trop faible ou s'ils restent bloqués pour toujours.
+- [ ] **Station de réparation** : particules vertes sur les tours voisines entamées, leurs PV
+      remontent ; la station elle-même ne se répare pas.
+- [ ] **Réparation d'urgence** (sort 1) : les tours proches regagnent la moitié de leur vie,
+      recharge de 20 s affichée.
+- [ ] **Champ de force** (sort 2, maintenue) : pendant la canalisation, les tours proches ne
+      perdent plus de vie ; le mana descend très vite.
+- [ ] Avis attendu : noms, rôles, chiffres.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni
