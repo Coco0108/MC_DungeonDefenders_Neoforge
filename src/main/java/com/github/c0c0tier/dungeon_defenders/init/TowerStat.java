@@ -30,7 +30,19 @@ public enum TowerStat {
     SPLASH_RADIUS("splash_radius", false, 0.0D),
     PROJECTILE_VELOCITY("projectile_velocity", false, 0.1D),
     // Distance parcourue par le projectile AU-DELÀ de la portée de ciblage, avant de disparaître.
-    PROJECTILE_EXTRA_DISTANCE("projectile_extra_distance", false, 0.0D);
+    PROJECTILE_EXTRA_DISTANCE("projectile_extra_distance", false, 0.0D),
+
+    // Tours de l'Alchimiste (2026-11-16).
+    // Niveau de l'effet appliqué (1 = Lenteur I...) : Alambic givrant.
+    EFFECT_LEVEL("effect_level", true, 1.0D),
+    // Dégâts supplémentaires (en %) subis par un monstre corrodé : Projecteur d'acide.
+    VULNERABILITY_PERCENT("vulnerability_percent", false, 0.0D),
+    // Dégâts supplémentaires (en %) des tours voisines : Pylône catalyseur.
+    BOOST_PERCENT("boost_percent", false, 0.0D),
+    // Mana du cristal en plus lâché par un monstre mort à portée : Condenseur de mana.
+    BONUS_MANA("bonus_mana", true, 0.0D),
+    // Durée de la flaque laissée par un tir : Lance-fioles.
+    LINGER_TICKS("linger_ticks", true, 1.0D);
 
     private final String jsonName;
     private final boolean integer;

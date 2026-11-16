@@ -2,8 +2,10 @@ package com.github.c0c0tier.dungeon_defenders.init;
 
 import com.github.c0c0tier.dungeon_defenders.ability.BloodRageAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.BurstAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.CatalysisAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.ChannelAbility;
 import com.github.c0c0tier.dungeon_defenders.ability.CircularSliceAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.FrostFlaskAbility;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -21,9 +23,8 @@ import java.util.Locale;
 // (AbstractTowerBlockEntity porte le commun, chaque tour concrète ne fixe que ses stats).
 // Ajouter un héros deviendra une entrée ici plus ses tours, sans toucher au reste.
 //
-// Un seul membre pour l'instant, comme ManaCrystalType à ses débuts : l'écran de choix n'a donc
-// qu'une option. C'est volontaire — ça valide toute la plomberie (sélection, persistance,
-// synchro, filtrage) sur un cas simple, avant que trois héros de plus ne s'y ajoutent.
+// Deux membres depuis le 2026-11-16 : l'Écuyer (tours et sorts repris du plan d'origine) et
+// l'Alchimiste (conception propre au mod).
 public enum HeroDefinition {
 
     // Circular Slice et Blood Rage : les deux sorts de l'Écuyer confirmés dans le jeu de
@@ -36,7 +37,20 @@ public enum HeroDefinition {
             TowerDefinition.HARPOON_TURRET,
             TowerDefinition.BOWLING_BALL_TURRET,
             TowerDefinition.MORTAR_TURRET),
-            CircularSliceAbility.INSTANCE, BloodRageAbility.INSTANCE);
+            CircularSliceAbility.INSTANCE, BloodRageAbility.INSTANCE),
+
+    // Deuxième héros (2026-11-16), de conception propre au mod : ni ses tours ni ses sorts ne
+    // viennent du jeu de référence. Un héros de soutien : ses tours ralentissent, fragilisent,
+    // renforcent les voisines et rapportent du mana, là où l'Écuyer bloque et frappe. Ajouté EN
+    // FIN d'enum : l'attachment HERO est persisté par nom, mais synchronisé par ordinal.
+    ALCHEMIST("alchemist", List.of(
+            TowerDefinition.VOLATILE_VAT,
+            TowerDefinition.FROST_STILL,
+            TowerDefinition.ACID_SPRAYER,
+            TowerDefinition.FLASK_LAUNCHER,
+            TowerDefinition.CATALYST_PYLON,
+            TowerDefinition.MANA_CONDENSER),
+            FrostFlaskAbility.INSTANCE, CatalysisAbility.INSTANCE);
 
     /** Héros attribué à un joueur qui n'a jamais choisi — voir ModAttachments.HERO. */
     public static final HeroDefinition DEFAULT = SQUIRE;

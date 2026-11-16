@@ -118,6 +118,48 @@ public class DungeonDefendersModClient {
                 DungeonDefendersMod.HARPOON_TURRET_BE.get(),
                 TowerHealthBarRenderer::new
         );
+        // Le reste du roster de l'Écuyer n'avait jamais été enregistré ici (aucune barre de vie
+        // pour ces quatre tours) : corrigé le 2026-11-16 en ajoutant celles de l'Alchimiste.
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.BOUNCER_BLOCKADE_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.SLICE_N_DICE_BLOCKADE_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.BOWLING_BALL_TURRET_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.MORTAR_TURRET_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.FROST_STILL_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.ACID_SPRAYER_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.VOLATILE_VAT_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.CATALYST_PYLON_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.MANA_CONDENSER_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.FLASK_LAUNCHER_BE.get(),
+                TowerHealthBarRenderer::new
+        );
         // Réutilise tel quel le renderer vanilla de l'orbe d'XP (pas final, paramétré sur
         // ExperienceOrb) : le cristal de mana aura donc l'air d'une orbe d'XP verte/jaune, pas
         // encore de couleur "mana" dédiée — voir doc/05-etat-et-problemes-connus.md.

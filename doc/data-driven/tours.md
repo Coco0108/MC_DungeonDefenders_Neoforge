@@ -4,7 +4,7 @@
 > [l'étape 1 (ennemis)](ennemis.md). **Pas encore testé en jeu** : procédure dans
 > [06-a-tester.md](../06-a-tester.md).
 >
-> **Aucune valeur de gameplay ne change.** Les six JSON livrés reprennent les constantes
+> **Aucune valeur de gameplay ne change.** Les six JSON de l'Écuyer reprennent les constantes
 > d'avant. Vérifié par le gametest `tower_shipped_values` : pour chaque tour, le JSON est chargé
 > et ses valeurs sont égales aux valeurs par défaut du code.
 
@@ -51,6 +51,14 @@ objet plat `"stat": nombre`. Exemple réel, `tower/bowling_ball_turret.json` :
 | `splash_radius` | décimal | 0 | Mortar Turret |
 | `projectile_velocity` | décimal | 0.1 | Bowling Ball Turret |
 | `projectile_extra_distance` | décimal | 0 | Bowling Ball Turret |
+| `effect_level` | entier | 1 | Alambic givrant (niveau de Lenteur) |
+| `vulnerability_percent` | décimal | 0 | Projecteur d'acide (dégâts subis en plus, en %) |
+| `boost_percent` | décimal | 0 | Pylône catalyseur (dégâts des tours voisines en plus, en %) |
+| `bonus_mana` | entier | 0 | Condenseur de mana (mana du cristal en plus) |
+| `linger_ticks` | entier | 1 | Lance-fioles (durée de la flaque) |
+
+Les tours de l'Alchimiste (2026-11-16) réutilisent aussi `range`, `cone_angle_degrees`, `damage`,
+`attack_interval_ticks` et `splash_radius`.
 
 Les valeurs livrées sont dans le tableau de
 [02-gameplay.md](../02-gameplay.md#les-chiffres-data-driven-des-tours--inittowerstatsregistryjava-datansdungeon_defenderstowerjson).
@@ -68,7 +76,7 @@ Les valeurs livrées sont dans le tableau de
   - `Stats de la tour dungeon_defenders:spike_blockade invalides (...) : stat inconnue "mana_cots" (stats de cette tour : ...) — les valeurs par défaut du code sont utilisées.`
   - `Aucun fichier de stats pour la tour ... : les valeurs par défaut du code sont utilisées.`
 - **Un fichier qui ne correspond à aucune tour** est ignoré, avec un avertissement.
-- **Au démarrage et à chaque `/reload`**, le log indique `Stats de tours chargées : 6 sur 6`.
+- **Au démarrage et à chaque `/reload`**, le log indique `Stats de tours chargées : 12 sur 12`.
 
 ## `/reload` et tours déjà posées
 

@@ -18,10 +18,8 @@ import java.util.List;
 // Écran de choix de héros : une colonne de boutons (un par HeroDefinition), le portrait et la
 // description du héros survolé, et un bouton de confirmation.
 //
-// **Une seule option pour l'instant** — l'Écuyer est le seul héros existant. C'est assumé : cet
-// écran existe pour valider toute la chaîne (choix, paquet, persistance, synchro, filtrage de la
-// roue) sur un cas simple. Ajouter un héros deviendra une entrée d'enum, sans toucher à cet
-// écran.
+// Ajouter un héros est une entrée d'enum (HeroDefinition), sans toucher à cet écran : c'est ce
+// qu'a vérifié l'arrivée de l'Alchimiste (2026-11-16).
 //
 // Pas de Menu : rien à lire depuis le serveur pour l'ouvrir, le héros courant vient d'un
 // attachment joueur déjà synchronisé — même raisonnement que MapSelectionScreen et
@@ -116,9 +114,12 @@ public class HeroSelectionScreen extends Screen {
         // placeholder que les textures vanilla réutilisées ailleurs dans le mod.
         guiGraphics.item(new ItemStack(hero.icon()), this.panelX, this.panelY);
         guiGraphics.text(this.font, hero.displayName(), this.panelX + ICON_SIZE + 6, this.panelY + 4, TEXT_COLOR);
-        guiGraphics.text(this.font, hero.description(), this.panelX, this.panelY + ICON_SIZE + 8, TEXT_COLOR);
+        // Description sur plusieurs lignes : celle de l'Alchimiste ne tient pas sur une seule.
+        int descriptionWidth = Math.max(80, this.width - this.panelX - 10);
+        int descriptionTop = this.panelY + ICON_SIZE + 8;
+        guiGraphics.textWithWordWrap(this.font, hero.description(), this.panelX, descriptionTop, descriptionWidth, TEXT_COLOR);
 
-        int y = this.panelY + ICON_SIZE + 8 + this.font.lineHeight * 2;
+        int y = descriptionTop + this.font.wordWrapHeight(hero.description(), descriptionWidth) + this.font.lineHeight;
         guiGraphics.text(this.font, Component.translatable("dungeon_defenders.hero_selection.towers"),
                 this.panelX, y, CURRENT_COLOR);
         y += this.font.lineHeight + 2;

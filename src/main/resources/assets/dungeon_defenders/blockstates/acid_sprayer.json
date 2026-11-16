@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "dungeon_defenders:block/acid_sprayer"
+    },
+    "facing=east": {
+      "model": "dungeon_defenders:block/acid_sprayer",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "dungeon_defenders:block/acid_sprayer",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "dungeon_defenders:block/acid_sprayer",
+      "y": 270
+    }
+  }
+}

@@ -1538,6 +1538,43 @@ mal se passer. En cas de plantage, le log du client est ce qu'il me faut.
 - [ ] À deux joueurs : le second voit l'aperçu en ouvrant l'écran de choix.
 - [ ] Si le HUD restait masqué après une capture : F1 le rétablit, et me le signaler.
 
+## Héros Alchimiste, ses six tours et ses deux sorts (2026-11-16)
+
+Branche `feature/heros-alchimiste`. Rien n'a été vu en jeu : les effets sont couverts par des
+gametests, pas le ressenti ni l'équilibrage. Astuce : le mannequin d'entraînement et la baguette
+de remplissage de mana évitent de lancer une vraie partie.
+
+- [ ] Touche `H` : l'écran propose **Écuyer** et **Alchimiste** ; la description de l'Alchimiste
+      passe à la ligne sans déborder de l'écran ; la liste montre ses 6 tours.
+- [ ] Après avoir choisi l'Alchimiste, la roue ne contient que ses 6 tours, avec nom,
+      description et coût. Le HUD affiche « Alchimiste ».
+- [ ] Les quatre tours de l'Écuyer qui n'avaient pas de barre de vie (Bouncer, Slice N Dice,
+      Bowling Ball, Mortar) en ont une une fois entamées.
+- [ ] **Alambic givrant** : cercle de portée à la pose ; les monstres qui entrent dans le rayon
+      ralentissent nettement (flocons), et reprennent leur vitesse en sortant.
+- [ ] **Projecteur d'acide** : cône large à la pose, orientable à la molette ; les monstres
+      devant lui perdent un peu de vie (particules vertes) ; ceux de derrière, rien.
+- [ ] Corrosion : un monstre arrosé meurt plus vite sous une tourelle ou sous tes coups qu'un
+      monstre non arrosé.
+- [ ] **Lance-fioles** : tire dans toutes les directions ; une flaque de flammes reste 3 s à
+      l'endroit visé et blesse les monstres qui y restent. Aucun bloc ne brûle.
+- [ ] **Pylône catalyseur** : particules d'enchantement au-dessus des tours voisines ; une
+      tourelle à côté tue plus vite le mannequin / un monstre qu'une tourelle isolée.
+- [ ] **Condenseur de mana** : un monstre tué dans son rayon lâche deux cristaux au lieu d'un ;
+      hors du rayon, un seul.
+- [ ] **Cuve instable** : les monstres de mêlée l'attaquent en priorité ; quand ils la
+      détruisent, explosion (son + particules) et ils perdent beaucoup de vie. La retirer à la
+      main ne fait rien exploser, et aucun bloc de la map n'est cassé.
+- [ ] **Fiole de givre** (sort 1) : vise le sol près d'un groupe ; ils sont presque figés 3 s.
+      Recharge de 8 s affichée sur le HUD.
+- [ ] **Catalyse** (sort 2, maintenue) : particules violettes sur les tours à moins de 8 blocs,
+      le mana descend vite, et tout s'arrête en relâchant.
+- [ ] Touche `U` sur un Condenseur ou un Pylône : l'amélioration passe (le bonus augmente, non
+      affiché pour l'instant).
+- [ ] En multijoueur : un Pylône d'Alchimiste renforce bien les tours d'un Écuyer.
+- [ ] Avis attendu : les noms, les rôles et les chiffres. Le Condenseur rend-il le mana trop
+      facile ?
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

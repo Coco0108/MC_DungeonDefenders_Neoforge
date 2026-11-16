@@ -1,0 +1,6 @@
+{
+  "max_health": 20,
+  "mana_cost": 40,
+  "range": 5.0,
+  "effect_level": 2
+}

@@ -12,6 +12,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -103,6 +104,40 @@ public abstract class AbstractTowerBlockEntity extends BlockEntity implements Ai
         return 1.0D + (this.towerLevel - 1) * GameBalance.get(BalanceValue.TOWER_UPGRADE_STAT_BONUS, isClientSide());
     }
 
+    // --- BONUS DE DÉGÂTS TEMPORAIRE ---
+    // Posé par le Pylône catalyseur et par le sort Catalyse de l'Alchimiste, qui le renouvellent
+    // tant qu'ils agissent : il expire seul. Jamais persisté ni synchronisé (purement serveur),
+    // et les bonus ne se cumulent pas : seul le plus fort compte.
+    private double boostFactor = 1.0D;
+    private long boostUntil = Long.MIN_VALUE / 2;
+
+    /** Multiplie les dégâts de cette tour par {@code factor} jusqu'au tick {@code untilGameTime}. */
+    public void applyDamageBoost(double factor, long untilGameTime) {
+        long now = this.level == null ? 0L : this.level.getGameTime();
+        if (now < this.boostUntil && factor < this.boostFactor) {
+            return;
+        }
+        this.boostFactor = factor;
+        this.boostUntil = untilGameTime;
+    }
+
+    /** Bonus de dégâts temporaire en vigueur : 1 s'il n'y en a pas ou s'il a expiré. */
+    public double damageBoost() {
+        return this.level != null && this.level.getGameTime() < this.boostUntil ? this.boostFactor : 1.0D;
+    }
+
+    /** Multiplicateur à appliquer aux DÉGÂTS : niveau d'amélioration et bonus temporaire. */
+    public double damageMultiplier() {
+        return levelMultiplier() * damageBoost();
+    }
+
+    /**
+     * Appelé côté serveur quand les monstres viennent de réduire la tour à 0 PV, juste avant que
+     * le bloc ne disparaisse. Rien par défaut ; la Cuve instable y explose.
+     */
+    protected void onDestroyedByMonsters(ServerLevel level) {
+    }
+
     /** Prix en mana du prochain niveau : une part fixe du coût de pose, quel que soit le niveau. */
     public int getUpgradeCost() {
         return (int) Math.round(getManaCost() * GameBalance.get(BalanceValue.TOWER_UPGRADE_COST_RATIO, isClientSide()));
@@ -163,6 +198,9 @@ public abstract class AbstractTowerBlockEntity extends BlockEntity implements Ai
             // "aucune tour perdue" sur le bonus de fin de vague (voir ScoreKeeper). Un retrait
             // volontaire par le joueur ne passe jamais par ici.
             this.level.setData(ModAttachments.WAVE_TOWER_LOST, true);
+            if (this.level instanceof ServerLevel serverLevel) {
+                onDestroyedByMonsters(serverLevel);
+            }
             // Le false empêche le drop de l'item : une tour détruite au combat ne se
             // récupère pas, comme le Cristal d'Eternia.
             this.level.destroyBlock(this.worldPosition, false);

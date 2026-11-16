@@ -3,6 +3,7 @@ package com.github.c0c0tier.dungeon_defenders.init;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.BouncerBlockadeBlock;
 import com.github.c0c0tier.dungeon_defenders.block.BowlingBallTurretBlock;
+import com.github.c0c0tier.dungeon_defenders.block.DirectionalTowerBlock;
 import com.github.c0c0tier.dungeon_defenders.block.EterniaCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.block.HarpoonTurretBlock;
 import com.github.c0c0tier.dungeon_defenders.block.ManaChestBlock;
@@ -10,12 +11,19 @@ import com.github.c0c0tier.dungeon_defenders.block.MapConfigBlock;
 import com.github.c0c0tier.dungeon_defenders.block.MortarTurretBlock;
 import com.github.c0c0tier.dungeon_defenders.block.NoBuildZoneBlock;
 import com.github.c0c0tier.dungeon_defenders.block.PlayerSpawnBlock;
+import com.github.c0c0tier.dungeon_defenders.block.SimpleTowerBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SliceNDiceBlockadeBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpawnerBlock;
 import com.github.c0c0tier.dungeon_defenders.block.SpikeBlockadeBlock;
 import com.github.c0c0tier.dungeon_defenders.block.TavernCrystalBlock;
 import com.github.c0c0tier.dungeon_defenders.block.TowerBlockItem;
 import com.github.c0c0tier.dungeon_defenders.block.TrainingDummyBlock;
+import com.github.c0c0tier.dungeon_defenders.block.entity.FrostStillBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.AcidSprayerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.VolatileVatBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.CatalystPylonBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ManaCondenserBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.FlaskLauncherBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.item.ManaFillWandItem;
 import com.github.c0c0tier.dungeon_defenders.item.ManaTestWandItem;
 import net.minecraft.world.item.BlockItem;
@@ -91,6 +99,51 @@ public class ModBlocks {
 
     public static final DeferredItem<BlockItem> MORTAR_TURRET_ITEM =
             ITEMS.registerItem("mortar_turret", properties -> new TowerBlockItem(MORTAR_TURRET.get(), properties));
+
+    // 3quater. Roster de l'Alchimiste (2026-11-16) : six tours de conception propre au mod, voir
+    // doc/02-gameplay.md. Une seule classe de bloc pour toutes (SimpleTowerBlock, ou
+    // DirectionalTowerBlock pour celle qui s'oriente) : seul le block entity les distingue.
+    public static final DeferredBlock<SimpleTowerBlock> FROST_STILL = BLOCKS.registerBlock("frost_still",
+            properties -> new SimpleTowerBlock(properties, FrostStillBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> FROST_STILL_ITEM =
+            ITEMS.registerItem("frost_still", properties -> new TowerBlockItem(FROST_STILL.get(), properties));
+
+    public static final DeferredBlock<DirectionalTowerBlock> ACID_SPRAYER = BLOCKS.registerBlock("acid_sprayer",
+            properties -> new DirectionalTowerBlock(properties, AcidSprayerBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> ACID_SPRAYER_ITEM =
+            ITEMS.registerItem("acid_sprayer", properties -> new TowerBlockItem(ACID_SPRAYER.get(), properties));
+
+    public static final DeferredBlock<SimpleTowerBlock> VOLATILE_VAT = BLOCKS.registerBlock("volatile_vat",
+            properties -> new SimpleTowerBlock(properties, VolatileVatBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> VOLATILE_VAT_ITEM =
+            ITEMS.registerItem("volatile_vat", properties -> new TowerBlockItem(VOLATILE_VAT.get(), properties));
+
+    public static final DeferredBlock<SimpleTowerBlock> CATALYST_PYLON = BLOCKS.registerBlock("catalyst_pylon",
+            properties -> new SimpleTowerBlock(properties, CatalystPylonBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> CATALYST_PYLON_ITEM =
+            ITEMS.registerItem("catalyst_pylon", properties -> new TowerBlockItem(CATALYST_PYLON.get(), properties));
+
+    public static final DeferredBlock<SimpleTowerBlock> MANA_CONDENSER = BLOCKS.registerBlock("mana_condenser",
+            properties -> new SimpleTowerBlock(properties, ManaCondenserBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> MANA_CONDENSER_ITEM =
+            ITEMS.registerItem("mana_condenser", properties -> new TowerBlockItem(MANA_CONDENSER.get(), properties));
+
+    public static final DeferredBlock<SimpleTowerBlock> FLASK_LAUNCHER = BLOCKS.registerBlock("flask_launcher",
+            properties -> new SimpleTowerBlock(properties, FlaskLauncherBlockEntity::new),
+            properties -> properties.strength(3.0F));
+
+    public static final DeferredItem<BlockItem> FLASK_LAUNCHER_ITEM =
+            ITEMS.registerItem("flask_launcher", properties -> new TowerBlockItem(FLASK_LAUNCHER.get(), properties));
 
     // 4. Baguette de test : retire 10 de mana au clic droit, pour vérifier le HUD (mana)
     public static final DeferredItem<ManaTestWandItem> MANA_TEST_WAND =
