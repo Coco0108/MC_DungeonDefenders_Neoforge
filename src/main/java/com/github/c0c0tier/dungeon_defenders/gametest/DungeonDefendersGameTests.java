@@ -914,6 +914,10 @@ public final class DungeonDefendersGameTests {
         Vec3 stand = helper.absoluteVec(new Vec3(2.5D, 1.0D, 2.5D));
         player.setPos(stand.x, stand.y, stand.z);
         player.setYRot(0.0F);
+        // Le regard d'un être vivant suit la rotation de sa TÊTE, laissée quelconque sur un
+        // joueur factice : sans cette ligne le tir part de travers et le test échoue une fois
+        // sur deux.
+        player.setYHeadRot(0.0F);
         player.setXRot(0.0F);
         BlockPos front = new BlockPos(2, 1, 7);
         // La zone de test est entourée de barrières invisibles, qui arrêteraient le tir comme
