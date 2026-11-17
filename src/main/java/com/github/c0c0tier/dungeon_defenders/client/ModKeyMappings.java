@@ -79,6 +79,21 @@ public class ModKeyMappings {
             GLFW.GLFW_KEY_H,
             CATEGORY);
 
+    // Butin au sol : ranger dans l'inventaire de la Forge / équiper directement. E et F, comme
+    // demandé par le joueur — ce sont aussi les touches vanilla de l'inventaire et de l'échange
+    // de main, voir LootPickupClientEvents pour la cohabitation.
+    public static final KeyMapping LOOT_STORE = new KeyMapping(
+            "key.dungeon_defenders.loot_store",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_E,
+            CATEGORY);
+
+    public static final KeyMapping LOOT_EQUIP = new KeyMapping(
+            "key.dungeon_defenders.loot_equip",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_F,
+            CATEGORY);
+
     // Ouvre l'écran des caractéristiques (HeroStatsScreen). K est libre côté vanilla.
     public static final KeyMapping HERO_STATS = new KeyMapping(
             "key.dungeon_defenders.hero_stats",
@@ -138,6 +153,8 @@ public class ModKeyMappings {
         event.register(MAP_OVERLAY);
         event.register(HERO_SELECTION);
         event.register(HERO_STATS);
+        event.register(LOOT_STORE);
+        event.register(LOOT_EQUIP);
         event.register(ABILITY_HEAL);
         event.register(ABILITY_SPELL_1);
         event.register(ABILITY_SPELL_2);

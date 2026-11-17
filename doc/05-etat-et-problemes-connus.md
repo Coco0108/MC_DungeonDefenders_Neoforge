@@ -808,6 +808,14 @@ vérifie la CI.
 - ✅ **Progression conservée à la mort** (2026-11-16) : `copyOnDeath` manquait sur tous les
   attachments joueur — mourir remettait niveau, expérience et héros à zéro. Corrigé, **à
   confirmer en jeu**.
+- ✅ **Butin et Forge** (2026-11-17, branche `feature/butin-et-forge`) : armes à rareté et bonus
+  aléatoires lâchées par les monstres et en fin de vague ; ramassage au sol par deux touches (E
+  ranger, F équiper) ; inventaire de la Forge de 100 objets propre au joueur ; une arme équipée
+  par héros ; bloc Forge et son écran (onglet Inventaire paginé). Règles fixées avec le joueur.
+  Détail dans
+  [02-gameplay.md](02-gameplay.md#le-butin-et-la-forge--loot-blockforgeblockjava-clientguiscreenforgescreenjava).
+  Gametests `loot_generation` et `loot_equipment` ; **aucune partie cliente n'a jamais tourné**
+  (touches, encadré, écran). Armes seulement, pas d'armures.
 - ✅ **Barre de vie sur toutes les tours** (2026-11-16) : `TowerHealthBarRenderer` n'était
   enregistré que pour Spike Blockade et Harpoon Turret ; les quatre autres tours de l'Écuyer n'en
   avaient donc jamais eu. Corrigé dans `DungeonDefendersModClient#onRegisterRenderers`.

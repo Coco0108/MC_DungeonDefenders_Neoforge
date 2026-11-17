@@ -36,7 +36,10 @@ import com.github.c0c0tier.dungeon_defenders.network.AbilityCooldownPayload;
 import com.github.c0c0tier.dungeon_defenders.client.ClientMapPreviews;
 import com.github.c0c0tier.dungeon_defenders.network.GameOverPayload;
 import com.github.c0c0tier.dungeon_defenders.network.MapPreviewPayload;
+import com.github.c0c0tier.dungeon_defenders.network.OpenForgePayload;
 import com.github.c0c0tier.dungeon_defenders.network.OpenMapSelectionPayload;
+import com.github.c0c0tier.dungeon_defenders.client.gui.LootPromptOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.screen.ForgeScreen;
 import com.github.c0c0tier.dungeon_defenders.network.EnemyDefinitionsPayload;
 import com.github.c0c0tier.dungeon_defenders.network.GameBalancePayload;
 import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
@@ -288,6 +291,9 @@ public class DungeonDefendersModClient {
         // autres registerAboveAll n'a pas d'impact visible même si un autre layer passait
         // dessus par endroits.
         event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "loot_prompt_overlay"),
+                new LootPromptOverlay());
+        event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "map_overlay"),
                 new MapOverlay());
 
@@ -346,6 +352,8 @@ public class DungeonDefendersModClient {
         // planter le chargement du mod — voir OpenMapSelectionPayload.
         event.register(OpenMapSelectionPayload.TYPE, (payload, context) ->
                 context.enqueueWork(() -> Minecraft.getInstance().setScreen(new MapSelectionScreen(payload.maps()))));
+        event.register(OpenForgePayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> Minecraft.getInstance().setScreen(new ForgeScreen())));
         event.register(AbilityCooldownPayload.TYPE, (payload, context) ->
                 context.enqueueWork(() -> ClientAbilityState.startCooldown(payload.slotOrdinal(), payload.cooldownTicks())));
     }

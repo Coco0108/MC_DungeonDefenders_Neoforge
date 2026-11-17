@@ -1666,6 +1666,36 @@ Branche `feature/points-de-stats` (contient tout le reste). Calculs couverts par
 - [ ] « Tout reprendre » : les points reviennent, les PV max redescendent ; refusé en Combat.
 - [ ] Les points survivent à une déconnexion, à la mort et à un changement de héros.
 
+## Butin et Forge (2026-11-17)
+
+Branche `feature/butin-et-forge` (contient tout le reste). La logique est couverte par les
+gametests `loot_generation` et `loot_equipment`. **Tout ce qui est client est à voir pour la
+première fois** : c'est là que je m'attends aux problèmes. Poser une Forge depuis l'onglet
+créatif du mod.
+
+- [ ] En Combat, des monstres lâchent parfois une arme qui brille ; marcher dessus ne la ramasse
+      pas.
+- [ ] Vague nettoyée : une arme apparaît aux pieds de chaque joueur.
+- [ ] Près d'un objet : un encadré sous le viseur avec le nom coloré, les bonus et
+      « [E] Ranger [F] Équiper » ; il disparaît en s'éloignant.
+- [ ] **E** range l'objet (message) **sans ouvrir l'inventaire vanilla**. Loin de tout objet, E
+      ouvre l'inventaire comme d'habitude.
+- [ ] **F** équipe directement **sans faire passer l'arme en main gauche** ; l'ancienne arme de
+      butin part dans l'inventaire.
+- [ ] Arme d'un autre héros : l'encadré ne propose que Ranger ; F affiche un refus.
+- [ ] Clic droit sur la Forge : l'écran s'ouvre, onglet Inventaire, second onglet grisé.
+- [ ] Les cases montrent une icône avec un cadre de la couleur de la rareté (à signaler si le
+      cadre est décalé ou a une taille bizarre) ; cliquer une case affiche son détail à droite.
+- [ ] Équiper depuis la Forge : l'arme passe en « Arme équipée », l'ancienne prend sa case.
+- [ ] Déséquiper, Détruire, et les flèches de page fonctionnent ; les textes ne se chevauchent
+      pas.
+- [ ] Les bonus se sentent : PV max sur le HUD, dégâts sur un monstre ou le mannequin.
+- [ ] Changer de héros : chacun retrouve son arme équipée.
+- [ ] Gagner une map : l'arme de la dernière vague est déjà dans l'inventaire au retour.
+- [ ] Inventaire, arme équipée : conservés après déconnexion et après la mort.
+- [ ] Avis attendu : fréquence du butin (trop, pas assez ?), force des bonus, mise en page de la
+      Forge, et le fait qu'une arme soit réservée à son héros.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni
