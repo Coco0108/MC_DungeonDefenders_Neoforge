@@ -56,6 +56,13 @@ public enum BalanceValue {
     // (CombatCountdown). 0 = démarrage immédiat.
     COMBAT_COUNTDOWN_SECONDS("pacing", "combat_countdown_seconds", 3.0D, 0.0D, true),
 
+    // balance/loot.json — butin (loot/LootGenerator) : chance qu'un monstre tué en Combat lâche
+    // une arme, armes offertes à chaque joueur quand une vague est nettoyée, et force gagnée par
+    // le butin à chaque vague au-delà de la première (0.05 = +5 %).
+    LOOT_DROP_CHANCE("loot", "drop_chance", 0.04D, 0.0D, false),
+    LOOT_WAVE_CLEAR_DROPS("loot", "wave_clear_drops", 1.0D, 0.0D, true),
+    LOOT_POWER_PER_WAVE("loot", "power_per_wave", 0.05D, 0.0D, false),
+
     // balance/weapons.json — armes de héros (item/HeroWeaponItem) : dégâts, portée du tir, rayon
     // de la zone touchée et recharge entre deux tirs.
     WEAPON_FLASK_DAMAGE("weapons", "flask_damage", 3.0D, 0.0D, false),

@@ -147,6 +147,11 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── HeroWeaponItem.java            # Arme à distance d'un héros : tir instantané au clic droit (fioles, rivets, bâton)
     │   │   ├── HeroWeapons.java               # Donne à chaque joueur l'arme de son héros, retire les autres
     │   │   ├── ManaTestWandItem.java / ManaFillWandItem.java  # Baguettes de test du mana
+    │   ├── loot/
+    │   │   ├── LootRarity.java                # Raretés : chance, force, nombre de bonus secondaires, couleur
+    │   │   ├── LootWeapon.java                # Une arme de butin (héros, rareté, bonus) ; forme objet au sol
+    │   │   ├── LootGenerator.java             # Tire une arme au hasard et la pose au sol
+    │   │   ├── Equipment.java                 # Inventaire de la Forge et arme équipée par héros : ranger, équiper, bonus
     │   ├── entity/
     │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
     │   │   ├── Corrosion.java                 # Marque en mémoire : un monstre corrodé subit plus de dégâts (Projecteur d'acide)
@@ -236,7 +241,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── data/dungeon_defenders/structure/gametest/empty.nbt  # Gabarit 3x3x3 sans bloc, partagé par les gametests
     │   ├── data/dungeon_defenders/dungeon_defenders/enemy/*.json  # Ennemis data-driven (zombie, skeleton), relus par /reload
     │   ├── data/dungeon_defenders/dungeon_defenders/tower/*.json    # Stats data-driven des 24 tours, relues par /reload
-    │   ├── data/dungeon_defenders/dungeon_defenders/balance/*.json  # Réglages globaux (difficulty, towers, progression, score, pacing, weapons), relus par /reload
+    │   ├── data/dungeon_defenders/dungeon_defenders/balance/*.json  # Réglages globaux (difficulty, towers, progression, score, pacing, weapons, loot), relus par /reload
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
     │   ├── data/minecraft/timeline/day.json        # Timeline "day" vanilla SANS la brûlure des monstres au soleil (générée, voir tools/)
     │   └── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"

@@ -66,6 +66,17 @@ plat `"clé": nombre`. Liste complète (`init/BalanceValue.java`) :
 | `progression.json` | `swiftness_speed_per_point` | 0.02 | 0 | Vitesse par point de Rapidité |
 | `progression.json` | `tower_mastery_damage_per_point` | 0.03 | 0 | Dégâts des tours posées par point de Maîtrise des tours |
 
+**Ajoutés avec le butin** (2026-11-17, voir
+[02-gameplay.md](../02-gameplay.md#le-butin-et-la-forge--loot-blockforgeblockjava-clientguiscreenforgescreenjava)) :
+
+| Fichier | Clé | Défaut | Minimum | Effet |
+|---|---|---|---|---|
+| `loot.json` | `drop_chance` | 0.04 | 0 | Chance qu'un monstre tué en Combat lâche une arme |
+| `loot.json` | `wave_clear_drops` | 1 (entier) | 0 | Armes offertes à chaque joueur à chaque vague nettoyée |
+| `loot.json` | `power_per_wave` | 0.05 | 0 | Force gagnée par le butin à chaque vague au-delà de la première |
+
+Les chances et la force de chaque rareté sont des constantes (`loot/LootRarity.java`).
+
 L'épée de l'Écuyer n'est pas ici : c'est une épée vanilla (stats d'une épée en fer).
 
 Attention : `score.json` et `difficulty.json` ont chacun des clés `easy_multiplier`... La

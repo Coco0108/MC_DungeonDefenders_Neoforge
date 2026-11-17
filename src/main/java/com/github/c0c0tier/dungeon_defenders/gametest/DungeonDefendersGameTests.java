@@ -52,6 +52,10 @@ import com.github.c0c0tier.dungeon_defenders.init.TowerStats;
 import com.github.c0c0tier.dungeon_defenders.init.TowerStatsRegistry;
 import com.github.c0c0tier.dungeon_defenders.item.HeroWeaponItem;
 import com.github.c0c0tier.dungeon_defenders.item.HeroWeapons;
+import com.github.c0c0tier.dungeon_defenders.loot.Equipment;
+import com.github.c0c0tier.dungeon_defenders.loot.LootGenerator;
+import com.github.c0c0tier.dungeon_defenders.loot.LootRarity;
+import com.github.c0c0tier.dungeon_defenders.loot.LootWeapon;
 import com.google.gson.JsonParser;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -74,7 +78,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.zombie.Zombie;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
@@ -155,6 +162,9 @@ public final class DungeonDefendersGameTests {
         // Armes de héros (doc/02-gameplay.md).
         register(event, environment, "hero_weapons", DungeonDefendersGameTests::heroWeapons);
         register(event, environment, "hero_stat_points", DungeonDefendersGameTests::heroStatPoints);
+        // Butin et inventaire de la Forge (doc/02-gameplay.md).
+        register(event, environment, "loot_generation", DungeonDefendersGameTests::lootGeneration);
+        register(event, environment, "loot_equipment", DungeonDefendersGameTests::lootEquipment);
         // Réglages globaux en data-driven (doc/data-driven/equilibrage.md).
         register(event, environment, "balance_shipped_values", DungeonDefendersGameTests::balanceShippedValues);
         register(event, environment, "balance_validation", DungeonDefendersGameTests::balanceValidation);
@@ -1007,6 +1017,115 @@ public final class DungeonDefendersGameTests {
         helper.assertValueEqual(tower.damageMultiplier(), 1.3D, "Maîtrise des tours du poseur");
         tower.setOwnerBonus(0.5D);
         helper.assertValueEqual(tower.damageMultiplier(), 1.0D, "jamais sous x1");
+        helper.succeed();
+    }
+
+    /**
+     * Génération du butin : une arme a toujours un bonus de dégâts et exactement le nombre de
+     * bonus secondaires de sa rareté ; elle est plus forte à une vague avancée ; elle survit à
+     * l'aller-retour vers un objet au sol ; l'objet posé ne se ramasse pas en marchant dessus.
+     */
+    static void lootGeneration(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        RandomSource random = RandomSource.create(42L);
+
+        for (LootRarity rarity : LootRarity.values()) {
+            for (int i = 0; i < 20; i++) {
+                LootWeapon weapon = LootGenerator.roll(random, HeroDefinition.ENGINEER, rarity, 1);
+                helper.assertTrue(weapon.damage() > 0.0D, "bonus de dégâts présent (" + rarity + ")");
+                helper.assertValueEqual(weapon.heroDefinition(), HeroDefinition.ENGINEER, "héros de l'arme");
+                helper.assertValueEqual(weapon.lootRarity(), rarity, "rareté de l'arme");
+                int secondaries = (weapon.health() > 0.0D ? 1 : 0) + (weapon.speed() > 0.0D ? 1 : 0)
+                        + (weapon.towerDamage() > 0.0D ? 1 : 0);
+                helper.assertValueEqual(secondaries, rarity.secondaryBonuses(), "bonus secondaires (" + rarity + ")");
+                helper.assertValueEqual(weapon.statLines().size(), 1 + rarity.secondaryBonuses(), "lignes affichées");
+            }
+        }
+
+        // Vague 21 : force doublée (+5 % par vague). Le minimum possible y dépasse le maximum de
+        // la vague 1 pour une même rareté (0,04 x 2 = 0,08).
+        LootWeapon late = LootGenerator.roll(random, HeroDefinition.SQUIRE, LootRarity.COMMON, 21);
+        helper.assertTrue(late.damage() >= 0.08D, "butin plus fort à une vague avancée : " + late.damage());
+
+        LootWeapon original = LootGenerator.roll(random, HeroDefinition.GEOMANCER, LootRarity.LEGENDARY, 3);
+        helper.assertValueEqual(LootWeapon.fromStack(original.toStack()).orElse(null), original, "aller-retour par l'objet au sol");
+        helper.assertTrue(LootWeapon.fromStack(new ItemStack(ModBlocks.SQUIRE_SWORD.get())).isEmpty(),
+                "une arme de base n'est pas du butin");
+
+        ItemEntity dropped = LootGenerator.drop(level, helper.absoluteVec(new Vec3(1.5D, 1.0D, 1.5D)), original);
+        helper.assertTrue(dropped.hasPickUpDelay(), "le butin ne se ramasse pas en marchant dessus");
+        dropped.discard();
+        helper.succeed();
+    }
+
+    /**
+     * Équipement : ranger et équiper un objet au sol (trop loin : refusé) ; équiper remplace
+     * l'arme en place, qui part dans l'inventaire ; l'arme d'un autre héros se range mais ne
+     * s'équipe pas ; les bonus s'appliquent (dégâts, PV max, tours) ; chaque héros garde son
+     * arme équipée ; échange depuis l'inventaire, déséquiper, détruire ; inventaire plein.
+     */
+    static void lootEquipment(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        Vec3 stand = helper.absoluteVec(new Vec3(1.5D, 1.0D, 1.5D));
+        player.setPos(stand.x, stand.y, stand.z);
+        player.setData(ModAttachments.HERO, HeroDefinition.ALCHEMIST.ordinal());
+        float baseHealth = player.getMaxHealth();
+
+        LootWeapon first = new LootWeapon(HeroDefinition.ALCHEMIST.id(), LootRarity.RARE.name(), 0.10D, 4.0D, 0.0D, 0.05D);
+        LootWeapon second = new LootWeapon(HeroDefinition.ALCHEMIST.id(), LootRarity.EPIC.name(), 0.20D, 0.0D, 0.0D, 0.0D);
+        LootWeapon foreign = new LootWeapon(HeroDefinition.ENGINEER.id(), LootRarity.COMMON.name(), 0.05D, 0.0D, 0.0D, 0.0D);
+
+        ItemEntity far = LootGenerator.drop(level, stand.add(0.0D, 0.0D, 8.0D), first);
+        helper.assertFalse(Equipment.pickUp(player, far, false), "objet trop loin : refusé");
+        helper.assertTrue(far.isAlive(), "l'objet trop loin reste au sol");
+        far.discard();
+
+        ItemEntity onGround = LootGenerator.drop(level, stand, first);
+        helper.assertTrue(Equipment.pickUp(player, onGround, true), "équiper directement depuis le sol");
+        helper.assertFalse(onGround.isAlive(), "l'objet ramassé disparaît");
+        helper.assertValueEqual(Equipment.equipped(player), first, "arme équipée");
+        helper.assertValueEqual(Equipment.inventory(player).size(), 0, "rien dans l'inventaire");
+        helper.assertValueEqual(Equipment.damageMultiplier(player), 1.10D, "bonus de dégâts de l'arme");
+        helper.assertValueEqual(Equipment.towerDamageBonus(player), 0.05D, "bonus aux tours de l'arme");
+        helper.assertValueEqual(player.getMaxHealth(), baseHealth + 4.0F, "PV max de l'arme");
+
+        ItemEntity better = LootGenerator.drop(level, stand, second);
+        helper.assertTrue(Equipment.pickUp(player, better, true), "équiper une seconde arme");
+        helper.assertValueEqual(Equipment.equipped(player), second, "la nouvelle arme remplace l'ancienne");
+        helper.assertValueEqual(Equipment.inventory(player), List.of(first), "l'ancienne part dans l'inventaire");
+        helper.assertValueEqual(player.getMaxHealth(), baseHealth, "les PV de l'ancienne arme sont retirés");
+
+        ItemEntity other = LootGenerator.drop(level, stand, foreign);
+        helper.assertFalse(Equipment.pickUp(player, other, true), "arme d'un autre héros : pas équipable");
+        helper.assertTrue(other.isAlive(), "elle reste au sol");
+        helper.assertTrue(Equipment.pickUp(player, other, false), "mais elle se range");
+        helper.assertValueEqual(Equipment.inventory(player), List.of(first, foreign), "inventaire après rangement");
+
+        // Chaque héros a sa propre arme équipée.
+        player.setData(ModAttachments.HERO, HeroDefinition.ENGINEER.ordinal());
+        helper.assertTrue(Equipment.equipped(player) == null, "l'Ingénieur n'a pas d'arme de butin");
+        helper.assertTrue(Equipment.equipFromInventory(player, 1), "l'Ingénieur équipe la sienne depuis l'inventaire");
+        helper.assertValueEqual(Equipment.inventory(player), List.of(first), "la case équipée est retirée de l'inventaire");
+        player.setData(ModAttachments.HERO, HeroDefinition.ALCHEMIST.ordinal());
+        helper.assertValueEqual(Equipment.equipped(player), second, "l'Alchimiste a gardé la sienne");
+
+        helper.assertTrue(Equipment.equipFromInventory(player, 0), "échange avec une case de l'inventaire");
+        helper.assertValueEqual(Equipment.equipped(player), first, "arme échangée");
+        helper.assertValueEqual(Equipment.inventory(player), List.of(second), "l'ancienne a pris la case");
+        helper.assertTrue(Equipment.unequip(player), "déséquiper");
+        helper.assertTrue(Equipment.equipped(player) == null, "plus d'arme de butin");
+        helper.assertValueEqual(Equipment.damageMultiplier(player), 1.0D, "plus de bonus");
+        helper.assertValueEqual(Equipment.inventory(player).size(), 2, "l'arme déséquipée est rangée");
+        helper.assertTrue(Equipment.discard(player, 0), "détruire une case");
+        helper.assertFalse(Equipment.discard(player, 5), "case inexistante");
+        helper.assertValueEqual(Equipment.inventory(player).size(), 1, "inventaire après destruction");
+
+        while (Equipment.inventory(player).size() < Equipment.CAPACITY) {
+            Equipment.store(player, foreign);
+        }
+        helper.assertFalse(Equipment.store(player, foreign), "inventaire plein : refusé");
+        helper.assertValueEqual(Equipment.inventory(player).size(), Equipment.CAPACITY, "capacité respectée");
         helper.succeed();
     }
 

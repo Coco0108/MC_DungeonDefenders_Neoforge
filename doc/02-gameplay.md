@@ -2683,6 +2683,92 @@ Corrigé le 2026-11-16 pour `EXPERIENCE`, `LEVEL`, `HERO`, `CHARACTER_NAME`, `FI
 et `HERO_STATS`. Le mana n'est pas concerné (il repart plein). Trouvé à la lecture du code, pas
 observé en jeu : à confirmer en mourant une fois.
 
+## Le butin et la Forge — `loot/`, `block/ForgeBlock.java`, `client/gui/screen/ForgeScreen.java`
+
+Ajouté le 2026-11-17. **Jamais vu en jeu** : la logique est couverte par deux gametests, mais ni
+les touches, ni le message à l'écran, ni l'écran de la Forge n'ont été affichés une seule fois.
+
+### Les règles, fixées avec le joueur (2026-11-16)
+
+- **Le joueur n'a pas d'inventaire portatif.** Tout son butin est rangé dans **l'inventaire de la
+  Forge**, qui est un **onglet de la Forge** et comporte **plusieurs pages**.
+- Un objet au sol se **range** (touche E, il part dans l'inventaire) ou s'**équipe directement**
+  (touche F).
+- Équiper **remplace** l'arme en place, qui **part dans l'inventaire**.
+- On s'équipe aussi à la Forge. Les autres onglets et le détail : « on verra plus tard ».
+
+### Une arme de butin — `loot/LootWeapon.java`
+
+L'arme d'un héros précis, avec une **rareté** et des bonus tirés au hasard. Elle a toujours un
+bonus de **dégâts** (tout ce que le joueur inflige), plus 0 à 3 bonus secondaires selon la rareté,
+parmi **PV max**, **vitesse** et **dégâts des tours** posées.
+
+| Rareté | Chance | Force | Bonus secondaires | Couleur |
+|---|---|---|---|---|
+| Commun | 60 % | ×1 | 0 | blanc |
+| Peu commun | 25 % | ×1,5 | 1 | vert |
+| Rare | 10 % | ×2,2 | 1 | bleu clair |
+| Épique | 4 % | ×3 | 2 | violet |
+| Légendaire | 1 % | ×4 | 3 | or |
+
+À force 1 : dégâts +4 à +8 %, PV +1 à +3, vitesse +1 à +3 %, tours +3 à +6 %. La force est
+multipliée par la rareté, puis par `1 + power_per_wave × (vague − 1)` : le butin d'une vague
+avancée est meilleur (`loot/LootGenerator.java`).
+
+C'est une **donnée**, pas un objet d'inventaire vanilla. Elle ne prend la forme d'un `ItemStack`
+que posée au sol (l'item de l'arme du héros, nommé, avec ses données dans `CUSTOM_DATA`).
+
+### D'où vient le butin
+
+- Un monstre tué **en Combat** a 4 % de chances de lâcher une arme, pour le héros d'un des
+  joueurs présents.
+- À chaque **vague nettoyée**, chaque joueur reçoit une arme pour **son** héros, à ses pieds.
+  Après la **dernière vague**, elle va directement dans son inventaire : la victoire renvoie à la
+  taverne, un objet resté au sol serait perdu.
+- L'objet au sol brille, ne se ramasse jamais en marchant dessus, et disparaît au bout de cinq
+  minutes comme tout objet.
+
+### Ramasser — `client/LootPickupClientEvents.java`, `client/gui/LootPromptOverlay.java`
+
+À moins de 3 blocs d'un objet (le plus proche, sans avoir à le viser), un encadré sous le viseur
+montre son nom, ses bonus et les touches. **E** range, **F** équipe.
+
+E et F sont aussi des touches vanilla (inventaire, échange de main). Quand un objet est à portée,
+l'appui est consommé avant que le jeu ne le traite : l'inventaire ne s'ouvre pas. Sans objet à
+portée, rien n'est intercepté. Les deux touches sont reconfigurables.
+
+### L'équipement — `loot/Equipment.java`
+
+- **Une arme n'est équipable que par son héros.** L'arme d'un autre héros se range mais ne
+  s'équipe pas (choix de Claude, à revoir si le joueur préfère autre chose).
+- **Chaque héros garde sa propre arme équipée** : changer de héros ne déséquipe rien.
+- Sans arme de butin, le héros a son arme de base, sans bonus. L'objet tenu en main ne change
+  pas : c'est toujours l'arme du héros, le butin n'en modifie que les chiffres.
+- Bonus appliqués : dégâts dans `ModEvents#playerDamageMultiplier` (avec le niveau et la
+  Puissance) ; PV et vitesse par modificateurs d'attributs transitoires ; dégâts des tours dans
+  l'instantané pris à la pose (`ownerBonus`, avec la Maîtrise des tours).
+- Inventaire : 100 objets (5 pages de 20). Plein : le ramassage est refusé avec un message, et
+  l'objet reste au sol.
+- Deux attachments joueur, persistants, synchronisés, conservés à la mort : `FORGE_INVENTORY` et
+  `EQUIPPED_WEAPONS` (par identifiant de héros).
+
+### La Forge — `block/ForgeBlock.java`, `ForgeScreen`
+
+Bloc de taverne (onglet créatif du mod). Clic droit : l'écran s'ouvre sur l'onglet **Inventaire**
+— grille paginée à gauche (cadre de la couleur de la rareté), arme équipée et détail de la case
+choisie à droite, boutons Équiper / Déséquiper / Détruire. Un second onglet grisé « À venir »
+marque la place des suivants. Le bloc ne stocke rien : l'inventaire appartient au joueur.
+Les actions sont refusées pendant le Combat.
+
+### Limites connues
+
+- **Armes seulement** : pas encore d'armures.
+- Pas de comparaison automatique entre l'objet au sol et l'arme équipée.
+- « Détruire » est immédiat, sans confirmation.
+- Pas de tri ni de filtre dans l'inventaire.
+- En créatif, E près d'un objet de butin range l'objet au lieu d'ouvrir l'inventaire.
+- Équilibrage théorique ; les bonus de butin se **multiplient** avec le niveau et la Puissance.
+
 ## Le mana du joueur
 
 Ressource pensée pour alimenter de futurs sorts/capacités (aucun n'existe encore) **et** la

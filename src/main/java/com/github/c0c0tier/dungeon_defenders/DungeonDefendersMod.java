@@ -260,6 +260,7 @@ public class DungeonDefendersMod {
                         output.accept(ModBlocks.TRAINING_DUMMY_ITEM.get());
                         output.accept(ModBlocks.NO_BUILD_ZONE_ITEM.get());
                         output.accept(ModBlocks.MAP_CONFIG_ITEM.get());
+                        output.accept(ModBlocks.FORGE_ITEM.get());
                     })
                     .build());
 
