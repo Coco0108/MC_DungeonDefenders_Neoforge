@@ -2645,10 +2645,20 @@ Jusque-là le joueur n'avait rien pour se battre lui-même, à part ses sorts. *
   des autres héros à la connexion, à la réapparition et au changement de héros. Elle ne se jette
   pas (`ItemTossEvent` annulé) et ne tombe pas à la mort (`LivingDropsEvent`). L'arme d'un autre
   héros, prise en créatif, refuse de tirer. Elle n'est dans aucun onglet créatif.
-- **Tir instantané, sans projectile** : un rayon part des yeux, s'arrête au premier bloc plein ou
-  au premier monstre, et l'effet s'applique à ce point ; une traînée de particules dessine le
-  tir. Pas d'entité ni de renderer, donc tout est couvert par le gametest `hero_weapons`. Les
-  marqueurs invisibles (zone interdite, spawner) ne l'arrêtent pas ; une tour, si.
+- **Vrai projectile** (2026-11-24, avant : tir instantané par rayon) : `fire()` lance un
+  `entity/WeaponProjectileEntity` depuis les yeux, qui vole jusqu'au premier bloc ou au premier
+  monstre, puis appelle `HeroWeaponItem#impact` à cet endroit (même effet qu'avant). Au-delà de
+  la portée, la fiole et l'éclat éclatent en l'air, le rivet disparaît. Il traverse les joueurs.
+  | Arme | Ce qui vole | Vitesse | Trajectoire |
+  |---|---|---|---|
+  | Sacoche de fioles | une fiole (potion jetable) | 1,4 bloc/tick | légère cloche (gravité 0,03) |
+  | Pistolet à rivets | un rivet (pépite de fer) | 3 blocs/tick | droite |
+  | Bâton de géomancien | un éclat (silex) | 1,6 bloc/tick | droite |
+
+  Vitesse et gravité sont des constantes de `HeroWeaponItem.Kind` (le ressenti du vol, pas de
+  l'équilibrage). Rendu par le `ThrownItemRenderer` vanilla : aucun modèle. Le projectile n'est
+  jamais sauvegardé (`noSave`). Le gametest `hero_weapons` fait voler chaque projectile tick par
+  tick jusqu'à l'impact.
 - **Recharge** : celle des objets vanilla (voile sur l'icône de la barre d'accès rapide).
 - **Le niveau du personnage sert enfin à quelque chose** : tout ce qu'un joueur inflige à un
   monstre (arme, épée, sorts) est multiplié par `1 + player_damage_per_level × (niveau − 1)`,

@@ -3,6 +3,7 @@ package com.github.c0c0tier.dungeon_defenders.init;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.entity.ManaCrystalEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
+import com.github.c0c0tier.dungeon_defenders.entity.WeaponProjectileEntity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.neoforged.bus.api.IEventBus;
@@ -26,6 +27,12 @@ public class ModEntities {
     public static final DeferredHolder<EntityType<?>, EntityType<TrainingDummyEntity>> TRAINING_DUMMY =
             ENTITY_TYPES.registerEntityType("training_dummy", TrainingDummyEntity::new, MobCategory.MISC,
                     builder -> builder.sized(0.6F, 1.95F).clientTrackingRange(8));
+
+    // Projectile des armes à distance des héros (fiole, rivet, éclat de pierre), voir
+    // WeaponProjectileEntity. Taille et suivi d'une boule de neige vanilla.
+    public static final DeferredHolder<EntityType<?>, EntityType<WeaponProjectileEntity>> WEAPON_PROJECTILE =
+            ENTITY_TYPES.registerEntityType("weapon_projectile", WeaponProjectileEntity::new, MobCategory.MISC,
+                    builder -> builder.sized(0.25F, 0.25F).clientTrackingRange(4).updateInterval(10).noSave());
 
     public static void register(IEventBus modEventBus) {
         ENTITY_TYPES.register(modEventBus);

@@ -1728,6 +1728,21 @@ m'aide beaucoup.
 - [ ] Avis attendu : l'ambiance (panneaux bruns et dorés) te va-t-elle, ou tu préfères autre
       chose (plus sombre, plus vanilla, textures dessinées) ?
 
+## Projectiles des armes de héros (2026-11-24)
+
+Branche `feature/projectiles-armes`. Effets couverts par le gametest `hero_weapons` ; le vol et le
+rendu n'ont jamais été vus.
+
+- [ ] **Sacoche de fioles** : une fiole visible part en légère cloche, éclate (particules
+      violettes, son de verre) et blesse les monstres autour.
+- [ ] **Pistolet à rivets** : une pépite part tout droit, très vite ; seul le monstre touché est
+      blessé.
+- [ ] **Bâton de géomancien** : un silex part tout droit ; les monstres touchés sont ralentis.
+- [ ] Un monstre qui bouge peut être raté (c'est voulu) ; un mur ou une tour arrête le tir ; un
+      autre joueur devant toi ne bloque pas le tir.
+- [ ] Le projectile part bien du centre de l'écran (pas décalé à gauche/droite).
+- [ ] Avis attendu : vitesses et cloche de la fiole, à régler si besoin.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

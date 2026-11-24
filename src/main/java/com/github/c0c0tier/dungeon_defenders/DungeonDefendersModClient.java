@@ -51,6 +51,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.entity.ExperienceOrbRenderer;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.entity.ZombieRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
@@ -227,6 +228,12 @@ public class DungeonDefendersModClient {
         event.registerEntityRenderer(
                 ModEntities.TRAINING_DUMMY.get(),
                 ZombieRenderer::new
+        );
+        // Projectile des armes de héros : l'item porté dessiné à plat face à la caméra, comme une
+        // boule de neige vanilla — aucun modèle à faire (voir WeaponProjectileEntity).
+        event.registerEntityRenderer(
+                ModEntities.WEAPON_PROJECTILE.get(),
+                ThrownItemRenderer::new
         );
     }
 

@@ -147,7 +147,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── AbilitySlotsOverlay.java      # 4 emplacements de compétences : icône, recharge, canalisation, manque de mana (client uniquement)
     │   │   └── MapOverlay.java               # Plan plein écran (touche maintenue) : rectangle + points des joueurs + cristal (client uniquement)
     │   ├── item/
-    │   │   ├── HeroWeaponItem.java            # Arme à distance d'un héros : tir instantané au clic droit (fioles, rivets, bâton)
+    │   │   ├── HeroWeaponItem.java            # Arme à distance d'un héros : lance un projectile au clic droit (fioles, rivets, bâton), effet à l'impact
     │   │   ├── HeroWeapons.java               # Donne à chaque joueur l'arme de son héros, retire les autres
     │   │   ├── ManaTestWandItem.java / ManaFillWandItem.java  # Baguettes de test du mana
     │   ├── loot/
@@ -159,6 +159,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
     │   │   ├── Corrosion.java                 # Marque en mémoire : un monstre corrodé subit plus de dégâts (Projecteur d'acide)
     │   │   ├── TrainingDummyEntity.java       # extends Zombie : cible immobile à vie infinie, pour mesurer les dégâts des tours
+    │   │   ├── WeaponProjectileEntity.java      # Projectile des armes de héros (fiole, rivet, éclat), rendu par ThrownItemRenderer
     │   │   ├── MobHealthBarRenderer.java      # RenderLivingEvent.Post : barre de vie zombie/squelette, cachée à PV pleins/hors portée (client)
     │   │   ├── BowlingBallEntity.java         # extends Arrow : perforation réelle (Bowling Ball Turret), voir 02-gameplay.md
     │   │   └── ai/

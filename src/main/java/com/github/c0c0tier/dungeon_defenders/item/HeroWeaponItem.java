@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.item;
 
+import com.github.c0c0tier.dungeon_defenders.entity.WeaponProjectileEntity;
 import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
 import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
 import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
@@ -17,30 +18,27 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.EntityHitResult;
-import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
 // Arme à distance d'un héros : l'attaque de base au clic droit (2026-11-16). Trois armes, une
 // seule classe — elles ne diffèrent que par leurs chiffres et par un effet :
-//   - Sacoche de fioles (Alchimiste) : éclate à l'endroit visé, blesse une petite zone ;
-//   - Pistolet à rivets (Ingénieur) : une seule cible, loin, cadence élevée ;
-//   - Bâton de géomancien (Géomancien) : courte portée, petite zone, ralentit.
+//   - Sacoche de fioles (Alchimiste) : une fiole en cloche, qui éclate en blessant une petite zone ;
+//   - Pistolet à rivets (Ingénieur) : un rivet rapide et droit, une seule cible, loin ;
+//   - Bâton de géomancien (Géomancien) : un éclat de pierre, courte portée, petite zone, ralentit.
 // L'Écuyer a une vraie épée (mêlée vanilla, clic gauche), voir ModBlocks.SQUIRE_SWORD.
 //
-// **Tir instantané, pas de projectile** : un rayon part des yeux du joueur, s'arrête au premier
-// bloc ou au premier monstre, et l'effet s'applique à ce point. Une traînée de particules dessine
-// le tir. Choix assumé : ni entité ni renderer à écrire, donc rien qui ne puisse être vérifié
-// que par un gametest. Un vrai projectile (fiole qui vole) pourra remplacer le rayon plus tard.
+// **Vrai projectile** depuis le 2026-11-24 (avant : tir instantané par rayon) : fire() lance un
+// WeaponProjectileEntity qui vole, s'arrête au premier bloc ou au premier monstre, et appelle
+// impact() à cet endroit. L'effet est donc le même qu'avant, mais il faut viser une cible qui
+// bouge. Vitesse et gravité sont des constantes de Kind (le ressenti du vol, pas de l'équilibrage).
 //
 // Chiffres : balance/weapons.json (doc/data-driven/equilibrage.md). Les dégâts passent par
 // playerAttack, ils reçoivent donc le bonus de niveau du joueur (ModEvents).
@@ -48,31 +46,45 @@ public class HeroWeaponItem extends Item {
 
     public enum Kind {
         FLASK(BalanceValue.WEAPON_FLASK_DAMAGE, BalanceValue.WEAPON_FLASK_RANGE, BalanceValue.WEAPON_FLASK_RADIUS,
-                BalanceValue.WEAPON_FLASK_COOLDOWN_TICKS, ParticleTypes.WITCH, SoundEvents.SPLASH_POTION_BREAK, 0),
+                BalanceValue.WEAPON_FLASK_COOLDOWN_TICKS, ParticleTypes.WITCH, SoundEvents.SPLASH_POTION_BREAK, 0,
+                Items.SPLASH_POTION, 1.4F, 0.03D, SoundEvents.SPLASH_POTION_THROW),
         RIVET(BalanceValue.WEAPON_RIVET_DAMAGE, BalanceValue.WEAPON_RIVET_RANGE, null,
-                BalanceValue.WEAPON_RIVET_COOLDOWN_TICKS, ParticleTypes.CRIT, SoundEvents.PISTON_EXTEND, 0),
+                BalanceValue.WEAPON_RIVET_COOLDOWN_TICKS, ParticleTypes.CRIT, SoundEvents.IRON_GOLEM_HURT, 0,
+                Items.IRON_NUGGET, 3.0F, 0.0D, SoundEvents.PISTON_EXTEND),
         STAFF(BalanceValue.WEAPON_STAFF_DAMAGE, BalanceValue.WEAPON_STAFF_RANGE, BalanceValue.WEAPON_STAFF_RADIUS,
-                BalanceValue.WEAPON_STAFF_COOLDOWN_TICKS, ParticleTypes.POOF, SoundEvents.STONE_BREAK, 40);
+                BalanceValue.WEAPON_STAFF_COOLDOWN_TICKS, ParticleTypes.POOF, SoundEvents.STONE_BREAK, 40,
+                Items.FLINT, 1.6F, 0.0D, SoundEvents.STONE_HIT);
 
         private final BalanceValue damage;
         private final BalanceValue range;
-        // null : une seule cible, le monstre touché par le rayon.
-        private final BalanceValue radius;
+        // null : une seule cible, le monstre touché par le projectile.
+        private final @Nullable BalanceValue radius;
         private final BalanceValue cooldownTicks;
         private final ParticleOptions particle;
-        private final SoundEvent sound;
+        private final SoundEvent impactSound;
         // Durée de Lenteur I appliquée aux monstres touchés ; 0 = aucun ralentissement.
         private final int slowTicks;
+        // Le projectile : l'item qu'il montre en vol, sa vitesse (blocs par tick), sa gravité
+        // (0 = vol droit) et le son du tir.
+        private final Item projectileItem;
+        private final float speed;
+        private final double gravity;
+        private final SoundEvent fireSound;
 
-        Kind(BalanceValue damage, BalanceValue range, BalanceValue radius, BalanceValue cooldownTicks,
-                ParticleOptions particle, SoundEvent sound, int slowTicks) {
+        Kind(BalanceValue damage, BalanceValue range, @Nullable BalanceValue radius, BalanceValue cooldownTicks,
+                ParticleOptions particle, SoundEvent impactSound, int slowTicks,
+                Item projectileItem, float speed, double gravity, SoundEvent fireSound) {
             this.damage = damage;
             this.range = range;
             this.radius = radius;
             this.cooldownTicks = cooldownTicks;
             this.particle = particle;
-            this.sound = sound;
+            this.impactSound = impactSound;
             this.slowTicks = slowTicks;
+            this.projectileItem = projectileItem;
+            this.speed = speed;
+            this.gravity = gravity;
+            this.fireSound = fireSound;
         }
     }
 
@@ -101,25 +113,26 @@ public class HeroWeaponItem extends Item {
         return InteractionResult.SUCCESS;
     }
 
-    /** Un tir (serveur). Public pour les gametests, qui n'ont pas de vraie main à cliquer. */
-    public void fire(ServerLevel level, Player player) {
-        double range = GameBalance.get(this.kind.range, false);
-        Vec3 eye = player.getEyePosition();
-        Vec3 look = player.getViewVector(1.0F);
-        Vec3 end = eye.add(look.scale(range));
+    /**
+     * Un tir (serveur) : lance le projectile depuis les yeux du joueur, dans la direction de son
+     * regard, et le renvoie. Public pour les gametests, qui n'ont pas de vraie main à cliquer.
+     */
+    public WeaponProjectileEntity fire(ServerLevel level, Player player) {
+        WeaponProjectileEntity projectile = new WeaponProjectileEntity(level, player, this,
+                new ItemStack(this.kind.projectileItem), GameBalance.get(this.kind.range, false),
+                this.kind.speed, this.kind.gravity);
+        level.addFreshEntity(projectile);
+        level.playSound(null, player.getX(), player.getEyeY(), player.getZ(), this.kind.fireSound, SoundSource.PLAYERS, 0.5F, 1.6F);
+        return projectile;
+    }
 
-        BlockHitResult blockHit = level.clip(new ClipContext(eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
-        Vec3 stop = blockHit.getType() == HitResult.Type.MISS ? end : blockHit.getLocation();
-
-        AABB searchBox = player.getBoundingBox().expandTowards(look.scale(range)).inflate(1.0D);
-        EntityHitResult entityHit = ProjectileUtil.getEntityHitResult(
-                player, eye, stop, searchBox, entity -> entity instanceof Monster && entity.isAlive(), eye.distanceToSqr(stop));
-        Entity direct = entityHit == null ? null : entityHit.getEntity();
-        Vec3 impact = entityHit == null ? stop : entityHit.getLocation();
-
-        trail(level, eye, impact);
-        level.playSound(null, impact.x, impact.y, impact.z, this.kind.sound, SoundSource.PLAYERS, 0.6F, 1.4F);
-
+    /**
+     * Effet de l'arme à l'endroit où son projectile s'arrête : le monstre touché seul (rivet), ou
+     * tous les monstres dans le rayon (fiole, bâton). {@code direct} = le monstre percuté, s'il y
+     * en a un.
+     */
+    public void impact(ServerLevel level, Player player, Vec3 at, @Nullable Entity direct) {
+        level.playSound(null, at.x, at.y, at.z, this.kind.impactSound, SoundSource.PLAYERS, 0.6F, 1.4F);
         float damage = (float) GameBalance.get(this.kind.damage, false);
         if (this.kind.radius == null) {
             if (direct instanceof Monster monster) {
@@ -129,33 +142,24 @@ public class HeroWeaponItem extends Item {
         }
 
         double radius = GameBalance.get(this.kind.radius, false);
-        level.sendParticles(this.kind.particle, impact.x, impact.y + 0.2D, impact.z,
+        level.sendParticles(this.kind.particle, at.x, at.y + 0.2D, at.z,
                 12, radius / 2.0D, 0.2D, radius / 2.0D, 0.02D);
-        List<Monster> monsters = level.getEntitiesOfClass(Monster.class, new AABB(impact, impact).inflate(radius),
-                monster -> monster.isAlive() && monster.getBoundingBox().distanceToSqr(impact) <= radius * radius);
+        List<Monster> monsters = level.getEntitiesOfClass(Monster.class, new AABB(at, at).inflate(radius),
+                monster -> monster.isAlive() && monster.getBoundingBox().distanceToSqr(at) <= radius * radius);
         for (Monster monster : monsters) {
             hit(level, player, monster, damage);
         }
+    }
+
+    /** Une particule de traînée derrière le projectile, à chaque tick de vol. */
+    public void trailParticle(ServerLevel level, Vec3 at) {
+        level.sendParticles(this.kind.particle, at.x, at.y, at.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
     }
 
     private void hit(ServerLevel level, Player player, Monster monster, float damage) {
         monster.hurtServer(level, level.damageSources().playerAttack(player), damage);
         if (this.kind.slowTicks > 0) {
             monster.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, this.kind.slowTicks, 0), player);
-        }
-    }
-
-    // Un point de particule par bloc, en partant un peu devant les yeux pour ne pas boucher la vue.
-    private void trail(ServerLevel level, Vec3 from, Vec3 to) {
-        Vec3 delta = to.subtract(from);
-        double length = delta.length();
-        if (length < 1.0E-3D) {
-            return;
-        }
-        Vec3 step = delta.scale(1.0D / length);
-        for (double travelled = 1.5D; travelled < length; travelled += 1.0D) {
-            Vec3 point = from.add(step.scale(travelled));
-            level.sendParticles(this.kind.particle, point.x, point.y - 0.2D, point.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
         }
     }
 }

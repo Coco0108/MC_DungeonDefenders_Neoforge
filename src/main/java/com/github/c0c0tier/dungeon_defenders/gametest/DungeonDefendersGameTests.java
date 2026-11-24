@@ -899,6 +899,14 @@ public final class DungeonDefendersGameTests {
         helper.succeed();
     }
 
+    // Fait voler un projectile d'arme jusqu'à son impact, sans attendre les ticks du serveur :
+    // le test reste synchrone. 60 ticks couvrent largement la portée de chaque arme.
+    private static void flyOut(com.github.c0c0tier.dungeon_defenders.entity.WeaponProjectileEntity projectile) {
+        for (int i = 0; i < 60 && !projectile.isRemoved(); i++) {
+            projectile.tick();
+        }
+    }
+
     /**
      * Armes de héros : chaque héros a la sienne ; changer de héros retire l'ancienne et donne la
      * nouvelle, en un seul exemplaire ; le Pistolet à rivets blesse le monstre visé ; le bonus de
@@ -942,14 +950,14 @@ public final class DungeonDefendersGameTests {
 
         HeroWeaponItem rivetGun = ModBlocks.ENGINEER_RIVET_GUN.get();
         Zombie target = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, front);
-        rivetGun.fire(level, player);
+        flyOut(rivetGun.fire(level, player));
         float baseLoss = target.getMaxHealth() - target.getHealth();
         helper.assertTrue(baseLoss > 0.0F, "le Pistolet à rivets blesse le monstre visé");
         target.discard();
 
         player.setData(ModAttachments.LEVEL, 5);
         Zombie second = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, front);
-        rivetGun.fire(level, player);
+        flyOut(rivetGun.fire(level, player));
         float boostedLoss = second.getMaxHealth() - second.getHealth();
         helper.assertTrue(Math.abs(boostedLoss - baseLoss * 1.2F) < 0.01F,
                 "niveau 5 : " + boostedLoss + " PV perdus, attendu 1,2 x " + baseLoss);
@@ -959,7 +967,7 @@ public final class DungeonDefendersGameTests {
         Zombie center = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, front);
         Zombie beside = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(3, 1, 8));
         Zombie away = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, new BlockPos(2, 1, 14));
-        ModBlocks.ALCHEMIST_FLASKS.get().fire(level, player);
+        flyOut(ModBlocks.ALCHEMIST_FLASKS.get().fire(level, player));
         helper.assertTrue(center.getHealth() < center.getMaxHealth(), "fiole : monstre visé blessé");
         helper.assertTrue(beside.getHealth() < beside.getMaxHealth(), "fiole : voisin blessé (zone)");
         helper.assertValueEqual(away.getHealth(), away.getMaxHealth(), "fiole : monstre éloigné épargné");
@@ -968,7 +976,7 @@ public final class DungeonDefendersGameTests {
         away.discard();
 
         Zombie slowed = helper.spawnWithNoFreeWill(EntityType.ZOMBIE, front);
-        ModBlocks.GEOMANCER_STAFF.get().fire(level, player);
+        flyOut(ModBlocks.GEOMANCER_STAFF.get().fire(level, player));
         helper.assertTrue(slowed.getHealth() < slowed.getMaxHealth(), "bâton : monstre blessé");
         helper.assertTrue(slowed.hasEffect(MobEffects.SLOWNESS), "bâton : monstre ralenti");
         slowed.discard();

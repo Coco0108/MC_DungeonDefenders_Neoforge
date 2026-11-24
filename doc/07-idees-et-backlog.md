@@ -78,7 +78,7 @@ un chiffrage précis). Statut : **Idée** (brute, pas encore creusée) / **Prêt
 | Armes / Armures | Autres onglets de la Forge (améliorer, fusionner ou vendre le butin...). | Difficile | Idée | Le joueur : « on verra les précisions plus tard » (2026-11-16). L'écran a déjà la rangée d'onglets. |
 | Armes / Armures | Confort de l'inventaire de la Forge : comparaison avec l'arme équipée, tri et filtre, confirmation avant de détruire. | Facile | Fait, à tester | Proposée par Claude (2026-11-17). Comparaison (Forge et butin au sol) et confirmation faites le 2026-11-24 avec la refonte des interfaces, tri (récent, rareté, dégâts) et filtre (mon héros) le même jour. |
 | Score / Progression | Points de stats à répartir à chaque niveau (vie, dégâts, vitesse, puissance des tours). | Moyen | Fait, à tester | Fait le 2026-11-16 après le « ensuite » du joueur : `HeroStat`, écran touche K. Voir [02-gameplay.md](02-gameplay.md#les-caractéristiques--initherostatjava-clientguiscreenherostatsscreenjava). S'ajoute au +5 % de dégâts par niveau. |
-| Armes / Armures | Vrais projectiles visibles pour les armes à distance (fiole qui vole, rivet), à la place du tir instantané. | Moyen | Idée | Proposée par Claude (2026-11-16). Demande une entité et un renderer par projectile. |
+| Armes / Armures | Vrais projectiles visibles pour les armes à distance (fiole qui vole, rivet), à la place du tir instantané. | Moyen | Fait, à tester | Proposée par Claude (2026-11-16). Faite le 2026-11-24 : une seule entité (`WeaponProjectileEntity`) rendue par le `ThrownItemRenderer` vanilla, l'item montré change selon l'arme. |
 
 ## Référence : roadmap de l'ancien prototype
 

@@ -795,7 +795,8 @@ vérifie la CI.
   équilibrage théorique. Le jeu compte donc **quatre héros et 24 tours**.
 - ✅ **Armes de héros et bonus de niveau** (2026-11-16, branche `feature/armes-de-heros`) : une
   arme par héros, donnée automatiquement et jamais perdue (`item/HeroWeapons`) ; épée de mêlée
-  pour l'Écuyer, tir instantané au clic droit pour les trois autres (`item/HeroWeaponItem`,
+  pour l'Écuyer, projectile au clic droit pour les trois autres (`item/HeroWeaponItem`, vrai
+  projectile depuis le 2026-11-24 : `entity/WeaponProjectileEntity`,
   chiffres dans `balance/weapons.json`) ; le niveau du personnage augmente les dégâts infligés
   par le joueur (+5 % par niveau). Détail dans
   [02-gameplay.md](02-gameplay.md#les-armes-de-héros--itemheroweaponitemjava-itemheroweaponsjava).
