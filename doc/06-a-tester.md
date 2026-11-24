@@ -1714,6 +1714,10 @@ m'aide beaucoup.
       assombries ; comparaison en vert/rouge avec l'arme équipée.
 - [ ] Forge : **Détruire** passe à « Confirmer ? » au premier clic, détruit au second ; changer
       de case annule. **Double-clic** sur une case l'équipe.
+- [ ] Forge, **Tri** (branche `feature/forge-tri`) : le bouton fait défiler récent → rareté →
+      dégâts ; « récent » montre la dernière arme ramassée en premier. **Filtre** « Mon héros » ne
+      garde que les armes du héros joué. Équiper/Détruire agit bien sur l'arme cliquée, quel que
+      soit le tri.
 - [ ] **Caractéristiques** (`K`) : panneau, héros et niveau en tête, une jauge par
       caractéristique avec « 3 / 20 » dedans, boutons + alignés.
 - [ ] **Choix de héros** (`H`) : cartes à gauche (« actuel » sous le héros joué), fiche à droite

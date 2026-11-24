@@ -2771,13 +2771,15 @@ Bloc de taverne (onglet créatif du mod). Clic droit : un panneau s'ouvre sur l'
 pour Commun, armes d'un autre héros assombries, infobulle au survol), à droite l'arme équipée
 (avec Déséquiper) puis la case choisie, ses bonus comparés à l'arme que son héros porte, et
 Équiper / Détruire. **Détruire demande un second clic** (« Confirmer ? »). Un double-clic sur une
-case l'équipe. Un second onglet grisé « À venir » marque la place des suivants. Le bloc ne stocke rien : l'inventaire appartient au joueur.
+case l'équipe. Sous la grille, **Tri** (récent, rareté, dégâts) et **Filtre** (tous les héros ou
+le sien) : une simple vue côté client, retenue le temps de la session ; l'inventaire garde son
+ordre côté serveur et les actions envoient toujours l'index réel. Un second onglet grisé « À
+venir » marque la place des suivants. Le bloc ne stocke rien : l'inventaire appartient au joueur.
 Les actions sont refusées pendant le Combat.
 
 ### Limites connues
 
 - **Armes seulement** : pas encore d'armures.
-- Pas de tri ni de filtre dans l'inventaire.
 - En créatif, E près d'un objet de butin range l'objet au lieu d'ouvrir l'inventaire.
 - Équilibrage théorique ; les bonus de butin se **multiplient** avec le niveau et la Puissance.
 

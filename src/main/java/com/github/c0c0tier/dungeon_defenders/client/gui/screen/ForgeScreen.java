@@ -22,7 +22,9 @@ import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 // Écran de la Forge (clic droit sur le bloc). Un panneau unique, avec des onglets au-dessus :
 // l'INVENTAIRE, seule façon pour le joueur de voir son butin (il n'a pas d'inventaire portatif),
@@ -34,6 +36,10 @@ import java.util.List;
 //   - à droite, l'arme équipée du héros actuel (avec Déséquiper), puis la case choisie, ses
 //     bonus comparés à l'arme que son héros porte déjà (LootComparison), et Équiper / Détruire.
 //     Détruire demande un second clic (« Confirmer ? ») : rien ne se récupère.
+//   - sous la grille, le tri (récent, rareté, dégâts) et le filtre (tous les héros, ou le sien).
+//     Ce n'est qu'une VUE : l'inventaire garde son ordre côté serveur, et les actions envoient
+//     toujours l'index réel (view() fait la correspondance). Le choix est retenu le temps de la
+//     session de jeu, pas sauvegardé.
 //
 // Pas de Menu : tout vient d'attachments joueur synchronisés (FORGE_INVENTORY,
 // EQUIPPED_WEAPONS). Un clic envoie un paquet et l'écran se redessine quand le serveur renvoie
@@ -54,6 +60,20 @@ public class ForgeScreen extends Screen {
     private static final int OTHER_HERO_VEIL = 0xA0000000;
     private static final int SELECTED_COLOR = 0xFFFFFFFF;
 
+    // Ordre d'affichage de la grille. RECENT = dernier ramassé en premier.
+    private enum Sort {
+        RECENT, RARITY, DAMAGE;
+
+        Sort next() {
+            return values()[(ordinal() + 1) % values().length];
+        }
+    }
+
+    private static Sort sort = Sort.RECENT;
+    private static boolean ownHeroOnly;
+
+    private Button sortButton;
+    private Button filterButton;
     private Button previousPage;
     private Button nextPage;
     private Button equipButton;
@@ -91,6 +111,16 @@ public class ForgeScreen extends Screen {
                 .bounds(this.gridLeft, pagerY, 16, 16).build());
         this.nextPage = this.addRenderableWidget(Button.builder(Component.literal(">"), b -> changePage(1))
                 .bounds(this.gridLeft + gridWidth - 16, pagerY, 16, 16).build());
+        this.sortButton = this.addRenderableWidget(Button.builder(sortLabel(), b -> {
+                    sort = sort.next();
+                    resetView();
+                })
+                .bounds(this.gridLeft, pagerY + 20, gridWidth, 14).build());
+        this.filterButton = this.addRenderableWidget(Button.builder(filterLabel(), b -> {
+                    ownHeroOnly = !ownHeroOnly;
+                    resetView();
+                })
+                .bounds(this.gridLeft, pagerY + 37, gridWidth, 14).build());
 
         int equippedTop = this.panelTop + UiStyle.HEADER_HEIGHT + 18;
         this.unequipButton = this.addRenderableWidget(Button.builder(
@@ -129,8 +159,47 @@ public class ForgeScreen extends Screen {
         select(-1);
     }
 
-    private static int pageCount() {
-        return Equipment.CAPACITY / Equipment.PAGE_SIZE;
+    private void resetView() {
+        this.page = 0;
+        select(-1);
+        this.sortButton.setMessage(sortLabel());
+        this.filterButton.setMessage(filterLabel());
+    }
+
+    private static Component sortLabel() {
+        return Component.translatable("dungeon_defenders.forge.sort",
+                Component.translatable("dungeon_defenders.forge.sort." + sort.name().toLowerCase(Locale.ROOT)));
+    }
+
+    private static Component filterLabel() {
+        return Component.translatable(ownHeroOnly ? "dungeon_defenders.forge.filter.own" : "dungeon_defenders.forge.filter.all");
+    }
+
+    /** Index réels de l'inventaire, dans l'ordre d'affichage, après filtre. */
+    private static List<Integer> view(LocalPlayer player) {
+        List<LootWeapon> items = Equipment.inventory(player);
+        String heroId = HeroDefinition.of(player).id();
+        List<Integer> indices = new ArrayList<>();
+        for (int i = 0; i < items.size(); i++) {
+            if (!ownHeroOnly || items.get(i).hero().equals(heroId)) {
+                indices.add(i);
+            }
+        }
+        Comparator<Integer> newestFirst = Comparator.<Integer>naturalOrder().reversed();
+        Comparator<Integer> byDamage = Comparator.comparingDouble((Integer i) -> items.get(i).damage()).reversed();
+        switch (sort) {
+            case RECENT -> indices.sort(newestFirst);
+            case RARITY -> indices.sort(Comparator.comparingInt((Integer i) -> items.get(i).lootRarity().ordinal()).reversed()
+                    .thenComparing(byDamage).thenComparing(newestFirst));
+            case DAMAGE -> indices.sort(byDamage.thenComparing(newestFirst));
+        }
+        return indices;
+    }
+
+    private int pageCount() {
+        LocalPlayer player = Minecraft.getInstance().player;
+        int shown = player == null ? 0 : view(player).size();
+        return Math.max(1, (shown + Equipment.PAGE_SIZE - 1) / Equipment.PAGE_SIZE);
     }
 
     private static void send(int action, int index) {
@@ -156,6 +225,7 @@ public class ForgeScreen extends Screen {
         if (this.selected >= items.size()) {
             select(-1);
         }
+        this.page = Math.min(this.page, pageCount() - 1);
         boolean outOfCombat = player.level().getData(ModAttachments.GAME_PHASE) != GamePhase.COMBAT.ordinal();
 
         this.previousPage.active = this.page > 0;
@@ -173,12 +243,19 @@ public class ForgeScreen extends Screen {
         this.unequipButton.active = outOfCombat && items.size() < Equipment.CAPACITY;
     }
 
+    // Index RÉEL de l'arme sous la souris, -1 sur une case vide ou hors de la grille.
     private int slotIndexAt(double mouseX, double mouseY) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null) {
+            return -1;
+        }
+        List<Integer> view = view(player);
         for (int i = 0; i < Equipment.PAGE_SIZE; i++) {
             int x = this.gridLeft + (i % COLUMNS) * SLOT_STEP;
             int y = this.gridTop + (i / COLUMNS) * SLOT_STEP;
+            int position = this.page * Equipment.PAGE_SIZE + i;
             if (UiStyle.isInside(mouseX, mouseY, x, y, SLOT, SLOT)) {
-                return this.page * Equipment.PAGE_SIZE + i;
+                return position < view.size() ? view.get(position) : -1;
             }
         }
         return -1;
@@ -215,7 +292,7 @@ public class ForgeScreen extends Screen {
         super.extractRenderState(g, mouseX, mouseY, partialTick);
 
         List<LootWeapon> items = Equipment.inventory(player);
-        renderGrid(g, items, hero, mouseX, mouseY);
+        renderGrid(g, items, view(player), hero, mouseX, mouseY);
         renderEquipped(g, player, hero);
         renderSelection(g, player, items);
     }
@@ -232,7 +309,7 @@ public class ForgeScreen extends Screen {
         g.centeredText(this.font, Component.translatable("dungeon_defenders.forge.tab.soon"), soon + TAB_WIDTH / 2, y + 6, UiStyle.DIM);
     }
 
-    private void renderGrid(GuiGraphicsExtractor g, List<LootWeapon> items, HeroDefinition hero, int mouseX, int mouseY) {
+    private void renderGrid(GuiGraphicsExtractor g, List<LootWeapon> items, List<Integer> view, HeroDefinition hero, int mouseX, int mouseY) {
         int gridWidth = COLUMNS * SLOT_STEP - 2;
         g.text(this.font, Component.translatable("dungeon_defenders.forge.tab.inventory"), this.gridLeft, this.gridTop - 12, UiStyle.GOLD);
         Component count = Component.translatable("dungeon_defenders.forge.count", items.size(), Equipment.CAPACITY);
@@ -240,13 +317,14 @@ public class ForgeScreen extends Screen {
 
         int hovered = slotIndexAt(mouseX, mouseY);
         for (int i = 0; i < Equipment.PAGE_SIZE; i++) {
-            int index = this.page * Equipment.PAGE_SIZE + i;
+            int position = this.page * Equipment.PAGE_SIZE + i;
             int x = this.gridLeft + (i % COLUMNS) * SLOT_STEP;
             int y = this.gridTop + (i / COLUMNS) * SLOT_STEP;
-            if (index >= items.size()) {
+            if (position >= view.size()) {
                 UiStyle.inset(g, x, y, SLOT, SLOT);
                 continue;
             }
+            int index = view.get(position);
             LootWeapon weapon = items.get(index);
             LootRarity rarity = weapon.lootRarity();
             int frame = rarity == LootRarity.COMMON ? 0 : rarity.argb();
@@ -263,8 +341,8 @@ public class ForgeScreen extends Screen {
         g.centeredText(this.font, Component.translatable("dungeon_defenders.forge.page", this.page + 1, pageCount()),
                 this.gridLeft + gridWidth / 2, pagerY + 4, UiStyle.TEXT);
 
-        if (items.isEmpty()) {
-            g.textWithWordWrap(this.font, Component.translatable("dungeon_defenders.forge.empty"),
+        if (view.isEmpty()) {
+            g.textWithWordWrap(this.font, Component.translatable(items.isEmpty() ? "dungeon_defenders.forge.empty" : "dungeon_defenders.forge.filtered_empty"),
                     this.gridLeft + 2, this.gridTop + 2, gridWidth - 4, UiStyle.DIM);
         }
 

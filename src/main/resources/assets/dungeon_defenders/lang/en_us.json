@@ -321,5 +321,12 @@
   "dungeon_defenders.tower_stat.boost_percent": "Boost: +%s%%",
   "dungeon_defenders.tower_stat.vulnerability_percent": "Weakens: +%s%%",
   "dungeon_defenders.tower_stat.bonus_mana": "Mana: +%s",
-  "dungeon_defenders.tower_stat.max_health": "HP: %s"
+  "dungeon_defenders.tower_stat.max_health": "HP: %s",
+  "dungeon_defenders.forge.sort": "Sort: %s",
+  "dungeon_defenders.forge.sort.recent": "recent",
+  "dungeon_defenders.forge.sort.rarity": "rarity",
+  "dungeon_defenders.forge.sort.damage": "damage",
+  "dungeon_defenders.forge.filter.all": "All heroes",
+  "dungeon_defenders.forge.filter.own": "My hero",
+  "dungeon_defenders.forge.filtered_empty": "No weapon for your hero. Change the filter to see everything."
 }

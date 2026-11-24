@@ -321,5 +321,12 @@
   "dungeon_defenders.tower_stat.boost_percent": "Renfort : +%s %%",
   "dungeon_defenders.tower_stat.vulnerability_percent": "Fragilise : +%s %%",
   "dungeon_defenders.tower_stat.bonus_mana": "Mana : +%s",
-  "dungeon_defenders.tower_stat.max_health": "PV : %s"
+  "dungeon_defenders.tower_stat.max_health": "PV : %s",
+  "dungeon_defenders.forge.sort": "Tri : %s",
+  "dungeon_defenders.forge.sort.recent": "récent",
+  "dungeon_defenders.forge.sort.rarity": "rareté",
+  "dungeon_defenders.forge.sort.damage": "dégâts",
+  "dungeon_defenders.forge.filter.all": "Tous les héros",
+  "dungeon_defenders.forge.filter.own": "Mon héros",
+  "dungeon_defenders.forge.filtered_empty": "Aucune arme pour ton héros. Change le filtre pour tout voir."
 }
