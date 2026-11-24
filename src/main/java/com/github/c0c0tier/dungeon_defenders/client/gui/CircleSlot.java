@@ -7,12 +7,12 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 // donnée par le théorème de Pythagore), pas de texture ni de géométrie custom bas niveau.
 // Sert de fond aux emplacements de compétences (voir AbilitySlotsOverlay), en attendant de
 // vraies icônes.
-final class CircleSlot {
+public final class CircleSlot {
 
     private CircleSlot() {
     }
 
-    static void render(GuiGraphicsExtractor guiGraphics, int centerX, int centerY, int radius, int fillColor, int borderColor) {
+    public static void render(GuiGraphicsExtractor guiGraphics, int centerX, int centerY, int radius, int fillColor, int borderColor) {
         renderDisc(guiGraphics, centerX, centerY, radius, borderColor);
         renderDisc(guiGraphics, centerX, centerY, radius - 2, fillColor);
     }
@@ -22,7 +22,7 @@ final class CircleSlot {
      * disque intérieur. Sert à la recharge (le voile descend à mesure qu'elle s'écoule) et, à
      * fraction 1, au grisé d'une compétence inutilisable.
      */
-    static void renderVeil(GuiGraphicsExtractor guiGraphics, int centerX, int centerY, int radius, float fraction, int color) {
+    public static void renderVeil(GuiGraphicsExtractor guiGraphics, int centerX, int centerY, int radius, float fraction, int color) {
         int inner = radius - 2;
         int firstRow = inner - Math.round(Math.clamp(fraction, 0.0F, 1.0F) * (inner * 2 + 1)) + 1;
         for (int dy = Math.max(firstRow, -inner); dy <= inner; dy++) {

@@ -1,48 +1,59 @@
 package com.github.c0c0tier.dungeon_defenders.client.gui.screen;
 
+import com.github.c0c0tier.dungeon_defenders.client.gui.LootComparison;
+import com.github.c0c0tier.dungeon_defenders.client.gui.UiStyle;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.loot.Equipment;
+import com.github.c0c0tier.dungeon_defenders.loot.LootRarity;
 import com.github.c0c0tier.dungeon_defenders.loot.LootWeapon;
 import com.github.c0c0tier.dungeon_defenders.network.ForgeActionPayload;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 
-// Écran de la Forge (clic droit sur le bloc). Une rangée d'onglets, dont un seul existe pour
-// l'instant : l'INVENTAIRE, la seule façon pour le joueur de voir son butin (il n'a pas
-// d'inventaire portatif). Les autres onglets viendront — « on verra les précisions plus tard ».
+// Écran de la Forge (clic droit sur le bloc). Un panneau unique, avec des onglets au-dessus :
+// l'INVENTAIRE, seule façon pour le joueur de voir son butin (il n'a pas d'inventaire portatif),
+// puis un onglet grisé qui marque la place des suivants (« on verra les précisions plus tard »).
 //
-// Onglet Inventaire : à gauche une grille paginée (Equipment.PAGE_SIZE cases par page, cadre de
-// la couleur de la rareté) ; à droite l'arme équipée du héros actuel, puis le détail de la case
-// choisie avec ses actions (Équiper, Détruire).
+// Onglet Inventaire :
+//   - à gauche, la grille paginée (Equipment.PAGE_SIZE cases par page) : cases creusées, cadre
+//     de la couleur de la rareté, armes d'un autre héros assombries, infobulle au survol ;
+//   - à droite, l'arme équipée du héros actuel (avec Déséquiper), puis la case choisie, ses
+//     bonus comparés à l'arme que son héros porte déjà (LootComparison), et Équiper / Détruire.
+//     Détruire demande un second clic (« Confirmer ? ») : rien ne se récupère.
 //
 // Pas de Menu : tout vient d'attachments joueur synchronisés (FORGE_INVENTORY,
 // EQUIPPED_WEAPONS). Un clic envoie un paquet et l'écran se redessine quand le serveur renvoie
-// l'attachment, sans rien prédire. Les cases sont de vrais boutons (clic et clavier gérés par
-// le jeu), sur lesquels l'icône de l'arme est dessinée.
+// l'attachment, sans rien prédire. Les cases de la grille sont dessinées à la main et cliquées
+// via mouseClicked ; les actions restent de vrais boutons.
 public class ForgeScreen extends Screen {
 
+    private static final int PANEL_WIDTH = 340;
+    private static final int PANEL_HEIGHT = 206;
     private static final int COLUMNS = 5;
-    private static final int CELL = 22;
-    private static final int CELL_BUTTON = 20;
-    private static final int GRID_TOP = 78;
+    private static final int SLOT = 18;
+    private static final int SLOT_STEP = 20;
+    private static final int TAB_WIDTH = 84;
+    private static final int TAB_HEIGHT = 16;
     private static final int LINE_HEIGHT = 10;
-    private static final int TEXT_COLOR = 0xFFFFFFFF;
-    private static final int DIM_COLOR = 0xFFAAAAAA;
-    private static final int TITLE_COLOR = 0xFFFFD700;
+    private static final int RIGHT_WIDTH = 204;
+    private static final int BOX_HEIGHT = 58;
+    private static final int OTHER_HERO_VEIL = 0xA0000000;
     private static final int SELECTED_COLOR = 0xFFFFFFFF;
 
-    private final List<Button> cells = new ArrayList<>();
     private Button previousPage;
     private Button nextPage;
     private Button equipButton;
@@ -52,8 +63,14 @@ public class ForgeScreen extends Screen {
     private int page;
     // Index ABSOLU dans l'inventaire (pas dans la page) ; -1 = aucune case choisie.
     private int selected = -1;
-    private int gridLeft;
+    // Index pour lequel Détruire attend sa confirmation ; -1 = aucun.
+    private int confirmDiscard = -1;
+
     private int panelLeft;
+    private int panelTop;
+    private int gridLeft;
+    private int gridTop;
+    private int rightLeft;
 
     public ForgeScreen() {
         super(Component.translatable("dungeon_defenders.forge.title"));
@@ -62,55 +79,54 @@ public class ForgeScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        this.cells.clear();
-        this.gridLeft = this.width / 2 - 170;
-        this.panelLeft = this.width / 2 - 40;
+        this.panelLeft = (this.width - PANEL_WIDTH) / 2;
+        this.panelTop = Math.max(TAB_HEIGHT + 2, (this.height - PANEL_HEIGHT) / 2 + TAB_HEIGHT / 2);
+        this.gridLeft = this.panelLeft + 10;
+        this.gridTop = this.panelTop + UiStyle.HEADER_HEIGHT + 18;
+        this.rightLeft = this.panelLeft + PANEL_WIDTH - RIGHT_WIDTH - 10;
 
-        // Onglets. Le second n'est là que pour montrer où les suivants prendront place.
-        Button inventoryTab = this.addRenderableWidget(Button.builder(
-                        Component.translatable("dungeon_defenders.forge.tab.inventory"), b -> { })
-                .bounds(this.gridLeft, 44, 90, 20).build());
-        inventoryTab.active = false;
-        Button soonTab = this.addRenderableWidget(Button.builder(
-                        Component.translatable("dungeon_defenders.forge.tab.soon"), b -> { })
-                .bounds(this.gridLeft + 94, 44, 90, 20).build());
-        soonTab.active = false;
-
-        for (int i = 0; i < Equipment.PAGE_SIZE; i++) {
-            int slot = i;
-            int x = this.gridLeft + (i % COLUMNS) * CELL;
-            int y = GRID_TOP + (i / COLUMNS) * CELL;
-            this.cells.add(this.addRenderableWidget(Button.builder(Component.empty(), b -> this.selected = this.page * Equipment.PAGE_SIZE + slot)
-                    .bounds(x, y, CELL_BUTTON, CELL_BUTTON).build()));
-        }
-
-        int pagerY = GRID_TOP + (Equipment.PAGE_SIZE / COLUMNS) * CELL + 4;
+        int gridWidth = COLUMNS * SLOT_STEP - 2;
+        int pagerY = this.gridTop + (Equipment.PAGE_SIZE / COLUMNS) * SLOT_STEP + 4;
         this.previousPage = this.addRenderableWidget(Button.builder(Component.literal("<"), b -> changePage(-1))
-                .bounds(this.gridLeft, pagerY, 20, 20).build());
+                .bounds(this.gridLeft, pagerY, 16, 16).build());
         this.nextPage = this.addRenderableWidget(Button.builder(Component.literal(">"), b -> changePage(1))
-                .bounds(this.gridLeft + COLUMNS * CELL - 22, pagerY, 20, 20).build());
+                .bounds(this.gridLeft + gridWidth - 16, pagerY, 16, 16).build());
 
+        int equippedTop = this.panelTop + UiStyle.HEADER_HEIGHT + 18;
         this.unequipButton = this.addRenderableWidget(Button.builder(
                         Component.translatable("dungeon_defenders.forge.unequip"), b -> send(ForgeActionPayload.UNEQUIP, 0))
-                .bounds(this.panelLeft, GRID_TOP + 62, 100, 20).build());
+                .bounds(this.rightLeft + RIGHT_WIDTH - 70, equippedTop - 14, 70, 12).build());
+
+        int actionsY = this.panelTop + PANEL_HEIGHT - 25;
         this.equipButton = this.addRenderableWidget(Button.builder(
                         Component.translatable("dungeon_defenders.forge.equip"), b -> send(ForgeActionPayload.EQUIP, this.selected))
-                .bounds(this.panelLeft, GRID_TOP + 152, 100, 20).build());
+                .bounds(this.rightLeft, actionsY, 100, 20).build());
         this.discardButton = this.addRenderableWidget(Button.builder(
-                        Component.translatable("dungeon_defenders.forge.discard"), b -> {
-                            send(ForgeActionPayload.DISCARD, this.selected);
-                            this.selected = -1;
-                        })
-                .bounds(this.panelLeft + 104, GRID_TOP + 152, 100, 20).build());
+                        Component.translatable("dungeon_defenders.forge.discard"), b -> onDiscard())
+                .bounds(this.rightLeft + RIGHT_WIDTH - 100, actionsY, 100, 20).build());
 
         this.addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> this.onClose())
-                .bounds(this.width / 2 - 50, this.height - 28, 100, 20).build());
+                .bounds(this.gridLeft, actionsY, gridWidth, 20).build());
         refresh();
+    }
+
+    private void onDiscard() {
+        if (this.confirmDiscard != this.selected) {
+            this.confirmDiscard = this.selected;
+            return;
+        }
+        send(ForgeActionPayload.DISCARD, this.selected);
+        select(-1);
+    }
+
+    private void select(int index) {
+        this.selected = index;
+        this.confirmDiscard = -1;
     }
 
     private void changePage(int delta) {
         this.page = Math.max(0, Math.min(pageCount() - 1, this.page + delta));
-        this.selected = -1;
+        select(-1);
     }
 
     private static int pageCount() {
@@ -138,13 +154,10 @@ public class ForgeScreen extends Screen {
         }
         List<LootWeapon> items = Equipment.inventory(player);
         if (this.selected >= items.size()) {
-            this.selected = -1;
+            select(-1);
         }
         boolean outOfCombat = player.level().getData(ModAttachments.GAME_PHASE) != GamePhase.COMBAT.ordinal();
 
-        for (int i = 0; i < this.cells.size(); i++) {
-            this.cells.get(i).visible = this.page * Equipment.PAGE_SIZE + i < items.size();
-        }
         this.previousPage.active = this.page > 0;
         this.nextPage.active = this.page < pageCount() - 1;
 
@@ -153,72 +166,166 @@ public class ForgeScreen extends Screen {
         this.discardButton.visible = chosen != null;
         this.equipButton.active = outOfCombat && chosen != null && chosen.heroDefinition() == HeroDefinition.of(player);
         this.discardButton.active = outOfCombat;
+        this.discardButton.setMessage(this.confirmDiscard >= 0 && this.confirmDiscard == this.selected
+                ? Component.translatable("dungeon_defenders.forge.discard_confirm").withStyle(ChatFormatting.RED)
+                : Component.translatable("dungeon_defenders.forge.discard"));
         this.unequipButton.visible = Equipment.equipped(player) != null;
         this.unequipButton.active = outOfCombat && items.size() < Equipment.CAPACITY;
     }
 
+    private int slotIndexAt(double mouseX, double mouseY) {
+        for (int i = 0; i < Equipment.PAGE_SIZE; i++) {
+            int x = this.gridLeft + (i % COLUMNS) * SLOT_STEP;
+            int y = this.gridTop + (i / COLUMNS) * SLOT_STEP;
+            if (UiStyle.isInside(mouseX, mouseY, x, y, SLOT, SLOT)) {
+                return this.page * Equipment.PAGE_SIZE + i;
+            }
+        }
+        return -1;
+    }
+
     @Override
-    public void extractRenderState(GuiGraphicsExtractor guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        int index = slotIndexAt(event.x(), event.y());
+        if (player != null && index >= 0 && index < Equipment.inventory(player).size()) {
+            select(index);
+            // Double-clic sur une arme de son héros : l'équiper tout de suite.
+            if (doubleClick && this.equipButton.active) {
+                send(ForgeActionPayload.EQUIP, index);
+            }
+            refresh();
+            return true;
+        }
+        return super.mouseClicked(event, doubleClick);
+    }
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) {
+            super.extractRenderState(g, mouseX, mouseY, partialTick);
             return;
         }
+        // Le panneau d'abord, les boutons (super) par-dessus.
+        renderTabs(g);
+        HeroDefinition hero = HeroDefinition.of(player);
+        UiStyle.titledPanel(g, this.font, Component.translatable("dungeon_defenders.forge.title_hero", this.getTitle(), hero.displayName()),
+                this.panelLeft, this.panelTop, PANEL_WIDTH, PANEL_HEIGHT);
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
+
         List<LootWeapon> items = Equipment.inventory(player);
+        renderGrid(g, items, hero, mouseX, mouseY);
+        renderEquipped(g, player, hero);
+        renderSelection(g, player, items);
+    }
 
-        guiGraphics.centeredText(this.font, this.getTitle(), this.width / 2, 20, TEXT_COLOR);
+    // Onglet actif collé au panneau (même fond, pas de bord bas), les autres en retrait.
+    private void renderTabs(GuiGraphicsExtractor g) {
+        int y = this.panelTop - TAB_HEIGHT + 2;
+        int x = this.panelLeft + 8;
+        UiStyle.panel(g, x, y, TAB_WIDTH, TAB_HEIGHT + 2);
+        g.centeredText(this.font, Component.translatable("dungeon_defenders.forge.tab.inventory"), x + TAB_WIDTH / 2, y + 5, UiStyle.GOLD);
 
-        // Grille : icône et cadre de rareté par-dessus chaque bouton visible.
+        int soon = x + TAB_WIDTH + 2;
+        UiStyle.inset(g, soon, y + 2, TAB_WIDTH, TAB_HEIGHT - 2);
+        g.centeredText(this.font, Component.translatable("dungeon_defenders.forge.tab.soon"), soon + TAB_WIDTH / 2, y + 6, UiStyle.DIM);
+    }
+
+    private void renderGrid(GuiGraphicsExtractor g, List<LootWeapon> items, HeroDefinition hero, int mouseX, int mouseY) {
+        int gridWidth = COLUMNS * SLOT_STEP - 2;
+        g.text(this.font, Component.translatable("dungeon_defenders.forge.tab.inventory"), this.gridLeft, this.gridTop - 12, UiStyle.GOLD);
+        Component count = Component.translatable("dungeon_defenders.forge.count", items.size(), Equipment.CAPACITY);
+        g.text(this.font, count, this.gridLeft + gridWidth - this.font.width(count), this.gridTop - 12, UiStyle.DIM);
+
+        int hovered = slotIndexAt(mouseX, mouseY);
         for (int i = 0; i < Equipment.PAGE_SIZE; i++) {
             int index = this.page * Equipment.PAGE_SIZE + i;
+            int x = this.gridLeft + (i % COLUMNS) * SLOT_STEP;
+            int y = this.gridTop + (i / COLUMNS) * SLOT_STEP;
             if (index >= items.size()) {
-                break;
+                UiStyle.inset(g, x, y, SLOT, SLOT);
+                continue;
             }
             LootWeapon weapon = items.get(index);
-            int x = this.gridLeft + (i % COLUMNS) * CELL;
-            int y = GRID_TOP + (i / COLUMNS) * CELL;
-            guiGraphics.item(iconOf(weapon), x + 2, y + 2);
-            guiGraphics.outline(x, y, CELL_BUTTON, CELL_BUTTON, weapon.lootRarity().argb());
+            LootRarity rarity = weapon.lootRarity();
+            int frame = rarity == LootRarity.COMMON ? 0 : rarity.argb();
+            UiStyle.itemSlot(g, iconOf(weapon), x, y, frame, index == hovered);
+            if (weapon.heroDefinition() != hero) {
+                g.fill(x + 1, y + 1, x + SLOT - 1, y + SLOT - 1, OTHER_HERO_VEIL);
+            }
             if (index == this.selected) {
-                guiGraphics.outline(x - 1, y - 1, CELL_BUTTON + 2, CELL_BUTTON + 2, SELECTED_COLOR);
+                g.outline(x - 1, y - 1, SLOT + 2, SLOT + 2, SELECTED_COLOR);
             }
         }
+
+        int pagerY = this.gridTop + (Equipment.PAGE_SIZE / COLUMNS) * SLOT_STEP + 4;
+        g.centeredText(this.font, Component.translatable("dungeon_defenders.forge.page", this.page + 1, pageCount()),
+                this.gridLeft + gridWidth / 2, pagerY + 4, UiStyle.TEXT);
+
         if (items.isEmpty()) {
-            guiGraphics.textWithWordWrap(this.font, Component.translatable("dungeon_defenders.forge.empty"),
-                    this.gridLeft, GRID_TOP + 4, COLUMNS * CELL, DIM_COLOR);
+            g.textWithWordWrap(this.font, Component.translatable("dungeon_defenders.forge.empty"),
+                    this.gridLeft + 2, this.gridTop + 2, gridWidth - 4, UiStyle.DIM);
         }
 
-        int pagerY = GRID_TOP + (Equipment.PAGE_SIZE / COLUMNS) * CELL + 4;
-        guiGraphics.centeredText(this.font, Component.translatable("dungeon_defenders.forge.page", this.page + 1, pageCount()),
-                this.gridLeft + COLUMNS * CELL / 2, pagerY + 6, TEXT_COLOR);
-        guiGraphics.text(this.font, Component.translatable("dungeon_defenders.forge.count", items.size(), Equipment.CAPACITY),
-                this.gridLeft, pagerY + 26, DIM_COLOR);
-
-        // Arme équipée du héros actuel.
-        guiGraphics.text(this.font,
-                Component.translatable("dungeon_defenders.forge.equipped", HeroDefinition.of(player).displayName()),
-                this.panelLeft, GRID_TOP, TITLE_COLOR);
-        LootWeapon equipped = Equipment.equipped(player);
-        if (equipped == null) {
-            guiGraphics.text(this.font, Component.translatable("dungeon_defenders.forge.base_weapon"),
-                    this.panelLeft, GRID_TOP + 12, DIM_COLOR);
-        } else {
-            describe(guiGraphics, equipped, GRID_TOP + 12);
-        }
-
-        // Détail de la case choisie.
-        if (this.selected >= 0 && this.selected < items.size()) {
-            describe(guiGraphics, items.get(this.selected), GRID_TOP + 96);
+        if (hovered >= 0 && hovered < items.size()) {
+            LootWeapon weapon = items.get(hovered);
+            List<Component> tooltip = new ArrayList<>();
+            tooltip.add(weapon.displayName());
+            tooltip.addAll(weapon.statLines());
+            HeroDefinition owner = weapon.heroDefinition();
+            if (owner != null && owner != hero) {
+                tooltip.add(Component.translatable("dungeon_defenders.forge.other_hero", owner.displayName()).withStyle(ChatFormatting.GRAY));
+            }
+            g.setComponentTooltipForNextFrame(this.font, tooltip, mouseX, mouseY);
         }
     }
 
-    // Nom (dans la couleur de la rareté) puis une ligne par bonus : cinq lignes au plus.
-    private void describe(GuiGraphicsExtractor guiGraphics, LootWeapon weapon, int top) {
-        guiGraphics.text(this.font, weapon.displayName(), this.panelLeft, top, TEXT_COLOR);
-        int y = top + LINE_HEIGHT;
-        for (Component line : weapon.statLines()) {
-            guiGraphics.text(this.font, line, this.panelLeft + 6, y, TEXT_COLOR);
+    private void renderEquipped(GuiGraphicsExtractor g, LocalPlayer player, HeroDefinition hero) {
+        int top = this.panelTop + UiStyle.HEADER_HEIGHT + 18;
+        g.text(this.font, Component.translatable("dungeon_defenders.forge.equipped"), this.rightLeft, top - 12, UiStyle.GOLD);
+        LootWeapon equipped = Equipment.equipped(player);
+        UiStyle.inset(g, this.rightLeft, top, RIGHT_WIDTH, BOX_HEIGHT);
+        UiStyle.itemSlot(g, new ItemStack(hero.weapon()), this.rightLeft + 4, top + 4,
+                equipped == null || equipped.lootRarity() == LootRarity.COMMON ? 0 : equipped.lootRarity().argb(), false);
+        int textLeft = this.rightLeft + 28;
+        if (equipped == null) {
+            g.text(this.font, new ItemStack(hero.weapon()).getHoverName(), textLeft, top + 5, UiStyle.TEXT);
+            g.text(this.font, Component.translatable("dungeon_defenders.forge.base_weapon"), textLeft, top + 5 + LINE_HEIGHT, UiStyle.DIM);
+            return;
+        }
+        g.text(this.font, equipped.displayName(), textLeft, top + 5, UiStyle.TEXT);
+        int y = top + 5 + LINE_HEIGHT;
+        for (Component line : LootComparison.lines(equipped, null, false)) {
+            g.text(this.font, line, textLeft, y, UiStyle.TEXT);
             y += LINE_HEIGHT;
+        }
+    }
+
+    private void renderSelection(GuiGraphicsExtractor g, LocalPlayer player, List<LootWeapon> items) {
+        int top = this.panelTop + UiStyle.HEADER_HEIGHT + 18 + BOX_HEIGHT + 18;
+        g.text(this.font, Component.translatable("dungeon_defenders.forge.selection"), this.rightLeft, top - 12, UiStyle.GOLD);
+        UiStyle.inset(g, this.rightLeft, top, RIGHT_WIDTH, BOX_HEIGHT);
+        LootWeapon chosen = this.selected >= 0 && this.selected < items.size() ? items.get(this.selected) : null;
+        if (chosen == null) {
+            g.textWithWordWrap(this.font, Component.translatable("dungeon_defenders.forge.select_hint"),
+                    this.rightLeft + 6, top + 6, RIGHT_WIDTH - 12, UiStyle.DIM);
+            return;
+        }
+        LootRarity rarity = chosen.lootRarity();
+        UiStyle.itemSlot(g, iconOf(chosen), this.rightLeft + 4, top + 4, rarity == LootRarity.COMMON ? 0 : rarity.argb(), false);
+        int textLeft = this.rightLeft + 28;
+        g.text(this.font, chosen.displayName(), textLeft, top + 5, UiStyle.TEXT);
+        int y = top + 5 + LINE_HEIGHT;
+        @Nullable LootWeapon reference = LootComparison.reference(player, chosen);
+        for (Component line : LootComparison.lines(chosen, reference, true)) {
+            g.text(this.font, line, textLeft, y, UiStyle.TEXT);
+            y += LINE_HEIGHT;
+        }
+        HeroDefinition owner = chosen.heroDefinition();
+        if (owner != null && owner != HeroDefinition.of(player)) {
+            g.text(this.font, Component.translatable("dungeon_defenders.forge.other_hero", owner.displayName()),
+                    this.rightLeft + 6, top + BOX_HEIGHT + 2, UiStyle.NEGATIVE);
         }
     }
 

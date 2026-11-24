@@ -1371,14 +1371,21 @@ noyées parmi les touches vanilla. `tower_wheel` (ouvre la roue, `R` par défaut
 
 ### La roue — `TowerWheelScreen`
 
-Un secteur par `TowerDefinition`, disposé en cercle (icône = l'item existant de la tour, pas de
-nouvel art) autour du centre de l'écran. Le secteur survolé est déterminé par l'angle entre le
+Un emplacement rond par tour du héros, disposé en cercle (icône = l'item existant de la tour,
+pas de nouvel art) autour du centre de l'écran, avec son numéro et son coût. Une tour trop chère
+a son coût en rouge et son emplacement voilé (elle reste choisissable : le serveur refusera la
+pose avec son message habituel) ; à la Taverne, tout est gratuit, comme côté serveur. Au
+centre : la tour survolée en grand, sinon le mana disponible. À côté de la roue, une fiche donne
+le nom, le coût, la description et les chiffres de la tour survolée (`TowerStatSummary` : dégâts,
+cadence, portée, zone, soin, PV...). Sur un écran étroit la fiche rétrécit, puis passe en bas.
+Refonte visuelle du 2026-11-24. Le secteur survolé est déterminé par l'angle entre le
 centre de l'écran et la souris (`Math.atan2`), avec une zone morte de 20px au centre pour
 éviter qu'un simple tremblement de souris sélectionne un secteur au hasard.
 
-Deux façons de confirmer : **cliquer directement** sur un secteur (`mouseClicked`), ou
+Trois façons de confirmer : **cliquer directement** sur un emplacement (`mouseClicked`),
 **maintenir la touche `tower_wheel` en visant**, puis **la relâcher** (`keyReleased`, via
-`KeyMapping#matches(KeyEvent)`) — les deux passent par le même calcul de secteur survolé.
+`KeyMapping#matches(KeyEvent)`) — les deux passent par le même calcul de secteur survolé —, ou
+**taper le numéro** de la tour (1 à 9, `keyPressed`).
 `Échap` (comportement par défaut de `Screen`) ferme la roue sans rien sélectionner.
 
 Ouverte directement côté client par `TowerPlacementClientEvents` (sur `ClientTickEvent.Post`,
@@ -1493,7 +1500,10 @@ Idées du joueur (issues #13 et #16), faites ensemble le 2026-11-10 comme prévu
   Blockade, qui n'en a pas) ;
 - sa **barre de vie**, même à PV pleins (`TowerHealthBarRenderer` fait une exception pour la
   tour regardée) ;
-- son **nom et ses PV** (`20 / 20`) sous le viseur (`client/gui/TowerInspectOverlay.java`).
+- sa **fiche**, à droite du viseur pour ne pas masquer la cible (`client/gui/TowerInspectOverlay.java`) :
+  nom, niveau en pastilles, jauge de PV, chiffres au niveau actuel et, quand c'est possible, la
+  touche et le prix de l'amélioration. La maîtrise des tours du poseur n'étant pas synchronisée,
+  les dégâts affichés sont ceux du niveau seul.
 
 Un seul déclencheur, le regard, plutôt que le clic ou la touche évoqués dans l'issue #13 : rien à
 apprendre, rien à refermer, aucun conflit avec les clics déjà pris par la pose et la
@@ -2730,8 +2740,10 @@ que posée au sol (l'item de l'arme du héros, nommé, avec ses données dans `C
 
 ### Ramasser — `client/LootPickupClientEvents.java`, `client/gui/LootPromptOverlay.java`
 
-À moins de 3 blocs d'un objet (le plus proche, sans avoir à le viser), un encadré sous le viseur
-montre son nom, ses bonus et les touches. **E** range, **F** équipe.
+À moins de 3 blocs d'un objet (le plus proche, sans avoir à le viser), un encadré sous le viseur,
+bordé de la couleur de sa rareté, montre son icône, son nom, ses bonus **comparés à l'arme que son
+héros porte déjà** (`client/gui/LootComparison.java` : écart en vert ou en rouge) et les touches.
+**E** range, **F** équipe.
 
 E et F sont aussi des touches vanilla (inventaire, échange de main). Quand un objet est à portée,
 l'appui est consommé avant que le jeu ne le traite : l'inventaire ne s'ouvre pas. Sans objet à
@@ -2754,17 +2766,17 @@ portée, rien n'est intercepté. Les deux touches sont reconfigurables.
 
 ### La Forge — `block/ForgeBlock.java`, `ForgeScreen`
 
-Bloc de taverne (onglet créatif du mod). Clic droit : l'écran s'ouvre sur l'onglet **Inventaire**
-— grille paginée à gauche (cadre de la couleur de la rareté), arme équipée et détail de la case
-choisie à droite, boutons Équiper / Déséquiper / Détruire. Un second onglet grisé « À venir »
-marque la place des suivants. Le bloc ne stocke rien : l'inventaire appartient au joueur.
+Bloc de taverne (onglet créatif du mod). Clic droit : un panneau s'ouvre sur l'onglet
+**Inventaire** — grille paginée à gauche (cases creusées, cadre de la couleur de la rareté sauf
+pour Commun, armes d'un autre héros assombries, infobulle au survol), à droite l'arme équipée
+(avec Déséquiper) puis la case choisie, ses bonus comparés à l'arme que son héros porte, et
+Équiper / Détruire. **Détruire demande un second clic** (« Confirmer ? »). Un double-clic sur une
+case l'équipe. Un second onglet grisé « À venir » marque la place des suivants. Le bloc ne stocke rien : l'inventaire appartient au joueur.
 Les actions sont refusées pendant le Combat.
 
 ### Limites connues
 
 - **Armes seulement** : pas encore d'armures.
-- Pas de comparaison automatique entre l'objet au sol et l'arme équipée.
-- « Détruire » est immédiat, sans confirmation.
 - Pas de tri ni de filtre dans l'inventaire.
 - En créatif, E près d'un objet de butin range l'objet au lieu d'ouvrir l'inventaire.
 - Équilibrage théorique ; les bonus de butin se **multiplient** avec le niveau et la Puissance.

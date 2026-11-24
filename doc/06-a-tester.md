@@ -1696,6 +1696,34 @@ créatif du mod.
 - [ ] Avis attendu : fréquence du butin (trop, pas assez ?), force des bonus, mise en page de la
       Forge, et le fait qu'une arme soit réservée à son héros.
 
+## Refonte des interfaces (2026-11-24)
+
+Branche `feature/interfaces` (contient tout le reste). Purement visuel : je n'ai vu aucun de
+ces écrans, la mise en page est calculée à la main. **Essayer aussi en échelle d'interface
+maximale** (Options > Vidéo), c'est là que ça risque de déborder. Une capture par écran qui cloche
+m'aide beaucoup.
+
+- [ ] **Roue des tours** : emplacements ronds avec numéro et coût ; au centre le mana, puis la
+      tour survolée en grand ; fiche à droite avec nom, coût, description et chiffres. Une tour
+      trop chère est voilée avec son coût en rouge ; à la Taverne, « Gratuite à la Taverne ».
+- [ ] Touches **1 à 6** dans la roue : posent directement la tour correspondante.
+- [ ] **Fiche de tour** (regarder une tour) : à droite du viseur, niveau en pastilles, jauge de
+      PV, chiffres, et « [U] Améliorer : X mana » ; les chiffres ne se chevauchent pas.
+- [ ] **Forge** : panneau unique avec les onglets au-dessus ; grille de cases creusées, cadre de
+      rareté (pas de cadre pour Commun) ; infobulle au survol ; armes d'un autre héros
+      assombries ; comparaison en vert/rouge avec l'arme équipée.
+- [ ] Forge : **Détruire** passe à « Confirmer ? » au premier clic, détruit au second ; changer
+      de case annule. **Double-clic** sur une case l'équipe.
+- [ ] **Caractéristiques** (`K`) : panneau, héros et niveau en tête, une jauge par
+      caractéristique avec « 3 / 20 » dedans, boutons + alignés.
+- [ ] **Choix de héros** (`H`) : cartes à gauche (« actuel » sous le héros joué), fiche à droite
+      avec grande icône, arme, description, six cases de tours (infobulle) et les deux sorts ;
+      double-clic sur une carte confirme ; bouton Annuler.
+- [ ] **Butin au sol** : encadré bordé de la couleur de rareté, bonus comparés à l'arme équipée,
+      touches dessinées en pastilles.
+- [ ] Avis attendu : l'ambiance (panneaux bruns et dorés) te va-t-elle, ou tu préfères autre
+      chose (plus sombre, plus vanilla, textures dessinées) ?
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

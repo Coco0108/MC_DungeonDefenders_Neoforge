@@ -348,6 +348,29 @@ static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
 (voir les constantes de `VanillaGuiLayers`, ex. `HOTBAR`, `PLAYER_HEALTH`) si l'overlay doit
 s'insérer dans l'empilement du HUD plutôt que flotter au-dessus.
 
+## Dessiner un écran ou un encadré dans le style du mod (`client/gui/UiStyle.java`)
+
+Depuis le 2026-11-24, la roue des tours, la fiche de tour, la Forge, les caractéristiques, le
+choix de héros et l'encadré du butin partagent un même style, dessiné en aplats (`fill`), sans
+texture. Pour qu'un nouvel écran s'y accorde, passer par `UiStyle` plutôt que par des couleurs
+locales :
+
+- `titledPanel(g, font, titre, x, y, largeur, hauteur)` : panneau sombre biseauté avec bandeau
+  doré ; le contenu commence à `y + UiStyle.HEADER_HEIGHT + 4`. `panel(...)` sans titre.
+- `inset(...)` : case creusée (encart, fond de jauge) ; `itemSlot(g, stack, x, y, cadre, survol)`
+  : emplacement 18x18 avec icône.
+- `bar(...)` : jauge ; `pips(...)` : rangée de pastilles (niveau, points) ; `divider(...)` :
+  filet ; `keyCap(...)` : touche dessinée en pastille (`[E]`).
+- Couleurs : `TEXT`, `DIM`, `GOLD` (titres), `MANA`, `POSITIVE` / `NEGATIVE`, `healthColor(f)`.
+
+Dans un `Screen`, dessiner le panneau **avant** `super.extractRenderState(...)` (qui ne dessine
+que les widgets ; le fond flou est fait à part) pour que les boutons vanilla passent par-dessus,
+puis le texte et les icônes **après**. Les infobulles passent par
+`setComponentTooltipForNextFrame` (ou `setTooltipForNextFrame` avec des lignes déjà découpées par
+`font.split`, une infobulle de composants ne passant pas à la ligne). Vérifier la mise en page à
+l'échelle d'interface la plus grande : un écran de 427x240 (720p en échelle 3) doit tout
+contenir.
+
 ## Ajouter un GUI de configuration (menu + écran + réseau)
 
 Pour un écran ouvert par clic droit sur un bloc, qui édite l'état d'un `BlockEntity` (pas un

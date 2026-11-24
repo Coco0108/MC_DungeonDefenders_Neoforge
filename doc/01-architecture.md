@@ -130,9 +130,12 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)
     │   │   ├── DiamondGauge.java             # Dessine une jauge en forme de losange (fill() empilés, sans texture)
     │   │   ├── CircleSlot.java               # Dessine un rond (fond + bordure) (fill() empilés, sans texture)
+    │   │   ├── UiStyle.java                  # Style commun des écrans : panneaux, cases creusées, jauges, pastilles, touches (couleurs centralisées)
+    │   │   ├── TowerStatSummary.java         # Chiffres lisibles d'une tour (« Dégâts : 6 ») pour la roue et la fiche de tour
+    │   │   ├── LootComparison.java           # Bonus d'une arme de butin comparés à l'arme déjà portée par son héros (vert/rouge)
     │   │   ├── CombatCountdownOverlay.java   # "Combat dans 3..." pendant le compte à rebours (client uniquement)
     │   │   ├── ProgressionFeedbackOverlay.java # "+X XP" près de la barre d'expérience et bannière "Niveau X !" (client uniquement)
-    │   │   ├── TowerInspectOverlay.java      # Nom + PV de la tour regardée, sous le viseur (client uniquement)
+    │   │   ├── TowerInspectOverlay.java      # Fiche de la tour regardée, à droite du viseur : niveau, PV, chiffres, amélioration
     │   │   ├── ManaOverlay.java              # Losange mana, bas gauche (client uniquement)
     │   │   ├── HealthOverlay.java            # Losange vie, bas gauche (client uniquement)
     │   │   ├── ExperienceOverlay.java        # Barre horizontale expérience custom, bas gauche (client uniquement)
