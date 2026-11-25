@@ -1,5 +1,14 @@
 package com.github.c0c0tier.dungeon_defenders.gametest;
 
+import com.github.c0c0tier.dungeon_defenders.atelier.BlocModele;
+import com.github.c0c0tier.dungeon_defenders.atelier.FicheBloc;
+import com.github.c0c0tier.dungeon_defenders.atelier.FicheObjet;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import com.github.c0c0tier.dungeon_defenders.atelier.Atelier;
 import com.github.c0c0tier.dungeon_defenders.atelier.AtelierEntities;
 import com.github.c0c0tier.dungeon_defenders.atelier.AtelierMonster;
@@ -177,10 +186,16 @@ public final class DungeonDefendersGameTests {
         // Réglages globaux en data-driven (doc/data-driven/equilibrage.md).
         register(event, environment, "balance_shipped_values", DungeonDefendersGameTests::balanceShippedValues);
         register(event, environment, "balance_validation", DungeonDefendersGameTests::balanceValidation);
-        // Monstres de l'Atelier (doc/ATELIER.md) : plus long, pour laisser l'animation d'attaque arriver à son impact.
+        // Monstres, objets et blocs de l'Atelier (doc/ATELIER.md), dans leur PROPRE environnement : un environnement =
+        // un lot, et les lots passent l'un après l'autre. Les tests d'un même lot tournent côte à côte, et ceux qui
+        // visent « le monstre le plus proche » (tours, armes) pourraient sinon viser un monstre d'ici. Le test des
+        // monstres dure plus longtemps, pour laisser l'animation d'attaque arriver à son impact.
+        Holder<TestEnvironmentDefinition<?>> atelier =
+                event.registerEnvironment(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "atelier"));
         Identifier atelierId = Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "atelier_monsters");
         event.registerTest(atelierId, ModGameTestInstance.create(atelierId, DungeonDefendersGameTests::atelierMonsters,
-                new TestData<>(environment, EMPTY_STRUCTURE, ATELIER_MAX_TICKS, 0, true)));
+                new TestData<>(atelier, EMPTY_STRUCTURE, ATELIER_MAX_TICKS, 0, true)));
+        register(event, atelier, "atelier_items_and_blocks", DungeonDefendersGameTests::atelierItemsAndBlocks);
     }
 
     private static final int ATELIER_MAX_TICKS = 200;
@@ -1224,5 +1239,43 @@ public final class DungeonDefendersGameTests {
             }
             helper.succeed();
         });
+    }
+
+    /**
+     * Chaque objet et chaque bloc de l'Atelier chargé (doc/ATELIER.md) est enregistré avec les réglages de sa fiche : pile,
+     * rareté, nourriture ; dureté, lumière, outil requis, et pour un bloc {@code modele}, une forme qui suit ses boîtes.
+     * Sans fiche chargée, rien à vérifier.
+     */
+    static void atelierItemsAndBlocks(GameTestHelper helper) {
+        for (FicheObjet objet : Atelier.objets().values()) {
+            Item item = BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, objet.id()));
+            helper.assertTrue(item != Items.AIR, objet.id() + " : objet enregistré");
+            ItemStack stack = new ItemStack(item);
+            helper.assertValueEqual(stack.getMaxStackSize(), objet.pile(), objet.id() + " : taille de pile");
+            helper.assertValueEqual(stack.getRarity(), objet.rarete().rarity, objet.id() + " : rareté");
+            helper.assertValueEqual(stack.has(DataComponents.FOOD), objet.nourriture().isPresent(), objet.id() + " : nourriture");
+        }
+        BlockPos pos = new BlockPos(1, 1, 1);
+        for (FicheBloc bloc : Atelier.blocs().values()) {
+            Identifier id = Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, bloc.id());
+            Block block = BuiltInRegistries.BLOCK.getValue(id);
+            helper.assertTrue(block != Blocks.AIR, bloc.id() + " : bloc enregistré");
+            helper.assertTrue(BuiltInRegistries.ITEM.getValue(id) != Items.AIR, bloc.id() + " : son objet est enregistré");
+            helper.setBlock(pos, block);
+            BlockState state = helper.getBlockState(pos);
+            helper.assertValueEqual(state.getDestroySpeed(helper.getLevel(), helper.absolutePos(pos)), bloc.durete(), bloc.id() + " : dureté");
+            helper.assertValueEqual(state.getLightEmission(), bloc.lumiere(), bloc.id() + " : lumière");
+            helper.assertValueEqual(state.requiresCorrectToolForDrops(), bloc.niveau() != FicheBloc.Niveau.AUCUN, bloc.id() + " : outil requis");
+            if (bloc.modele()) {
+                helper.assertTrue(block instanceof BlocModele, bloc.id() + " : bloc modèle");
+                AABB bounds = state.getShape(helper.getLevel(), helper.absolutePos(pos)).bounds();
+                double minY = Atelier.forme(bloc.id()).stream().mapToDouble(b -> b[1]).min().orElseThrow() / 16.0D;
+                double maxY = Atelier.forme(bloc.id()).stream().mapToDouble(b -> b[4]).max().orElseThrow() / 16.0D;
+                helper.assertTrue(Math.abs(bounds.minY - minY) < 1.0E-6 && Math.abs(bounds.maxY - maxY) < 1.0E-6,
+                        bloc.id() + " : la forme suit ses boîtes");
+            }
+            helper.setBlock(pos, Blocks.AIR);
+        }
+        helper.succeed();
     }
 }

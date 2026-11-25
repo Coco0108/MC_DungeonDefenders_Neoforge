@@ -37,6 +37,9 @@ import java.util.regex.Pattern;
 public final class AtelierLoader {
     public static final String MONSTRES = "data/" + DungeonDefendersMod.MODID + "/atelier_monstres/";
     /** Tous les sons du mod, enregistrés comme événements au démarrage ({@link AtelierSounds}). */
+    /** Fiches d'objets ({@link FicheObjet}) et de blocs ({@link FicheBloc}), formes des blocs {@code modele}. */
+    public static final String OBJETS = "data/" + DungeonDefendersMod.MODID + "/atelier_objets/";
+    public static final String BLOCS = "data/" + DungeonDefendersMod.MODID + "/atelier_blocs/";
     public static final String SONS = "assets/" + DungeonDefendersMod.MODID + "/sounds.json";
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Pattern ID = Pattern.compile("[a-z0-9_]+");
@@ -47,20 +50,22 @@ public final class AtelierLoader {
 
     private final JarContents jar;
     private final Set<String> idsPris;
+    private final Set<String> objetsPris;
     private Set<String> sons = Set.of();
     private final Set<Identifier> glowmasks = new HashSet<>();
 
-    private AtelierLoader(JarContents jar, Set<String> idsPris) {
+    private AtelierLoader(JarContents jar, Set<String> idsPris, Set<String> objetsPris) {
         this.jar = jar;
         this.idsPris = idsPris;
+        this.objetsPris = objetsPris;
     }
 
     /**
      * Charge toutes les fiches de {@code jar}. {@code idsPris} : les ids d'entité déjà utilisés par Dungeon Defenders
-     * lui-même (un monstre de l'Atelier ne peut pas en prendre un).
+     * lui-même (un monstre de l'Atelier ne peut pas en prendre un) ; {@code objetsPris} : ses ids d'objet et de bloc.
      */
-    public static void load(JarContents jar, Set<String> idsPris) {
-        AtelierLoader loader = new AtelierLoader(jar, idsPris);
+    public static void load(JarContents jar, Set<String> idsPris, Set<String> objetsPris) {
+        AtelierLoader loader = new AtelierLoader(jar, idsPris, objetsPris);
         loader.sons = loader.lireSons();
         Map<String, FicheMonstre> valides = new TreeMap<>();
         Map<String, List<String>> noms = new TreeMap<>();
@@ -82,6 +87,142 @@ public final class AtelierLoader {
         Atelier.initMonstres(valides, noms, impacts, loader.sons, loader.glowmasks, rejetees);
         LOGGER.info("Atelier : {} monstre(s) chargé(s) {}, {} fiche(s) rejetée(s) {}",
                 valides.size(), valides.keySet(), rejetees.size(), rejetees.keySet());
+
+        // Objets et blocs : tous dans le même registre d'objets, avec les œufs des monstres chargés.
+        Set<String> oeufs = new HashSet<>();
+        valides.keySet().forEach(id -> oeufs.add(id + "_spawn_egg"));
+        Map<String, FicheObjet> objets = loader.lireDossier(OBJETS, "Objet", FicheObjet.CODEC, FicheObjet::id,
+                Set.of("id", "nom", "nom_en", "pile", "rarete", "brillant", "nourriture", "destinations", "origine"), Set.of(),
+                (objet, erreurs) -> loader.verifierObjet(objet, oeufs, erreurs));
+        Map<String, List<double[]>> formes = new TreeMap<>();
+        Map<String, FicheBloc> blocs = loader.lireDossier(BLOCS, "Bloc", FicheBloc.CODEC, FicheBloc::id,
+                Set.of("id", "nom", "nom_en", "durete", "resistance", "outil", "niveau", "lumiere", "son", "modele", "transparent",
+                        "destinations", "origine"), Set.of("cache"),
+                (bloc, erreurs) -> loader.verifierBloc(bloc, oeufs, objets, formes, erreurs));
+        formes.keySet().retainAll(blocs.keySet());
+        Atelier.initObjets(objets, blocs, formes);
+        LOGGER.info("Atelier : {} objet(s) {}, {} bloc(s) {}", objets.size(), objets.keySet(), blocs.size(), blocs.keySet());
+    }
+
+    /**
+     * Lit chaque fichier d'un dossier d'objets ou de blocs, avec un message par problème ; les valides sont renvoyés par
+     * id. Mêmes règles que les monstres : le nom du fichier est l'id, un fichier invalide est ignoré sans arrêter le jeu.
+     * {@code ignores} : sections reconnues mais pas lues ici (avertissement) ; tout champ hors de {@code connus} aussi.
+     */
+    private <T> Map<String, T> lireDossier(String dossier, String quoi, com.mojang.serialization.Codec<T> codec,
+            java.util.function.Function<T, String> idDe, Set<String> connus, Set<String> ignores,
+            java.util.function.BiConsumer<T, List<String>> verifier) {
+        Map<String, T> valides = new TreeMap<>();
+        lister(dossier).forEach((fichier, chemin) -> {
+            List<String> erreurs = new ArrayList<>();
+            List<String> avertissements = new ArrayList<>();
+            T valeur = null;
+            if (!ID.matcher(fichier).matches()) {
+                erreurs.add("nom de fichier invalide : minuscules, chiffres et _ uniquement (pas d'accent, d'espace ni de tiret)");
+            } else if (lireJson(chemin, erreurs) instanceof JsonObject json) {
+                valeur = codec.parse(JsonOps.INSTANCE, json)
+                        .ifError(error -> erreurs.addAll(List.of(error.message().split("; "))))
+                        .result().orElse(null);
+                for (String champ : json.keySet()) {
+                    if (ignores.contains(champ)) {
+                        avertissements.add("`" + champ + "` n'est pas lu par Dungeon Defenders (voir doc/ATELIER.md) : ignoré");
+                    } else if (!connus.contains(champ)) {
+                        avertissements.add("champ inconnu `" + champ + "` : ignoré");
+                    }
+                }
+            } else if (erreurs.isEmpty()) {
+                erreurs.add(chemin + " n'est pas un objet JSON");
+            }
+            if (valeur != null) {
+                if (!idDe.apply(valeur).equals(fichier)) {
+                    erreurs.add("`id` vaut « " + idDe.apply(valeur) + " » mais le fichier s'appelle " + fichier
+                            + ".json : ils doivent être identiques");
+                }
+                verifier.accept(valeur, erreurs);
+            }
+            if (valeur != null && erreurs.isEmpty()) {
+                valides.put(fichier, valeur);
+                avertissements.forEach(avertissement -> LOGGER.warn("{} {} : {}", quoi, chemin, avertissement));
+            } else {
+                LOGGER.error("{} {} rejeté ({} problème(s)) :\n  - {}", quoi, chemin, erreurs.size(), String.join("\n  - ", erreurs));
+            }
+        });
+        return valides;
+    }
+
+    /** Sa texture doit exister ; son id ne doit être ni un objet du mod, ni un œuf. */
+    private void verifierObjet(FicheObjet objet, Set<String> oeufs, List<String> erreurs) {
+        verifierIdObjet(objet.id(), oeufs, erreurs);
+        if (!jar.containsFile(objet.texturePath())) {
+            erreurs.add("texture introuvable : " + objet.texturePath() + " (une image 16 × 16)");
+        }
+    }
+
+    /**
+     * Sa texture doit exister, son id être libre (objets et blocs partagent le registre des objets), son niveau aller avec
+     * un outil ; un bloc {@code modele} doit avoir son modèle converti et une forme valide.
+     */
+    private void verifierBloc(FicheBloc bloc, Set<String> oeufs, Map<String, FicheObjet> objets,
+            Map<String, List<double[]>> formes, List<String> erreurs) {
+        verifierIdObjet(bloc.id(), oeufs, erreurs);
+        if (objets.containsKey(bloc.id())) {
+            erreurs.add("`id` : « " + bloc.id() + " » est déjà un objet (" + OBJETS + bloc.id() + ".json) : un bloc est aussi un objet,"
+                    + " ils ne peuvent pas avoir le même id");
+        }
+        if (!jar.containsFile(bloc.texturePath())) {
+            erreurs.add("texture introuvable : " + bloc.texturePath());
+        }
+        if (bloc.niveau() != FicheBloc.Niveau.AUCUN && bloc.outil() == FicheBloc.Outil.AUCUN) {
+            erreurs.add("`niveau` « " + bloc.niveau().getSerializedName() + " » : il faut aussi l'`outil` qui le casse");
+        }
+        if (bloc.modele()) {
+            verifierForme(bloc, formes, erreurs);
+        }
+    }
+
+    private void verifierIdObjet(String id, Set<String> oeufs, List<String> erreurs) {
+        if (id.endsWith("_spawn_egg")) {
+            erreurs.add("`id` : « _spawn_egg » est réservé aux œufs d'apparition des monstres");
+        } else if (objetsPris.contains(id) || oeufs.contains(id)) {
+            erreurs.add("`id` : « " + id + " » est déjà un objet ou un bloc de Dungeon Defenders (" + DungeonDefendersMod.MODID + ":" + id + ")");
+        }
+    }
+
+    /**
+     * Un bloc {@code modele} : son modèle converti, et sa forme, des boîtes de 6 nombres chacune, dans les limites d'un
+     * modèle de bloc (-16 à 32 pixels). Sans boîte, il ne pourrait même pas être sélectionné.
+     */
+    private void verifierForme(FicheBloc bloc, Map<String, List<double[]>> formes, List<String> erreurs) {
+        if (!jar.containsFile(bloc.modelPath())) {
+            erreurs.add("modèle introuvable : " + bloc.modelPath() + " (le modèle converti, déployé par l'Atelier)");
+        }
+        if (!jar.containsFile(bloc.formePath())) {
+            erreurs.add("forme introuvable : " + bloc.formePath() + " (déployée par l'Atelier)");
+            return;
+        }
+        JsonElement json = lireJson(bloc.formePath(), erreurs);
+        JsonElement boites = json != null && json.isJsonObject() ? json.getAsJsonObject().get("boites_px") : null;
+        if (boites == null || !boites.isJsonArray() || boites.getAsJsonArray().isEmpty()) {
+            erreurs.add(bloc.formePath() + " : il faut une liste « boites_px » non vide");
+            return;
+        }
+        List<double[]> forme = new ArrayList<>();
+        int index = 0;
+        for (JsonElement boite : boites.getAsJsonArray()) {
+            index++;
+            double[] valeurs = boite.isJsonArray() && boite.getAsJsonArray().size() == 6
+                    ? boite.getAsJsonArray().asList().stream().mapToDouble(v -> v.isJsonPrimitive() && v.getAsJsonPrimitive().isNumber()
+                            ? v.getAsDouble() : Double.NaN).toArray()
+                    : null;
+            if (valeurs == null || java.util.Arrays.stream(valeurs).anyMatch(v -> Double.isNaN(v) || v < -16 || v > 32)
+                    || valeurs[0] >= valeurs[3] || valeurs[1] >= valeurs[4] || valeurs[2] >= valeurs[5]) {
+                erreurs.add(bloc.formePath() + " : boîte " + index + " invalide (6 nombres x0, y0, z0, x1, y1, z1 en pixels, de -16 à 32,"
+                        + " chaque début avant sa fin)");
+                return;
+            }
+            forme.add(valeurs);
+        }
+        formes.put(bloc.id(), List.copyOf(forme));
     }
 
     /** Les fichiers JSON directement dans {@code dossier}, par nom sans extension, triés. */

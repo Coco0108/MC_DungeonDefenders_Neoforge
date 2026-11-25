@@ -41,6 +41,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import com.github.c0c0tier.dungeon_defenders.atelier.AtelierEntities;
 import com.github.c0c0tier.dungeon_defenders.atelier.AtelierLoader;
+import com.github.c0c0tier.dungeon_defenders.atelier.AtelierObjets;
 import com.github.c0c0tier.dungeon_defenders.atelier.AtelierSounds;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -279,8 +280,12 @@ public class DungeonDefendersMod {
         AtelierLoader.load(container.getModInfo().getOwningFile().getFile().getContents(),
                 ModEntities.ENTITY_TYPES.getEntries().stream()
                         .map(entry -> entry.getId().getPath())
+                        .collect(java.util.stream.Collectors.toSet()),
+                java.util.stream.Stream.concat(ModBlocks.ITEMS.getEntries().stream(), ModBlocks.BLOCKS.getEntries().stream())
+                        .map(entry -> entry.getId().getPath())
                         .collect(java.util.stream.Collectors.toSet()));
         AtelierEntities.register(modEventBus);
+        AtelierObjets.register(modEventBus);
         AtelierSounds.register(modEventBus);
         ModChunkTickets.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);

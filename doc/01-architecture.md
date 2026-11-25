@@ -166,7 +166,10 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── AtelierMonster.java            # extends Monster + GeoEntity : l'unique entité de tous les monstres de l'Atelier
     │   │   ├── ReturningAnimationController.java # Repris de l'Atelier : revient à idle/walk après une animation déclenchée
     │   │   ├── AtelierEntities.java           # Un EntityType + un œuf par fiche ; attributs ; onglets créatifs
-    │   │   └── AtelierSounds.java             # Un SoundEvent par entrée de sounds.json
+    │   │   ├── AtelierSounds.java             # Un SoundEvent par entrée de sounds.json
+    │   │   ├── FicheObjet.java / FicheBloc.java # Formats des fiches d'objet et de bloc (repris de l'Atelier, sans cache)
+    │   │   ├── AtelierObjets.java             # Un objet par fiche d'objet, un bloc + son objet par fiche de bloc
+    │   │   └── BlocModele.java                # Bloc modèle converti : forme = union de ses boîtes (repris de l'Atelier)
     │   ├── entity/
     │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
     │   │   ├── Corrosion.java                 # Marque en mémoire : un monstre corrodé subit plus de dégâts (Projecteur d'acide)

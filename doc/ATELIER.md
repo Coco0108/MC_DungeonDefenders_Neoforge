@@ -29,6 +29,10 @@ Le namespace `atelier:` devient `dungeon_defenders:` dans tout ce qui est copié
 | Textures, variantes, glowmask | `assets/dungeon_defenders/textures/entity/<id>/…` (`<texture>_glowmask.png` à côté si elle existe) | `AtelierMonsterRenderer` |
 | Sons | `assets/dungeon_defenders/sounds/entity/<id>/<nom>.ogg` + entrées `entity.<id>.<nom>` de `assets/dungeon_defenders/sounds.json` | `AtelierSounds` |
 | Ennemi de vague | `data/dungeon_defenders/dungeon_defenders/enemy/<id>.json` | `EnemyRegistry` (le système d'ennemis du mod, voir [data-driven/ennemis.md](data-driven/ennemis.md)) |
+| Fiche d'un objet, sa texture | `data/dungeon_defenders/atelier_objets/<id>.json`, `assets/dungeon_defenders/textures/item/<id>.png` | `AtelierLoader`, `AtelierObjets` |
+| Fiche d'un bloc, sa texture | `data/dungeon_defenders/atelier_blocs/<id>.json`, `assets/dungeon_defenders/textures/block/<id>.png` (et `_top`, `_bottom`, `_side`) | `AtelierLoader`, `AtelierObjets` |
+| Bloc `modele` : modèle converti, forme | `assets/dungeon_defenders/models/block/<id>.json`, `data/dungeon_defenders/atelier_formes_bloc/<id>.json` | Minecraft (modèle), `BlocModele` (forme) |
+| Fichiers natifs des objets et blocs | états de bloc, modèles et définitions d'objet (`items/<id>.json`), butin du bloc, tags d'outil, noms | Minecraft : **écrits par le déploiement**, pas par ce code |
 | Effets, projectiles | `data/dungeon_defenders/atelier_effets/<id>.json`, `atelier_projectiles/<id>.json` | **rien** (références inertes, voir plus bas) |
 
 ## Au démarrage
@@ -104,6 +108,32 @@ L'entité générique étend `Monster`, pas seulement `PathfinderMob` : dans Dun
 héros, l'IA des vagues (`ModEvents.onMonsterSpawn`), l'XP, le score et le butin ne visent que des `Monster`.
 Catégorie `MONSTER`, sans aucune apparition naturelle : il n'apparaît que par un spawner de map, un œuf ou `/summon`.
 
+## Les objets et les blocs
+
+Même principe : un objet par fiche d'objet, un bloc et son objet par fiche de bloc, enregistrés au démarrage
+(`atelier/AtelierObjets`, repris d'`objet/AtelierObjets.java` de l'Atelier), tous dans l'onglet « Dungeon Defenders ».
+Ce code ne fait qu'**enregistrer** : les fichiers natifs (états de bloc, modèles, définitions d'objet, butin du bloc,
+tags d'outil, noms) arrivent avec le déploiement, comme l'Atelier les génère pour lui-même.
+
+**Objet** `dungeon_defenders:<id>` : `pile` (1 à 99, défaut 64), `rarete` (`commun`, `peu_commun`, `rare`, `epique` :
+couleur du nom), `brillant` (reflet d'enchantement), `nourriture` (`faim`, `saturation`, `toujours`).
+
+**Bloc** `dungeon_defenders:<id>` et son objet :
+
+| Champ | Effet |
+|---|---|
+| `durete`, `resistance` | Temps pour le casser ; résistance aux explosions (défaut : `durete`) |
+| `outil`, `niveau` | `niveau` autre que `aucun` : ne tombe qu'avec le bon outil (le tag d'outil arrive avec le déploiement) ; un `niveau` sans `outil` est refusé |
+| `lumiere` | 0 à 15 |
+| `son` | `pierre`, `bois`, `terre`, `herbe`, `sable`, `metal`, `verre`, `laine`, `amethyste` |
+| `transparent` | Comme le verre : ne cache rien derrière lui, rien n'y apparaît, on n'y étouffe pas |
+| `modele: true` | Modèle Blockbench converti en modèle de bloc : sélection et collision suivent les boîtes de sa forme (`BlocModele`, repris de l'Atelier), il ne cache jamais les faces voisines et laisse passer la lumière du ciel |
+
+Vérifications (fichier ignoré, un message par problème) : texture absente, `id` différent du nom du fichier, `id` déjà
+pris (par un objet ou un bloc du mod, un œuf de monstre, ou entre un objet et un bloc de l'Atelier), `_spawn_egg`
+réservé, `niveau` sans `outil`, bloc `modele` sans son modèle ou avec une forme invalide (boîtes de 6 nombres, de -16 à
+32 pixels). `cache` (bloc-cachette) : ignoré, avec un avertissement.
+
 ## Le lien avec les vagues
 
 Un monstre de l'Atelier devient un ennemi de vague par un fichier `enemy/<id>.json` du système d'ennemis du mod
@@ -144,7 +174,10 @@ il faudra un `GeoBlockEntity` générique, une fois le format défini dans l'Ate
 ## Tester
 
 - `./gradlew runGameTestServer` : le test `atelier_monsters` fait apparaître **chaque** monstre chargé et vérifie sa
-  fiche (PV, dégâts), l'IA de vague, l'apparition par son `enemy/<id>.json`, et que son coup ne tombe qu'à l'impact.
-  Sans monstre déployé, il n'a rien à vérifier.
-- En jeu : l'œuf dans l'onglet « Dungeon Defenders », ou `/summon dungeon_defenders:<id>` ; voir
+  fiche (PV, dégâts), l'IA de vague, l'apparition par son `enemy/<id>.json`, et que son coup ne tombe qu'à l'impact ;
+  `atelier_items_and_blocks` vérifie chaque objet (pile, rareté, nourriture) et chaque bloc (dureté, lumière, outil,
+  forme d'un bloc `modele`). Sans rien de déployé, ils n'ont rien à vérifier. Ils tournent dans leur propre
+  environnement (`dungeon_defenders:atelier`), donc dans un lot à part : les tests des tours et des armes visent le
+  monstre le plus proche, et un monstre d'un test voisin du même lot pourrait les fausser.
+- En jeu : l'œuf, les objets et les blocs dans l'onglet « Dungeon Defenders », ou `/summon dungeon_defenders:<id>` ; voir
   [06-a-tester.md](06-a-tester.md#monstres-de-latelier).

@@ -1764,6 +1764,10 @@ essayé en local avec une copie du « gluant » (chargement, IA de vague, impact
 - [ ] Blessé, il joue `hurt` (s'il l'a) ; mort, il joue `death` sans basculer sur le côté puis disparaît.
 - [ ] Sons `ambient`, `hurt`, `death` de sa fiche, et sons des keyframes de ses animations.
 - [ ] Un monstre volant (`"deplacement": "vol"`) vole, reste suspendu à l'arrêt, ne prend pas de dégâts de chute.
+- [ ] **Objets** de l'Atelier : dans l'onglet « Dungeon Defenders », avec leur texture, leur nom, la couleur de leur
+      rareté ; la nourriture se mange.
+- [ ] **Blocs** : texture (ou modèle converti), son, lumière ; un bloc `modele` se sélectionne et se heurte selon sa
+      forme ; il tombe une fois cassé (avec le bon outil s'il a un `niveau`).
 
 ## Général
 

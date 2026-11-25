@@ -20,6 +20,9 @@ public final class Atelier {
     private static Set<String> sons = Set.of();
     private static Set<Identifier> glowmasks = Set.of();
     private static Map<String, List<String>> rejetees = Map.of();
+    private static Map<String, FicheObjet> objets = Map.of();
+    private static Map<String, FicheBloc> blocs = Map.of();
+    private static Map<String, List<double[]>> formes = Map.of();
 
     private Atelier() {
     }
@@ -33,6 +36,13 @@ public final class Atelier {
         sons = Collections.unmodifiableSet(evenements);
         glowmasks = Collections.unmodifiableSet(lumineuses);
         rejetees = Collections.unmodifiableMap(invalides);
+    }
+
+    static void initObjets(Map<String, FicheObjet> validesObjets, Map<String, FicheBloc> validesBlocs,
+            Map<String, List<double[]>> boites) {
+        objets = Collections.unmodifiableMap(validesObjets);
+        blocs = Collections.unmodifiableMap(validesBlocs);
+        formes = Collections.unmodifiableMap(boites);
     }
 
     /** Les monstres chargés, par id. */
@@ -72,5 +82,20 @@ public final class Atelier {
     /** Les fiches ignorées au démarrage, par nom de fichier, avec chaque problème. */
     public static Map<String, List<String>> rejetees() {
         return rejetees;
+    }
+
+    /** Les objets de atelier_objets/, par id. */
+    public static Map<String, FicheObjet> objets() {
+        return objets;
+    }
+
+    /** Les blocs de atelier_blocs/, par id. */
+    public static Map<String, FicheBloc> blocs() {
+        return blocs;
+    }
+
+    /** Les boîtes d'un bloc {@code modele}, en pixels ({@code [x0, y0, z0, x1, y1, z1]}) ; vide pour un cube. */
+    public static List<double[]> forme(String blocId) {
+        return formes.getOrDefault(blocId, List.of());
     }
 }
