@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.client.gui;
 
+import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -27,8 +28,13 @@ public class WaveOverlay implements GuiLayer {
             return;
         }
 
+        // Rien à afficher à la Taverne : il n'y a pas de partie en cours, donc pas de vague.
+        if (!GamePhase.of(level).isInGame()) {
+            return;
+        }
+
         int currentWave = level.getData(ModAttachments.CURRENT_WAVE);
-        int maxWave = ModAttachments.MAX_WAVE;
+        int maxWave = ModAttachments.waveCount(level);
 
         Component text = Component.translatable("dungeon_defenders.hud.wave", currentWave, maxWave);
         int x = guiGraphics.guiWidth() - MARGIN - minecraft.font.width(text);

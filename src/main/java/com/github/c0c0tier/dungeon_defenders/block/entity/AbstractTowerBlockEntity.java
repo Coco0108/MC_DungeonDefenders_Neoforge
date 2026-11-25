@@ -1,11 +1,18 @@
 package com.github.c0c0tier.dungeon_defenders.block.entity;
 
+import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
+import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
+import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStats;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -25,19 +32,35 @@ import net.minecraft.world.level.storage.ValueOutput;
 // détail des paliers).
 public abstract class AbstractTowerBlockEntity extends BlockEntity implements AiAttackTarget {
 
-    private final int maxHealth;
-    // Coût en mana à la pose, consommé par ModEvents.onTowerPlace (générique à toute la
-    // catégorie, pas seulement Blockade).
-    private final int manaCost;
+    // Quelle tour du catalogue est ce block entity : c'est par elle qu'il lit ses chiffres
+    // (PV max, coût, dégâts, portée...), data-driven depuis le 2026-11-10 — voir
+    // init/TowerStatsRegistry. Jamais recopiés dans des champs : un /reload s'applique ainsi aux
+    // tours déjà posées, sans les reposer.
+    private final TowerDefinition definition;
 
     private int health;
+    // Niveau d'amélioration, 1 à la pose (voir upgrade()). Persistant et synchronisé : le client
+    // en a besoin pour les PV max de la barre de vie et pour l'affichage de l'inspection.
+    private int towerLevel = 1;
 
     protected AbstractTowerBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state,
-            int maxHealth, int manaCost) {
+            TowerDefinition definition) {
         super(type, pos, state);
-        this.maxHealth = maxHealth;
-        this.manaCost = manaCost;
-        this.health = maxHealth;
+        this.definition = definition;
+        this.health = getMaxHealth();
+    }
+
+    public TowerDefinition definition() {
+        return this.definition;
+    }
+
+    /**
+     * Les chiffres en vigueur pour cette tour, du bon côté : la copie client si ce block entity
+     * vit dans un monde client, celle du serveur sinon (y compris avant d'avoir une Level, le
+     * temps de sa construction).
+     */
+    protected TowerStats stats() {
+        return this.definition.stats(this.level != null && this.level.isClientSide());
     }
 
     public int getHealth() {
@@ -45,20 +68,160 @@ public abstract class AbstractTowerBlockEntity extends BlockEntity implements Ai
     }
 
     public int getMaxHealth() {
-        return this.maxHealth;
+        return (int) Math.round(stats().intValue(TowerStat.MAX_HEALTH) * levelMultiplier());
     }
 
+    /** Coût en mana à la pose, consommé par ModEvents.onTowerPlace (générique à toute catégorie). */
     public int getManaCost() {
-        return this.manaCost;
+        return stats().intValue(TowerStat.MANA_COST);
+    }
+
+    // --- AMÉLIORATION ---
+    // Idée du backlog ("4 niveaux par tour, comme le jeu de référence"), faite le 2026-11-10.
+    // Une tour posée est niveau 1 ; chaque niveau coûte une part de son coût de pose et ajoute
+    // un bonus à ses PV max et à ses dégâts. Les trois réglages sont data-driven
+    // (balance/towers.json : max_level, upgrade_cost_ratio, upgrade_stat_bonus). Portée et
+    // cadence ne changent pas avec le niveau.
+
+    public int getTowerLevel() {
+        return this.towerLevel;
+    }
+
+    private boolean isClientSide() {
+        return this.level != null && this.level.isClientSide();
+    }
+
+    public int getMaxTowerLevel() {
+        return Math.max(1, GameBalance.getInt(BalanceValue.TOWER_MAX_LEVEL, isClientSide()));
+    }
+
+    public boolean canUpgrade() {
+        return this.towerLevel < getMaxTowerLevel();
+    }
+
+    /** Multiplicateur de PV max et de dégâts au niveau actuel : x1 au niveau 1. */
+    public double levelMultiplier() {
+        return 1.0D + (this.towerLevel - 1) * GameBalance.get(BalanceValue.TOWER_UPGRADE_STAT_BONUS, isClientSide());
+    }
+
+    // --- BONUS DE DÉGÂTS TEMPORAIRE ---
+    // Posé par le Pylône catalyseur et par le sort Catalyse de l'Alchimiste, qui le renouvellent
+    // tant qu'ils agissent : il expire seul. Jamais persisté ni synchronisé (purement serveur),
+    // et les bonus ne se cumulent pas : seul le plus fort compte.
+    private double boostFactor = 1.0D;
+    private long boostUntil = Long.MIN_VALUE / 2;
+
+    /** Multiplie les dégâts de cette tour par {@code factor} jusqu'au tick {@code untilGameTime}. */
+    public void applyDamageBoost(double factor, long untilGameTime) {
+        long now = this.level == null ? 0L : this.level.getGameTime();
+        if (now < this.boostUntil && factor < this.boostFactor) {
+            return;
+        }
+        this.boostFactor = factor;
+        this.boostUntil = untilGameTime;
+    }
+
+    /** Bonus de dégâts temporaire en vigueur : 1 s'il n'y en a pas ou s'il a expiré. */
+    public double damageBoost() {
+        return this.level != null && this.level.getGameTime() < this.boostUntil ? this.boostFactor : 1.0D;
+    }
+
+    // --- MAÎTRISE DES TOURS DU POSEUR ---
+    // Caractéristique "Maîtrise des tours" (init/HeroStat) du joueur qui a posé la tour, relevée
+    // à la pose puis à chaque amélioration (ModNetworking). C'est un instantané : des points
+    // dépensés plus tard ne profitent aux tours déjà posées qu'à leur prochaine amélioration.
+    // Persisté (la tour doit le garder après un redémarrage), jamais synchronisé.
+    private double ownerBonus = 1.0D;
+
+    public void setOwnerBonus(double ownerBonus) {
+        this.ownerBonus = Math.max(1.0D, ownerBonus);
+        setChanged();
+    }
+
+    public double ownerBonus() {
+        return this.ownerBonus;
+    }
+
+    /** Multiplicateur à appliquer aux DÉGÂTS : niveau, maîtrise du poseur et bonus temporaire. */
+    public double damageMultiplier() {
+        return levelMultiplier() * this.ownerBonus * damageBoost();
+    }
+
+    /**
+     * Appelé côté serveur quand les monstres viennent de réduire la tour à 0 PV, juste avant que
+     * le bloc ne disparaisse. Rien par défaut ; la Cuve instable y explose.
+     */
+    protected void onDestroyedByMonsters(ServerLevel level) {
+    }
+
+    /** Prix en mana du prochain niveau : une part fixe du coût de pose, quel que soit le niveau. */
+    public int getUpgradeCost() {
+        return (int) Math.round(getManaCost() * GameBalance.get(BalanceValue.TOWER_UPGRADE_COST_RATIO, isClientSide()));
+    }
+
+    /** Tout le mana investi dans cette tour (pose + améliorations) : la base du remboursement. */
+    public int getInvestedMana() {
+        return getManaCost() + (this.towerLevel - 1) * getUpgradeCost();
+    }
+
+    /**
+     * Passe au niveau suivant (serveur). Les PV gagnés en PV max sont aussi ajoutés aux PV
+     * actuels : améliorer une tour entamée ne la soigne pas entièrement, mais ne la laisse pas
+     * non plus plus abîmée qu'avant en proportion.
+     *
+     * @return faux si la tour est déjà au niveau maximum.
+     */
+    public boolean upgrade() {
+        if (!canUpgrade()) {
+            return false;
+        }
+        int previousMaxHealth = getMaxHealth();
+        this.towerLevel++;
+        this.health = Math.min(getMaxHealth(), this.health + (getMaxHealth() - previousMaxHealth));
+        setChanged();
+        if (this.level != null && !this.level.isClientSide()) {
+            this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), Block.UPDATE_ALL);
+        }
+        return true;
     }
 
     @Override
     public abstract int getAiPriority();
 
-    /** Retire {@code amount} PV à la tour. */
+    // --- BOUCLIER TEMPORAIRE ---
+    // Posé par le sort Champ de force de l'Ingénieur, même principe que le bonus de dégâts : il
+    // est renouvelé tant que le sort agit et expire seul. Tant qu'il tient, les coups des
+    // monstres ne retirent aucun PV. Purement serveur.
+    private long shieldUntil = Long.MIN_VALUE / 2;
+
+    /** Rend la tour insensible aux dégâts jusqu'au tick {@code untilGameTime}. */
+    public void applyShield(long untilGameTime) {
+        this.shieldUntil = Math.max(this.shieldUntil, untilGameTime);
+    }
+
+    public boolean isShielded() {
+        return this.level != null && this.level.getGameTime() < this.shieldUntil;
+    }
+
+    /** Rend {@code amount} PV à la tour, sans dépasser ses PV max. */
+    public void repair(int amount) {
+        setHealth(Math.min(getMaxHealth(), this.health + amount));
+    }
+
+    /** Retire {@code amount} PV à la tour (rien si un bouclier la protège). */
     @Override
     public void damage(int amount) {
+        if (isShielded()) {
+            return;
+        }
         setHealth(this.health - amount);
+        if (this.level instanceof ServerLevel serverLevel && !isRemoved()) {
+            onDamaged(serverLevel);
+        }
+    }
+
+    /** Appelé côté serveur après un coup encaissé, si la tour tient encore. Rien par défaut. */
+    protected void onDamaged(ServerLevel level) {
     }
 
     public void setHealth(int health) {
@@ -77,6 +240,13 @@ public abstract class AbstractTowerBlockEntity extends BlockEntity implements Ai
         this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), Block.UPDATE_ALL);
 
         if (this.health <= 0) {
+            // Une tour détruite par les monstres pendant la vague : plus de multiplicateur
+            // "aucune tour perdue" sur le bonus de fin de vague (voir ScoreKeeper). Un retrait
+            // volontaire par le joueur ne passe jamais par ici.
+            this.level.setData(ModAttachments.WAVE_TOWER_LOST, true);
+            if (this.level instanceof ServerLevel serverLevel) {
+                onDestroyedByMonsters(serverLevel);
+            }
             // Le false empêche le drop de l'item : une tour détruite au combat ne se
             // récupère pas, comme le Cristal d'Eternia.
             this.level.destroyBlock(this.worldPosition, false);
@@ -101,11 +271,16 @@ public abstract class AbstractTowerBlockEntity extends BlockEntity implements Ai
     protected void saveAdditional(ValueOutput output) {
         super.saveAdditional(output);
         output.putInt("Health", this.health);
+        output.putInt("TowerLevel", this.towerLevel);
+        output.putDouble("OwnerBonus", this.ownerBonus);
     }
 
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
-        this.health = input.getIntOr("Health", this.maxHealth);
+        // Le niveau d'abord : il entre dans le calcul des PV max, donc du repli des PV.
+        this.towerLevel = Math.max(1, input.getIntOr("TowerLevel", 1));
+        this.health = input.getIntOr("Health", getMaxHealth());
+        this.ownerBonus = Math.max(1.0D, input.getDoubleOr("OwnerBonus", 1.0D));
     }
 }

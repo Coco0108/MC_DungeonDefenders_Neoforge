@@ -1,0 +1,14 @@
+{
+  "flask_damage": 3.0,
+  "flask_range": 16.0,
+  "flask_radius": 2.5,
+  "flask_cooldown_ticks": 14,
+  "rivet_damage": 4.0,
+  "rivet_range": 24.0,
+  "rivet_cooldown_ticks": 8,
+  "staff_damage": 3.0,
+  "staff_range": 10.0,
+  "staff_radius": 1.5,
+  "staff_cooldown_ticks": 16,
+  "player_damage_per_level": 0.05
+}

@@ -10,27 +10,49 @@ import com.github.c0c0tier.dungeon_defenders.client.gui.CharacterOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ExperienceOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.HealthOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ManaOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.MapOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.PhaseOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreGainOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.CombatCountdownOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.ProgressionFeedbackOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.ScoreOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.TowerInspectOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveEnemiesOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.WaveOverlay;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.GameOverScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.ManaChestConfigScreen;
+import com.github.c0c0tier.dungeon_defenders.client.gui.screen.MapConfigScreen;
+import com.github.c0c0tier.dungeon_defenders.client.gui.screen.MapSelectionScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.SpawnerConfigScreen;
 import com.github.c0c0tier.dungeon_defenders.entity.MobHealthBarRenderer;
+import com.github.c0c0tier.dungeon_defenders.client.ClientEnemyDefinitions;
+import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStatsRegistry;
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
-import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
+import com.github.c0c0tier.dungeon_defenders.client.ClientAbilityState;
+import com.github.c0c0tier.dungeon_defenders.network.AbilityCooldownPayload;
+import com.github.c0c0tier.dungeon_defenders.client.ClientMapPreviews;
 import com.github.c0c0tier.dungeon_defenders.network.GameOverPayload;
+import com.github.c0c0tier.dungeon_defenders.network.MapPreviewPayload;
+import com.github.c0c0tier.dungeon_defenders.network.OpenForgePayload;
+import com.github.c0c0tier.dungeon_defenders.network.OpenMapSelectionPayload;
+import com.github.c0c0tier.dungeon_defenders.client.gui.LootPromptOverlay;
+import com.github.c0c0tier.dungeon_defenders.client.gui.screen.ForgeScreen;
+import com.github.c0c0tier.dungeon_defenders.network.EnemyDefinitionsPayload;
+import com.github.c0c0tier.dungeon_defenders.network.GameBalancePayload;
 import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
+import com.github.c0c0tier.dungeon_defenders.network.TowerStatsPayload;
 import com.google.common.reflect.TypeToken;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.entity.ExperienceOrbRenderer;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
+import net.minecraft.client.renderer.entity.ZombieRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.resources.Identifier;
@@ -41,6 +63,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
@@ -99,12 +122,118 @@ public class DungeonDefendersModClient {
                 DungeonDefendersMod.HARPOON_TURRET_BE.get(),
                 TowerHealthBarRenderer::new
         );
+        // Le reste du roster de l'Écuyer n'avait jamais été enregistré ici (aucune barre de vie
+        // pour ces quatre tours) : corrigé le 2026-11-16 en ajoutant celles de l'Alchimiste.
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.BOUNCER_BLOCKADE_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.SLICE_N_DICE_BLOCKADE_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.BOWLING_BALL_TURRET_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.MORTAR_TURRET_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.FROST_STILL_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.ACID_SPRAYER_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.VOLATILE_VAT_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.CATALYST_PYLON_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.MANA_CONDENSER_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.FLASK_LAUNCHER_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        // Roster de l'Ingénieur.
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.IRON_BARRICADE_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.REPEATER_TURRET_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.LONGSHOT_TURRET_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.MAGNET_COIL_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.REPAIR_STATION_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.PISTON_SLAMMER_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        // Roster de du Géomancien.
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.THORN_HEDGE_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.MUD_TOTEM_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.GEYSER_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.BOULDER_THROWER_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.CRYSTAL_SPIRE_BE.get(),
+                TowerHealthBarRenderer::new
+        );
+        event.registerBlockEntityRenderer(
+                DungeonDefendersMod.LIFESTONE_BE.get(),
+                TowerHealthBarRenderer::new
+        );
         // Réutilise tel quel le renderer vanilla de l'orbe d'XP (pas final, paramétré sur
         // ExperienceOrb) : le cristal de mana aura donc l'air d'une orbe d'XP verte/jaune, pas
         // encore de couleur "mana" dédiée — voir doc/05-etat-et-problemes-connus.md.
         event.registerEntityRenderer(
                 ModEntities.MANA_CRYSTAL.get(),
                 ExperienceOrbRenderer::new
+        );
+        // Même principe pour le mannequin d'entraînement : ZombieRenderer est paramétré sur
+        // Zombie, donc valide pour TrainingDummyEntity qui en hérite. Il ressemble donc à un
+        // zombie planté là, pas à un mannequin de paille — placeholder assumé en attendant un
+        // vrai modèle, voir doc/05-etat-et-problemes-connus.md.
+        event.registerEntityRenderer(
+                ModEntities.TRAINING_DUMMY.get(),
+                ZombieRenderer::new
+        );
+        // Projectile des armes de héros : l'item porté dessiné à plat face à la caméra, comme une
+        // boule de neige vanilla — aucun modèle à faire (voir WeaponProjectileEntity).
+        event.registerEntityRenderer(
+                ModEntities.WEAPON_PROJECTILE.get(),
+                ThrownItemRenderer::new
         );
     }
 
@@ -156,6 +285,24 @@ public class DungeonDefendersModClient {
         event.registerAboveAll(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "ability_slots_overlay"),
                 new AbilitySlotsOverlay());
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "tower_inspect_overlay"),
+                new TowerInspectOverlay());
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "combat_countdown_overlay"),
+                new CombatCountdownOverlay());
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "progression_feedback_overlay"),
+                new ProgressionFeedbackOverlay());
+        // Plein écran ; comme le fond couvre tout l'écran, l'ordre exact d'empilement avec les
+        // autres registerAboveAll n'a pas d'impact visible même si un autre layer passait
+        // dessus par endroits.
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "loot_prompt_overlay"),
+                new LootPromptOverlay());
+        event.registerAboveAll(
+                Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "map_overlay"),
+                new MapOverlay());
 
         // Les cœurs vanilla ne sont pas prévus pour 100 PV (ils s'étalent sur plusieurs
         // rangées) et feraient doublon avec HealthOverlay : on les masque plutôt que de
@@ -185,6 +332,7 @@ public class DungeonDefendersModClient {
     static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.SPAWNER_CONFIG.get(), SpawnerConfigScreen::new);
         event.register(ModMenus.MANA_CHEST_CONFIG.get(), ManaChestConfigScreen::new);
+        event.register(ModMenus.MAP_CONFIG.get(), MapConfigScreen::new);
     }
 
     // Handlers des paquets clientbound du mod (voir ModNetworking, qui n'enregistre que les
@@ -194,27 +342,61 @@ public class DungeonDefendersModClient {
     @SubscribeEvent
     static void onRegisterClientPayloadHandlers(RegisterClientPayloadHandlersEvent event) {
         event.register(ScoreGainPayload.TYPE, DungeonDefendersModClient::handleScoreGain);
+        event.register(MapPreviewPayload.TYPE, DungeonDefendersModClient::handleMapPreview);
+        // Les ennemis data-driven (icônes, noms, ordre, types de mob) : reçus à la connexion et
+        // après chaque /reload, voir init/EnemyRegistry#onDatapackSync.
+        event.register(EnemyDefinitionsPayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> ClientEnemyDefinitions.replace(payload.enemies())));
+        // Les chiffres data-driven des tours (coût, portée, PV max) : même calendrier.
+        event.register(TowerStatsPayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> TowerStatsRegistry.replaceClient(payload)));
+        event.register(GameBalancePayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> GameBalance.replaceClient(payload)));
         event.register(GameOverPayload.TYPE, (payload, context) ->
-                context.enqueueWork(() -> Minecraft.getInstance().setScreen(new GameOverScreen(payload.victory()))));
+                context.enqueueWork(() -> Minecraft.getInstance().setScreen(new GameOverScreen(payload.victory(), payload.finalScore()))));
+        // L'écran de choix de map ne s'ouvre plus directement depuis TavernCrystalBlock : ce
+        // bloc est chargé aussi sur un serveur dédié, où nommer une classe cliente fait
+        // planter le chargement du mod — voir OpenMapSelectionPayload.
+        event.register(OpenMapSelectionPayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> Minecraft.getInstance().setScreen(new MapSelectionScreen(payload.maps()))));
+        event.register(OpenForgePayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> Minecraft.getInstance().setScreen(new ForgeScreen())));
+        event.register(AbilityCooldownPayload.TYPE, (payload, context) ->
+                context.enqueueWork(() -> ClientAbilityState.startCooldown(payload.slotOrdinal(), payload.cooldownTicks())));
+    }
+
+    // Aperçu d'une map créée en jeu : chargé comme texture dynamique (voir ClientMapPreviews).
+    private static void handleMapPreview(MapPreviewPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> ClientMapPreviews.put(payload.structureId(), payload.png()));
     }
 
     private static void handleScoreGain(ScoreGainPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            // Pas de borne-check sur les ordinaux ici, contrairement à ModNetworking : ce
+            // Pas de borne-check sur l'ordinal de source ici, contrairement à ModNetworking : ce
             // paquet vient du serveur (autoritaire dans ce mod co-op), pas d'un client — même
             // confiance que les autres ordinaux d'enum synchronisés par attachment (GamePhase,
-            // GameDifficulty...), jamais revérifiés côté client non plus. NO_ENEMY (-1) reste un
-            // cas à part : ce n'est pas un ordinal invalide, juste "aucun ennemi associé".
-            SpawnableEnemy enemy = payload.enemyOrdinal() == ScoreGainPayload.NO_ENEMY
-                    ? null
-                    : SpawnableEnemy.values()[payload.enemyOrdinal()];
-            ScoreGainOverlay.INSTANCE.addPopup(payload.amount(), ScoreSource.values()[payload.sourceOrdinal()], enemy);
+            // GameDifficulty...). L'ennemi, lui, est un identifiant : s'il est inconnu de la
+            // copie client (ClientEnemyDefinitions), le popup s'affiche simplement sans icône.
+            ScoreGainOverlay.INSTANCE.addPopup(payload.amount(), ScoreSource.values()[payload.sourceOrdinal()],
+                    payload.enemy().orElse(null));
         });
     }
 
     @SubscribeEvent
     static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         ModKeyMappings.register(event);
+    }
+
+    // Libère Tab de la liste des joueurs vanilla : demandé en jeu (2026-09-07), maintenant que
+    // ModKeyMappings.MAP_OVERLAY partage ce code physique et que la liste vanilla n'a plus
+    // d'usage dans ce mod. Simple changement de la touche VIVE (KeyMapping#setKey), pas de la
+    // touche par défaut (non mutable après construction) : refait à chaque lancement du jeu —
+    // un rebind manuel du joueur sur cette touche ne survivrait donc pas à un redémarrage,
+    // acceptable puisqu'elle n'a plus aucun rôle ici. enqueueWork : FMLClientSetupEvent tourne
+    // en parallèle des autres mods, ce genre d'effet de bord doit attendre le thread principal.
+    @SubscribeEvent
+    static void onClientSetup(FMLClientSetupEvent event) {
+        event.enqueueWork(() -> Minecraft.getInstance().options.keyPlayerList.setKey(InputConstants.UNKNOWN));
     }
 
     // Plus de hotbar (HUD masqué, HOTBAR ci-dessus, et à terme un seul item par main plutôt

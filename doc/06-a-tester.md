@@ -66,7 +66,7 @@ mana dans `onMonsterDeath` — même monstre tué, deux effets à vérifier en m
 - [ ] Tuer un zombie : le HUD **Score** (bas centre) augmente de **10**, et le HUD
       **Expérience** (barre verte bas gauche) augmente aussi de **10**.
 - [ ] Tuer un squelette : les deux augmentent de **15** cette fois (zombie et squelette n'ont
-      pas la même valeur, vérifie `SpawnableEnemy.xpValue()`).
+      pas la même valeur, vérifie le champ `xp_value` des JSON d'ennemis).
 - [ ] **En multijoueur (2 joueurs ou plus)** : tuer un monstre donne bien l'XP à **tous les
       joueurs présents** en même temps, pas seulement à celui qui a porté le coup — décidé
       volontairement, à vérifier que ce n'est pas juste un seul joueur qui progresse.
@@ -84,7 +84,7 @@ mana dans `onMonsterDeath` — même monstre tué, deux effets à vérifier en m
 - [ ] Se déconnecter/reconnecter après avoir gagné de l'expérience/un niveau : les deux valeurs
       sont bien conservées (persistance de l'attachment joueur).
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `awardExperienceAndScore`,
-      `grantExperience` ou `SpawnableEnemy.xpValueFor`.
+      `grantExperience` ou `EnemyRegistry.xpValueFor`.
 
 ## Gain de score flottant, avec sa source (`ScoreGainOverlay`, `ScoreGainPayload`)
 
@@ -132,6 +132,121 @@ Nouveau (2026-08-27), jamais vérifié visuellement.
 - [ ] Modifier directement `showScoreGainPopup=false` dans le fichier `.toml` (jeu fermé) puis
       relancer : l'option décochée dans l'écran de config reflète bien la valeur du fichier.
 - [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `ClientDisplayConfig`.
+
+## Contour de sélection masqué sur les tours et cristaux (`BlockOutlineClientEvents`)
+
+Nouveau (2026-08-30), jamais vérifié visuellement. Le risque principal n'est pas que le contour
+reste affiché, c'est qu'il **emporte le ciblage avec lui** — d'où les points d'interaction
+ci-dessous, à vérifier au moins autant que le rendu.
+
+- [ ] Viser une tour posée (n'importe laquelle : Spike/Bouncer/Slice N Dice Blockade, Harpoon/
+      Bowling Ball/Mortar Turret) : **aucun contour noir**, à aucune hauteur de visée.
+- [ ] Viser le Cristal d'Eternia, puis le cristal de la taverne : **aucun contour noir** non
+      plus (le cristal d'Eternia en avait un de 3 blocs de haut, très visible).
+- [ ] Viser un bloc quelconque à côté (terrain, coffre de mana) : le contour noir **est toujours
+      là** — seuls les tours et cristaux sont concernés. (Le bloc de spawn joueur n'a lui de
+      contour qu'en créatif, pour une autre raison — voir sa propre section.)
+- [ ] Clic droit sur le Cristal d'Eternia en Construction : le vote « prêt » fonctionne toujours
+      (message de progression) — c'est la preuve que le ciblage n'a pas été cassé.
+- [ ] Clic droit sur le cristal de la taverne : `MapSelectionScreen` s'ouvre toujours.
+- [ ] Mode suppression de tour (`X`) : le contour **orange** apparaît toujours sur la tour visée
+      (et devrait être plus lisible qu'avant, sans la boîte noire par-dessus), et le clic gauche
+      retire bien la tour.
+- [ ] En créatif, casser une tour/un cristal reste possible (viser + clic gauche maintenu) même
+      sans contour — un peu moins confortable, à confirmer que c'est acceptable en usage réel.
+- [ ] La barre de vie des tours (`TowerHealthBarRenderer`) s'affiche toujours normalement.
+- [ ] Option `showTowerBlockOutline` : présente et **décochée par défaut** dans Menu Mods >
+      Dungeon Defenders > Config > "Affichage (HUD)". La cocher fait **revenir** le contour noir
+      sur les tours et cristaux (comportement d'avant), la décocher le fait repartir.
+- [ ] Sur le serveur dédié : le comportement est le même, et un autre joueur qui n'a pas touché
+      à son option voit la même chose (config purement locale, rien de synchronisé).
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `BlockOutlineClientEvents`.
+
+## Repérage des blocs marqueurs en créatif (`MarkerOverlayClientEvents`)
+
+Nouveau (2026-09-06), jamais vérifié en jeu — demandé pendant le premier test de la pile
+maps/taverne, faute de moyen de retrouver les blocs marqueurs (spawn joueur, zone interdite,
+config de map, support de mannequin, spawner) une fois posés, tous invisibles.
+
+- [ ] En créatif, poser un exemplaire de chacun des 5 marqueurs (spawn joueur, zone interdite,
+      config de map, support de mannequin, spawner), s'éloigner d'une quinzaine de blocs :
+      chacun affiche un **contour coloré** (une couleur différente par type) et son **nom
+      au-dessus**, sans avoir à viser précisément.
+- [ ] Se cacher derrière un mur plein face à un marqueur (toujours à moins de ~16 blocs) :
+      **l'étiquette de nom reste lisible à travers le mur**, seul le contour disparaît (il n'est
+      pas conçu pour traverser les murs, seulement l'étiquette).
+- [ ] S'éloigner de plus de 16 blocs (`SCAN_RADIUS`, valeur de test) : contour et étiquette
+      disparaissent. Se rapprocher : ils réapparaissent dans la seconde qui suit (`SCAN_INTERVAL_TICKS`
+      = 1 scan/seconde), pas besoin de bouger pour déclencher le rafraîchissement.
+- [ ] Passer en survie (ou en mode aventure/spectateur) : **plus aucun contour ni étiquette**,
+      même à côté d'un marqueur — c'est un outil d'édition, pas un élément de jeu.
+- [ ] Poser plusieurs marqueurs du même type à proximité : chacun a bien son propre contour et
+      sa propre étiquette, pas de fusion ni de doublon.
+- [ ] **Le point le plus incertain** : coût du scan périodique. Avec plusieurs marqueurs et un
+      monde chargé autour, vérifier qu'il n'y a **aucune saccade perceptible** une fois par
+      seconde (le scan n'a jamais été profilé) — sinon réduire `SCAN_RADIUS` ou espacer
+      `SCAN_INTERVAL_TICKS`.
+- [ ] Redémarrer le serveur/recharger le monde pendant qu'un contour est affiché : pas de crash,
+      pas d'étiquette "fantôme" qui reste affichée sur un marqueur qui n'existe plus.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `MarkerOverlayClientEvents`.
+
+**Corrigé au passage (2026-09-06)** : l'item en main de `player_spawn`, `no_build_zone`,
+`map_config` et `training_dummy` affichait une texture cassée violet/noir. Cause réelle : ces
+quatre blocs n'avaient qu'un modèle d'item à l'ancien format (`models/item/<nom>.json`, plus lu
+par cette version du jeu), pas le nouveau (`assets/dungeon_defenders/items/<nom>.json`) déjà
+utilisé par le reste du mod (spawner, tours...). Les quatre affichent maintenant leur texture
+placeholder (hay block, béton rouge, table de cartographie, lodestone) en main, comme dans
+l'onglet créatif.
+
+- [ ] Prendre chacun de ces 4 items en main/inventaire : texture placeholder correcte, plus de
+      violet/noir.
+
+## Le plan plein écran de la zone actuelle (`client/MapOverlay*.java`)
+
+Nouveau (2026-09-07), jamais vérifié en jeu — essai explicitement expérimental, demandé pendant
+que le joueur reconstruit la taverne. Touche par défaut : `Tab`, maintenue.
+
+- [ ] La liste des joueurs vanilla (normalement affichée en maintenant Tab) **n'apparaît plus du
+      tout**, même en multijoueur avec plusieurs joueurs connectés — `key.playerList` a été
+      libérée au démarrage du client (`DungeonDefendersModClient#onClientSetup`) puisque Tab
+      n'affiche désormais que notre plan.
+- [ ] Aller dans Options > Contrôles > Touches : "Liste des joueurs" apparaît **non liée**
+      ("Aucune"/"Non attribuée"), pas sur Tab.
+
+Dans la Taverne :
+
+- [ ] Maintenir `Tab` : un fond sombre plein écran apparaît, avec un rectangle centré aux
+      proportions de la taverne actuelle (repli 9x9 si aucune structure sauvegardée, ou les
+      vraies dimensions une fois la structure livrée).
+- [ ] Un point apparaît à ta position, dans une couleur distincte (vert par défaut).
+- [ ] Le cristal de la taverne apparaît comme un marqueur carré doré, à peu près à sa vraie
+      position dans le rectangle par rapport à toi.
+- [ ] Relâcher `Tab` : tout disparaît immédiatement.
+
+Dans une map (Construction ou Combat) :
+
+- [ ] Même chose, rectangle aux proportions de la map en cours (pas de la taverne) — vérifier
+      que ça change bien de forme/taille par rapport à la taverne si les deux ont des
+      dimensions différentes.
+- [ ] Le Cristal d'Eternia apparaît comme marqueur, pas le cristal de la taverne.
+- [ ] Avec un deuxième joueur connecté : **deux points distincts**, le tien dans ta couleur
+      "joueur local", l'autre dans une couleur de la palette — vérifier qu'ils bougent bien en
+      temps réel quand chacun se déplace, et qu'ils restent dans les limites du rectangle même
+      près des bords de la zone.
+- [ ] Se reconnecter (le deuxième joueur) : sa couleur reste la **même** qu'avant (déterministe
+      par UUID, pas par ordre de connexion).
+
+Cas transverses :
+
+- [ ] **Le point le plus incertain** : le scan périodique du cristal (une fois par seconde
+      pendant que `Tab` est maintenu) ne doit provoquer **aucune saccade perceptible**, même sur
+      une grande map — jamais profilé, zone potentiellement grande contrairement au scan des
+      marqueurs d'édition (rayon fixe de 16, lui, déjà mesuré comme négligeable).
+- [ ] Maintenir `Tab` juste après un chargement du monde/une téléportation (avant que le serveur
+      ait eu le temps de synchroniser la taille) : pas de crash, l'overlay ne s'affiche
+      simplement pas tant que la taille n'est pas connue (repli `sizeX/sizeZ <= 0`).
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `MapOverlay`, `MapOverlayState`
+      ou `MapOverlayClientEvents`.
 
 ## Le reste du roster de l'Écuyer (Bouncer Blockade, Bowling Ball Turret)
 
@@ -430,6 +545,388 @@ seulement les tours.
 - [ ] Vérifier `run/logs/latest.log` après la session : aucune exception liée à
       `ModEvents.onBlockBreakAttempt` ou `BreakBlockEvent`.
 
+## L'export d'un pack de maps (`/dd_export`)
+
+Nouveau (2026-09-02). Le TOML et le JSON generes ont ete valides hors jeu (analyse syntaxique),
+et `lowcodefml` existe bien dans le loader de cette version — mais **le jar produit n'a jamais
+ete charge par Minecraft**, c'est tout l'objet de ce test.
+
+- [ ] Creer deux maps sous un meme namespace personnalise (ex. `test_pack:map/a` et
+      `test_pack:map/b`), puis lancer `/dd_export test_pack`.
+- [ ] Un message de succes indique le nombre de maps, d'apercus (0 pour l'instant) et le chemin.
+- [ ] Le fichier existe dans `<dossier du serveur>/dungeon_defenders_export/test_pack.jar`.
+      L'ouvrir avec un gestionnaire d'archives : il doit contenir `META-INF/neoforge.mods.toml`,
+      deux `.nbt` sous `data/test_pack/structure/map/`, et deux fichiers de langue.
+- [ ] **Le test qui compte** : deposer ce jar dans le dossier `mods` d'une installation
+      **propre** (un autre monde, ou apres avoir supprime les maps de la sauvegarde), demarrer,
+      et verifier que les deux maps apparaissent dans le carrousel sous un pack nomme
+      "Test Pack" — sans erreur au demarrage.
+- [ ] Verifier que les maps du jar sont bien **non supprimables** (bouton grise) : ce sont des
+      ressources en lecture seule.
+- [ ] `/dd_export` sur un namespace inexistant, ou avec des majuscules : message d'erreur clair,
+      pas de plantage, pas de jar vide cree.
+- [ ] `/dd_export dungeon_defenders` alors que la campagne vient du jar du mod : doit refuser
+      (aucune map creee en jeu sous ce namespace), sauf si tu as toi-meme cree des maps dedans.
+- [ ] La commande refuse bien en dessous du niveau de permission gamemaster.
+
+## Le force-chargement de la zone de map (`ModChunkTickets`)
+
+Nouveau (2026-09-02), jamais verifie en jeu. Difficile a observer directement : le test consiste
+surtout a verifier qu'un spawner **loin** du groupe fonctionne quand meme.
+
+- [ ] Construire une map assez large pour que deux spawners soient a plus de ~150 blocs l'un de
+      l'autre (au-dela de la distance de rendu/simulation par defaut).
+- [ ] Lancer la partie, rester pres d'un seul spawner pendant toute une vague : les ennemis du
+      spawner **eloigne** doivent quand meme apparaitre et arriver. C'est le test central.
+- [ ] `/forceload query` dans la zone de map pendant une partie : des chunks doivent etre
+      signales comme forces.
+- [ ] Retourner a la taverne (`/dd_leave` ou bouton Abandonner) puis refaire `/forceload query` :
+      **plus aucun** chunk force dans la zone de map.
+- [ ] Quitter le serveur **en pleine partie**, le relancer, puis `/forceload query` : plus aucun
+      chunk force non plus — c'est le rappel de validation qui doit avoir fait le menage.
+- [ ] Enchainer deux parties de tailles de map differentes : aucun chunk de la premiere ne doit
+      rester force pendant la seconde.
+- [ ] Sur une tres grande map, verifier l'avertissement dans les logs au-dela de 1024 chunks (et
+      surveiller le TPS du serveur).
+- [ ] Aucune exception liee a `ModChunkTickets` ou au systeme de tickets.
+
+## La creation de map en jeu (`MapRegistry`, `MapConfigBlock`, ecran a trois colonnes)
+
+Nouveau (2026-09-02), jamais verifie en jeu. **La plus grosse modification a ce jour** : l'enum
+GameMap disparait, le carrousel devient dynamique, StartGamePayload change de forme, et le
+nombre de vagues n'est plus une constante. Beaucoup de regressions possibles sur l'existant.
+
+> Une **map de test est desormais livree** dans le mod (`dungeon_defenders_test:map/test_arena`) :
+> l'essentiel de cette section se teste donc sans rien construire. Elle s'appelle "Arene de
+> test", tient en 3 vagues, et contient deja cristal, spawner, coffre de mana, marqueur de spawn
+> et zones interdites.
+
+- [ ] Clic droit sur le cristal de la taverne : "Arene de test" apparait dans le pack **"Maps de
+      test"**, separe de "Campagne" (namespace `dungeon_defenders_test`, pas `dungeon_defenders`
+      — voir 05-etat-et-problemes-connus.md). L'apercu affiche la texture manquante (aucun PNG)
+      — attendu.
+- [ ] Cliquer "Jouer" : l'arene se pose a (10000, 65, 0), murs compris. On arrive devant le
+      cristal, pas au milieu du vide.
+- [ ] Le HUD affiche **Vague 1/3**, pas 1/5 — la preuve que le nombre de vagues vient de la map.
+- [ ] **Corrige (2026-09-12)** : le compteur d'ennemis de la vague (ennemis tues/total, HUD) doit
+      afficher le vrai total (12 = 8 zombies + 4 squelettes) des l'arrivee sur la map, pas 0 —
+      sinon la vague ne se termine jamais meme une fois tous les ennemis tues (voir
+      05-etat-et-problemes-connus.md).
+- [ ] Le spawner fait bien apparaitre 8 zombies et 4 squelettes en combat.
+- [ ] Le coffre de mana s'ouvre et donne 50 mana.
+- [ ] Poser une tour pres du spawner (dans la zone rouge) est refuse avec le message ; quelques
+      blocs plus loin, ca passe.
+- [ ] Enchainer les 3 vagues jusqu'a la victoire, puis "Rejouer" : l'arene est reposee a neuf,
+      cristal a 100 PV, tours effacees.
+
+Sans aucune map (retirer temporairement test_arena du jar, ou tester avant de l'ajouter) :
+
+- [ ] Clic droit sur le cristal de la taverne : l'ecran s'ouvre, colonne des packs vide, message
+      "Aucune map disponible" a la place de l'apercu, bouton "Jouer" **grise**.
+- [ ] Aucune exception dans les logs.
+
+## La deuxieme map de test, plus travaillee (`map/ruins_sanctuary.nbt`)
+
+Nouveau (2026-09-08), jamais chargee par Minecraft ni vue en jeu — seulement verifiee
+programmatiquement (rampes continues, aucun marqueur flottant, murs pleins, positions dans les
+bornes). "Sanctuaire en Ruines" : trois couloirs de monstres convergeant vers une plateforme
+centrale surelevee. C'est le test le plus significatif a ce jour de `generer-map-de-test.py` et
+consorts : une geometrie bien plus complexe (denivele, rampes, plusieurs spawners) que l'arene
+plate de `test_arena`.
+
+- [ ] Clic droit sur le cristal de la taverne : "Sanctuaire en Ruines" apparait dans le pack
+      "Campagne", a cote de "Arene de test".
+- [ ] Cliquer "Jouer" : toute la structure se pose sans trou ni bloc manquant visible — sol,
+      quatre murs d'enceinte, plateforme centrale, les trois couloirs et leurs rampes, la cour
+      sud.
+- [ ] **Le point le plus incertain** : les rampes (4 marches d'1 bloc chacune, pas de blocstate
+      d'escalier) sont bien praticables — marcher dessus a pied, puis verifier qu'un monstre
+      spawne peut les monter tout seul jusqu'a la plateforme sans rester bloque.
+- [ ] Le cristal est bien au centre de la plateforme, PV pleins, joignable depuis les trois
+      couloirs.
+- [ ] Le HUD affiche **Vague 1/5**.
+- [ ] Les trois spawners fonctionnent independamment : nord = que des zombies, est = surtout des
+      squelettes, ouest = melange des deux. Verifier que chacun apparait bien dans son propre
+      couloir, pas dans un autre.
+- [ ] Le marqueur de spawn joueur et le coffre de mana sont sur la plateforme, pres du cristal ;
+      le coffre donne bien 50 mana.
+- [ ] Zone interdite autour de chaque spawner : poser une tour juste a cote d'un spawner est
+      refuse, quelques blocs plus loin dans le couloir ca passe.
+- [ ] Les piliers en ruine le long des couloirs sont visibles, poses sur le sol (pas flottants),
+      certains plus courts/fissures que d'autres. Les torches donnent assez de lumiere pour
+      qu'aucun monstre ne spawne naturellement dans les couloirs la nuit.
+- [ ] La cour sud (arrivee joueur) est accessible en descendant la quatrieme rampe depuis la
+      plateforme — **aucun spawner** ne doit s'y trouver.
+- [ ] Aucune exception dans les logs liee au chargement de cette structure.
+
+Creer une map de bout en bout :
+
+- [ ] En creatif, construire une petite arene **loin de (0,65,0) et de (10000,65,0)**, avec un
+      `eternia_crystal`, un `spawner` configure, un `player_spawn`, et un bloc
+      **Configuration de map**.
+- [ ] **Corrige (2026-09-06, meme incident que la taverne)** : si jamais tu construis a
+      `(10000, 65, 0)` (MAP_POS) plutot qu'ailleurs, cliquer "Jouer" sur n'importe quelle map
+      sans structure sauvegardee (y compris la tienne en cours) ne doit **plus rien effacer** a
+      cet endroit — avant ce correctif, chaque tentative de "Jouer" sans structure trouvee
+      nettoyait toute la zone avant de poser le placeholder.
+- [ ] Clic droit sur le bloc de config : l'ecran s'ouvre (creatif seulement — verifier qu'en
+      survie il est introuvable et que le message apparait si on force). Renseigner nom, ordre,
+      nombre de vagues (mettre **3**, pas 5, pour verifier que ce n'est plus une constante) et
+      multiplicateur. Valider.
+- [ ] Rouvrir l'ecran : les valeurs saisies sont bien la (persistance + synchro du block entity).
+- [ ] Sauvegarder la zone avec un bloc de structure vanilla, nommee
+      `dungeon_defenders:map/ma_map`.
+- [ ] **Sans redemarrer**, retourner a la taverne, clic droit sur le cristal : la map apparait,
+      dans le pack "Campagne", avec le nom saisi. C'est le point central de toute la
+      fonctionnalite.
+- [ ] L'apercu affiche la texture "manquante" (aucun PNG fourni) — comportement attendu, pas un
+      bug.
+- [ ] Cliquer "Jouer" : la **vraie structure** est posee a (10000,65,0), pas la plateforme de
+      pierre lisse. On arrive sur le `player_spawn`, qui a disparu.
+- [ ] Le HUD affiche **Vague 1/3**, pas 1/5 — c'est ce qui verifie que le nombre de vagues vient
+      bien de la map.
+- [ ] Enchainer les 3 vagues jusqu'a la victoire : l'ecran de fin s'ouvre bien a la 3e.
+- [ ] Bouton "Rejouer" de l'ecran de fin : relance **la meme map** (et pas la plateforme
+      placeholder) — c'est ce que verifie l'attachment CURRENT_MAP.
+
+Les packs et le regroupement :
+
+- [ ] Creer une deuxieme map dans le meme namespace : les deux apparaissent sous "Campagne", et
+      les fleches du carrousel passent de l'une a l'autre avec le compteur "1 / 2".
+- [ ] Donner des ordres differents dans leurs blocs de config, resauvegarder : l'ordre du
+      carrousel suit.
+- [ ] Sauvegarder une map sous un **autre namespace** (ex. `test_pack:map/essai`) : un deuxieme
+      pack apparait dans la colonne de gauche, sous "Campagne", et son carrousel ne contient que
+      ses maps. Son nom affiche est `test_pack` (pas de traduction fournie).
+- [ ] Selectionner un pack puis l'autre : le carrousel repart bien a la premiere map du pack.
+
+La suppression :
+
+- [ ] **En survie**, ouvrir l'ecran de choix : **aucun** bouton "Supprimer cette map".
+- [ ] **En creatif**, le bouton apparait sous "Jouer", en rouge.
+- [ ] Sur une map creee en jeu : le bouton est **actif**. Cliquer -> confirmation.
+- [ ] Repondre Non : rien n'est supprime, retour a l'ecran de choix.
+- [ ] Repondre Oui : message en chat, et la map disparait **immediatement** du carrousel (pas
+      besoin de rouvrir l'ecran).
+- [ ] Supprimer la derniere map d'un pack : le pack disparait aussi de la colonne de gauche, et
+      la selection retombe sur un pack valide sans planter.
+- [ ] Sur une map livree dans le jar du mod (quand la campagne existera) : le bouton est
+      **grise** — c'est une ressource en lecture seule.
+
+Regressions a surveiller :
+
+- [ ] Les spawners fonctionnent toujours : leur ecran de config s'ouvre, la borne "derniere
+      vague active" propose par defaut le nombre de vagues de la map en cours (et non plus 5).
+- [ ] `/dd_leave` et le bouton "Abandonner le niveau" ramenent toujours a la taverne, et le HUD
+      repasse en phase Taverne.
+- [ ] Le HUD Vague reaffiche bien la bonne borne apres un retour a la taverne puis une nouvelle
+      partie sur une map a nombre de vagues different.
+- [ ] Aucune exception liee a `MapRegistry`, `MapConfigBlockEntity`, `StartGamePayload` ou
+      `OpenMapSelectionPayload` — ce dernier a change de forme (il portait zero champ, il porte
+      maintenant une liste), donc un client et un serveur de versions differentes ne peuvent pas
+      se parler : verifier que les deux sont bien a jour.
+
+## Le bouton "Abandonner le niveau" (menu pause)
+
+Nouveau (2026-09-02), jamais verifie en jeu. Premier ajout du mod a un ecran **vanilla** : le
+risque principal est un bouton mal place ou superpose a ceux de Minecraft.
+
+- [ ] **A la taverne**, ouvrir le menu pause (Echap) : **aucun** bouton "Abandonner le niveau".
+- [ ] **Dans une map** (apres avoir clique "Jouer"), ouvrir le menu pause : le bouton apparait,
+      en **rouge**, **sous** le bouton "Sauvegarder et quitter" — pas superpose, pas hors ecran.
+- [ ] Verifier a plusieurs tailles de fenetre et plusieurs valeurs de "GUI Scale" (surtout la
+      plus grande) : le bouton doit rester visible et ne jamais chevaucher un bouton vanilla.
+- [ ] Cliquer dessus : un ecran de confirmation s'ouvre, avec le titre et un message qui precise
+      que **tous les joueurs** sont ramenes.
+- [ ] Repondre **Non** : retour au **menu pause** (pas au jeu), la partie continue.
+- [ ] Repondre **Oui** : l'ecran se ferme, retour a la taverne, la souris est rendue au jeu (pas
+      de curseur bloque), et le HUD repasse en "Phase : Taverne" sans compteurs de vague.
+- [ ] Abandonner **en pleine phase de Combat** avec des monstres vivants : ca doit marcher aussi,
+      et les monstres de la map disparaitre avec la zone nettoyee.
+- [ ] **En multijoueur** : un joueur qui abandonne ramene **tout le monde** a la taverne. C'est
+      voulu (une seule partie active a la fois), a confirmer que ce n'est pas vecu comme un bug.
+- [ ] Relancer une partie juste apres un abandon : elle repart bien **vague 1**.
+- [ ] `/dd_leave` fonctionne toujours en parallele.
+- [ ] Aucune exception dans les logs liee a `PauseMenuClientEvents` ou `LeaveMapPayload`.
+
+## Les zones interdites a la pose (`NoBuildZoneBlock`)
+
+Nouveau (2026-09-02), jamais verifie en jeu.
+
+- [ ] En creatif, l'item "Marqueur de zone interdite" apparait dans l'onglet du mod et se pose
+      sans crash. Le bloc pose est **invisible** ; en creatif on le retrouve au contour de
+      visee, en survie il est traversable et introuvable.
+- [ ] Marcher a travers : aucune collision, ni pour le joueur ni pour un monstre (a verifier en
+      combat, un monstre doit traverser la zone normalement).
+- [ ] Poser un marqueur, ouvrir la roue des tours, viser la case du marqueur : l'hologramme doit
+      etre **rouge** (position refusee).
+- [ ] Clic droit pour confirmer quand meme : rien ne se pose, et le message "Impossible de poser
+      une tour ici." apparait. C'est le point important — sans ce message le refus serait
+      inexplicable.
+- [ ] Viser une case **voisine** libre : hologramme vert, la tour se pose normalement. Le
+      marqueur ne doit interdire que sa propre case.
+- [ ] `/fill` une zone de marqueurs (ex. un couloir 5x1x10) : toute la zone refuse la pose,
+      d'un bout a l'autre.
+- [ ] Le marqueur ne fait **ni ombre ni trou noir** : poser un bloc plein a cote, sa face
+      tournee vers le marqueur s'affiche normalement ; une torche d'un cote eclaire bien de
+      l'autre.
+- [ ] Sauvegarder une structure contenant des marqueurs avec un bloc de structure, la recharger
+      ailleurs : les marqueurs sont bien presents et interdisent toujours la pose.
+- [ ] A la Taverne (ou la pose est gratuite) : un marqueur interdit quand meme la pose — la
+      gratuite ne doit pas contourner l'interdiction.
+- [ ] Aucune exception dans les logs liee a `NoBuildZoneBlock`.
+
+## La phase Taverne (`GamePhase.TAVERN`)
+
+Nouveau (2026-09-01), jamais verifie en jeu. Touche 11 points de decision dans le code : le
+risque n'est pas tant la taverne elle-meme que les **regressions sur une vraie partie**, la
+phase par defaut ayant change.
+
+A la taverne :
+
+- [ ] Le HUD affiche "Phase : Taverne". Les compteurs **Vague** (haut droite) et **Ennemis**
+      (barre haut centre) sont **absents**.
+- [ ] La roue des tours (`R`) s'ouvre, et poser une tour marche — **sans rien couter en mana**
+      (le HUD mana ne bouge pas, aucun message "-X mana").
+- [ ] En poser cinq ou six d'affilee avec 0 mana : toutes doivent passer.
+- [ ] Le mode suppression (`X`) fonctionne, et retirer une tour **ne rembourse rien** (pas de
+      message "+X mana remboursé", HUD mana inchange).
+- [ ] Poser une tourelle a portee du mannequin : elle lui tire dessus (c'est tout l'interet).
+
+Le passage taverne -> map :
+
+- [ ] Poser deux ou trois tours d'essai dans la taverne, puis cliquer "Jouer" : elles ont
+      **disparu** de la taverne au retour (`clearTestTowers`).
+- [ ] Une fois sur la map, le HUD passe en "Phase : Construction", affiche **Vague 1/5** et la
+      barre d'ennemis revient.
+- [ ] Sur la map, poser une tour **coute bien du mana** a nouveau, et la retirer **rembourse**
+      50 %.
+- [ ] Enchainer une vague complete : Construction -> Combat -> Construction, la vague avance
+      normalement (verifie que `startNewGame` n'a pas casse la progression).
+- [ ] Deux parties d'affilee : "Jouer", quitter avec `/dd_leave`, "Jouer" de nouveau — la
+      seconde doit repartir **vague 1**, pas vague 2 (c'est le piege que `startNewGame` evite).
+
+Le retour map -> taverne :
+
+- [ ] `/dd_leave` depuis une map : retour a la taverne ET le HUD repasse en "Phase : Taverne",
+      compteurs de vague masques.
+- [ ] Meme chose via le bouton "Retour a la taverne" de l'ecran de fin de partie.
+- [ ] Redemarrer le serveur alors que la sauvegarde etait en pleine partie (quitter le serveur
+      en phase Combat sur une map) : au redemarrage on doit etre a la **Taverne**, pas coince en
+      Combat.
+
+Cas limites :
+
+- [ ] En Combat, la roue des tours refuse toujours de s'ouvrir (message "phase de Construction")
+      — la phase Taverne ne doit pas avoir ouvert une breche.
+- [ ] Maj + clic droit sur un spawner depuis la taverne : bascule en Construction. Sans interet,
+      mais ne doit rien casser.
+- [ ] Aucune exception dans les logs liee a `PhaseTransitions`, `GamePhase` ou
+      `TavernSpawn.clearTestTowers`.
+
+## Le mannequin d'entrainement (`TrainingDummyEntity`, `TrainingDummyBlock`)
+
+Nouveau (2026-08-31), jamais verifie en jeu. Deuxieme `Entity` custom du mod, et le premier a
+etre un `Mob` (attributs, IA, rendu) — plusieurs points peuvent casser independamment.
+
+Le bloc et l'invocation :
+
+- [ ] En creatif, l'item "Support de mannequin" apparait dans l'onglet du mod et se pose sans
+      crash. Le bloc pose est **invisible** ; en creatif on le retrouve au contour de visee, en
+      survie il est traversable et introuvable (meme comportement que le spawner).
+- [ ] Dans la seconde qui suit la pose, un mannequin apparait **a la position du bloc**
+      (**corrige le 2026-09-06** : il apparaissait avant un bloc plus haut, signale en jeu).
+- [ ] Le tuer n'est pas possible, mais le supprimer a la main (`/kill @e[type=dungeon_defenders:training_dummy]`)
+      doit le faire **reapparaitre** en moins d'une seconde.
+- [ ] Casser le bloc en creatif : le mannequin **disparait avec lui**
+      (`affectNeighborsAfterRemoval`), pas d'entite orpheline laissee derriere.
+- [ ] Poser deux blocs cote a cote : deux mannequins distincts, un par bloc. Poser deux blocs
+      l'un sur l'autre est un cas limite (le rayon de recherche fait 1,5 bloc) : verifier qu'il
+      n'en manque pas un.
+- [ ] Redemarrer le serveur plusieurs fois : il ne doit **jamais** y avoir deux mannequins
+      empiles au meme endroit.
+
+Le mannequin lui-meme :
+
+- [ ] Il ressemble a un **zombie immobile** — comportement attendu (placeholder, pas de modele
+      de mannequin dedie), pas un bug.
+- [ ] Il ne bouge **jamais** : pas de marche, pas de rotation vers le joueur, pas de chute meme
+      sans bloc solide sous lui.
+- [ ] Il ne **brule pas** au soleil (un zombie normal, lui, prend feu).
+- [ ] **Aucune barre de vie** ne s'affiche au-dessus de lui, meme apres l'avoir frappe.
+- [ ] Le frapper a l'epee : l'animation de degat joue, mais il ne meurt jamais et sa vie ne
+      descend pas durablement.
+- [ ] Poser une **Harpoon Turret** (ou n'importe quelle tourelle) a portee : elle doit **lui
+      tirer dessus** — c'est le point central de toute la fonctionnalite, et ce qui verifie que
+      le ciblage `Monster` fonctionne pour un type custom.
+- [ ] Poser un **Bouncer Blockade** contre lui : il encaisse les coups **sans etre repousse**
+      (`KNOCKBACK_RESISTANCE`).
+- [ ] Il n'attaque **personne** et ne se dirige jamais vers le Cristal d'Eternia (verifie que
+      `ModEvents.onMonsterSpawn` l'ignore bien).
+- [ ] Le tuer etant impossible, verifier qu'il ne donne **ni cristal de mana, ni XP, ni score**,
+      et qu'il ne compte **pas** dans les ennemis d'une vague (`WAVE_ENEMIES_TOTAL/KILLED`).
+- [ ] Aucune exception dans les logs liee a `TrainingDummyEntity`, `TrainingDummyBlockEntity` ou
+      `EntityAttributeCreationEvent` (un Mob custom sans attributs plante a l'invocation).
+
+## Le chargement de la structure de la taverne (`TavernSpawn#placeTavern`)
+
+Nouveau (2026-08-31), jamais vérifié en jeu. **La vraie structure est désormais livrée**
+(2026-09-11, premier jet du joueur : 40×12×35, 16 800 blocs) — les points ci-dessous sous
+« Une fois `tavern.nbt` livré » sont donc maintenant tous testables, plus seulement le repli.
+
+Sans fichier de structure (état actuel du dépôt) :
+
+- [ ] Démarrer le monde/serveur : la plateforme 9x9 de pierre lisse apparait comme avant, on
+      arrive bien dessus, rien n'a changé pour le joueur.
+- [ ] Les logs contiennent l'avertissement `Structure de taverne introuvable ... repli sur la
+      plateforme provisoire.` (une fois par chargement du monde, pas en boucle).
+- [ ] `/dd_leave` depuis une map ramene toujours au meme endroit.
+- [ ] **Corrige (2026-09-06, incident en jeu)** : construire quelque chose a la main a cote de
+      la plateforme de repli (par exemple les murs d'une taverne en cours de construction, pas
+      encore sauvegardee en structure), redemarrer le serveur — **ca doit survivre**. Avant ce
+      correctif, tout ce qui n'etait pas la plateforme 9x9 elle-meme etait efface a chaque
+      redemarrage (`clearZone` tournait meme en l'absence de structure).
+
+Une fois `data/dungeon_defenders/structure/tavern.nbt` livre :
+
+- [ ] Au demarrage, la taverne apparait entierement, centree sur (0, 65, 0) en X/Z, son sol a
+      Y=64. Aucun bloc manquant sur les bords.
+- [ ] Plus aucune trace de l'ancienne plateforme de pierre lisse autour (c'est ce que doit
+      effacer le nettoyage de zone) — ni d'une version precedente de la taverne, a tester en
+      livrant une structure plus petite apres une plus grande.
+- [ ] Le `tavern_crystal` de la structure est bien la et son clic droit ouvre l'ecran de choix
+      de map (les block entities d'une structure gardent leurs donnees NBT).
+- [ ] Avec un `player_spawn` pose dans la structure : on arrive **a sa position**, pas au
+      centre. Sans marqueur : on arrive au centre (0, 65, 0).
+- [ ] **Corrige (2026-09-11, incident en jeu)** : un joueur qui rejoint ce monde **pour la toute
+      premiere fois** (jamais connecte avant, aucune donnee de joueur existante) arrive bien au
+      marqueur, pas au centre par defaut. Avant ce correctif, seuls les teleports explicites
+      (mort, `/dd_leave`, retour de map) respectaient le marqueur — le tout premier placement
+      d'un joueur neuf, lui, ignorait `setRespawnData` (particularite vanilla non comprise en
+      profondeur, contournee plutot que corrigee a la racine — voir
+      `ModEvents.onPlayerLoggedIn`/`ModAttachments.FIRST_SPAWN_HANDLED`). A tester avec un compte
+      qui n'a jamais rejoint ce monde precis, pas en se reconnectant avec un joueur existant.
+- [ ] Le marqueur **n'est pas consomme** : quitter la taverne, y revenir (`/dd_leave`), et
+      redemarrer le serveur — on doit arriver au meme endroit a chaque fois.
+- [ ] Mourir dans une map fait reapparaitre a la position d'arrivee de la taverne, pas a
+      (0, 65, 0) si le marqueur est ailleurs.
+- [ ] Les entites de la structure (cadres, supports a armure, tableaux) **sont bien posees**.
+- [ ] Le support de mannequin (`training_dummy`, present dans ce premier jet) invoque bien son
+      mannequin dans la seconde qui suit le chargement — meme checklist que sa propre section
+      plus haut, mais cette fois dans la vraie taverne plutot qu'un bloc pose isolement en test.
+- [ ] **Le point le plus incertain** : redemarrer le serveur trois ou quatre fois d'affilee et
+      recompter ces entites. Elles doivent rester au **meme nombre**, pas se dupliquer a chaque
+      demarrage — c'est ce que doit empecher la suppression d'entites de `clearZone`, et c'est
+      justement ce qui depend du fait que les chunks soient bien charges a ce moment-la.
+- [ ] Laisser tomber un objet au sol dans la taverne, redemarrer : il a disparu (nettoyage
+      volontaire).
+- [ ] Se tenir dans la taverne pendant un redemarrage (multijoueur, ou juste se reconnecter) :
+      le joueur n'est **jamais** supprime par le nettoyage.
+- [ ] Modifier un bloc de la taverne en creatif, redemarrer : la modification est ecrasee (la
+      structure est reposee a chaque chargement).
+- [ ] Aucune exception dans les logs liee a `TavernSpawn`, `StructureTemplate` ou
+      `StructureTemplateManager`.
+
 ## Le bloc de spawn joueur (`ModBlocks.PLAYER_SPAWN`, `MapInstance#findAndConsumeSpawnMarker`)
 
 Jamais testé en jeu. **Le mécanisme complet n'est pas testable pour l'instant** — voir
@@ -442,9 +939,25 @@ fois qu'une vraie structure `.nbt` de map (avec un `PLAYER_SPAWN` posé dedans) 
 - [ ] **Corrigé (2026-08-26)** : l'item dans la main/l'inventaire doit maintenant afficher la
       texture de lodestone (auparavant cassée, `models/item/player_spawn.json` manquant) —
       identique à l'apparence du bloc posé, pas de texture manquante/magenta-noir.
-- [ ] Poser le bloc n'importe où (taverne, placeholder de map...) : doit avoir l'apparence
-      d'un bloc de lodestone (texture placeholder, voir doc/02-gameplay.md), pas de texture
-      manquante.
+- [ ] **Changé (2026-08-30)** : poser le bloc n'importe où (taverne, placeholder de map...) —
+      il ne doit **rien** apparaître à l'écran, le bloc est désormais invisible (`PlayerSpawnBlock`,
+      même traitement que le spawner). Pas de trou noir ni de face voisine qui disparaît autour
+      de la position : rien du tout, comme si l'air était resté.
+- [ ] **En créatif**, viser précisément l'endroit où il est posé : un **contour de sélection**
+      doit apparaître — c'est le seul moyen de le retrouver, exactement comme pour le spawner.
+      (Il n'est pas concerné par le masquage de contour des tours/cristaux, voir sa section.)
+- [ ] **En survie**, viser précisément l'endroit où il est posé : **aucun contour**, le rayon de
+      visée doit traverser comme s'il n'y avait rien.
+- [ ] Marcher sur la position du bloc, en survie comme en créatif : on doit **traverser** (pas
+      de collision), et ne pas rester "posé dessus" — attention à ne pas se faire piéger si le
+      bloc a été posé au-dessus d'un vide.
+- [ ] L'item reste bien **visible** dans l'onglet créatif et dans la main/l'inventaire (texture
+      de lodestone) : c'est le bloc **posé** qui est invisible, pas l'item.
+- [ ] Poser un bloc plein juste à côté d'un `PLAYER_SPAWN` : sa face tournée vers le marqueur
+      doit s'afficher normalement (pas de face manquante/noire — le marqueur ne doit rien
+      occlure).
+- [ ] Vérifier qu'il ne fait pas d'ombre / ne bloque pas la lumière : poser une torche d'un côté
+      du marqueur, l'éclairage de l'autre côté ne doit pas être coupé.
 - [ ] Cliquer sur "Jouer" dans la taverne avec un `PLAYER_SPAWN` posé quelque part dans le
       placeholder de map (par exemple posé juste avant de cliquer, en restant sur place) :
       comportement attendu **inchangé** pour l'instant (téléportation à `MAP_POS` comme avant),
@@ -487,6 +1000,748 @@ reconfirmer avec ces deux changements.
       `NoClassDefFoundError`/`ClassNotFoundException` mentionnant `Minecraft`/`Screen` —
       signerait que le handler client a fini par se charger côté serveur malgré la séparation
       voulue.
+
+## Le systeme de heros (`HeroDefinition`, `HeroSelectionScreen`)
+
+Nouveau (2026-09-03), jamais verifie en jeu. Un seul heros existe, donc l'ecran de choix n'a
+qu'une option — c'est attendu, pas un bug.
+
+- [ ] Appuyer sur **H** : l'ecran "Choisir un heros" s'ouvre, avec l'Ecuyer marque d'un ✔
+      (c'est deja le tien par defaut), sa description, et la liste de ses 6 tours.
+- [ ] Cliquer "Choisir" : message de confirmation en chat, l'ecran se ferme.
+- [ ] Le HUD en bas centre affiche maintenant **"Pseudo (Écuyer) - niv 1"** au lieu de
+      "Pseudo - niv 1".
+- [ ] Ouvrir la roue des tours (`R`) : elle contient bien les **6 tours de l'Ecuyer**, et rien
+      d'autre. Comme il n'y a qu'un heros, c'est le meme contenu qu'avant — ce qui compte, c'est
+      qu'aucune tour ne manque.
+- [ ] Poser une tour depuis la roue : ca marche exactement comme avant.
+- [ ] **En phase Combat**, appuyer sur H et confirmer : refuse avec le message "Impossible de
+      changer de heros pendant le Combat".
+- [ ] Appuyer sur H **pendant le mode pose ou le mode suppression** : l'ecran ne doit pas
+      s'ouvrir (garde symetrique a celui de la roue).
+- [ ] Se deconnecter/reconnecter : le heros choisi est conserve (attachment persiste).
+- [ ] **En multijoueur** : deux joueurs peuvent avoir des heros differents, chacun voit sa
+      propre roue. (Un seul heros existant, ce test n'aura de sens qu'avec le deuxieme.)
+- [ ] Verifier dans Options > Controles que la touche H apparait sous la categorie
+      "Dungeon Defenders" et se rebinde.
+- [ ] Aucune exception liee a `HeroDefinition`, `HeroSelectionScreen` ou `SelectHeroPayload`.
+
+## Les competences (`ability/`, touches 1-4)
+
+Nouveau (2026-09-03), jamais verifie en jeu. Trois mecanismes distincts a valider separement :
+soin (maintenu, self), reparation (maintenu, cible), sort 1 (salve+recharge), sort 2 (maintenu,
+buff). C'est aussi le tout premier usage d'une touche *maintenue* dans le mod (pas juste un
+appui) — a surveiller particulierement.
+
+Heal Self (touche 1) :
+
+- [ ] A PV non pleins, maintenir 1 : la vie remonte progressivement, le mana descend en meme
+      temps (1 pour 1, visible au HUD).
+- [ ] Relacher 1 avant PV pleins : le soin s'arrete immediatement.
+- [ ] Maintenir jusqu'a PV pleins : s'arrete tout seul des que la vie plafonne, meme sans
+      relacher la touche.
+- [ ] Maintenir jusqu'a mana epuise : s'arrete tout seul a 0 mana.
+- [ ] **Se faire toucher par un monstre pendant qu'on se soigne** : le soin s'interrompt
+      immediatement, message "Soin interrompu !" en chat — c'est le point le plus important de
+      cette section, verifie le comportement confirme du jeu de reference.
+- [ ] Ouvrir un ecran (menu pause) en maintenant 1 : le soin s'arrete des l'ouverture.
+
+Repair Defense (touche 4) :
+
+- [ ] Endommager une tour (laisser un monstre la taper en combat, ou tout autre moyen), viser
+      dessus et maintenir 4 : ses PV remontent, le mana descend en meme temps.
+- [ ] Viser dans le vide (aucune tour) et maintenir 4 : rien ne se passe, aucune erreur.
+- [ ] Commencer a maintenir 4 en visant une tour, puis bouger la camera pour viser autre chose
+      **sans relacher** : la reparation continue sur la PREMIERE tour visee (cible fixee a
+      l'appui, pas de re-visee en cours de canalisation — comportement attendu, pas un bug).
+- [ ] Maintenir sur une tour deja a PV pleins : s'arrete tout de suite (ou ne demarre pas),
+      sans message, sans consommer de mana.
+- [ ] Reparer une tour jusqu'a PV pleins alors qu'elle en avait moins : s'arrete pile au
+      maximum, jamais au-dela (verifie que `setHealth` est bien plafonne cote reparation).
+
+Circular Slice (touche 2, sort 1 — salve) :
+
+- [ ] Avec au moins 60 mana, appuyer sur 2 pres de plusieurs monstres : tous les monstres a
+      environ 4 blocs autour du joueur prennent des degats et sont repousses **loin** du
+      joueur (pas attires).
+- [ ] Le mana descend de 60 d'un coup a l'appui, pas progressivement.
+- [ ] Reappuyer immediatement sur 2 : rien ne se passe (en recharge). Attendre ~3 secondes :
+      ca fonctionne de nouveau.
+- [ ] Avec moins de 60 mana : message "Pas assez de mana !", rien ne se declenche, la recharge
+      n'est pas non plus enclenchee (un echec par manque de mana ne doit pas bloquer le
+      prochain essai une fois assez de mana regagne).
+- [ ] Maintenir la touche 2 (au lieu d'un simple appui) : un seul coup part, pas une rafale —
+      confirme que c'est bien une salve et pas une canalisation.
+
+Blood Rage (touche 3, sort 2 — maintenue) :
+
+- [ ] Maintenir 3 : le joueur devient visiblement plus rapide, et ses coups au corps a corps
+      infligent plus de degats (Speed + Strength vanilla, verifiable aux icones d'effets en
+      haut a droite de l'ecran).
+- [ ] Le mana descend plus vite que pendant Heal Self (2/tick contre 1/tick).
+- [ ] Relacher 3 : le buff disparait en une fraction de seconde (pas instantanement du fait de
+      la duree courte rafraichie a chaque tick), pas de buff qui reste colle indefiniment.
+- [ ] Maintenir jusqu'a mana epuise : le buff s'arrete tout seul, meme touche encore enfoncee.
+
+HUD et cas transverses :
+
+- [ ] Les 4 emplacements affichent chacun une icone (pomme doree, epee, poudre de blaze,
+      enclume) au lieu des ronds vides d'avant.
+- [ ] Deux competences a la fois : maintenir 1 (soin) puis appuyer sur 4 (reparation) sans
+      relacher 1 — un joueur ne peut canaliser qu'UNE seule competence a la fois, verifier ce
+      qui se passe reellement (la deuxieme devrait remplacer la premiere, a confirmer que le
+      comportement observe est sain et pas un etat incoherent).
+- [ ] Ouvrir la roue des tours (R) en maintenant une competence : elle s'arrete.
+- [ ] Se deconnecter en pleine canalisation puis reconnecter : aucune erreur au demarrage,
+      aucun effet fantome qui continue.
+- [ ] Verifier dans Options > Controles que les 4 touches ("Compétence : Soin/Sort 1/Sort
+      2/Réparer une tour") apparaissent sous "Dungeon Defenders" et se rebindent.
+- [ ] En creatif, appuyer sur 1-4 : la competence se declenche ET le slot de hotbar change
+      (effet de bord assume, voir doc/02-gameplay.md) — a confirmer que ce n'est pas genant en
+      pratique.
+- [ ] **Recharge sur le HUD** : lancer Circular Slice (2) → son emplacement se couvre d'un
+      voile sombre qui descend en ~3 secondes, avec les secondes restantes (3, 2, 1) au centre.
+- [ ] **Canalisation sur le HUD** : maintenir 1, 3 ou 4 (4 en visant une tour) → la bordure de
+      l'emplacement passe au jaune clair, et revient au noir au relachement.
+- [ ] **Mana insuffisant sur le HUD** : a 0 mana, les quatre emplacements sont grises ; avec
+      moins de 60 mana, celui de Circular Slice est grise et les trois autres non.
+- [ ] Se deconnecter pendant une recharge puis rejoindre : aucun voile residuel.
+- [ ] Aucune exception liee a `ability.*`, `ModEvents.tickAbilityChannel`,
+      `ModEvents.onPlayerDamaged`, ou aux 3 nouveaux paquets (`StartChannelAbilityPayload`,
+      `StopChannelAbilityPayload`, `ActivateBurstAbilityPayload`).
+
+## Le mod sur un serveur dédié
+
+Le mod a été déployé pour la première fois sur le serveur dédié du joueur le 2026-08-30 : il ne
+démarrait pas du tout (`NoClassDefFoundError: net/minecraft/client/gui/screens/Screen` dès
+`constructMods`, à cause de `TavernCrystalBlock` — voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#le-mod-ne-démarrait-pas-du-tout-sur-un-serveur-dédié-2026-08-30)).
+Corrigé, mais **rien de ce qui suit n'a encore été rejoué sur un vrai serveur** : le solo ne
+prouve rien ici, un client embarque les deux côtés.
+
+Avant même de déployer, vérifier le jar produit (ni `build` ni `runServer` ne détectent ce type
+de bug, l'environnement de dev contenant les classes des deux côtés) :
+
+```bash
+./gradlew build -x test
+python3 tools/verifier-dist.py build/libs/dungeon_defenders-0.0.1.jar
+```
+
+Le script refait le raisonnement de la JVM d'un serveur dédié : il part des classes du mod
+chargeables côté serveur et suit leurs références jusqu'à trouver — ou non — une classe
+`net.minecraft.client.*`. Sortie attendue : `OK : aucune classe cliente nommée dans le graphe
+serveur.` Sinon il affiche la chaîne fautive, à corriger avec un des deux patrons décrits dans
+[01-architecture.md](01-architecture.md#la-règle-clientserveur--nommer-une-classe-cliente-suffit-à-casser-un-serveur-dédié).
+
+- [ ] Le serveur démarre et le mod se charge (plus de `NoClassDefFoundError` dans les logs
+      serveur).
+- [ ] Un client peut se connecter (le protocole custom du mod négocie sans erreur : les paquets
+      sont bien enregistrés des deux côtés).
+- [ ] Clic droit sur le cristal de la taverne : `MapSelectionScreen` s'ouvre bien, avec le
+      carrousel de maps et la difficulté courante — c'est le chemin qui a changé (paquet
+      `OpenMapSelectionPayload` au lieu d'un appel direct), donc le plus à risque.
+- [ ] Choisir une difficulté puis « Jouer » fonctionne toujours (aller-retour
+      `SetDifficultyPayload` + `StartGamePayload`).
+- [ ] Les autres écrans s'ouvrent toujours en multijoueur : config du spawner, config du coffre
+      de mana, roue des tours, écran de fin de partie.
+- [ ] Le HUD (mana, vie, vague, score, popup de gain) s'affiche et se met à jour pour un joueur
+      connecté à distance, pas seulement en solo.
+- [ ] À deux joueurs si possible : le score/l'XP sont bien partagés, et chacun voit ses propres
+      popups.
+
+## IA : convergence longue distance vers le cristal (`SeekEterniaCrystalGoal`)
+
+Corrige un trou de fond jamais testé avant : sans ça, un monstre spawné hors du rayon local des
+goals de palier (16 blocs cristal / 8 blocs tour) errait au hasard sans jamais forcément
+approcher le cristal. Une map dédiée à ce test est livrée dans le mod
+(`dungeon_defenders_test:map/couloir_ecart_ia`, dans le pack "Maps de test") : un couloir de 74
+blocs entre le spawner et le cristal, sans autre chemin possible — voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md#convergence-longue-distance-vers-le-cristal-seeketerniacrystalgoal).
+
+- [ ] Choisir « Couloir - ecart IA » (pack "Maps de test") dans l'écran de la taverne, jouer,
+      passer en Combat : un monstre qui spawn à l'autre bout du couloir se dirige tout de suite
+      vers le cristal (pas d'errance aléatoire prolongée avant de "tomber" dans son rayon de
+      détection de 16 blocs).
+- [ ] Poser une tour (Blockade ou Turret) au milieu du couloir, sur le chemin : le monstre
+      s'arrête pour la taper dès qu'il est à portée, puis, une fois la tour détruite, reprend sa
+      route vers le cristal sans avoir besoin de la retrouver par hasard.
+- [ ] Un monstre bloqué (aucun chemin possible vers le cristal, si testable) ne plante pas —
+      il retente périodiquement plutôt que de figer ou de spammer des calculs de chemin.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception liée à `SeekEterniaCrystalGoal`,
+      `ModAttachments.CRYSTAL_POS`, ou `EterniaCrystalBlockEntity`.
+- [ ] Aucune régression sur le comportement déjà validé : archers qui tirent sur le cristal à
+      portée, monstres de mêlée qui respectent toujours l'ordre de priorité Block > Corps à
+      corps > Cristal > Tourelle une fois à portée locale.
+
+## Ennemis data-driven, étape 1 (`EnemyRegistry`, JSON d'ennemis, migration du format des spawners)
+
+Nouveau (2026-09-29), plan complet dans [data-driven/ennemis.md](data-driven/ennemis.md).
+Vérifié hors jeu : build, `tools/verifier-dist.py`, les 7 gametests (dont 4 nouveaux), et
+comparaison des trois `.nbt` de test régénérés (seul le champ `Enemy` diffère). **Jamais vu en
+jeu.**
+
+> ⚠️ **À tester en solo, pas sur le serveur dédié.** La version du protocole réseau du mod passe
+> de `1` à `2` : un client à jour sera **refusé** par le serveur du homelab tant que celui-ci
+> tourne l'ancien jar (et inversement). C'est voulu : sans ça, les deux versions échangeraient
+> des paquets de forme différente.
+
+**Où lire les logs** : en solo, le serveur intégré écrit dans le `logs/latest.log` de l'instance
+Minecraft (le même fichier que le client). Toutes les lignes ci-dessous y apparaissent.
+
+**Au lancement (tous les scénarios)** :
+
+- [ ] Le log contient `2 ennemi(s) chargé(s) : [...]` avec `dungeon_defenders:zombie` et
+      `dungeon_defenders:skeleton`.
+- [ ] Rien n'a changé à l'écran : l'aperçu au-dessus d'un spawner (icônes d'œufs, noms, total),
+      l'écran de config (bouton « cycler » : Zombie puis Squelette), la barre de vie des monstres,
+      le popup « +10 » / « +15 » avec l'œuf.
+
+### 1. Une map existante spawne toujours les bons ennemis (ancien format converti)
+
+**A. Avec un vrai monde d'avant la mise à jour.** C'est le cas de ta map de campagne, si elle
+contient déjà des spawners.
+
+- [ ] Avant de synchroniser, avec l'ancienne version du mod : vérifier que le monde contient au
+      moins un spawner configuré (zombies + squelettes), puis quitter le monde.
+- [ ] Synchroniser cette branche, relancer, ouvrir le monde. Aller près du spawner pour charger
+      son chunk. Le log contient une ligne **par ennemi du spawner** :
+      `Spawner à <x>, <y>, <z> : ennemi n°0 (ancien format) converti en dungeon_defenders:zombie`
+      (`n°1` → `dungeon_defenders:skeleton`).
+- [ ] L'aperçu du spawner et son écran de config affichent la même composition qu'avant.
+- [ ] Passer en Combat : il fait apparaître **les mêmes monstres qu'avant**, en même nombre, et la
+      vague se termine normalement (le compteur d'ennemis ne reste pas à 0).
+- [ ] Quitter, relancer, revenir au même spawner : **plus aucune** ligne « converti » pour lui.
+      Il a été resauvegardé au nouveau format.
+- [ ] Si la map est aussi sauvegardée en structure (`dungeon_defenders:map/...`) : la jouer depuis
+      la taverne. Les lignes « converti » **réapparaissent à chaque partie**. C'est attendu : le
+      fichier `.nbt` de la sauvegarde reste à l'ancien format, et seul l'export le convertit (§5).
+
+**B. Si tu n'as pas de monde d'avant sous la main**, on peut simuler l'ancien format avec la
+commande vanilla `/data`, en créatif :
+
+- [ ] Poser un spawner, le viser, puis taper (en remplaçant `<x> <y> <z>` par sa position) :
+      `/data merge block <x> <y> <z> {Entries:[{Enemy:0,BaseCount:4,Spawned:0,Accumulator:0,EffectiveTotal:4},{Enemy:1,BaseCount:2,Spawned:0,Accumulator:0,EffectiveTotal:2}]}`
+- [ ] Le log contient immédiatement les deux lignes `... ennemi n°0 (ancien format) converti en
+      dungeon_defenders:zombie` et `... n°1 ... dungeon_defenders:skeleton`.
+- [ ] `/data get block <x> <y> <z> Entries` affiche maintenant `Enemy: "dungeon_defenders:zombie"`
+      et `Enemy: "dungeon_defenders:skeleton"` : l'écriture est bien au nouveau format.
+- [ ] En Combat : 4 zombies et 2 squelettes apparaissent (difficulté Normal, vague 1), et la
+      vague se termine.
+
+**C. Les maps de test embarquées** (pack « Maps de test ») ont été régénérées au nouveau format :
+
+- [ ] Jouer `Arene de test` : **aucune** ligne « converti » dans le log, et toujours 8 zombies +
+      4 squelettes.
+
+### 2. Une modification de stat dans un JSON d'ennemi est appliquée par `/reload`
+
+Le JSON du mod est dans le jar. Pour le modifier sans le toucher, on le **remplace** par un
+datapack du monde, qui a priorité sur le mod.
+
+- [ ] Dans `saves/<ton monde>/datapacks/`, créer le dossier `dd_test_ennemis` avec deux
+      fichiers :
+  - `pack.mcmeta` :
+    ```json
+    { "pack": { "description": "Test ennemis Dungeon Defenders", "min_format": 101, "max_format": 101 } }
+    ```
+  - `data/dungeon_defenders/dungeon_defenders/enemy/zombie.json` : copie du zombie livré avec
+    **`"xp_value": 50`** au lieu de 10 :
+    ```json
+    {
+      "entity_type": "minecraft:zombie",
+      "icon": "minecraft:zombie_spawn_egg",
+      "xp_value": 50,
+      "order": 0,
+      "behavior": { "type": "dungeon_defenders:melee_priority" }
+    }
+    ```
+- [ ] En jeu, **sans quitter** : `/reload`. Le log contient à nouveau `2 ennemi(s) chargé(s)`.
+      `/datapack list enabled` doit lister `file/dd_test_ennemis`.
+- [ ] Tuer un zombie : le score et l'XP montent de **50**, et le popup affiche « +50 » avec l'œuf.
+      Un squelette donne toujours **15**.
+- [ ] Changer `50` en `80`, `/reload`, tuer un zombie : **+80**. Toujours sans redémarrer.
+- [ ] Si le zombie donne encore **10** alors que le pack est bien listé, c'est que l'ordre de
+      priorité des packs ne fait pas passer le datapack devant le mod. Me le signaler, c'est une
+      information utile en soi.
+- [ ] À la fin : supprimer le dossier `dd_test_ennemis`, puis `/reload`. Le zombie redonne 10.
+
+### 3. Une erreur volontaire dans un JSON donne un message clair, sans crash
+
+Avec le même datapack :
+
+- [ ] Dans `zombie.json`, remplacer `"minecraft:zombie"` par **`"minecraft:zombi"`**, puis
+      `/reload`.
+- [ ] Le jeu ne plante pas, et le log contient une erreur vanilla qui désigne le fichier et la
+      cause :
+      `Couldn't parse data file 'dungeon_defenders:zombie' from 'dungeon_defenders:dungeon_defenders/enemy/zombie.json': ...`,
+      avec dans le détail **`"entity_type" inconnu : minecraft:zombi`**.
+- [ ] La ligne suivante indique **`1 ennemi(s) chargé(s) : [dungeon_defenders:skeleton]`** :
+      le fichier cassé est ignoré, le squelette se charge normalement.
+- [ ] Conséquence attendue : le zombie est maintenant un **ennemi inconnu**. Les spawners qui en
+      contiennent se comportent comme au scénario 4 (barrière dans l'aperçu, rien ne spawne, hors
+      du total). Le squelette, lui, fonctionne normalement.
+- [ ] Variante : mettre `"type": "dungeon_defenders:lance_flammes"` dans `behavior`. Même chose,
+      avec dans le détail `Type de comportement d'ennemi inconnu : dungeon_defenders:lance_flammes`
+      et la liste des types connus.
+- [ ] Corriger le fichier (ou supprimer le datapack), `/reload` : les 2 ennemis reviennent, et
+      les spawners refont apparaître des zombies **sans avoir été reconfigurés**.
+
+### 4. Un identifiant inconnu dans un spawner : ignoré, loggé, vague pas bloquée
+
+- [ ] En créatif, sur un spawner (en remplaçant la position) :
+      `/data merge block <x> <y> <z> {Entries:[{Enemy:"dungeon_defenders:gobelin",BaseCount:6,Spawned:0,Accumulator:0,EffectiveTotal:6},{Enemy:"dungeon_defenders:zombie",BaseCount:4,Spawned:0,Accumulator:0,EffectiveTotal:4}]}`
+- [ ] En Construction, l'aperçu au-dessus du spawner montre une **barrière** et
+      `dungeon_defenders:gobelin : ennemi inconnu`, et un **total de 4** : l'inconnu n'est pas
+      compté.
+- [ ] L'écran de config affiche la ligne `dungeon_defenders:gobelin`. Cliquer « Valider » sans y
+      toucher : la ligne est **conservée** (vérifier avec `/data get block <x> <y> <z> Entries`).
+- [ ] Passer en Combat : le log contient **une seule fois** (pas à chaque seconde)
+      `Spawner à <x>, <y>, <z> : ennemi inconnu dungeon_defenders:gobelin, ignoré (pack manquant ou JSON invalide ?)`.
+- [ ] Seuls les 4 zombies apparaissent. Les tuer **termine la vague** : c'est le point essentiel,
+      l'ennemi inconnu ne bloque rien.
+- [ ] Aucun crash, ni en solo ni à la reconnexion au monde. L'identifiant inconnu est toujours
+      là après une sauvegarde et un rechargement.
+
+### Autres points à vérifier au passage
+
+- [ ] **`/dd_export`** sur un pack de maps créé en jeu **avant** la mise à jour : un message
+      supplémentaire indique le nombre d'ennemis convertis, et le log détaille chaque spawner.
+      Le jar produit ne donne plus aucune ligne « converti » quand on joue ses maps.
+- [ ] Des monstres **sans JSON** gardent leur IA d'avant : un husk ou un stray invoqué avec
+      `/summon` près du cristal l'attaque (le husk au corps à corps, le stray à l'arc).
+- [ ] Aucune exception liée à `EnemyRegistry`, `EnemyDefinitionsPayload`,
+      `ClientEnemyDefinitions` ou `SpawnerBlockEntity` dans le log.
+
+## Amélioration des tours et portée de pose (2026-11-10)
+
+Voir [02-gameplay.md](02-gameplay.md#améliorer-une-tour--abstracttowerblockentityupgrade-networkupgradetowerpayloadjava).
+Calculs vérifiés par gametest ; touche, affichage et sensations **jamais vus en jeu**.
+
+- [ ] En Construction, regarder un Harpoon Turret : « Tourelle Harpon — niv. 1/4 », ses PV, et
+      « [U] Améliorer : 38 mana ».
+- [ ] Appuyer sur **U** : message « améliorée au niveau 2 (-38 mana) », le mana baisse de 38,
+      l'affichage passe à « niv. 2/4 » et les PV max à 25.
+- [ ] Monter jusqu'au niveau 4 : la ligne « Améliorer » disparaît. Un appui de plus affiche
+      « déjà au niveau maximum ».
+- [ ] Sans assez de mana : message de refus avec le prix et le mana disponible.
+- [ ] En Combat : U affiche le refus « phase de Construction », et la ligne « Améliorer » est
+      masquée. À la Taverne : l'amélioration est gratuite.
+- [ ] Une tour niveau 4 fait nettement plus mal qu'une niveau 1 (mannequin d'entraînement) et
+      encaisse plus.
+- [ ] Retirer une tour niveau 3 : le remboursement est la moitié de tout le mana dépensé (pose +
+      2 niveaux), pas seulement de la pose.
+- [ ] Le niveau survit à une sauvegarde et un rechargement.
+- [ ] La touche apparaît dans Options > Contrôles, catégorie du mod, et peut être changée.
+- [ ] **Portée** : poser puis retirer une tour visée à 15 blocs fonctionne (avant, rien ne se
+      passait au-delà de 8 blocs).
+- [ ] Finir une vague sans perdre de tour : popup supplémentaire « Aucune tour perdue ».
+      Retirer soi-même une tour pendant la Construction ne le fait pas perdre.
+- [ ] Me dire si 4 niveaux, +25 % et 75 % du prix paraissent justes : tout se règle dans
+      `balance/towers.json`.
+
+## Variantes d'ennemis : brute, coureur, tireur d'élite (2026-11-10)
+
+Voir [data-driven/ennemis.md](data-driven/ennemis.md#extension-du-2026-11-10--stats-optionnelles-et-variantes).
+Vérifié par gametest ; apparence et équilibrage **jamais vus en jeu**.
+
+- [ ] Le log annonce `5 ennemi(s) chargé(s)`. Dans l'écran de config d'un spawner, le bouton
+      « cycler » propose Zombie, Squelette, **Brute, Coureur, Tireur d'élite**.
+- [ ] Spawner avec des brutes : de **grands** zombies lents, 60 PV, qui font très mal aux tours
+      et au cristal (12 par coup). Popup « +40 » avec une hache en icône.
+- [ ] Spawner avec des coureurs : de **petits** husks rapides et fragiles (12 PV), « +8 ».
+- [ ] Spawner avec des tireurs d'élite : des strays qui s'arrêtent plus loin du cristal (14
+      blocs) et tirent, « +25 ».
+- [ ] Mélanger brutes et zombies dans un même spawner : chacun garde bien ses propres stats.
+- [ ] Mini-boss : un spawner avec 1 brute, vague de début = vague de fin = 3. Elle n'apparaît
+      qu'à la vague 3, et la vague se termine quand elle meurt.
+- [ ] Les maps existantes (zombies et squelettes) se comportent exactement comme avant.
+- [ ] Me dire si la taille, la vitesse et la résistance paraissent justes : ce sont des
+      premières valeurs, modifiables dans les JSON puis `/reload`.
+
+## Bonus de score, score final et compte à rebours (2026-11-10)
+
+Voir [02-gameplay.md](02-gameplay.md#bonus-et-multiplicateurs-de-score--initscorekeeperjava).
+Calculs vérifiés par gametests ; l'affichage n'a **jamais été vu en jeu**.
+
+- [ ] En Construction, cliquer sur le cristal (seul) : « Combat dans 3... » s'affiche au-dessus
+      du viseur, descend à 2 puis 1, puis le Combat démarre.
+- [ ] À deux joueurs : pendant le décompte, un joueur reclique sur le cristal (retire son vote).
+      Le décompte **s'annule**.
+- [ ] Finir une vague sans être touché et sans que le cristal le soit : trois popups de score,
+      « +50 Vague terminée », « +25 Aucun dégât subi », « +38 Cristal intact » (en Normal).
+- [ ] Se faire toucher pendant la vague suivante : plus de popup « Aucun dégât subi ». Laisser
+      un monstre toucher le cristal : plus de popup « Cristal intact ».
+- [ ] Gagner la map : popup « +200 Map terminée », puis l'écran de fin affiche **« Score : N »**
+      avec le total de la partie (pas 0). Pareil après une défaite, sans le bonus.
+- [ ] En Difficile, un zombie rapporte **15** de score au lieu de 10 (l'expérience reste à 10).
+- [ ] Sur une map dont le bloc de configuration a un multiplicateur de score de 2 : tous les
+      gains sont doublés.
+- [ ] Datapack : `balance/pacing.json` avec `{ "combat_countdown_seconds": 0 }`, `/reload` : le
+      Combat démarre dès le dernier vote, comme avant.
+
+## Inspecter une tour posée et description dans la roue (2026-11-10)
+
+Tout est du rendu client, donc **rien n'a pu être vérifié hors jeu** au-delà de la compilation.
+
+- [ ] Roue des tours : sous le nom et le coût de la tour survolée, une ligne grise de
+      description apparaît, lisible et pas coupée par le bord de l'écran.
+- [ ] Poser un Harpoon Turret, sortir du mode pose, le **regarder** : son cône de portée
+      s'affiche au sol, orienté dans le sens où il tire, identique à celui de la pose.
+- [ ] En le regardant : sa barre de vie est visible même à PV pleins, et « Tourelle Harpon » +
+      « PV : 20 / 20 » s'affichent sous le viseur. Regarder ailleurs : tout disparaît.
+- [ ] Regarder une Blockade : barre de vie et texte, **pas** de cercle de portée.
+- [ ] Une tour endommagée affiche les bons PV, et ils baissent en direct pendant un combat.
+- [ ] Rien ne s'affiche pendant le mode pose, le mode suppression, ou avec la roue ouverte.
+- [ ] À plus de 20 blocs, rien ne s'affiche.
+
+## Heure du monde figée et heure par map (`WorldTime`, 2026-11-10)
+
+Voir [02-gameplay.md](02-gameplay.md#lheure-du-monde-figée--worldtimejava). Vérifié par gametest,
+**jamais vu en jeu**.
+
+- [ ] Ouvrir un monde : il fait **midi**, et le soleil ne bouge plus (attendre une minute).
+      Aucune pluie.
+- [ ] `config/dungeon_defenders-common.toml` contient `defaultTimeOfDay = 6000`. Le passer à
+      `13000`, relancer : la taverne est au crépuscule.
+- [ ] En créatif, clic droit sur le bloc de configuration d'une map : le nouvel champ
+      « Heure de la map » est vide. Y mettre `18000`, valider, rouvrir : la valeur est conservée.
+- [ ] Sauvegarder la map en structure et la jouer : il fait **nuit** pendant toute la partie.
+- [ ] Retour à la taverne (`/dd_leave` ou fin de partie) : l'heure par défaut revient.
+- [ ] Une map sans heure (`Arene de test`) se joue à l'heure par défaut.
+- [ ] **En plein midi, à ciel ouvert, zombies et squelettes ne prennent pas feu** (correctif
+      `data/minecraft/timeline/day.json`). Le ciel, le soleil et la lumière restent normaux.
+- [ ] En multijoueur si possible : les deux joueurs voient la même heure.
+
+## Réapparition des coffres de mana (correctif du registre, 2026-11-10)
+
+`ManaChestBlockEntity` avait le même bug de registre que les spawners (voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)). Corrigé et couvert par le
+gametest `mana_chest_respawn`, mais **le symptôme d'origine n'a jamais été revu en jeu**.
+
+- [ ] Sur une map posée depuis la taverne (`Arene de test`, qui contient un coffre) : ouvrir le
+      coffre en survie pendant la vague 1. Il disparaît et donne son mana.
+- [ ] Finir la vague : au retour en Construction, le coffre **réapparaît** et peut être rouvert.
+- [ ] Même chose avec un coffre posé à la main en créatif, et après avoir quitté puis rouvert le
+      monde.
+
+## Stats des tours et réglages globaux data-driven (étapes 2 et 3)
+
+Nouveau (2026-11-10), voir [data-driven/tours.md](data-driven/tours.md) et
+[data-driven/equilibrage.md](data-driven/equilibrage.md). Vérifié hors jeu (build,
+`verifier-dist.py`, gametests). **Jamais vu en jeu.** Même méthode que pour les ennemis : un
+datapack du monde (`saves/<monde>/datapacks/dd_test/`, avec le `pack.mcmeta` de la section
+« Ennemis data-driven ») qui remplace un fichier du mod, puis `/reload`.
+
+**Au lancement** :
+
+- [ ] Le log contient `Stats de tours chargées : 6 sur 6` et
+      `Réglages d'équilibrage chargés : 6 sur 6`.
+- [ ] Rien n'a changé : coût affiché dans la roue, portée à la pose, dégâts et cadence des six
+      tours, PV, remboursement de moitié au retrait, barre d'expérience pleine à 100.
+
+**Stats d'une tour** (fichier
+`data/dungeon_defenders/dungeon_defenders/tower/harpoon_turret.json` dans le datapack) :
+
+- [ ] Poser un Harpoon Turret. Mettre dans le fichier `{ "mana_cost": 10, "range": 20.0,
+      "attack_interval_ticks": 5 }`, puis `/reload` : la roue affiche **10** de mana, l'aperçu de
+      portée s'agrandit, et le turret **déjà posé** tire beaucoup plus vite et plus loin.
+- [ ] Mettre `{ "max_health": 60 }`, `/reload` : le turret déjà posé affiche une barre de vie à
+      un tiers (20 PV sur 60). Un turret posé ensuite a 60 PV.
+- [ ] Erreur volontaire `{ "mana_cots": 10 }`, `/reload` : pas de crash, le log contient
+      `Stats de la tour dungeon_defenders:harpoon_turret invalides (...) : stat inconnue
+      "mana_cots" (stats de cette tour : ...)`, et la tour reprend ses valeurs par défaut (50).
+- [ ] Stat hors sujet `{ "contact_damage": 3 }` : même refus, message
+      `la stat "contact_damage" n'est pas utilisée par cette tour`.
+
+**Réglages globaux** (fichiers `.../balance/difficulty.json`, `towers.json`,
+`progression.json` dans le datapack) :
+
+- [ ] `difficulty.json` avec `{ "normal_multiplier": 2.0 }`, `/reload` en phase Construction :
+      l'aperçu au-dessus des spawners et le compteur d'ennemis de la vague **doublent**.
+- [ ] `towers.json` avec `{ "refund_ratio": 1.0 }`, `/reload` : retirer une tour rend tout son
+      coût.
+- [ ] `progression.json` avec `{ "xp_per_level": 20 }`, `/reload` : la barre d'expérience se
+      remplit cinq fois plus vite, deux zombies font passer un niveau.
+- [ ] Erreur volontaire `{ "normal_multiplierr": 2.0 }` : pas de crash, log
+      `Fichier d'équilibrage ... invalide : clé inconnue "normal_multiplierr" (clés de ce
+      fichier : ...)`, et la difficulté reprend ses valeurs par défaut.
+- [ ] Supprimer le datapack, `/reload` : tout revient aux valeurs d'origine.
+
+## IA : contournement d'obstacle (`map/detour_ia.nbt`)
+
+Complète le test ci-dessus : celui-là vérifie qu'un monstre converge sur une **longue**
+distance en ligne droite, celui-ci vérifie qu'il sait **contourner** un obstacle sur une
+distance **modérée** (~27 blocs) où la ligne droite est physiquement impossible (mur avec
+passage étroit, puis falaise franchissable seulement via une rampe à l'opposé) — voir
+[02-gameplay.md](02-gameplay.md#mapdetour_ianbt).
+Vérifié hors jeu par simulation (BFS), pas seulement par relecture des coordonnées — mais
+**jamais vu bouger un vrai monstre dedans**.
+
+- [ ] Choisir « Detour - IA » (pack "Maps de test") dans l'écran de la taverne, jouer, passer en
+      Combat : un monstre qui spawn se dirige d'abord vers le passage étroit à gauche du mur
+      (pas vers le mur lui-même), puis, une fois de l'autre côté, se dirige vers la droite pour
+      trouver la rampe plutôt que de rester coincé au pied de la falaise.
+- [ ] Le monstre monte bien la rampe (changement de hauteur visible, sol clair une fois en
+      haut) puis continue vers le cristal, sans redescendre ni faire d'aller-retour absurde.
+- [ ] Poser une tour sur le trajet (dans le passage du mur, ou en haut près du cristal) : même
+      comportement "s'arrête taper, puis reprend sa route" que sur `couloir_ecart_ia`.
+- [ ] Vérifier `run/logs/latest.log` : aucune exception, et surtout qu'un monstre ne reste pas
+      visiblement bloqué/tremblant indéfiniment contre le mur ou la falaise (signerait un
+      chemin que le pathfinder ne sait pas calculer malgré la vérification hors jeu).
+
+## Retours de progression : popup d'XP et passage de niveau (2026-11-16)
+
+- [ ] Tuer un monstre : un « +X XP » vert apparaît à droite du libellé « Expérience : x/y »,
+      monte légèrement et s'efface en un peu plus d'une seconde. Il ne recouvre ni les losanges
+      ni les emplacements de compétences.
+- [ ] Tuer plusieurs monstres d'un coup (mortier, boule de bowling) : un seul popup, avec le
+      total, plutôt que plusieurs textes superposés.
+- [ ] Franchir un niveau : bannière jaune « Niveau X ! » en haut de l'écran pendant ~2,5 s, son
+      de passage de niveau, particules vertes autour du joueur, et le message du chat toujours là.
+- [ ] À deux joueurs : l'autre joueur entend le son et voit les particules, mais pas la bannière.
+- [ ] Se déconnecter puis rejoindre avec un personnage déjà monté en niveau : ni popup ni
+      bannière à la connexion.
+- [ ] Options > Mods > configuration : décocher « popup de gain d'expérience » puis « bannière
+      de passage de niveau » les masque chacun indépendamment.
+
+## Vagues périodiques du spawner (« une vague sur N », 2026-11-16)
+
+- [ ] Clic droit sur un spawner en créatif : un nouveau champ « Une vague sur (1 = toutes) »
+      apparaît sous « dernière vague », avec 1 par défaut, y compris sur un spawner d'une map
+      existante.
+- [ ] Poser un second spawner avec une brute, première vague 2, dernière vague 5, une vague
+      sur 2 : la brute apparaît aux vagues 2 et 4, pas aux vagues 1, 3 et 5.
+- [ ] Le compteur « Ennemis : x/y » du HUD compte la brute aux vagues 2 et 4 seulement, et la
+      vague se termine bien aux vagues où elle n'apparaît pas.
+- [ ] Rouvrir l'écran du spawner après validation, puis après un redémarrage du monde : le pas
+      saisi est conservé.
+
+## Aperçu de map capturé en jeu (2026-11-16)
+
+Code de rendu écrit sans pouvoir le voir tourner : c'est le point le plus susceptible de
+mal se passer. En cas de plantage, le log du client est ce qu'il me faut.
+
+- [ ] En créatif, clic droit sur le cristal de la taverne : un bouton « Prendre l'aperçu »
+      sous « Supprimer ». Grisé sur une map livrée avec le mod, actif sur une map créée en jeu.
+      Absent en survie.
+- [ ] Cliquer dessus : l'écran se ferme et un rappel « Aperçu de … : cadrez puis appuyez sur
+      F9 » reste affiché au-dessus de la hotbar.
+- [ ] F9 accroupi : « Capture d'aperçu annulée », le rappel disparaît.
+- [ ] Réarmer, cadrer, F9 : le HUD disparaît un court instant puis revient, message « Aperçu
+      enregistré pour … ».
+- [ ] Rouvrir l'écran de choix : l'image de la map est la capture, **sans** HUD ni main
+      dessus, à l'endroit, pas étirée (recadrée au centre si la fenêtre n'est pas en 16:9).
+- [ ] Le fichier existe : `<monde>/dungeon_defenders/previews/<namespace>/<id>.png`, 128×72.
+- [ ] Redémarrer le monde et rouvrir l'écran : l'aperçu est toujours là.
+- [ ] `/dd_export <namespace>` annonce 1 aperçu, et le jar contient
+      `assets/<namespace>/textures/gui/maps/<id>.png`.
+- [ ] À deux joueurs : le second voit l'aperçu en ouvrant l'écran de choix.
+- [ ] Si le HUD restait masqué après une capture : F1 le rétablit, et me le signaler.
+
+## Héros Alchimiste, ses six tours et ses deux sorts (2026-11-16)
+
+Branche `feature/heros-alchimiste`. Rien n'a été vu en jeu : les effets sont couverts par des
+gametests, pas le ressenti ni l'équilibrage. Astuce : le mannequin d'entraînement et la baguette
+de remplissage de mana évitent de lancer une vraie partie.
+
+- [ ] Touche `H` : l'écran propose **Écuyer** et **Alchimiste** ; la description de l'Alchimiste
+      passe à la ligne sans déborder de l'écran ; la liste montre ses 6 tours.
+- [ ] Après avoir choisi l'Alchimiste, la roue ne contient que ses 6 tours, avec nom,
+      description et coût. Le HUD affiche « Alchimiste ».
+- [ ] Les quatre tours de l'Écuyer qui n'avaient pas de barre de vie (Bouncer, Slice N Dice,
+      Bowling Ball, Mortar) en ont une une fois entamées.
+- [ ] **Alambic givrant** : cercle de portée à la pose ; les monstres qui entrent dans le rayon
+      ralentissent nettement (flocons), et reprennent leur vitesse en sortant.
+- [ ] **Projecteur d'acide** : cône large à la pose, orientable à la molette ; les monstres
+      devant lui perdent un peu de vie (particules vertes) ; ceux de derrière, rien.
+- [ ] Corrosion : un monstre arrosé meurt plus vite sous une tourelle ou sous tes coups qu'un
+      monstre non arrosé.
+- [ ] **Lance-fioles** : tire dans toutes les directions ; une flaque de flammes reste 3 s à
+      l'endroit visé et blesse les monstres qui y restent. Aucun bloc ne brûle.
+- [ ] **Pylône catalyseur** : particules d'enchantement au-dessus des tours voisines ; une
+      tourelle à côté tue plus vite le mannequin / un monstre qu'une tourelle isolée.
+- [ ] **Condenseur de mana** : un monstre tué dans son rayon lâche deux cristaux au lieu d'un ;
+      hors du rayon, un seul.
+- [ ] **Cuve instable** : les monstres de mêlée l'attaquent en priorité ; quand ils la
+      détruisent, explosion (son + particules) et ils perdent beaucoup de vie. La retirer à la
+      main ne fait rien exploser, et aucun bloc de la map n'est cassé.
+- [ ] **Fiole de givre** (sort 1) : vise le sol près d'un groupe ; ils sont presque figés 3 s.
+      Recharge de 8 s affichée sur le HUD.
+- [ ] **Catalyse** (sort 2, maintenue) : particules violettes sur les tours à moins de 8 blocs,
+      le mana descend vite, et tout s'arrête en relâchant.
+- [ ] Touche `U` sur un Condenseur ou un Pylône : l'amélioration passe (le bonus augmente, non
+      affiché pour l'instant).
+- [ ] En multijoueur : un Pylône d'Alchimiste renforce bien les tours d'un Écuyer.
+- [ ] Avis attendu : les noms, les rôles et les chiffres. Le Condenseur rend-il le mana trop
+      facile ?
+
+## Héros Ingénieur, ses six tours et ses deux sorts (2026-11-16)
+
+Branche `feature/heros-ingenieur`. Effets couverts par le gametest `engineer_towers`, rien vu en
+jeu.
+
+- [ ] Touche `H` : l'Ingénieur est proposé ; sa roue contient ses 6 tours.
+- [ ] **Barricade blindée** : entamée par les monstres, ses PV remontent seuls (1 PV toutes les
+      2 s) ; les monstres de mêlée s'y attaquent en priorité.
+- [ ] **Tourelle à répétition** : flèches en rafale (environ 3 par seconde), cône de 60°.
+- [ ] **Tourelle longue portée** : cône très étroit à la pose, tire à plus de 20 blocs, un tir
+      toutes les 4 s qui tue un zombie d'un coup.
+- [ ] **Marteau-pilon** : son de piston et nuage quand un monstre approche ; les monstres sont
+      blessés et projetés en arrière.
+- [ ] **Bobine magnétique** : les monstres à portée dévient vers elle et piétinent autour.
+      À signaler si l'effet est trop faible ou s'ils restent bloqués pour toujours.
+- [ ] **Station de réparation** : particules vertes sur les tours voisines entamées, leurs PV
+      remontent ; la station elle-même ne se répare pas.
+- [ ] **Réparation d'urgence** (sort 1) : les tours proches regagnent la moitié de leur vie,
+      recharge de 20 s affichée.
+- [ ] **Champ de force** (sort 2, maintenue) : pendant la canalisation, les tours proches ne
+      perdent plus de vie ; le mana descend très vite.
+- [ ] Avis attendu : noms, rôles, chiffres.
+
+## Héros Géomancien, ses six tours et ses deux sorts (2026-11-16)
+
+Branche `feature/heros-geomancien` (contient aussi l'Alchimiste et l'Ingénieur). Effets couverts
+par le gametest `geomancer_towers`, sauf la Pierre de vie ; rien vu en jeu.
+
+- [ ] Touche `H` : quatre héros proposés ; la roue du Géomancien contient ses 6 tours.
+- [ ] **Haie de ronces** : les monstres qui la frappent perdent de la vie à chaque coup ; elle
+      ne blesse pas un monstre qui passe à côté sans la toucher.
+- [ ] **Totem de boue** : toutes les 4 s, les monstres à portée s'arrêtent net 1,5 s
+      (éclaboussures), puis repartent.
+- [ ] **Geyser** : les monstres proches sont projetés à 3-4 blocs de haut et retombent blessés.
+      À signaler s'ils retombent derrière un mur ou restent coincés.
+- [ ] **Lance-rochers** : avec une brute et des zombies à portée, c'est la brute qui est visée ;
+      elle s'arrête une seconde à chaque coup.
+- [ ] **Flèche de cristal** : sur un groupe serré, étincelles sur plusieurs monstres à la fois ;
+      sur un monstre seul, un seul touché.
+- [ ] **Pierre de vie** (pas de test automatique) : blessé, se tenir à moins de 6 blocs rend 1
+      cœur toutes les 2 s, avec un cœur au-dessus de la tête ; rien à pleine vie.
+- [ ] **Séisme** (sort 1) : les monstres autour de toi sautent en l'air et sont blessés ;
+      recharge de 10 s affichée.
+- [ ] **Peau de pierre** (sort 2, maintenue) : tu encaisses nettement moins, tu marches plus
+      lentement, et l'effet cesse en relâchant.
+- [ ] Les quatre héros : passer de l'un à l'autre entre deux vagues ; les tours déjà posées par
+      l'ancien héros restent et fonctionnent.
+- [ ] Avis attendu : noms, rôles, chiffres ; y a-t-il un héros clairement trop fort ou inutile ?
+
+## Armes de héros et bonus de niveau (2026-11-16)
+
+Branche `feature/armes-de-heros` (contient les quatre héros). Couvert par le gametest
+`hero_weapons` ; rien vu en jeu.
+
+- [ ] En se connectant, l'arme du héros est dans l'inventaire (une épée pour l'Écuyer).
+- [ ] Changer de héros (`H`) : l'ancienne arme disparaît, la nouvelle arrive, un seul exemplaire.
+- [ ] Jeter l'arme (`A`/`Q`) : elle revient aussitôt, rien ne tombe au sol.
+- [ ] Mourir puis réapparaître : l'arme est là, aucune arme au sol à l'endroit de la mort.
+- [ ] **Sacoche de fioles** (clic droit) : traînée violette, éclat à l'endroit visé, plusieurs
+      monstres proches blessés d'un coup.
+- [ ] **Pistolet à rivets** : un monstre lointain (20 blocs) perd de la vie ; tir rapide.
+- [ ] **Bâton de géomancien** : courte portée, le monstre touché ralentit 2 s.
+- [ ] La recharge se voit sur l'icône de l'arme ; impossible de tirer pendant.
+- [ ] Tirer à travers une zone interdite (marqueur invisible) fonctionne ; une tour ou un mur
+      arrête le tir.
+- [ ] Clic droit avec l'arme **pendant le mode pose de tour** : la pose reste prioritaire, à
+      signaler sinon.
+- [ ] En créatif, l'arme d'un autre héros (`/give @s dungeon_defenders:engineer_rivet_gun`)
+      refuse de tirer avec un message.
+- [ ] Bonus de niveau : au niveau 5, un monstre meurt en moins de coups qu'au niveau 1.
+- [ ] L'écran de choix de héros montre l'arme comme icône de chaque héros.
+- [ ] Avis attendu : clic droit pour tirer (ou clic gauche ?), dégâts, cadence.
+
+## Caractéristiques à répartir et progression conservée à la mort (2026-11-16)
+
+Branche `feature/points-de-stats` (contient tout le reste). Calculs couverts par le gametest
+`hero_stat_points` ; l'écran n'a jamais été affiché.
+
+- [ ] **Mourir une fois** (correctif) : niveau, expérience et héros sont conservés au retour.
+      Avant, on revenait niveau 1 en Écuyer.
+- [ ] Touche `K` : l'écran s'ouvre, « Points à répartir : 0 » au niveau 1, boutons `+` grisés.
+- [ ] Passer un niveau : message « 1 point(s) de caractéristique à répartir (touche K) ».
+- [ ] `+` sur **Vitalité** : la barre de vie du HUD passe à 22 PV max ; les textes ne se
+      chevauchent pas et le compteur de points descend.
+- [ ] **Puissance** : un monstre meurt en un peu moins de coups.
+- [ ] **Rapidité** : on court un peu plus vite (peu visible avec un seul point).
+- [ ] **Maîtrise des tours** : une tour posée APRÈS avoir mis des points tue plus vite qu'une
+      tour posée avant ; améliorer l'ancienne (`U`) lui donne le bonus.
+- [ ] « Tout reprendre » : les points reviennent, les PV max redescendent ; refusé en Combat.
+- [ ] Les points survivent à une déconnexion, à la mort et à un changement de héros.
+
+## Butin et Forge (2026-11-17)
+
+Branche `feature/butin-et-forge` (contient tout le reste). La logique est couverte par les
+gametests `loot_generation` et `loot_equipment`. **Tout ce qui est client est à voir pour la
+première fois** : c'est là que je m'attends aux problèmes. Poser une Forge depuis l'onglet
+créatif du mod.
+
+- [ ] En Combat, des monstres lâchent parfois une arme qui brille ; marcher dessus ne la ramasse
+      pas.
+- [ ] Vague nettoyée : une arme apparaît aux pieds de chaque joueur.
+- [ ] Près d'un objet : un encadré sous le viseur avec le nom coloré, les bonus et
+      « [E] Ranger [F] Équiper » ; il disparaît en s'éloignant.
+- [ ] **E** range l'objet (message) **sans ouvrir l'inventaire vanilla**. Loin de tout objet, E
+      ouvre l'inventaire comme d'habitude.
+- [ ] **F** équipe directement **sans faire passer l'arme en main gauche** ; l'ancienne arme de
+      butin part dans l'inventaire.
+- [ ] Arme d'un autre héros : l'encadré ne propose que Ranger ; F affiche un refus.
+- [ ] Clic droit sur la Forge : l'écran s'ouvre, onglet Inventaire, second onglet grisé.
+- [ ] Les cases montrent une icône avec un cadre de la couleur de la rareté (à signaler si le
+      cadre est décalé ou a une taille bizarre) ; cliquer une case affiche son détail à droite.
+- [ ] Équiper depuis la Forge : l'arme passe en « Arme équipée », l'ancienne prend sa case.
+- [ ] Déséquiper, Détruire, et les flèches de page fonctionnent ; les textes ne se chevauchent
+      pas.
+- [ ] Les bonus se sentent : PV max sur le HUD, dégâts sur un monstre ou le mannequin.
+- [ ] Changer de héros : chacun retrouve son arme équipée.
+- [ ] Gagner une map : l'arme de la dernière vague est déjà dans l'inventaire au retour.
+- [ ] Inventaire, arme équipée : conservés après déconnexion et après la mort.
+- [ ] Avis attendu : fréquence du butin (trop, pas assez ?), force des bonus, mise en page de la
+      Forge, et le fait qu'une arme soit réservée à son héros.
+
+## Refonte des interfaces (2026-11-24)
+
+Branche `feature/interfaces` (contient tout le reste). Purement visuel : je n'ai vu aucun de
+ces écrans, la mise en page est calculée à la main. **Essayer aussi en échelle d'interface
+maximale** (Options > Vidéo), c'est là que ça risque de déborder. Une capture par écran qui cloche
+m'aide beaucoup.
+
+- [ ] **Roue des tours** : emplacements ronds avec numéro et coût ; au centre le mana, puis la
+      tour survolée en grand ; fiche à droite avec nom, coût, description et chiffres. Une tour
+      trop chère est voilée avec son coût en rouge ; à la Taverne, « Gratuite à la Taverne ».
+- [ ] Touches **1 à 6** dans la roue : posent directement la tour correspondante.
+- [ ] **Fiche de tour** (regarder une tour) : à droite du viseur, niveau en pastilles, jauge de
+      PV, chiffres, et « [U] Améliorer : X mana » ; les chiffres ne se chevauchent pas.
+- [ ] **Forge** : panneau unique avec les onglets au-dessus ; grille de cases creusées, cadre de
+      rareté (pas de cadre pour Commun) ; infobulle au survol ; armes d'un autre héros
+      assombries ; comparaison en vert/rouge avec l'arme équipée.
+- [ ] Forge : **Détruire** passe à « Confirmer ? » au premier clic, détruit au second ; changer
+      de case annule. **Double-clic** sur une case l'équipe.
+- [ ] Forge, **Tri** (branche `feature/forge-tri`) : le bouton fait défiler récent → rareté →
+      dégâts ; « récent » montre la dernière arme ramassée en premier. **Filtre** « Mon héros » ne
+      garde que les armes du héros joué. Équiper/Détruire agit bien sur l'arme cliquée, quel que
+      soit le tri.
+- [ ] **Caractéristiques** (`K`) : panneau, héros et niveau en tête, une jauge par
+      caractéristique avec « 3 / 20 » dedans, boutons + alignés.
+- [ ] **Choix de héros** (`H`) : cartes à gauche (« actuel » sous le héros joué), fiche à droite
+      avec grande icône, arme, description, six cases de tours (infobulle) et les deux sorts ;
+      double-clic sur une carte confirme ; bouton Annuler.
+- [ ] **Butin au sol** : encadré bordé de la couleur de rareté, bonus comparés à l'arme équipée,
+      touches dessinées en pastilles.
+- [ ] Avis attendu : l'ambiance (panneaux bruns et dorés) te va-t-elle, ou tu préfères autre
+      chose (plus sombre, plus vanilla, textures dessinées) ?
+
+## Projectiles des armes de héros (2026-11-24)
+
+Branche `feature/projectiles-armes`. Effets couverts par le gametest `hero_weapons` ; le vol et le
+rendu n'ont jamais été vus.
+
+- [ ] **Sacoche de fioles** : une fiole visible part en légère cloche, éclate (particules
+      violettes, son de verre) et blesse les monstres autour.
+- [ ] **Pistolet à rivets** : une pépite part tout droit, très vite ; seul le monstre touché est
+      blessé.
+- [ ] **Bâton de géomancien** : un silex part tout droit ; les monstres touchés sont ralentis.
+- [ ] Un monstre qui bouge peut être raté (c'est voulu) ; un mur ou une tour arrête le tir ; un
+      autre joueur devant toi ne bloque pas le tir.
+- [ ] Le projectile part bien du centre de l'écran (pas décalé à gauche/droite).
+- [ ] Avis attendu : vitesses et cloche de la fiole, à régler si besoin.
 
 ## Général
 

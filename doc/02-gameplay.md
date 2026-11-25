@@ -53,11 +53,11 @@ Un monde vide n'a nulle part où faire apparaître un joueur "normalement" (le j
 d'habitude un sol solide près de l'origine). `TavernSpawn`, sur `LevelEvent.Load` (une fois
 par chargement de l'Overworld) :
 
-1. Fixe le point de spawn du monde à **(0, 65, 0)** via `ServerLevel#setRespawnData(...)` —
-   remplace la recherche automatique de sol (qui échouerait dans le vide).
-2. **(Re)pose le contenu de la taverne** à cet emplacement — pour l'instant une plateforme
-   provisoire en dur (9×9, `smooth_stone`, un bloc sous le point de spawn), en attendant une
-   vraie structure `.nbt`.
+1. **(Re)pose la structure de la taverne** à cet emplacement (voir "Le chargement de la
+   structure" juste en dessous).
+2. Fixe le point de spawn du monde sur la **position d'arrivée réelle** de cette structure via
+   `ServerLevel#setRespawnData(...)` — remplace la recherche automatique de sol (qui échouerait
+   dans le vide). C'est donc aussi là que réapparaît un joueur mort en pleine map.
 
 **Pourquoi rejouer l'étape 2 à *chaque* chargement du monde**, plutôt qu'une seule fois : la
 taverne suit le même principe que les futures maps (voir 05-etat-et-problemes-connus.md,
@@ -67,26 +67,146 @@ de la taverne dans une future version du mod resterait invisible sur une sauvega
 existante : le joueur garderait la version posée lors de sa toute première connexion, le mod
 n'ayant plus aucune raison de la reposer ensuite. Recharger à chaque démarrage du monde est le
 déclencheur le plus simple qui garantit que ce qui est affiché correspond toujours à la
-version livrée avec le mod installé. Le remplacement de la plateforme provisoire par un vrai
-chargement de structure `.nbt` gardera ce même principe (voir le commentaire de
-`TavernSpawn#buildPlaceholderPlatform`).
+version livrée avec le mod installé.
 
 `LevelEvent.Load` se déclenche pour **toute** dimension qui se charge (l'Overworld, mais
 aussi le Nether/End vanilla si un joueur y va) — le handler sort immédiatement si ce n'est
 pas l'Overworld (`serverLevel.dimension() != Level.OVERWORLD`), pour ne rien changer ailleurs.
+
+### Le chargement de la structure — `TavernSpawn#placeTavern`
+
+Depuis le 2026-08-31, la taverne est une vraie structure Minecraft chargée depuis
+**`data/dungeon_defenders/structure/tavern.nbt`** (identifiant `dungeon_defenders:tavern`), et
+non plus une plateforme codée en dur. C'est le premier vrai chargement de structure du mod — le
+même mécanisme servira pour les maps (`MapInstance.buildPlaceholderArena`, pas encore remplacé).
+
+Déroulé de `placeTavern` :
+
+1. `level.getStructureManager().get(TAVERN_STRUCTURE)` — le gestionnaire vanilla, qui lit aussi
+   bien les structures livrées dans le jar du mod que celles d'un datapack.
+2. **Si le fichier est absent** : message d'avertissement dans les logs et **repli sur l'ancienne
+   plateforme** 9×9 en `smooth_stone`, posée **sans rien nettoyer autour** (voir encadré
+   ci-dessous). Volontaire : dans un monde vide, un mod sans sol est injouable — mieux vaut une
+   plateforme moche qu'une chute infinie.
+3. **Si un fichier est chargé**, nettoyage de la zone avant de poser (`clearZone`), sur l'emprise
+   exacte de la structure plus `CLEAR_MARGIN = 4` de marge dans toutes les directions. Sans ça,
+   une version précédente plus grande laisserait ses restes flotter autour de la nouvelle
+   taverne. La marge se calcule à partir de `template.getSize()`, pas d'un rayon en dur : la
+   taverne peut grandir sans qu'on ait à toucher au code.
+4. `template.placeInWorld(...)` avec `Block.UPDATE_CLIENTS` (et **pas** `UPDATE_ALL`) : on ne
+   veut pas déclencher une cascade de mises à jour de voisinage sur chaque bloc posé, seulement
+   que les clients voient le résultat — même choix que le bloc de structure vanilla.
+
+> **Incident du 2026-09-06** : le repli nettoyait lui aussi la zone avant de poser sa plateforme.
+> Un joueur qui construit sa taverne à la main directement à `SPAWN_POS`, **avant** d'avoir
+> sauvegardé quoi que ce soit comme structure, la voyait entièrement effacée au redémarrage
+> suivant — `clearZone` tournait à chaque chargement, qu'une structure existe ou non. Le repli ne
+> nettoie donc plus jamais rien ; seul le chargement d'une vraie structure le justifie encore (là,
+> le contenu final est entièrement déterminé par le fichier, rien à perdre). **Conséquence pour
+> construire la taverne à la main** : le contenu posé au-dessus de la plateforme de repli survit
+> maintenant aux redémarrages — mais reste vulnérable tant qu'il n'est pas capturé dans un bloc de
+> structure nommé `dungeon_defenders:tavern` (un `/save`, une régénération de chunk, etc. peuvent
+> encore le perdre).
+
+#### Où la structure est posée
+
+Centrée **horizontalement** sur `SPAWN_POS` (0/0 en X/Z), sa couche la plus basse posée à
+`SPAWN_POS.y - 1` (soit Y=64) : le sol de la taverne est donc juste sous le point d'arrivée.
+
+#### La position d'arrivée — le marqueur `player_spawn`, non consommé
+
+`arrivalPos(level)` cherche un bloc `player_spawn` **dans la structure** et renvoie sa position ;
+sinon, repli sur `SPAWN_POS`. Le créateur de la taverne peut donc déplacer le point d'arrivée
+sans avoir à recaler toute la structure.
+
+Deux différences avec le marqueur d'une map (`MapInstance#findAndConsumeSpawnMarker`) :
+
+- **Il n'est pas consommé.** On revient à la taverne en permanence ; le supprimer à la première
+  arrivée casserait toutes les suivantes. C'est sans conséquence visuelle depuis que le bloc est
+  invisible et traversable (voir "Le bloc de spawn joueur" plus bas).
+- **La recherche se fait dans le template, pas dans le monde** : `StructureTemplate#filterBlocks`
+  renvoie directement les positions absolues du bloc demandé, pas besoin de balayer un volume
+  bloc par bloc comme le fait `MapInstance`.
+
+`arrivalPos` est recalculée à chaque appel plutôt que mémorisée dans un champ statique : le
+gestionnaire de structures garde déjà le template en cache, et elle n'est appelée que rarement
+(chargement du monde, retour à la taverne). `MapInstance.returnToTavern` l'utilise aussi, pour
+que `/dd_leave` et la fin de partie ramènent au même endroit que le spawn.
+
+#### Les entités aussi sont remises à zéro — `clearZone`
+
+`clearZone` fait deux passes : d'abord tous les blocs de la zone en air, **puis** la suppression
+de toutes les entités qui s'y trouvent, joueurs exceptés. C'est ce qui permet à la structure de
+contenir des entités (`StructurePlaceSettings` par défaut, pas de `setIgnoreEntities`) sans
+qu'elles se dupliquent à chaque rechargement : celles du chargement précédent sont supprimées,
+`placeInWorld` repose celles du fichier.
+
+**L'ordre des deux passes est délibéré.** Écrire un bloc force le chargement de son chunk ;
+balayer les blocs en premier garantit donc que tous les chunks de la zone sont chargés avant
+qu'on interroge leurs entités. Chercher les entités d'abord — pendant `LevelEvent.Load`, avant
+que quoi que ce soit ne soit chargé — n'en trouverait aucune, et la structure en poserait un
+exemplaire de plus à chaque démarrage du serveur.
+
+Ce que ça emporte, volontairement : les entités décoratives (reposées juste après), les objets
+au sol qu'un joueur aurait laissés dans la taverne, et le futur **mannequin d'entraînement** des
+tours. Chaque chargement du monde remet la taverne dans l'état livré avec le mod.
+
+> Décidé avec le joueur (2026-08-31) : la suppression d'entités est nécessaire de toute façon,
+> puisqu'un mannequin d'entraînement (PV infinis, immobile, cible des tours pour mesurer leurs
+> dégâts) viendra vivre dans la taverne et ne doit pas s'accumuler en plusieurs exemplaires.
+
+## L'heure du monde, figée — `WorldTime.java`
+
+Idées du joueur (issues #44 et #45), faites le 2026-11-10 : **plus de cycle jour/nuit**. La nuit
+qui tombe au milieu d'une partie n'apporte rien à un jeu de défense par vagues, et l'ambiance
+d'une map devient un choix de son créateur.
+
+- **Au démarrage du serveur** (`ServerStartedEvent`), l'heure est figée à
+  `defaultTimeOfDay` (config commune, `config/dungeon_defenders-common.toml`, **6000 = midi** par
+  défaut). C'est l'heure de la taverne. La météo est arrêtée aussi (règle `ADVANCE_WEATHER` à
+  faux, cycle remis à zéro) : de la pluie sur un monde vide n'a aucun intérêt.
+- **Au lancement d'une map** (`MapInstance#startGame`), l'heure passe à celle de la map si son
+  bloc de configuration en fixe une, sinon elle reste à l'heure par défaut.
+- **Au retour à la taverne** (`MapInstance#returnToTavern`), elle revient à l'heure par défaut.
+
+Heure en ticks vanilla : `0` = lever du soleil, `6000` = midi, `12000` = coucher, `18000` =
+minuit. Une map sans heure propre porte `-1` (`MapDefinition.DEFAULT_TIME_OF_DAY`) ; toute valeur
+hors de `[0, 24000[` est traitée comme « pas d'heure propre ».
+
+**Techniquement** : depuis Minecraft 26.1 l'heure passe par des « horloges »
+(`ServerClockManager`). `WorldTime.freezeAt` met l'horloge de l'Overworld en pause
+(`setPaused`) et la règle (`setTotalTicks`), ce qui diffuse aussi l'heure aux clients. Fait à
+`ServerStartedEvent` et pas au chargement du niveau comme `TavernSpawn` : le gestionnaire
+d'horloges est une donnée du serveur entier, initialisée après les niveaux. Vérifié par le
+gametest `world_time_frozen`.
+
+### Les monstres ne brûlent plus au soleil — `data/minecraft/timeline/day.json`
+
+Conséquence directe de l'heure figée, trouvée et corrigée le 2026-11-10 : à midi en permanence,
+zombies et squelettes prendraient feu sans arrêt sur une map à ciel ouvert (ils brûlaient déjà
+la moitié du temps quand le jour défilait). Le jeu décide ça par l'attribut d'environnement
+`MONSTERS_BURN`, que la timeline vanilla `day` met à vrai pendant la journée avec un
+modificateur `or` : impossible de le forcer à faux depuis la dimension ou le biome.
+
+Le mod remplace donc `data/minecraft/timeline/day.json` par une copie **sans** la piste
+`minecraft:gameplay/monsters_burn` — même principe que `data/minecraft/dimension/overworld.json`,
+et ça vaut aussi pour les mondes déjà créés (les timelines sont relues à chaque chargement). Les
+17 autres pistes (couleur du ciel, angle du soleil...) sont celles du jeu. Le fichier est
+**généré** par `tools/generer-timeline-sans-brulure.py <minecraft.jar> <fichier>`, à relancer à
+chaque changement de version de Minecraft. Gametest `monsters_do_not_burn` (il échouait avant).
 
 ## La taverne — choix de map et difficulté
 
 ### Le bloc — `block/TavernCrystalBlock.java`
 
 Un cristal, mais **différent** d'`EterniaCrystalBlock` : pas de block entity, pas de PV, pas
-de mécanique de combat — juste un point d'interaction dans la taverne. Clic droit ouvre
-`MapSelectionScreen`, **entièrement côté client** :
+de mécanique de combat — juste un point d'interaction dans la taverne. Clic droit demande au
+client d'ouvrir `MapSelectionScreen`, via un paquet sans champ :
 
 ```java
 protected InteractionResult useWithoutItem(...) {
-    if (level.isClientSide()) {
-        Minecraft.getInstance().setScreen(new MapSelectionScreen());
+    if (player instanceof ServerPlayer serverPlayer) {
+        serverPlayer.connection.send(OpenMapSelectionPayload.INSTANCE.toVanillaClientbound());
     }
     return InteractionResult.SUCCESS;
 }
@@ -97,11 +217,19 @@ n'a besoin d'aucune donnée propre à un bloc précis (contrairement au spawner,
 savoir *quel* spawner configurer via son `BlockPos`) : la liste des maps est statique côté
 client, et la difficulté actuelle vient d'un attachment de `Level` déjà synchronisé
 (`ModAttachments.DIFFICULTY`). Le système de `Menu` sert à transmettre des données du serveur
-au client à l'ouverture ; ici il n'y a rien à transmettre, donc pas besoin de ce système.
+au client à l'ouverture ; ici il n'y a rien à transmettre, donc pas besoin de ce système. D'où
+un simple paquet clientbound « ouvre cet écran », sur le même modèle que `GameOverPayload`.
+
+> **Pourquoi pas plus simple ?** La version d'origine faisait
+> `if (level.isClientSide()) Minecraft.getInstance().setScreen(new MapSelectionScreen());`,
+> directement dans le bloc. Ça marche en solo, mais empêche le mod de se charger **du tout**
+> sur un serveur dédié : la branche ne s'exécute jamais côté serveur, mais la classe *nomme*
+> `MapSelectionScreen`, donc `Screen`, absent d'un serveur. Crash constaté le 2026-08-30, voir
+> [01-architecture.md](01-architecture.md#la-règle-clientserveur--nommer-une-classe-cliente-suffit-à-casser-un-serveur-dédié).
 
 ### La liste des maps — `init/GameMap.java`
 
-Un enum, sur le même principe que `SpawnableEnemy` : chaque valeur porte un `id` (utilisé
+Un enum (sur le même principe que l'ex-`SpawnableEnemy`, aujourd'hui remplacé par des JSON) : chaque valeur porte un `id` (utilisé
 pour la clé de traduction `dungeon_defenders.map.<id>` et le chemin de la texture d'aperçu
 `assets/dungeon_defenders/textures/gui/maps/<id>.png`) et un booléen `visible`.
 
@@ -156,28 +284,66 @@ maps/structures"), toutes les maps partagent la **même coordonnée fixe**
 (`MAP_POS = (10000, 65, 0)`, loin de la taverne) plutôt que d'avoir chacune la leur — pas
 besoin d'une grille de coordonnées puisqu'il n'y en a jamais deux en même temps.
 
-- **`startGame(level)`** (déclenché par `StartGamePayload`) : nettoie la zone (remplace tout
-  par de l'air dans un volume autour de `MAP_POS` — plus large que le placeholder lui-même,
-  pour rattraper d'éventuelles tours posées autour une fois qu'elles existeront), pose un
-  placeholder générique (même technique que `TavernSpawn`, une simple plateforme), cherche et
-  consomme un `PLAYER_SPAWN` (voir plus bas), puis téléporte **tous** les joueurs de la `Level`
-  — pas seulement celui qui a cliqué "Jouer", puisqu'une seule partie est partagée par tout le
-  monde (confirmé explicitement : "de toute façon on devra le faire").
-- **`returnToTavern(level)`** : même nettoyage de la zone, puis téléporte tout le monde vers
-  `TavernSpawn.SPAWN_POS`. Déclenché par la commande `/dd_leave` (voir `ModCommands` et
+- **`startGame(level, map)`** (déclenché par `StartGamePayload`) : depuis le 2026-09-02, la map
+  choisie est réellement chargée depuis sa structure `.nbt` (`MapInstance#placeMap`), même
+  mécanisme que `TavernSpawn` — nettoyage de zone dimensionné sur la structure puis pose si un
+  fichier existe, cherche et consomme un `PLAYER_SPAWN` (voir plus bas), puis téléporte
+  **tous** les joueurs de la `Level` — pas seulement celui qui a cliqué "Jouer", puisqu'une seule
+  partie est partagée par tout le monde (confirmé explicitement : "de toute façon on devra le
+  faire"). **Si aucune structure n'est trouvée** : repli sur `buildPlaceholderArena()` (une
+  simple plateforme à `MAP_POS`) — **sans nettoyer la zone** (corrigé le 2026-09-06, même
+  incident que `TavernSpawn` : `MAP_POS` est l'endroit où un créateur bâtit sa map à la main
+  avant de la sauvegarder en structure ; nettoyer à chaque "Jouer" sans structure trouvée
+  effacerait ce travail en cours).
+- **`returnToTavern(level)`** : nettoie la zone (fin de partie, plus rien à conserver — les
+  tours et monstres de la partie qui vient de se terminer), puis téléporte tout le monde vers
+  `TavernSpawn.arrivalPos(level)`. Déclenché par la commande `/dd_leave` (voir `ModCommands` et
   "Victoire et défaite" plus bas) — pas encore par un vrai point de sortie posé dans la map
-  elle-même, puisqu'aucune vraie map n'existe.
+  elle-même.
 
-`MapInstance` est pensé pour que le seul changement nécessaire, une fois de vraies maps
-prêtes, soit de remplacer `buildPlaceholderArena()` par un vrai chargement de structure
-`.nbt` — même logique que ce qui est prévu pour `TavernSpawn` (voir plus haut).
-
-### Le bloc de spawn joueur — `block PLAYER_SPAWN`, `MapInstance#findAndConsumeSpawnMarker`
+### Le bloc de spawn joueur — `block/PlayerSpawnBlock.java`, `MapInstance#findAndConsumeSpawnMarker`
 
 Décidé avec le joueur (2026-08-26), repris du plan Excel (feuille "Idées" > "CHOIX DE MAP") :
 plutôt qu'une téléportation vers `MAP_POS` codée en dur, le créateur d'une map peut poser un
-bloc `PLAYER_SPAWN` (bloc plein simple, aucun comportement au clic — `BLOCKS.registerSimpleBlock`,
-pas de classe dédiée) à l'endroit exact où les joueurs doivent apparaître.
+bloc `PLAYER_SPAWN` (aucun comportement au clic) à l'endroit exact où les joueurs doivent
+apparaître.
+
+#### Invisible et traversable, comme le spawner
+
+Demandé en jeu (2026-08-30) : c'est un **marqueur d'édition**, pas un élément de décor — il ne
+doit ni se voir ni gêner un déplacement pendant une partie. Traitement identique, méthode par
+méthode, à celui de `SpawnerBlock` (voir "Le spawner n'est plus jamais un obstacle physique"
+plus bas pour le raisonnement complet, valable tel quel ici) :
+
+| Méthode | Valeur | Effet |
+|---|---|---|
+| `getRenderShape` | `RenderShape.INVISIBLE` | jamais rendu, pour personne (même limite : pas de contexte joueur dans cette méthode, donc invisible même en créatif) |
+| `getCollisionShape` | `Shapes.empty()` | joueur et monstres traversent, quelle que soit la phase ou le mode |
+| `getShape` | `Shapes.block()` **si joueur créatif**, sinon `Shapes.empty()` | seul le créatif peut le viser (contour de sélection) — introuvable en survie |
+
+Le bloc était jusque-là enregistré via `BLOCKS.registerSimpleBlock`, sans classe dédiée : cette
+classe n'existe que pour ces trois overrides.
+
+**Pourquoi, alors qu'il s'auto-supprime au démarrage ?** Parce que ça ne couvrait qu'un cas :
+`findAndConsumeSpawnMarker` ne consomme que le **premier** marqueur trouvé (voir plus bas) —
+tous les autres restent posés et visibles — et le marqueur se voit de toute façon tant que la
+partie n'a pas démarré.
+
+**Pas besoin de `noOcclusion()` dans ses `Properties`** : l'occlusion est calculée à
+l'initialisation du `BlockState` à partir de `getShape` avec un `CollisionContext.empty()`
+(vérifié dans `BlockBehaviour$BlockStateBase#initCache` : `occlusionShape = getOcclusionShape(state)`,
+lui-même `state.getShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO)`). `getEntity()` y est `null`,
+donc le repli `Shapes.empty()` s'applique : le marqueur n'occlut rien et ne bloque pas la
+lumière, sans réglage supplémentaire. Un bloc invisible qui occlurait laisserait au contraire un
+trou noir visible (faces voisines cullées).
+
+Enfin, `getShape` **n'est pas mis en cache** par état (contrairement à `getCollisionShape`,
+vérifié dans `BlockStateBase#getShape`, qui délègue directement au bloc à chaque appel) — c'est
+ce qui permet à la forme de dépendre du joueur qui regarde.
+
+L'**item**, lui, reste visible normalement dans l'onglet créatif et en main : `RenderShape` ne
+concerne que le bloc posé, le rendu de l'item passe par `models/item/player_spawn.json`
+(voir "Texture cassée en main" plus bas).
 
 `findAndConsumeSpawnMarker(level)` parcourt le même volume que `clearZone`/
 `buildPlaceholderArena` (autour de `MAP_POS`), juste après que l'arène a été (re)posée : le
@@ -200,7 +366,9 @@ l'absence actuelle de structures réelles à charger.
 ### Texture cassée en main — `models/item/player_spawn.json`
 
 Signalé en jeu (2026-08-26) : l'item s'affichait avec une texture manquante dans la main/
-l'inventaire, alors que le bloc posé s'affichait correctement. Cause : contrairement au modèle
+l'inventaire, alors que le bloc posé s'affichait correctement (il était encore visible à
+l'époque — voir "Invisible et traversable" ci-dessus ; le modèle de bloc reste nécessaire, ne
+serait-ce que comme parent du modèle d'item). Cause : contrairement au modèle
 de **bloc** (`models/block/player_spawn.json`, ajouté dès le départ), aucun modèle d'**item**
 n'avait été créé — sans lui, rien n'indique au jeu quel modèle utiliser pour l'icône. Corrigé
 en ajoutant `models/item/player_spawn.json` avec `"parent":
@@ -225,7 +393,7 @@ simples (ex. `minecraft:item/dirt`, qui référence directement `minecraft:block
 | Block entity | `newBlockEntity` → `new EterniaCrystalBlockEntity(pos, state)` |
 | Render shape | `RenderShape.MODEL` (modèle JSON classique) |
 | Collision | `Shapes.box(0, 0, 0, 1, 3, 1)` — 1×3×1, le cristal est infranchissable sur 3 blocs |
-| Sélection | même boîte 1×3×1 (contour de visée aligné sur la collision) |
+| Sélection | même boîte 1×3×1 — le ciblage reste sur 3 blocs de haut, mais le contour noir n'est **plus dessiné** (voir "Le contour de sélection masqué sur les tours et les cristaux") |
 
 Propriétés définies à l'enregistrement dans `ModBlocks` :
 
@@ -259,6 +427,15 @@ la progression à tout le monde (`Prêt : 2/3`), et dès que tous sont prêts,
 `PhaseTransitions.enterCombat(level)` se déclenche — qui remet aussitôt "prêt" à faux pour
 tout le monde (voir plus bas), pour repartir propre à la Construction suivante. Un seul joueur
 en solo se retrouve donc à devoir cliquer une fois pour lancer le combat (1/1).
+
+**Compte à rebours (2026-11-10)** : le Combat ne démarre plus à l'instant du dernier clic.
+`CombatCountdown.start(level)` lance un décompte de `combat_countdown_seconds` secondes
+(`balance/pacing.json`, **3** par défaut ; `0` = démarrage immédiat comme avant), affiché
+« Combat dans 3... » au-dessus du viseur (`client/gui/CombatCountdownOverlay.java`). Le temps
+restant vit dans `ModAttachments.COMBAT_COUNTDOWN` (ticks, synchronisé une fois par seconde,
+décrémenté par `LevelTickEvent.Post`). Un joueur qui retire son vote pendant le décompte
+l'**annule** ; il est aussi abandonné si la phase n'est plus la Construction, et remis à zéro
+par toute remise à zéro de la partie.
 
 Le harnais de test au clic droit du `SpawnerBlock` (shift + clic droit, voir plus bas) reste
 disponible en parallèle pour basculer directement de phase sans passer par le vote — pratique
@@ -493,23 +670,67 @@ pose vanilla "arc tendu" puisque le squelette porte déjà un arc par défaut) e
 le **visuel** du tir, ce n'est pas sa collision qui inflige les dégâts (le cristal n'étant pas
 une entité, une flèche vanilla ne saurait pas le "toucher" toute seule).
 
+### Le goal de longue distance — `entity/ai/SeekEterniaCrystalGoal.java`, `ModAttachments.CRYSTAL_POS`
+
+Les trois goals ci-dessus ont tous un point commun : ils héritent (directement ou via
+`AbstractEterniaCrystalAttackGoal`) de `MoveToBlockGoal`, qui ne s'active que si une cible
+existe déjà dans un rayon de recherche **local et court** (16 blocs pour le cristal, 8 pour les
+tours). Tant qu'un monstre n'est pas par hasard entré dans ce rayon, rien ne le pousse à s'en
+approcher — il retombe sur l'errance aléatoire vanilla, ce qui peut ne jamais converger sur une
+grande map (63 blocs de large pour le Sanctuaire en Ruines, par exemple). Décidé avec le joueur
+(2026-09-12) : peu importe la distance, un monstre doit toujours pouvoir trouver un chemin
+jusqu'au cristal.
+
+`ModAttachments.CRYSTAL_POS` (`BlockPos` nullable, ni persistant ni synchronisé) retient la
+position réelle du cristal actuellement chargé sur la `Level`, posée par
+`EterniaCrystalBlockEntity#setLevel` et retirée par `#setRemoved` — même patron que
+`ACTIVE_SPAWNERS`/`ACTIVE_MANA_CHESTS`. Évite de refaire une recherche en spirale coûteuse à
+chaque monstre : la position est déjà connue.
+
+`SeekEterniaCrystalGoal` (`extends Goal`, `Flag.MOVE`) navigue en ligne directe vers cette
+position via le vrai pathfinder Minecraft (`mob.getNavigation().moveTo(...)`, calculé une fois
+au démarrage puis relancé toutes les `RETRY_INTERVAL_TICKS` (40, ~2 s) si la navigation
+s'arrête sans être arrivée — chemin bloqué ou déjà terminé). Aucune limite de distance dans
+`canUse()` (juste `crystalPos() != null`) : contrairement aux trois goals ci-dessus, celui-ci
+est censé toujours pouvoir s'activer.
+
+Ajouté à une **priorité plus basse** que le goal de palier (`AttackPriorityTargetGoal`/
+`RangedAttackEterniaCrystalGoal`), qui partage `Flag.MOVE` : dès qu'une cible locale existe (une
+tour à moins de 8 blocs sur le chemin, par exemple), le goal de palier reprend la main sur le
+déplacement ; une fois cette cible détruite ou hors de portée, `SeekEterniaCrystalGoal` redevient
+le seul goal éligible et reprend naturellement la direction du cristal. C'est le comportement
+"le monstre tape la tour sur son chemin puis reprend sa route vers le cristal" obtenu
+**gratuitement** par la hiérarchie de priorité des goals, sans système de points de passage
+dédié.
+
 ### L'attribution — `ModEvents.onMonsterSpawn`
 
 Écoute `EntityJoinLevelEvent` sur le bus de jeu. Pour chaque `Monster` rejoignant un monde
-côté serveur, **un seul** goal est ajouté au `goalSelector`, selon le type :
+côté serveur :
 
 - `AbstractSkeleton` (squelette, et tout futur sous-type) reçoit `RangedAttackEterniaCrystalGoal`
-  (priorité 1) — ignore Blockade/Turret, ne vise que le cristal à distance.
-- Tout le reste reçoit `AttackPriorityTargetGoal` (priorité 0) — choisit lui-même sa cible
-  parmi Block/Corps à corps/Cristal/Tourelle selon leur palier de priorité et leur portée
-  respective (voir "Le goal de mêlée unifié" plus haut).
+  (priorité 1) puis `SeekEterniaCrystalGoal` (priorité 2) — ignore Blockade/Turret, ne vise que
+  le cristal à distance ou, hors de portée, s'en approche en ligne directe.
+- Tout le reste reçoit `AttackPriorityTargetGoal` (priorité 0) puis `SeekEterniaCrystalGoal`
+  (priorité 1) — choisit sa cible parmi Block/Corps à corps/Cristal/Tourelle selon leur palier
+  de priorité et leur portée respective (voir "Le goal de mêlée unifié" plus haut), ou converge
+  vers le cristal si rien n'est à portée.
 
-> `Monster` plutôt que `PathfinderMob` : les deux goals n'exigent techniquement qu'un
+Dans les deux cas, l'attribut vanilla `FOLLOW_RANGE` du monstre est aussi relevé à 128 blocs
+(`MONSTER_FOLLOW_RANGE`) : c'est ce même attribut que le pathfinder vanilla utilise pour borner
+la recherche de chemin, pas seulement la détection de cible — sans ce relèvement,
+`SeekEterniaCrystalGoal` ne pourrait tout simplement pas calculer de chemin sur toute la
+distance d'une grande map (la valeur vanilla d'un zombie, 35 blocs, ne suffit déjà plus au
+Sanctuaire en Ruines).
+
+> `Monster` plutôt que `PathfinderMob` : les trois goals n'exigent techniquement qu'un
 > `PathfinderMob`, mais cette classe couvre aussi les mobs passifs (animaux, villageois...).
 > `Monster` est la bonne frontière sémantique — tout ce qui est hostile, rien de passif.
 
 `EntityJoinLevelEvent` se déclenche aussi au rechargement d'un chunk et au changement de
-dimension. Le code vérifie donc d'abord qu'aucun des deux goals n'est déjà présent :
+dimension. Le code vérifie donc d'abord qu'aucun des deux goals "marqueurs" n'est déjà présent
+(pas besoin de vérifier `SeekEterniaCrystalGoal` séparément : il est toujours ajouté dans la
+même branche que l'un des deux autres) :
 
 ```java
 monster.goalSelector.getAvailableGoals().stream()
@@ -517,7 +738,7 @@ monster.goalSelector.getAvailableGoals().stream()
                 || wrapped.getGoal() instanceof AttackPriorityTargetGoal)
 ```
 
-Sans ce test, un même monstre cumulerait plusieurs exemplaires du goal et attaquerait le
+Sans ce test, un même monstre cumulerait plusieurs exemplaires des goals et attaquerait le
 cristal plusieurs fois par seconde.
 
 ## La barre de vie des monstres — `entity/MobHealthBarRenderer.java`
@@ -567,8 +788,8 @@ déclenche juste après ce `super.submit(...)` — même repère que le nametag,
 billboard caméra-face comme `HealthBarRendering`. Pas de filtre générique par type d'entité sur
 cet event (contrairement à `RegisterRenderStateModifiersEvent`) : `onRenderLiving` reçoit
 **toute** `LivingEntity` rendue et filtre lui-même sur `state.entityType` (zombie/squelette
-uniquement, seuls monstres du mod pour l'instant — pas de liste partagée avec
-`SpawnableEnemy`). Sort tôt si vide/PV pleins/trop loin (`state.distanceToCameraSq`, un champ
+— depuis le 2026-09-29, les `entity_type` des ennemis data-driven reçus du serveur par
+`ClientEnemyDefinitions`, soit exactement zombie + squelette avec les JSON livrés). Sort tôt si vide/PV pleins/trop loin (`state.distanceToCameraSq`, un champ
 vanilla), sinon anime via `HealthLerp` (indexé par `ENTITY_ID` plutôt que `BlockPos` — un
 monstre bouge, `LERP_BY_ENTITY_ID` static plutôt que porté par une instance de couche
 puisqu'il n'y a plus de couche) et dessine via `HealthBarRendering`, exactement comme avant.
@@ -642,10 +863,10 @@ dégâts de contact aux monstres dont le cooldown (`WeakHashMap<Monster, Long>` 
 retenir des entités mortes/déchargées) est écoulé, **uniquement si** `dealsContactDamage` est
 actif — sinon la méthode ne fait rien.
 
-`SpikeBlockadeBlockEntity` n'est donc plus qu'une déclaration de stats : `MAX_HEALTH=30`,
-`MANA_COST=30`, `dealsContactDamage=true`, `CONTACT_DAMAGE=2.0F`,
-`CONTACT_DAMAGE_INTERVAL_TICKS=20` (1 s), `CONTACT_RANGE=1.0` — toute la logique vit dans la
-base ou la catégorie.
+`SpikeBlockadeBlockEntity` ne déclare plus que `dealsContactDamage=true` et sa
+`TowerDefinition` : toute la logique vit dans la base ou la catégorie, et ses chiffres (30 PV,
+30 de mana, 2 dégâts toutes les 20 ticks dans un rayon de 1) sont data-driven depuis le
+2026-11-10 — voir « Les chiffres data-driven des tours » plus bas.
 
 `getAiPriority()` (voir "IA des ennemis" plus haut, `AiAttackTarget`) dérive de
 `dealsContactDamage` : `true` (Spike Blockade) → `PRIORITY_MELEE_TOWER` (20, le "corps à
@@ -663,10 +884,11 @@ AbstractTowerBlockEntity` en tout début de handler, générique à toutes les c
 avoir besoin d'un tag séparé (le block entity venant d'être créé au moment où l'événement se
 déclenche).
 
-Logique : d'abord la phase — `level.getData(ModAttachments.GAME_PHASE) ==
-GamePhase.BUILD.ordinal()`, sinon placement annulé et message dédié
+Logique : d'abord la phase — `GamePhase.of(level).allowsTowerBuilding()`, vrai en
+**Construction** et à la **Taverne**, faux en Combat ; sinon placement annulé et message dédié
 (`dungeon_defenders.tower.build_phase_only`), vérifié **avant** le mana pour ne pas laisser
-croire à un problème de mana alors que c'est la phase qui bloque. Puis le mana : si
+croire à un problème de mana alors que c'est la phase qui bloque. À la Taverne, le handler
+s'arrête là : **la pose y est gratuite** (voir "La phase Taverne" plus bas). Puis le mana : si
 `player.getData(ModAttachments.MANA) < tower.getManaCost()`, l'événement est annulé
 (`event.setCanceled(true)`) — NeoForge restaure alors le `BlockSnapshot` précédent **et** rend
 l'item au joueur automatiquement (le bloc n'est jamais réellement resté posé), pas besoin de le
@@ -782,6 +1004,8 @@ double, double, double, ItemStack, ItemStack)` — pas de `LivingEntity`, c'est 
 avec le même léger arc vers le haut que `RangedAttackEterniaCrystalGoal` pour compenser la
 gravité sur la distance.
 
+(Depuis le 2026-11-10 ces chiffres sont data-driven, voir « Les chiffres data-driven des
+tours » ; les valeurs ci-dessous sont celles par défaut.)
 `HarpoonTurretBlockEntity` n'est qu'une déclaration de stats : `MAX_HEALTH=20`,
 `MANA_COST=50`, `RANGE=12.0`, `CONE_ANGLE_DEGREES=45.0`, `DAMAGE=6.0F`,
 `ATTACK_INTERVAL_TICKS=30` (1,5 s) — valeurs de test, pas encore équilibrées, comme pour Spike
@@ -1088,13 +1312,52 @@ confirmation ; seul le paquet final touche le serveur.
 
 ### Le catalogue — `init/TowerDefinition.java`
 
-Enum commune client/serveur, un membre par tour posable via la roue (id, nom traduit, `Block`
-+ `Item` d'icône, portée, `coneAngleDegrees`). **Ne duplique pas le coût en mana** :
-`manaCost()` réexpose directement la constante du block entity concerné
-(`SpikeBlockadeBlockEntity.MANA_COST`, `HarpoonTurretBlockEntity.MANA_COST`), seule source
-d'autorité (déjà lue par `ModEvents.onTowerPlace`). `SPIKE_BLOCKADE` a `range=0.0` (pas de
-portée, `coneAngleDegrees` sans effet) ; `HARPOON_TURRET` a `range=12.0`,
-`coneAngleDegrees=45.0` — premier membre du catalogue à exercer réellement l'aperçu de portée.
+Enum commune client/serveur, un membre par tour posable via la roue : id, nom traduit, `Block`
++ `Item` d'icône, et ses **valeurs par défaut** (`TowerStats`). Depuis le 2026-11-10, les
+chiffres d'une tour ne sont plus des constantes de son block entity : ils sont **data-driven**
+(voir « Les chiffres data-driven des tours » ci-dessous) et se lisent par
+`tower.stats(clientSide)`. La roue et l'aperçu de portée lisent la copie **client**
+(`stats(true)`) : coût en mana, `range` (absente pour une Blockade = aucun cercle),
+`cone_angle_degrees` (absente = cercle complet).
+
+### Les chiffres data-driven des tours — `init/TowerStatsRegistry.java`, `data/<ns>/dungeon_defenders/tower/*.json`
+
+Étape 2 du passage en data-driven (plan et détail : [data-driven/tours.md](data-driven/tours.md)).
+Un fichier par tour, nommé comme son id (`tower/spike_blockade.json`...), relu au démarrage et à
+chaque `/reload`, synchronisé au client (`TowerStatsPayload`). Les six fichiers de l'Écuyer reprennent
+exactement les valeurs d'avant :
+
+| Tour | `max_health` | `mana_cost` | Autres stats |
+|---|---|---|---|
+| `spike_blockade` | 30 | 30 | `contact_damage` 2, `contact_interval_ticks` 20, `contact_range` 1 |
+| `bouncer_blockade` | 25 | 25 | `contact_damage` 1, `contact_interval_ticks` 10, `contact_range` 1, `knockback_strength` 0.8 |
+| `slice_n_dice_blockade` | 35 | 40 | `contact_damage` 1, `contact_interval_ticks` 5, `contact_range` 1.5 |
+| `harpoon_turret` | 20 | 50 | `range` 12, `cone_angle_degrees` 45, `damage` 6, `attack_interval_ticks` 30 |
+| `bowling_ball_turret` | 20 | 55 | `range` 12, `cone_angle_degrees` 45, `damage` 5, `attack_interval_ticks` 40, `projectile_velocity` 1.5, `projectile_extra_distance` 4 |
+| `mortar_turret` | 20 | 70 | `range` 14, `cone_angle_degrees` 45, `damage` 8, `attack_interval_ticks` 60, `splash_radius` 2 |
+
+Les six tours de l'Alchimiste (2026-11-16) ont leur propre tableau :
+[L'Alchimiste](#lalchimiste--deuxième-héros-herodefinitionalchemist).
+
+- **La liste des tours et leur comportement restent en Java** (une tour est un bloc + un block
+  entity). Seuls les nombres sont dans les JSON.
+- **Une tour a toujours des stats** : les valeurs écrites dans `TowerDefinition` servent de repli
+  si le fichier manque ou est invalide (message dans le log), et déclarent quelles stats la tour
+  utilise.
+- **Validation stricte** (`TowerStats.parse`) : stat inconnue, stat que cette tour n'utilise pas
+  (`range` sur une Blockade), valeur non numérique, non entière pour un entier, ou sous son
+  minimum → le fichier est refusé en entier, avec la liste des stats acceptées. Une stat absente
+  garde sa valeur par défaut.
+- **Lues à chaque usage, jamais recopiées** (`AbstractTowerBlockEntity#stats()`) : un `/reload`
+  s'applique aux tours **déjà posées**. Conséquence assumée : augmenter `max_health` fait
+  apparaître les tours existantes comme entamées (leurs PV actuels ne bougent pas).
+- **Deux copies, serveur et client**, dans `TowerStatsRegistry` (classe commune : les block
+  entities, chargés des deux côtés, y lisent leurs PV max pour la barre de vie). Un block entity
+  choisit sa copie selon `level.isClientSide()`.
+
+**Description dans la roue** (issue #15, 2026-11-10) : sous le nom et le coût de la tour
+survolée, une troisième ligne dit à quoi elle sert (`TowerDefinition#description`, clé
+`dungeon_defenders.tower.<id>.description`).
 
 ### Les touches — `client/ModKeyMappings.java`
 
@@ -1108,14 +1371,21 @@ noyées parmi les touches vanilla. `tower_wheel` (ouvre la roue, `R` par défaut
 
 ### La roue — `TowerWheelScreen`
 
-Un secteur par `TowerDefinition`, disposé en cercle (icône = l'item existant de la tour, pas de
-nouvel art) autour du centre de l'écran. Le secteur survolé est déterminé par l'angle entre le
+Un emplacement rond par tour du héros, disposé en cercle (icône = l'item existant de la tour,
+pas de nouvel art) autour du centre de l'écran, avec son numéro et son coût. Une tour trop chère
+a son coût en rouge et son emplacement voilé (elle reste choisissable : le serveur refusera la
+pose avec son message habituel) ; à la Taverne, tout est gratuit, comme côté serveur. Au
+centre : la tour survolée en grand, sinon le mana disponible. À côté de la roue, une fiche donne
+le nom, le coût, la description et les chiffres de la tour survolée (`TowerStatSummary` : dégâts,
+cadence, portée, zone, soin, PV...). Sur un écran étroit la fiche rétrécit, puis passe en bas.
+Refonte visuelle du 2026-11-24. Le secteur survolé est déterminé par l'angle entre le
 centre de l'écran et la souris (`Math.atan2`), avec une zone morte de 20px au centre pour
 éviter qu'un simple tremblement de souris sélectionne un secteur au hasard.
 
-Deux façons de confirmer : **cliquer directement** sur un secteur (`mouseClicked`), ou
+Trois façons de confirmer : **cliquer directement** sur un emplacement (`mouseClicked`),
 **maintenir la touche `tower_wheel` en visant**, puis **la relâcher** (`keyReleased`, via
-`KeyMapping#matches(KeyEvent)`) — les deux passent par le même calcul de secteur survolé.
+`KeyMapping#matches(KeyEvent)`) — les deux passent par le même calcul de secteur survolé —, ou
+**taper le numéro** de la tour (1 à 9, `keyPressed`).
 `Échap` (comportement par défaut de `Screen`) ferme la roue sans rien sélectionner.
 
 Ouverte directement côté client par `TowerPlacementClientEvents` (sur `ClientTickEvent.Post`,
@@ -1221,6 +1491,65 @@ restauré (`before.restore(...)`) — le bloc disparaît comme s'il n'avait jama
 - Pas de filtrage par héros — la roue liste toutes les tours, en attendant ce système.
 - Pas de remplissage translucide de l'hologramme, juste le contour filaire.
 
+## Inspecter une tour posée — `client/TowerInspectClientEvents.java`
+
+Idées du joueur (issues #13 et #16), faites ensemble le 2026-11-10 comme prévu au backlog :
+**regarder** une tour déjà posée (jusqu'à 20 blocs) suffit à afficher
+
+- sa **portée** au sol, cercle ou cône, exactement comme pendant la pose (rien pour une
+  Blockade, qui n'en a pas) ;
+- sa **barre de vie**, même à PV pleins (`TowerHealthBarRenderer` fait une exception pour la
+  tour regardée) ;
+- sa **fiche**, à droite du viseur pour ne pas masquer la cible (`client/gui/TowerInspectOverlay.java`) :
+  nom, niveau en pastilles, jauge de PV, chiffres au niveau actuel et, quand c'est possible, la
+  touche et le prix de l'amélioration. La maîtrise des tours du poseur n'étant pas synchronisée,
+  les dégâts affichés sont ceux du niveau seul.
+
+Un seul déclencheur, le regard, plutôt que le clic ou la touche évoqués dans l'issue #13 : rien à
+apprendre, rien à refermer, aucun conflit avec les clics déjà pris par la pose et la
+suppression. L'affichage disparaît dès qu'on regarde ailleurs. Il est désactivé pendant le mode
+pose et le mode suppression, qui dessinent déjà au même endroit, et quand un écran est ouvert.
+
+Tout est côté client : un raycast `OUTLINE` par tick (`TowerInspectState.target`), comme la
+suppression de tour. Le dessin de la portée réutilise `renderRangeArea`/`facingYRot` de
+`TowerPlacementClientEvents` (rendus accessibles au package), avec l'orientation réelle du bloc
+(`HORIZONTAL_FACING`) et les stats data-driven de la tour, donc à jour après un `/reload`.
+
+## Améliorer une tour — `AbstractTowerBlockEntity#upgrade`, `network/UpgradeTowerPayload.java`
+
+Idée du backlog (« 4 niveaux par tour, comme le jeu de référence »), faite le 2026-11-10. La
+formule n'avait jamais été discutée : celle-ci est une première proposition, entièrement
+réglable dans `balance/towers.json`.
+
+- **En jeu** : regarder une tour posée et appuyer sur **U** (`ModKeyMappings.UPGRADE_TOWER`,
+  modifiable). Sous le viseur, l'inspection affiche `Tourelle Harpon — niv. 2/4`, les PV, et
+  tant que c'est possible `[U] Améliorer : 38 mana`.
+- **Règles** (revérifiées côté serveur, `ModNetworking#handleUpgradeTower`) : en Construction ou
+  à la Taverne seulement, comme la pose ; payant sauf à la Taverne ; refus avec un message si la
+  tour est au niveau maximum ou si le mana manque.
+- **Effet** : `levelMultiplier() = 1 + (niveau − 1) × upgrade_stat_bonus`, appliqué aux **PV
+  max** et aux **dégâts** (contact des Blockades, tir des Turrets). Portée et cadence ne
+  changent pas. Les PV gagnés en PV max s'ajoutent aux PV actuels : améliorer une tour entamée
+  ne la soigne pas entièrement.
+- **Prix** : `round(coût de pose × upgrade_cost_ratio)` par niveau, le même à chaque niveau.
+- **Remboursement au retrait** : il porte désormais sur tout le mana investi
+  (`getInvestedMana()` : pose + améliorations), toujours multiplié par `refund_ratio`.
+- Le niveau est persistant (`TowerLevel`) et synchronisé avec le block entity.
+
+| Clé (`balance/towers.json`) | Défaut | Effet |
+|---|---|---|
+| `max_level` | 4 | Niveau maximum |
+| `upgrade_cost_ratio` | 0.75 | Prix d'un niveau, en part du coût de pose |
+| `upgrade_stat_bonus` | 0.25 | Bonus de PV max et de dégâts par niveau au-delà du premier |
+
+Exemple avec les valeurs livrées, Harpoon Turret (50 de mana, 20 PV, 6 dégâts) : chaque niveau
+coûte 38 ; au niveau 4, 35 PV et 10.5 dégâts, pour 164 de mana investi.
+
+**Portée de visée corrigée au passage** : le client laissait viser une case ou une tour jusqu'à
+20 blocs (`MAX_REACH`), mais le serveur appliquait à la pose et au retrait la limite de 8 blocs
+des écrans de configuration, et refusait donc **sans message** au-delà. Les deux côtés
+partagent maintenant `TowerDefinition.REACH` (20 blocs).
+
 ## La suppression de tour — `client/TowerRemovalState.java`, `client/TowerRemovalClientEvents.java`, `network/RemoveTowerPayload.java`
 
 Décidé avec le joueur (2026-08-26), sur le modèle du jeu de référence plutôt que sur le minage
@@ -1273,12 +1602,35 @@ uniquement (même message `tower.build_phase_only` que la pose, symétrique), di
 `AbstractTowerBlockEntity` à la position reçue — le client n'est jamais l'autorité, même s'il a
 déjà refusé une cible invalide de son côté.
 
-Remboursement : `Math.round(tower.getManaCost() * TOWER_MANA_REFUND_RATIO)`, avec
-`TOWER_MANA_REFUND_RATIO = 0.5F` — valeur de test, pas encore équilibrée, comme les coûts de
-pose eux-mêmes (`TowerDefinition`). Plafonné à `MAX_MANA` comme tout gain de mana. La
+Remboursement : `round(tower.getManaCost() × refund_ratio)`, avec `refund_ratio = 0.5` par
+défaut — réglage data-driven depuis le 2026-11-10 (`balance/towers.json`,
+`BalanceValue.TOWER_REFUND_RATIO`), valeur de test pas encore équilibrée, comme les coûts de
+pose eux-mêmes. Plafonné à `MAX_MANA` comme tout gain de mana. La
 destruction passe par `serverLevel.destroyBlock(pos, false)` — **pas de drop d'item**, même
 convention qu'une tour détruite au combat (`AbstractTowerBlockEntity#setHealth`, `dropBlock =
 false`) : la touche dédiée est voulue comme l'unique façon "propre" de retirer une tour.
+
+### L'état des compétences sur le HUD — `client/ClientAbilityState.java`, `AbilityCooldownPayload`
+
+Ajouté le 2026-11-16 (idée #39). Chaque emplacement de `AbilitySlotsOverlay` montre désormais :
+
+| État | Affichage | D'où vient l'information |
+|---|---|---|
+| En recharge (salve) | voile sombre qui descend + secondes restantes | `AbilityCooldownPayload`, envoyé par le serveur quand la salve part |
+| En canalisation | bordure jaune clair | le client lui-même (`AbilityClientEvents`, à l'envoi du Start/Stop) |
+| Mana insuffisant | emplacement entièrement grisé | l'attachment `MANA` synchronisé, comparé au coût (salve) ou au coût par tick (maintenue) |
+
+Le serveur reste **seul juge** de la recharge (`AbilityCooldowns`) : le paquet ne porte qu'une
+durée à afficher, que le client décompte en ticks locaux (`ClientAbilityState#tick`). On envoie
+une durée et non un instant de fin parce que l'horloge du monde n'est pas un repère fiable côté
+client (elle est figée sur les branches récentes, et resynchronisée par à-coups).
+
+Seules les compétences en salve ont une recharge, comme dans le jeu de référence : les trois
+compétences maintenues ne sont limitées que par le mana.
+
+**Limite connue** : la bordure de canalisation reflète ce que le client a *demandé*. Si le
+serveur arrête la canalisation de lui-même (mana épuisé, PV pleins, coup reçu pendant le soin)
+alors que la touche est encore enfoncée, la bordure reste allumée jusqu'au relâchement.
 
 ### Ce qui n'est PAS fait, volontairement
 
@@ -1318,6 +1670,1128 @@ tour, sans avoir eu besoin de toucher à `strength()`/`getDestroyProgress()` par
 - Aucun retour visuel pendant que le mode est actif hors du contour orange sur la cible (pas de
   changement de curseur, pas d'indicateur HUD permanent) — seul le message système à
   l'activation/désactivation l'indique.
+
+## Le contour de sélection masqué sur les tours et les cristaux — `client/BlockOutlineClientEvents.java`
+
+Demandé en jeu (2026-08-30), pour l'immersion : le contour noir filaire que Minecraft dessine
+autour du bloc visé n'apparaît plus sur les tours ni sur les cristaux. Ces blocs ont des modèles
+custom rendus par un `BlockEntityRenderer`, et la boîte vanilla — alignée sur `getShape`, donc
+**1,5 bloc de haut** pour une tour (hitbox anti-escalade) et **3 blocs** pour le Cristal
+d'Eternia — flottait visiblement autour du modèle au lieu de l'épouser.
+
+### Comment — annuler l'extraction du render state, pas toucher aux formes
+
+`ExtractBlockOutlineRenderStateEvent` (`net.neoforged.neoforge.client.event`) est annulable ;
+sa javadoc est explicite : annulé, aucun render state de contour n'est soumis, donc rien n'est
+dessiné. **`RenderHighlightEvent` des versions précédentes n'existe plus** dans cette version de
+NeoForge — c'est cet événement-là (plus `CustomBlockOutlineRenderer` pour un rendu custom, non
+utilisé ici) qui l'a remplacé.
+
+```java
+@SubscribeEvent
+static void onExtractBlockOutline(ExtractBlockOutlineRenderStateEvent event) {
+    BlockEntity blockEntity = event.getLevel().getBlockEntity(event.getBlockPos());
+    if (hidesOutline(event.getBlockState(), blockEntity)) {
+        event.setCanceled(true);
+    }
+}
+```
+
+**Ceci ne touche que le rendu, jamais le ciblage** — c'est la différence essentielle avec
+l'approche `getShape` → `Shapes.empty()` utilisée par `SpawnerBlock` (voir plus haut) : là-bas
+le but était justement de rendre le bloc introuvable/incliquable en survie, ce qui ici casserait
+toute interaction avec les tours et les cristaux. `getShape` reste inchangé, donc viser, le clic
+droit (vote prêt sur le Cristal d'Eternia, choix de map sur celui de la taverne), le mode
+suppression de tour et la casse en créatif fonctionnent exactement comme avant : le bloc reste
+parfaitement cliquable, il n'est simplement plus souligné.
+
+### Quels blocs
+
+Reconnus par leur **block entity** : `AbstractTowerBlockEntity` (couvre Blockade et Turret, donc
+automatiquement toute nouvelle tour ajoutée plus tard, même logique générique que le ciblage du
+mode suppression) et `EterniaCrystalBlockEntity`. Le cristal de la taverne n'a pas de block
+entity (aucun état à stocker) : reconnu à sa classe de bloc, `TavernCrystalBlock`.
+
+Le spawner et le coffre de mana ne sont **pas** concernés (hors demande) — et le spawner ne
+dessine de toute façon déjà aucun contour en survie, puisque son `getShape` y est vide.
+
+### L'option de config
+
+`ClientDisplayConfig.SHOW_TOWER_BLOCK_OUTLINE` (`showTowerBlockOutline`), **par défaut `false`**
+— contrairement aux autres options d'affichage, activées par défaut : c'est bien l'absence de
+contour qui est le comportement voulu, l'option n'existe que pour le remettre. Config de type
+CLIENT, donc purement locale : un joueur qui la réactive ne change rien pour les autres.
+
+### Ce qui reste pour repérer une tour
+
+Le contour n'était pas le seul repère visuel : le mode suppression dessine son propre contour
+**orange** (`TowerRemovalClientEvents`, inchangé et désormais mieux lisible sans la boîte noire
+par-dessus) et les tours affichent leur barre de vie (`TowerHealthBarRenderer`).
+
+## Créer une map entièrement en jeu — `init/MapRegistry.java`, `block/MapConfigBlock.java`
+
+Décidé avec le joueur (2026-09-02). Objectif : **plus une seule ligne de code ni de JSON à
+écrire pour ajouter une map**, ni pour lui, ni pour un tiers qui voudrait publier un pack.
+
+### Le mécanisme qui rend tout ça possible
+
+Le gestionnaire de structures de Minecraft cherche dans deux familles de sources, dans cet
+ordre (vérifié dans son constructeur) :
+
+1. **le dossier `generated/` de la sauvegarde** — exactement là où un bloc de structure vanilla
+   écrit quand on sauvegarde ;
+2. **les ressources chargées** — datapacks *et* jars de mods, tous namespaces confondus
+   (`ResourceManagerTemplateSource#list` passe par `listMatchingResources`).
+
+Conséquence : une map sauvegardée en jeu avec un bloc de structure est **immédiatement
+chargeable par le mod, sur le même serveur, sans transfert de fichier ni redémarrage**. Et
+`listTemplates()` voit tout, quelle que soit l'origine.
+
+`MapRegistry.discover` ne filtre donc que sur le **chemin** (`map/*`), jamais sur le namespace.
+C'est ce qui rend l'extensibilité gratuite.
+
+### Le namespace fait office de pack
+
+`dungeon_defenders:map/*` est la campagne, `<autre>:map/*` un pack tiers. Aucune donnée à
+déclarer : l'identifiant de la structure suffit à regrouper les maps. Un pack peut traduire son
+nom via `dungeon_defenders.map_pack.<namespace>` dans son propre fichier de langue ; sans ça,
+son namespace s'affiche tel quel plutôt qu'une clé crue.
+
+### Les réglages voyagent dans le `.nbt`
+
+`MapConfigBlock` (invisible, traversable, créatif seulement — même traitement que les autres
+marqueurs) est posé **dans** la map. Il porte le nom affiché, l'ordre dans le pack, le nombre de
+vagues, le multiplicateur de score et, depuis le 2026-11-10, l'**heure de la map** (`TimeOfDay`,
+0-23999 ; champ laissé vide dans l'écran = pas d'heure propre, voir « L'heure du monde, figée »).
+Une map publiée avant l'ajout de ce champ reste lisible : clé absente = pas d'heure propre.
+
+Comme il fait partie de la structure, ces réglages sont sauvegardés dans le `.nbt` : copier le
+fichier emporte tout, il n'y a aucun fichier de configuration à transmettre à côté.
+
+**Ils se lisent sans poser la map** : `StructureTemplate#filterBlocks` renvoie les blocs demandés
+avec leur NBT, donc le carrousel peut afficher le nom et le nombre de vagues d'une map qui n'a
+jamais été chargée — même technique que la recherche du marqueur `player_spawn` de la taverne.
+
+Une map **sans** bloc de configuration reste jouable, avec les valeurs par défaut (décidé avec le
+joueur) : on peut ainsi tester une map avant de l'avoir renseignée.
+
+Un champ `FormatVersion` est écrit à chaque sauvegarde. Il ne sert à rien aujourd'hui, mais
+chaque champ ayant déjà son propre repli, un pack publié avant l'ajout d'un champ reste lisible.
+
+### Le nombre de vagues devient propre à chaque map
+
+`MAX_WAVE = 5` n'est plus qu'un **repli**. La valeur réelle vit dans l'attachment
+`ModAttachments.MAP_WAVE_COUNT`, posé par `MapInstance.startGame` depuis la map choisie, et lue
+par `ModAttachments.waveCount(level)` — utilisée par la condition de victoire
+(`ModEvents.onMonsterDeath`), la progression de vague (`PhaseTransitions.enterBuild`), le HUD
+(`WaveOverlay`) et la borne par défaut de l'écran de config du spawner.
+
+### L'écran de choix — trois colonnes
+
+```
+PACKS          |        LA MAP         |  DIFFICULTÉ
+▸ Campagne     |    ◀ [aperçu] ▶       |   Facile
+  Cavernes     |      Deeper Well      |   Normal
+  …            |         2 / 5         |   Difficile
+                                           [ Jouer ]
+```
+
+Le carrousel ne parcourt que les maps **du pack sélectionné** : on ne traverse plus toute la
+campagne pour atteindre la map d'un DLC. La colonne des packs défile à la molette au-delà de 8.
+
+**La liste vient du serveur**, portée par `OpenMapSelectionPayload` (qui n'avait aucun champ
+auparavant). Ce n'est pas un choix : le gestionnaire de structures est construit à partir de
+l'accès au dossier de sauvegarde, il n'existe donc que côté serveur. Un pack installé côté
+serveur apparaît ainsi sans que le client ait à le connaître.
+
+`StartGamePayload` porte désormais l'identifiant de la map choisie — sans ce champ, le carrousel
+n'était que décoratif. `ModAttachments.CURRENT_MAP` mémorise la map en cours pour que le bouton
+« Rejouer » de l'écran de fin de partie relance **la même**, alors que l'écran de choix est
+fermé depuis longtemps côté client.
+
+### Supprimer une map — dans l'écran de choix, en créatif
+
+Le bouton vit dans l'écran de **choix**, pas dans celui de configuration. Raison : le bloc de
+configuration ne connaît pas l'identifiant de sa propre structure — celui-ci est choisi bien plus
+tard, au moment de sauvegarder avec un bloc de structure. Il aurait donc fallu le retaper à la
+main. Dans l'écran de choix, l'identifiant est connu et on voit ce qu'on efface.
+
+Le bouton **n'existe pas en survie** (outil de mappeur), et n'est **actif que sur une map
+réellement supprimable** : `MapDefinition#fromWorld`, calculé côté serveur en vérifiant si le
+fichier existe dans le dossier `generated/` de la sauvegarde. Une map livrée dans un jar est une
+ressource en lecture seule — autant griser le bouton que laisser cliquer pour échouer ensuite.
+
+Confirmation par `ConfirmScreen` avant d'agir. La map est aussi retirée de la liste **locale** :
+celle-ci vient du serveur à l'ouverture de l'écran et n'est pas rafraîchie, sans ça la map
+supprimée resterait affichée. Un pack vidé de sa dernière map disparaît avec elle.
+
+### Le pack « Maps de test » — `data/dungeon_defenders_test/`
+
+Les maps qui ne sont **pas du contenu** (générées pour exercer la chaîne technique ou une IA
+avant qu'une vraie map n'existe) vivent sous un **namespace séparé**,
+`dungeon_defenders_test`, plutôt que sous `dungeon_defenders` — décidé avec le joueur
+(2026-09-12) pour qu'elles n'apparaissent plus dans le pack « Campagne ». `MapDefinition#packId`
+étant simplement le namespace de l'identifiant de structure, et `MapRegistry#discover`
+découvrant les structures `map/*` de **tous** les namespaces sans avoir besoin qu'un mod les
+"déclare" (un dossier `data/<namespace>/` suffit, comme pour tout datapack), ce déplacement n'a
+demandé qu'à déplacer les fichiers `.nbt` et à ajouter la traduction du nom de pack
+(`dungeon_defenders.map_pack.dungeon_defenders_test`) — aucun changement de code. Elles
+apparaissent donc dans l'écran de choix sous leur propre colonne « Maps de test », séparée de
+la campagne.
+
+### `map/test_arena.nbt`
+
+Une arène de 49×6×49 livrée dans le jar (`dungeon_defenders_test:map/test_arena`), pour que la
+chaîne complète soit exerçable **avant** qu'une vraie map existe. Contenu : sol et murs
+d'enceinte (le monde est vide, sans murs on tombe), un couloir visible entre les deux bouts, un
+Cristal d'Eternia, un spawner configuré (8 zombies + 4 squelettes, vagues 1 à 3), un
+`player_spawn`, un coffre de mana, des `no_build_zone` autour du spawner, et un `map_config`
+réglé sur **3 vagues** — volontairement différent du défaut de 5, pour qu'un simple coup d'œil
+au HUD confirme que le nombre de vagues vient bien de la map.
+
+Elle a été **générée sans passer par le jeu**, avec `tools/generer-map-de-test.py` : un `.nbt` de
+structure n'est qu'un fichier NBT gzippé au format relu dans `StructureTemplate`. Le script écrit
+le NBT, et le fichier produit a été relu et vérifié tag par tag.
+
+> **Le piège du format, à connaître si tu génères une structure à la main** : `size` et `pos`
+> s'écrivent en **`TAG_List` d'entiers**, pas en `TAG_Int_Array`. `StructureTemplate#load` les lit
+> avec `getListOrEmpty` — un `TAG_Int_Array` y serait lu comme une liste vide, donnant une
+> structure de taille 0 avec tous les blocs empilés à l'origine, **sans le moindre message
+> d'erreur**.
+
+### `map/couloir_ecart_ia.nbt`
+
+Un couloir étroit et long de 9×6×90 (`dungeon_defenders_test:map/couloir_ecart_ia`), généré le
+2026-09-12 avec `tools/generer-map-ecart-ia.py` (même écriture NBT que `generer-map-de-test.py`).
+Objectif unique : exercer `SeekEterniaCrystalGoal` (voir "Le goal de longue distance" plus haut)
+sur une distance largement supérieure au rayon de détection local des goals de palier (16 blocs
+cristal / 8 blocs tour) et à l'ancien `FOLLOW_RANGE` vanilla d'un zombie (35 blocs) — sans ce
+goal, un monstre spawné ici n'aurait aucune raison de se diriger vers le cristal avant d'y
+"tomber" par hasard.
+
+Cristal près de l'extrémité sud (`z=8`), spawner près de l'extrémité nord (`z=82`) : **74 blocs**
+d'écart en ligne droite, le couloir lui-même ne laissant aucun autre chemin possible. Spawner
+volontairement simple (10 zombies, vagues 1-2, aucun squelette) : ce test porte sur le
+déplacement, pas sur la composition des vagues. `player_spawn` et coffre de mana près du
+cristal ; `map_config` réglé sur 2 vagues pour rejouer vite pendant les tests. Aucune tour
+pré-posée : rien n'empêche d'en placer une au milieu du couloir pour vérifier au passage qu'un
+monstre s'arrête la taper avant de reprendre sa route vers le cristal.
+
+### `map/detour_ia.nbt`
+
+Complément de `couloir_ecart_ia` (2026-09-12, même génération hors du jeu) : là où celle-ci
+teste une **longue** distance en ligne droite, celle-ci teste une distance **modérée** (~27
+blocs à vol d'oiseau) mais avec **deux obstacles qui rendent la ligne droite impossible** —
+vérifie que `SeekEterniaCrystalGoal`, via le vrai pathfinder Minecraft, sait aussi contourner un
+obstacle plutôt que de foncer bêtement dans un mur.
+
+Généré par `tools/generer-map-detour-ia.py`, salle 13×11×34 :
+
+1. Un **mur plein** de 5 blocs de haut barre presque toute la largeur (rangées `z=7-8`), avec un
+   passage de 3 blocs de large seulement sur la gauche — détour latéral obligatoire.
+2. Une **falaise** de 3 blocs de haut (`z=20`) barre la suite pour qui n'a pas déjà pris la
+   rampe à droite (rangées `z=16-19`, terrassée 1 bloc de plus par rangée — même technique de
+   rampe qu'utilise le générateur du Sanctuaire en Ruines sur une autre branche, pas encore
+   fusionnée ici) — détour **et** changement de hauteur, puisque 3 blocs dépasse largement ce
+   qu'un mob franchit d'un seul pas (~1 bloc en vanilla).
+
+Le sol change aussi de texture (`smooth_quartz`) une fois sur la plateforme haute, pour que la
+différence de hauteur soit lisible d'un coup d'œil en jeu. Cristal, `player_spawn` et coffre de
+mana sur la plateforme haute ; spawner (10 zombies, vagues 1-2) dans la salle basse, avant les
+deux obstacles.
+
+Vérifié hors jeu **par simulation**, pas seulement visuellement : un script BFS (même règle que
+le pathfinder vanilla — pas de 1 bloc de hauteur maximum par déplacement) confirme qu'un chemin
+existe bien du spawner au cristal, qu'il passe obligatoirement par le trou du mur ET par la
+rampe, et que la colonne centrale (le raccourci direct) est bien bloquée aux deux endroits —
+sans cette vérification, une erreur de coordonnées aurait pu livrer une map insoluble sans
+aucun moyen de le voir avant un vrai test en jeu.
+
+### Une deuxième map, plus travaillée — `map/ruins_sanctuary.nbt`
+
+« Sanctuaire en Ruines » (63×9×63, `dungeon_defenders:map/ruins_sanctuary`, générée par
+`tools/generer-map-sanctuaire.py`, même méthode que `test_arena`) : un essai pour voir jusqu'où
+la génération sans passer par le jeu peut aller, à la demande du joueur — **concept librement
+inspiré** de la structure générale des toutes premières maps de la campagne du jeu de référence
+(plusieurs couloirs de monstres convergeant vers une salle centrale surélevée), **pas** une
+reproduction d'une map précise : ni ses dimensions, ni ses textures, ni son tracé exact ne sont
+repris (voir la décision sur la provenance des assets,
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)).
+
+Trois couloirs de monstres (nord, est, ouest), chacun avec son propre spawner et sa propre
+composition — nord en zombies purs (rush au contact), est majoritairement squelettes (pression à
+distance), ouest un mélange des deux — remontant une rampe en escalier (4 marches d'1 bloc,
+praticable nativement par le pathfinding vanilla, pas de blocstate d'escalier orienté) jusqu'à
+une plateforme centrale surélevée où se trouve le Cristal d'Eternia. Une quatrième rampe, côté
+sud, ne sert qu'aux joueurs (pas de spawner) et mène à une cour d'arrivée où sont posés le
+`player_spawn` et le coffre de mana. Décor : piliers en ruine (`mossy_stone_bricks`, quelques-uns
+au sommet fissuré) et torches le long des couloirs, lampes encastrées dans les murs d'enceinte
+comme `test_arena`. 5 vagues (contre 3 pour `test_arena`), multiplicateur de score 1,2.
+
+**Convention de hauteur du script** : `LANE`/`PLAZA_TOP` (postés par une petite fonction
+`fill_column`, qui remplit aussi la colonne en dessous pour qu'aucune marche ne soit creuse) sont
+le bloc **solide** du sol, jamais la case où se tient une entité — un marqueur/spawner/le cristal
+va donc systématiquement un bloc au-dessus de la hauteur de sol correspondante. Piégeant à
+écrire : une première version plaçait le Cristal d'Eternia **à la même position** que le bloc de
+sol de la plateforme, une superposition invisible à la simple lecture du script. Détectée par un
+garde-fou ajouté pour l'occasion (`put()` refuse toute position hors des bornes de la structure,
+et le script compte les positions écrasées intentionnellement — seulement les lampes plantées
+dans les murs, 16 au total) puis confirmée par une relecture du `.nbt` généré (script de
+vérification séparé, temporaire, pas conservé dans le dépôt) : chaque marqueur repose bien sur un
+bloc solide, aucune rampe ne saute plus d'un bloc de haut d'une rangée à l'autre, les quatre murs
+d'enceinte sont pleins sur toute leur hauteur. **Jamais vu en jeu** — ces vérifications portent
+sur la cohérence du fichier généré, pas sur le rendu visuel réel, qui reste à confirmer.
+
+### Le force-chargement de la zone — `init/ModChunkTickets.java`
+
+**Pourquoi c'est indispensable et pas un détail** : Minecraft ne charge et ne fait tourner que
+les chunks proches d'un joueur. Une arène fixe où plusieurs spawners sont éloignés les uns des
+autres verrait donc ceux qui sont loin du groupe **cesser simplement de fonctionner**, sans
+erreur ni message. Le symptôme — « certains ennemis n'apparaissent jamais » — est
+particulièrement pénible à diagnostiquer, d'où le fait de le régler avant la première vraie map.
+
+Passe par le système de **tickets de NeoForge** plutôt que par le `/forceload` vanilla : les
+tickets ont un propriétaire (ici `MapInstance.MAP_POS`), sont persistés, et surtout **revalidés
+au chargement du monde**. Le rappel de validation supprime tout : le monde démarre toujours à la
+taverne, donc aucun chunk de map n'a de raison de rester chargé — sans ça, un serveur arrêté en
+pleine partie garderait la zone chargée indéfiniment au redémarrage.
+
+Le dernier argument de `forceChunk` est passé à `true` : on veut des chunks qui **tickent**
+réellement, pas seulement chargés — sans ça les spawners ne tourneraient toujours pas.
+
+Forcé par `MapInstance.startGame` sur exactement la même emprise que le nettoyage, relâché par
+`returnToTavern`. La liste de ce qui est réellement forcé est gardée en mémoire pour pouvoir
+relâcher les **mêmes** chunks : la taille d'une map peut changer entre-temps si son créateur la
+re-sauvegarde. Un avertissement est loggé au-delà de 1024 chunks (environ 512×512 blocs) — un
+garde-fou d'alerte, pas une limite de conception.
+
+### Publier une map
+
+Une map créée en jeu vit dans la sauvegarde du monde, pas dans le mod : elle ne part pas avec
+lui. Mais c'est le **même format et la même recherche**, donc publier revient à copier le `.nbt`
+dans les ressources d'un jar — celui du mod pour la campagne, un jar d'extension pour un pack
+tiers. Un jar d'extension ne contient **aucun code** :
+
+```
+mon_pack.jar
+├── META-INF/neoforge.mods.toml      (dépendance à dungeon_defenders)
+├── data/mon_pack/structure/map/ma_map.nbt
+└── assets/mon_pack/textures/gui/maps/ma_map.png
+```
+
+Un datapack seul fonctionne aussi pour la structure, mais ne peut pas embarquer l'image
+d'aperçu — d'où le jar comme format recommandé.
+
+#### `/dd_export <namespace>` — le jar est généré pour toi
+
+Recopier des fichiers aux bons endroits et écrire un `neoforge.mods.toml` correct, c'est
+exactement le genre d'étape qui décourage un auteur. La commande produit donc l'objet fini, dans
+`<dossier du serveur>/dungeon_defenders_export/<namespace>.jar` :
+
+- le `neoforge.mods.toml`, avec `modLoader = "lowcodefml"` (le chargeur des mods **sans code** —
+  vérifié présent dans le loader de cette version) et une dépendance requise à
+  `dungeon_defenders` ;
+- une entrée `data/<ns>/structure/map/<id>.nbt` par map du pack ;
+- son aperçu `assets/<ns>/textures/gui/maps/<id>.png` s'il existe ;
+- un fichier de langue de départ avec la clé `dungeon_defenders.map_pack.<ns>`.
+
+**Conversion des ennemis à l'export (depuis le 2026-09-29)** : le `.nbt` n'est plus recopié
+octet pour octet. Il est relu, chaque champ `"Enemy"` numérique d'un spawner (ancien format,
+ordinal) est réécrit en identifiant via la table figée `LegacyEnemyIds`, puis le NBT est
+réécrit dans le jar ; rien d'autre ne change. Chaque conversion est loggée
+(`Export <ns> : map <id>, spawner [x, y, z] (relatif) : ennemi n°0 converti en ...`) et la
+commande affiche un message supplémentaire avec le nombre d'ennemis convertis. Une map
+sauvegardée avant la migration sort donc au nouveau format, sans rien refaire en jeu ; son
+fichier dans `generated/` reste, lui, à l'ancien format (lisible, voir « Les ennemis
+data-driven »).
+
+**Un jar par pack, pas par map** : un pack de cinq maps donne un seul fichier à publier. La
+commande prend donc un namespace.
+
+**Seules les maps créées en jeu sont exportées** (`MapDefinition#fromWorld`) : une map qui vient
+déjà d'un jar est une ressource en lecture seule, la ré-emballer n'aurait pas de sens.
+
+Le **nom du pack** n'est stocké nulle part — la commande écrit donc une valeur de départ dérivée
+du namespace (`cavernes_oubliees` → « Cavernes Oubliees ») que l'auteur corrige dans le fichier
+de langue. Mieux vaut un fichier à retoucher qu'une clé de traduction crue affichée aux joueurs.
+
+Les **aperçus** sont cherchés dans `<monde>/dungeon_defenders/previews/<ns>/<id>.png`, là où
+la capture en jeu les écrit (voir « L'aperçu d'une map, capturé en jeu »).
+
+Réservée au niveau de permission « gamemaster » : c'est un outil de créateur.
+
+**Attention au masquage** : une structure du monde est cherchée *avant* celle d'un jar. Une map
+publiée puis re-sauvegardée en jeu sous le même identifiant est donc remplacée par la version
+locale tant qu'on ne la supprime pas de la sauvegarde. Pratique pour itérer, déroutant si on
+l'oublie.
+
+### Ce qui n'est PAS fait dans cette étape
+
+- Une map créée en jeu affiche la texture "manquante" **tant que son aperçu n'a pas été
+  capturé** (voir la section suivante).
+- **Pas de commande d'export** vers un jar prêt à publier (phase 3).
+- **Pas de réinitialisation entre deux tentatives** (tours retirées, PV du cristal) — PR séparée
+  juste après, décidé avec le joueur pour ne pas gonfler celle-ci.
+
+
+## L'aperçu d'une map, capturé en jeu — `client/MapPreviewCapture.java`, `init/MapPreviews.java`
+
+Ajouté le 2026-11-16 (phase 2 du chantier « maps en jeu », déroulé validé le 2026-09-02).
+
+### Côté mappeur
+
+1. Clic droit sur le cristal de la taverne, en **créatif** : sous « Supprimer », un bouton
+   **« Prendre l'aperçu »**, actif seulement sur une map créée en jeu (celle d'un jar embarque
+   déjà son image).
+2. Le bouton **arme** la capture pour la map affichée et ferme l'écran. Un rappel reste
+   affiché au-dessus de la hotbar : « Aperçu de … : cadrez puis appuyez sur F9 ».
+3. On va se placer, on cadre, on appuie sur **F9** (touche réglable). Le HUD est masqué le
+   temps de trois ticks, l'image est lue, recadrée au centre en 16:9, réduite à **128×72**.
+4. **F9 accroupi** annule.
+
+Le bouton est dans l'écran de choix, et non dans le bloc de configuration de la map, parce que
+c'est le seul endroit qui connaît l'**identifiant de structure** : le bloc de configuration,
+posé dans la map, ignore sous quel nom le bloc de structure la sauvegardera.
+
+### Le trajet de l'image
+
+- Le client envoie `UploadMapPreviewPayload` (identifiant + PNG).
+- Le serveur (`ModNetworking#handleUploadMapPreview`) revérifie : créatif, identifiant de map,
+  map **de la sauvegarde**, taille et signature PNG. Il écrit
+  `<monde>/dungeon_defenders/previews/<ns>/<id>.png` (`MapPreviews#save`, qui borne aussi le
+  chemin au dossier des aperçus : un identifiant peut contenir « .. »).
+- Il renvoie l'image aux autres joueurs connectés (`MapPreviewPayload`), et à chaque joueur
+  qui ouvre ensuite l'écran de choix, **avant** le paquet qui ouvre l'écran
+  (`TavernCrystalBlock`).
+- Le client la charge en texture dynamique (`ClientMapPreviews`) ; l'écran de choix affiche
+  celle-ci si elle existe, sinon la ressource du pack.
+- `/dd_export` l'embarque dans le jar, comme prévu depuis la phase 3.
+
+### Limites
+
+- **30 000 octets au plus** : le jeu plafonne un paquet client → serveur à 32 767 octets. À
+  128×72 une capture pèse d'ordinaire 5 à 15 Ko ; au-delà, le client refuse avec un message
+  plutôt que d'envoyer un paquet que le serveur rejetterait en déconnectant le joueur.
+- Supprimer une map ne supprime pas son aperçu (fichier orphelin de quelques Ko, sans effet).
+- Si la lecture de l'image n'aboutissait jamais, le HUD resterait masqué : **F1** le rétablit.
+- Gametest `map_preview_storage` pour le rangement côté serveur. La capture elle-même (rendu,
+  recadrage, texture) n'est **vérifiable qu'en jeu**.
+
+## Abandonner un niveau — `client/PauseMenuClientEvents.java`, `network/LeaveMapPayload.java`
+
+Un bouton rouge **« Abandonner le niveau »** ajouté au bas du menu pause vanilla, qui ramène à
+la taverne après confirmation.
+
+### Pourquoi le menu pause plutôt qu'un bloc de sortie
+
+Les deux options ont été pesées avec le joueur (2026-09-02). Le bloc à poser dans chaque map
+perdait sur trois points : il faut y penser à la construction (une map où le mappeur l'oublie
+n'a pas de sortie), il faut aller le chercher physiquement, et ce n'est pas là qu'un joueur
+cherche à quitter. Le menu pause marche sur **toutes** les maps sans que le mappeur ait quoi que
+ce soit à placer.
+
+La commande `/dd_leave` reste en parallèle : c'est un harnais de test, utilisable à tout moment
+y compris pour déboguer.
+
+### Comment le bouton est ajouté
+
+`ScreenEvent.Init.Post` (NeoForge) permet d'ajouter des widgets à un écran vanilla déjà
+initialisé, via `addListener`. Le handler filtre sur `PauseScreen`.
+
+**Le bouton n'apparaît que pendant une partie** (`GamePhase#isInGame()`) : proposer d'abandonner
+depuis la taverne n'aurait aucun sens.
+
+**Sa position est calculée depuis les widgets déjà présents**, pas depuis la mise en page
+vanilla : le bouton se place sous le widget le plus bas de l'écran (`getY() + getHeight()`
+maximal), avec un repli et un plafond pour ne jamais déborder. La mise en page du menu pause
+change d'une version de Minecraft à l'autre, et d'autres mods peuvent aussi y avoir ajouté des
+boutons — se caler sur des coordonnées en dur aurait fini par superposer deux boutons.
+
+Le rouge est celui du **texte** (`ChatFormatting.RED`), pas du fond : un `Button` vanilla ne
+sait pas colorer son fond sans widget custom, et ça ne valait pas la peine ici.
+
+### La confirmation
+
+Demandée par le joueur, et justifiée : le menu pause s'ouvre par réflexe, et un clic à côté
+ferait perdre la partie en cours sans retour possible. `ConfirmScreen` (vanilla) affiche le
+titre et un message qui précise le vrai effet — **tous les joueurs** sont ramenés, pas seulement
+celui qui a cliqué. « Non » revient au menu pause (`setScreen` sur la même instance, dont
+`init()` est rejoué), pas au jeu.
+
+### Le paquet
+
+`LeaveMapPayload`, C2S sans champ — un simple signal, comme `StartGamePayload` à l'aller. Le
+serveur revérifie la phase avant d'agir (le client masque déjà le bouton hors partie, mais il
+n'est jamais l'autorité) puis appelle `MapInstance.returnToTavern`, qui nettoie la zone de map,
+repasse en phase Taverne et téléporte tout le monde.
+
+## Les zones interdites à la pose — `block/NoBuildZoneBlock.java`
+
+Premier outil de *mappeur* du mod au sens strict (les autres marqueurs servent au fonctionnement
+de la map ; celui-ci sert à la régler). Posé par le créateur d'une map pour délimiter où les
+joueurs **ne peuvent pas** construire.
+
+### Liste noire, pas liste blanche
+
+Décidé avec le joueur (2026-08-31), à l'inverse du jeu de référence qui définit des zones
+*autorisées*. Raison donnée : c'est plus ouvert à la créativité du joueur, et surtout **un oubli
+du mappeur autorise une pose en trop plutôt que de rendre un endroit injouable**. Le pire cas
+d'une liste noire est bénin ; celui d'une liste blanche ne l'est pas.
+
+Un marqueur = une position interdite. On "peint" donc la zone, typiquement au `/fill` en
+créatif ; le format structure les sauvegarde comme n'importe quel bloc.
+
+### Comment il bloque réellement la pose
+
+**Il occupe la case, et ça suffit.** Un bloc normal n'est pas `canBeReplaced()`, et c'est
+exactement ce que testent le ciblage côté client (`TowerPlacementClientEvents`) et l'autorité
+serveur (`ModNetworking#handlePlaceTower`) pour décider si une position est libre. Aucune
+logique de zone, aucun volume à calculer, aucun registre à tenir.
+
+Les deux endroits ajoutent quand même un **test explicite du marqueur**, pour une seule raison :
+pouvoir *expliquer* le refus. Sans lui, le joueur voit un hologramme rouge sans cause visible —
+le bloc est invisible. Le message `dungeon_defenders.tower.no_build_zone` est envoyé côté client
+au moment où il tente de confirmer une pose refusée, et côté serveur s'il refuse de son côté
+(le paquet n'arrive normalement jamais, le client filtrant déjà — c'est de la défense en
+profondeur, comme partout ailleurs dans le mod).
+
+### Le bloc
+
+Invisible, traversable, ciblable en créatif seulement — même traitement que `SpawnerBlock`,
+`PlayerSpawnBlock` et `TrainingDummyBlock` (voir "Le spawner n'est plus jamais un obstacle
+physique" pour le raisonnement détaillé, identique ici). Traversable est important : une zone
+simplement interdite à la construction ne doit gêner ni un monstre ni un joueur.
+
+### Ce qui n'est PAS fait, volontairement
+
+- **Pas de marqueur de volume** (deux coins définissant une boîte) : un bloc par case, quitte à
+  en poser beaucoup. Le `/fill` rend ça indolore, et ça évite toute une gestion de volumes qui
+  se chevauchent, de coins orphelins et de sauvegarde de leur appairage.
+- **Aucun retour visuel de la zone** en dehors du contour de visée en créatif : pas de
+  surbrillance des cases interdites pendant le mode pose. À reconsidérer si ça se révèle
+  pénible à l'usage.
+
+## La phase Taverne — `GamePhase.TAVERN`
+
+Décidée avec le joueur (2026-09-01). Le problème de départ : `GAME_PHASE` valait `BUILD` par
+défaut et rien ne distinguait le hub d'une map — la roue des tours s'ouvrait donc dans la
+taverne, la pose y était acceptée, et le HUD y affichait « Vague 1/5 ». Plutôt que d'y
+**interdire** la construction, une troisième phase la rend **délibérée** : la taverne devient
+une zone d'essai libre, ce qui va de pair avec le mannequin d'entraînement qui y vit (voir plus
+bas).
+
+### Pourquoi une phase globale suffit
+
+`GAME_PHASE` est un attachment de `Level`, donc partagé par tout le monde — a priori mauvais
+signe pour une phase censée décrire *où l'on est*. Ça marche quand même parce que
+`MapInstance.startGame` et `returnToTavern` téléportent **tous** les joueurs ensemble : le mod
+est bâti autour d'une seule session partagée (voir 05-etat-et-problemes-connus.md, "Système de
+maps/structures"). « Tout le monde est à la taverne » est donc un vrai état du monde, pas une
+approximation.
+
+### Ce que la phase change
+
+| Comportement | Taverne |
+|---|---|
+| Roue des tours, pose | **autorisée** — `GamePhase#allowsTowerBuilding()`, vrai en `BUILD` et `TAVERN` |
+| Coût en mana de la pose | **gratuit** (`ModEvents.onTowerPlace` sort avant le débit) |
+| Mode suppression de tour | **autorisé**, même garde — sinon impossible de nettoyer ses essais |
+| Remboursement à la suppression | **aucun** (`ModNetworking.handleRemoveTower`) |
+| Spawners | inactifs — déjà `COMBAT` uniquement, rien à changer |
+| Vote « prêt » du Cristal d'Eternia | inactif — déjà `BUILD` uniquement |
+| Comptage de vague, score, XP | inactifs |
+| HUD Vague / Ennemis | masqués — `GamePhase#isInGame()` |
+
+**Gratuité et absence de remboursement vont ensemble** : aucun monstre ne meurt dans le hub,
+donc aucun mana n'y rentre — faire payer les essais les rendrait impossibles au bout de deux ou
+trois tours. Et rembourser une pose gratuite reviendrait à imprimer du mana à volonté.
+
+### Les transitions
+
+| Quand | Appel |
+|---|---|
+| Chargement du monde | `TavernSpawn.onLevelLoad` → `PhaseTransitions.enterTavern` |
+| Clic sur « Jouer » | `MapInstance.startGame` → `PhaseTransitions.startNewGame` (vague 1, `BUILD`) |
+| `/dd_leave`, « Retour à la taverne » | `MapInstance.returnToTavern` → `PhaseTransitions.enterTavern` |
+| Fin de vague, victoire, défaite | inchangé (`enterBuild`, `onVictory`, `onDefeat`) |
+
+`startNewGame` est volontairement distincte d'`enterBuild` : cette dernière fait **avancer** la
+vague (elle sert au retour en Construction entre deux vagues), donc démarrer une partie avec
+elle commencerait à la vague 2. Cette remise à zéro était implicite tant que la phase par
+défaut valait `BUILD` ; elle ne l'est plus.
+
+**Les tours d'essai sont effacées au lancement d'une partie** (`TavernSpawn.clearTestTowers`,
+appelée par `startGame`) : sans ça elles resteraient plantées dans la taverne jusqu'au prochain
+chargement du monde. Balayage de la zone bloc par bloc faute de registre de tours (contrairement
+aux spawners et aux coffres de mana, qui ont le leur) — coût ponctuel, payé une fois au clic sur
+« Jouer ».
+
+### Deux détails d'implémentation
+
+- **`TAVERN` est ajoutée à la fin de l'enum**, pas au début. La phase est persistée par nom
+  (donc les sauvegardes existantes s'en fichent), mais la valeur synchronisée vers le client est
+  un `ordinal()` — insérer la nouvelle valeur avant les autres les aurait décalées.
+- **La valeur par défaut de l'attachment est passée de `BUILD` à `TAVERN`** : c'est là que tout
+  joueur apparaît, et `TavernSpawn` force de toute façon cette phase à chaque chargement du
+  monde.
+
+> Le harnais de test (maj + clic droit sur un spawner) bascule Construction ↔ Combat. Depuis la
+> Taverne, il envoie en Construction — sans intérêt, mais sans dégât non plus.
+
+## Le mannequin d'entraînement — `entity/TrainingDummyEntity.java`, `block/TrainingDummyBlock.java`
+
+Demandé par le joueur (2026-08-31) pour la taverne : une **cible immobile et indestructible**,
+attaquée par les tours, pour mesurer leurs dégâts sans avoir à monter une vraie vague.
+
+### L'entité — pourquoi elle hérite de `Zombie`
+
+Deux contraintes de l'existant, pas un choix esthétique :
+
+1. **Les tourelles ne ciblent que des `Monster`** (`AbstractTurretBlockEntity#findTarget` fait un
+   `getEntitiesOfClass(Monster.class, ...)`). Le mannequin doit donc en être un, sinon aucune
+   tour ne lui tire dessus et il ne sert à rien.
+2. Passer par `Zombie` permet de **réutiliser tel quel le `ZombieRenderer` vanilla** (typé sur
+   `Zombie`, donc valide pour une sous-classe), sans créer ni modèle ni texture — exactement le
+   même procédé que `ManaCrystalEntity extends ExperienceOrb` + `ExperienceOrbRenderer`.
+
+> **Limite assumée** : le mannequin ressemble donc à un zombie planté là, pas à un mannequin de
+> paille. Placeholder, comme les textures vanilla réutilisées ailleurs dans le mod.
+
+Tout ce qui fait d'un zombie un zombie est ensuite neutralisé :
+
+| Aspect | Comment |
+|---|---|
+| Ne bouge pas | `setNoAi(true)` — coupe `isEffectiveAi()`, qui conditionne à la fois le tick des goals et la simulation de déplacement. Il ne subit même pas la gravité, ce qui va bien avec un bloc support invisible et traversable |
+| Aucun comportement | `registerGoals()` vide (ni les goals de déplacement/attaque du zombie, ni ses goals de ciblage) |
+| Pas de goal du mod | `ModEvents.onMonsterSpawn` ignore explicitement cette classe — sans ça, tout `Monster` qui rejoint le monde reçoit le goal d'attaque du Cristal d'Eternia et le mannequin partirait en promenade |
+| Ne brûle pas au soleil | `isSunSensitive()` → `false` (la taverne est à ciel ouvert) |
+| Pas repoussé | `KNOCKBACK_RESISTANCE` à `1.0` — annule tout le calcul de `LivingEntity#knockback` (`power *= 1.0 - résistance`), donc le Bouncer Blockade peut le frapper sans le déplacer |
+| Ni poussé ni poussant | `isPushable()` → `false`, `doPush(...)` vide |
+| Ne disparaît jamais | `removeWhenFarAway(...)` → `false`, plus `setPersistenceRequired()` |
+| Vie infinie | `MAX_HEALTH` à **1024**, remise au maximum dans `hurtServer` après le coup, et re-vérifiée à chaque `tick()` |
+
+**Pourquoi 1024 PV et une remise à niveau, plutôt qu'une vraie invulnérabilité** : les dégâts
+sont réellement appliqués, donc les événements de dégâts se déclenchent normalement — ce qui
+laisse la porte ouverte à un futur compteur de DPS. La marge sert à ce qu'aucun coup unique ne
+puisse atteindre 0 avant la remise à niveau ; la source la plus violente du mod en est très
+loin.
+
+**Pas de barre de vie** : `MobHealthBarRenderer` filtre sur `EntityType.ZOMBIE` et
+`EntityType.SKELETON` exactement. Un type custom ne correspond pas, donc rien n'est dessiné —
+c'est bien ce qui est voulu, mais c'est un effet de bord du filtre, pas une exclusion explicite :
+si ce filtre est un jour élargi, il faudra penser à en exclure le mannequin.
+
+### Le bloc — un "spawner de mannequin"
+
+`TrainingDummyBlock` n'a aucun comportement propre : son block entity vérifie une fois par
+seconde qu'un `TrainingDummyEntity` existe **à sa position** (pas au-dessus — changé le
+2026-09-06, retour en jeu : le mannequin apparaissait flottant un bloc plus haut que
+l'emplacement du support), et en invoque un sinon. Sans conséquence sur le mannequin lui-même,
+qui n'a de toute façon pas besoin de sol sous ses pieds (`setNoAi`). Invisible, traversable,
+ciblable en créatif seulement — même traitement que `SpawnerBlock` et `PlayerSpawnBlock`, c'est
+un marqueur d'édition, et le même principe "le marqueur EST l'endroit visé" que
+`PlayerSpawnBlock`.
+
+**Pourquoi un bloc plutôt qu'un mannequin posé directement dans le `.nbt` de la taverne**
+(décidé avec le joueur) : le bloc fait partie de la structure et se repose donc proprement à
+chaque chargement du monde, alors qu'une entité dépend du nettoyage d'entités de la zone
+(`TavernSpawn#clearZone`) pour ne pas se dupliquer. Comme le bloc vérifie l'existence du
+mannequin avant d'en invoquer un, deux exemplaires ne peuvent pas s'accumuler **même si ce
+nettoyage ratait l'ancien**. Bonus : le mannequin se déplace en créatif en déplaçant son bloc,
+sans retoucher au fichier de structure.
+
+Retirer le bloc emporte son mannequin (`affectNeighborsAfterRemoval` →
+`TrainingDummyBlockEntity#discardDummy`) : sans ça, casser le support en créatif laisserait une
+entité orpheline que plus rien ne gère — le nettoyage de zone de la taverne ne passe qu'au
+chargement du monde, et une map n'en a pas du tout.
+
+`TrainingDummyBlockEntity` ne persiste **aucun état** — contrairement à `SpawnerBlockEntity`, il
+n'y a rien à configurer ; il n'existe que pour avoir un tick serveur.
+## Le système de héros — `init/HeroDefinition.java`
+
+Décidé avec le joueur (2026-09-03). La question posée était : faire les tours des quatre héros,
+ou finir l'Écuyer à 100 % ? Réponse retenue : **un héros complet d'abord**, la classe de base une
+fois, les différences ensuite — le principe déjà appliqué aux tours, où
+`AbstractTowerBlockEntity` porte le commun et chaque tour concrète ne fixe que ses stats.
+
+Trois arguments ont tranché :
+
+- Aujourd'hui le joueur **ne fait rien en combat**, il regarde ses tours. Ajouter dix-huit tours
+  de plus enrichit un simulateur de contemplation.
+- Valider le système sur 6 tours coûte moins cher que sur 24, et un premier jet de système de
+  classes se révèle rarement juste du premier coup.
+- Une fois le système là, les trois autres héros deviennent du **contenu** : des entrées d'enum
+  et des blocs, sans risque de conception.
+
+### Ce que cette étape couvre — et ce qu'elle ne couvre pas
+
+**Faite** : l'identité (quel héros on est, choisi, persisté, synchronisé) et le **filtrage des
+tours**. C'est la partie qui ne demandait aucune décision de conception.
+
+**Pas faite** : les compétences (les 4 emplacements du HUD restent quatre ronds vides dessinés en
+dur), l'arme et l'attaque de base, et les stats propres au héros. Toutes demandent des décisions
+que le joueur n'a pas encore prises — comment on déclenche une compétence, ce qu'elle coûte, ce
+qu'elle fait.
+
+### Le catalogue
+
+`HeroDefinition` est à l'Écuyer ce que `TowerDefinition` est aux tours : un membre par héros,
+portant son identifiant, son libellé et **la liste des tours qu'il peut poser**. Ajouter un héros
+sera une entrée ici plus ses tours.
+
+Un seul membre pour l'instant, comme `ManaCrystalType` à ses débuts. L'écran de choix n'a donc
+qu'une option — c'est assumé : ça valide toute la plomberie (choix, paquet, persistance, synchro,
+filtrage) sur un cas simple, avant que trois héros ne s'y ajoutent.
+
+### Où le héros est stocké
+
+`ModAttachments.HERO`, un attachment **joueur** (chacun son héros, contrairement à la phase ou à
+la vague qui sont des états du monde). Persisté **par nom** et non par ordinal, comme
+`GAME_PHASE` : l'ordre des membres changera forcément quand les autres héros arriveront, et une
+sauvegarde existante ne doit pas se retrouver avec le mauvais héros.
+
+### Le filtrage des tours, et l'autorité
+
+`TowerWheelScreen` ne liste plus `TowerDefinition.values()` mais les tours du héros du joueur.
+C'est ce qui donne un sens au choix de classe.
+
+Le serveur revérifie : `ModNetworking#handlePlaceTower` refuse une tour qui n'appartient pas au
+héros du joueur, avec son propre message. Le client ne montre déjà que les bonnes, mais il n'est
+jamais l'autorité — un paquet forgé demanderait sinon la tour d'une autre classe.
+
+### Changer de héros
+
+Touche **H**, qui ouvre `HeroSelectionScreen`. Une touche plutôt qu'un bloc de taverne : le
+système doit être testable tout de suite, sans dépendre d'une structure. Le choix depuis la
+taverne viendra quand elle existera.
+
+**Refusé pendant le Combat** (revérifié côté serveur) : changer de classe au milieu d'une vague
+laisserait des tours posées qu'on ne peut plus poser, et viderait le choix de sa substance.
+
+Le HUD affiche désormais le héros à côté du nom et du niveau — c'est l'information qui dit au
+joueur quelles tours il peut poser, elle vaut mieux qu'un pseudo affiché en permanence.
+
+## Les compétences — `ability/`, `init/AbilitySlot.java`
+
+Décidé avec le joueur (2026-09-03) : « on fait comme le jeu de base ». Les quatre emplacements
+du HUD (voir `AbilitySlotsOverlay`, jusqu'ici quatre ronds vides) sont désormais fonctionnels,
+avec les **vraies** valeurs et mécaniques du jeu de référence — vérifiées par recherche plutôt
+que reconstruites de mémoire (voir plus bas pour la nuance sur ce qui est confirmé et ce qui ne
+l'est pas).
+
+### Quatre emplacements, deux mécanismes différents
+
+| Emplacement | Compétence | Générique/héros | Déclenchement |
+|---|---|---|---|
+| HEAL | Heal Self | générique (`HealAbility`) | maintenue |
+| SPELL_1 | Circular Slice (Écuyer) | par héros (`HeroDefinition#spell1`) | **salve + recharge** |
+| SPELL_2 | Blood Rage (Écuyer) | par héros (`HeroDefinition#spell2`) | maintenue |
+| REPAIR | Repair Defense | générique (`RepairAbility`) | maintenue, avec cible |
+
+Trois emplacements sur quatre sont des **canalisations** (`ChannelAbility`) : la touche
+correspondante est maintenue, le mana se vide en continu tant qu'elle reste enfoncée. Le
+quatrième (Circular Slice) est une **salve** (`BurstAbility`) : un appui, un coût payé d'un
+coup, puis une recharge. C'est le mécanisme du jeu de référence lui-même, pas une simplification
+du mod — la tentation aurait été de tout uniformiser en canalisation pour un seul code, mais ça
+aurait trahi la consigne « on fait comme le jeu de base ».
+
+### Qui décide de la durée d'une canalisation — le serveur, jamais le client
+
+Le client n'annonce que deux choses : « je commence » (`StartChannelAbilityPayload`, avec la
+cible pour Repair) et « j'arrête » (`StopChannelAbilityPayload`). C'est
+`ModEvents.onPlayerTick` qui fait réellement avancer la canalisation, à chaque tick serveur :
+il appelle `ChannelAbility#canContinue` puis `#applyTick`, et **coupe de son propre chef** dès
+que la condition n'est plus vraie — mana épuisé, PV pleins (Heal), tour réparée au maximum
+(Repair), ou coup reçu (Heal seulement, voir plus bas) — sans attendre un nouveau paquet du
+client. `PlayerAbilityChannels` garde cet état côté serveur (au plus une canalisation par
+joueur), en mémoire uniquement — jamais synchronisé ni persisté, une canalisation ne doit pas
+survivre à une reconnexion.
+
+Le mana n'est resynchronisé qu'une fois tous les 4 ticks pendant une canalisation
+(`MANA_SYNC_INTERVAL_TICKS` dans `ModEvents`), pas à chaque tick : vingt paquets par seconde
+pour un HUD qui n'a pas besoin d'une telle fréquence.
+
+### Heal Self — `ability/HealAbility.java`
+
+1 mana = 1 PV, chaque tick tant que la touche reste maintenue (ratio de test, le jeu de
+référence lie plutôt le débit à une statistique "Casting Rate" qui n'existe pas dans ce mod).
+
+**Interrompue par un coup reçu**, en plus de PV pleins/mana épuisé : `ModEvents` écoute
+`LivingDamageEvent.Post` et coupe la canalisation dès qu'un joueur en train de se soigner
+encaisse des dégâts réels (`getHealthDamage() > 0`) — comportement confirmé pour Heal Self dans
+le jeu de référence. **Volontairement pas étendu à Repair ni Blood Rage** : aucune source ne
+documente qu'elles sont interrompues par des dégâts, extrapoler aurait été deviner.
+
+### Repair Defense — `ability/RepairAbility.java`
+
+Même ratio que le soin (1 mana = 1 PV de tour/tick), pour n'avoir qu'un seul nombre à retenir.
+
+La cible est choisie **au moment de l'appui**, par le même raycast que le mode suppression de
+tour (`TowerRemovalClientEvents`, `ClipContext.Block.OUTLINE`, 20 blocs) — et reste fixée pour
+toute la durée de la canalisation, même si le joueur bouge la caméra en la maintenant.
+**Simplification assumée** : viser une tour différente demande de relâcher puis rappuyer, pas de
+"glisser" la cible en cours de canalisation. Plus simple à coder et à comprendre ; à revoir si
+le ressenti en jeu le demande.
+
+`AbstractTowerBlockEntity#setHealth` ne plafonne **pas** au maximum de lui-même (vérifié dans sa
+source : `Math.max(0, health)`, aucun `Math.min`) — c'est `RepairAbility` qui doit s'arrêter à
+`getMaxHealth()`, pas le block entity.
+
+### Circular Slice — `ability/CircularSliceAbility.java` (sort 1 de l'Écuyer)
+
+**60 mana, 3 secondes de recharge (60 ticks) : les vraies valeurs du jeu de référence**,
+confirmées par recherche — pas des valeurs de test comme presque partout ailleurs dans le mod.
+Une attaque tournante à 360° autour du joueur : dégâts + repousse à tous les `Monster` dans un
+rayon de 4 blocs.
+
+**Simplification assumée** : le jeu de référence touche deux fois ("hits twice"), ici un seul
+coup avec les dégâts cumulés — pas de raison technique, juste plus simple pour une première
+version. Le rayon (4 blocs) et le knockback ne sont, eux, pas confirmés — valeurs de test.
+
+Repousse avec la même formule que le Bouncer Blockade (`AbstractBlockadeBlockEntity`),
+**testée en jeu** : `dx = joueurX - monstreX` (pas l'inverse), qui pousse bien loin du joueur.
+
+### Blood Rage — `ability/BloodRageAbility.java` (sort 2 de l'Écuyer)
+
+Buff Speed + Strength tant que la touche est maintenue, drainant le mana "très rapidement"
+(jeu de référence, valeur exacte non documentée — 2 mana/tick est un choix de test,
+volontairement plus cher que le soin).
+
+Implémentée avec les effets **vanilla** `MobEffects.SPEED`/`MobEffects.STRENGTH` — vérifiés
+dans les sources avant d'écrire cette classe, à la place de noms plausibles mais faux
+(`MOVEMENT_SPEED`/`DAMAGE_BOOST`, qui n'existent pas dans cette version). Rafraîchis à chaque
+tick avec une durée volontairement courte (`EFFECT_DURATION_TICKS`) : dès que la canalisation
+s'arrête, l'effet expire de lui-même en quelques ticks, sans code de nettoyage séparé.
+
+### Les touches — `ModKeyMappings.ABILITY_KEYS`, `client/AbilityClientEvents.java`
+
+**1 à 4**, dans l'ordre du HUD (Heal, Sort 1, Sort 2, Réparation). `AbilityClientEvents` est le
+premier endroit du mod à utiliser `KeyMapping#isDown()` (une touche *maintenue*) plutôt que
+`consumeClick()` (un appui simple, déjà utilisé partout ailleurs pour R/G/X/H) — trois des
+quatre compétences en ont besoin.
+
+**Effet de bord accepté** : en créatif, où la hotbar reste active (elle est neutralisée
+seulement en survie, voir `DungeonDefendersModClient`), appuyer sur 1-4 change *aussi* le slot
+de hotbar sélectionné en plus de déclencher la compétence. Sans conséquence pratique : les
+compétences n'ont d'utilité qu'en jeu, pas en train de construire.
+
+**Une canalisation en cours est coupée si un écran s'ouvre** (menu pause, roue des tours...) :
+`AbilityClientEvents` détecte `minecraft.screen != null` et envoie un `Stop` immédiatement —
+capturer une touche de compétence pendant qu'un écran a le focus n'aurait de toute façon aucun
+sens.
+
+### Ce qui n'est PAS fait, volontairement
+
+- **Aucun message** quand une canalisation démarrée s'arrête immédiatement au premier tick
+  (cible déjà à PV pleins, par exemple) — silencieux, pas de distinction avec "n'a jamais
+  démarré".
+- Repair et Blood Rage ne sont **pas** interrompues par des dégâts (voir Heal Self plus haut,
+  volontaire).
+- Pas de nettoyage de `PlayerAbilityChannels`/`AbilityCooldowns` à la déconnexion — limite
+  acceptée, négligeable sur un serveur privé (voir le commentaire de classe de
+  `PlayerAbilityChannels`).
+
+## L'Alchimiste — deuxième héros (`HeroDefinition.ALCHEMIST`)
+
+Ajouté le 2026-11-16, à la demande du joueur (« Héros et tours »). **Conception propre au mod** :
+ni ses tours ni ses sorts ne sont repris du jeu de référence, contrairement au roster de l'Écuyer.
+Tout est proposé par Claude et **jamais vu en jeu** — noms, rôles et chiffres sont à corriger
+librement (les chiffres sans recompiler, voir `tower/*.json`).
+
+**Identité** : un héros de soutien. L'Écuyer bloque et frappe ; l'Alchimiste ralentit, fragilise,
+renforce les tours voisines et fait rentrer du mana. Ses tours valent surtout **combinées** à
+d'autres, les siennes ou celles d'un Écuyer en multijoueur.
+
+| Tour | Rôle | Stats livrées |
+|---|---|---|
+| **Cuve instable** `volatile_vat` | Mur passif et fragile (priorité IA « block », les monstres de mêlée s'y jettent). **Explose** quand les monstres la détruisent : dégâts à tout ce qui l'entoure. Rien si on la retire soi-même. | 15 PV, 35 mana, `damage` 12, `splash_radius` 3 |
+| **Alambic givrant** `frost_still` | Aucun dégât. **Ralentit** tous les monstres de son rayon (Lenteur, réappliquée deux fois par seconde). | 20 PV, 40 mana, `range` 5, `effect_level` 2 |
+| **Projecteur d'acide** `acid_sprayer` | Arrose **tous** les monstres d'un cône court et large (orientable). Dégâts faibles, mais pose la **corrosion** : +30 % de dégâts subis, de toutes les sources, pendant 3 s. | 20 PV, 60 mana, `range` 6, `cone_angle_degrees` 90, `damage` 1, `attack_interval_ticks` 20, `vulnerability_percent` 30 |
+| **Lance-fioles** `flask_launcher` | Tire tout autour de lui. La fiole laisse une **flaque** qui blesse deux fois par seconde tout monstre qui s'y tient. | 20 PV, 65 mana, `range` 10, `damage` 2 (par passage), `attack_interval_ticks` 80, `splash_radius` 2, `linger_ticks` 60 |
+| **Pylône catalyseur** `catalyst_pylon` | N'attaque pas. **+25 % de dégâts** aux tours voisines, quel que soit leur héros. | 15 PV, 80 mana, `range` 4, `boost_percent` 25 |
+| **Condenseur de mana** `mana_condenser` | Tour d'économie : un monstre qui meurt dans son rayon lâche **un cristal de mana en plus**. | 15 PV, 60 mana, `range` 5, `bonus_mana` 5 |
+
+| Sort | Type | Effet |
+|---|---|---|
+| **Fiole de givre** (sort 1) | salve, 50 mana, 8 s de recharge | Se brise à l'endroit visé (16 blocs max) : 4 dégâts et Lenteur VI pendant 3 s dans un rayon de 4. |
+| **Catalyse** (sort 2) | maintenue, 2 mana/tick | Les tours à 8 blocs du joueur font +50 % de dégâts tant que la touche est tenue. |
+
+### Comment c'est construit
+
+- **`AbstractPulseTowerBlockEntity`** : troisième catégorie de tours, « à impulsions ». La tour
+  agit à intervalle régulier sur tout ce qui l'entoure, au lieu de viser une cible (Turret) ou de
+  piquer au contact (Blockade). Une tour concrète ne fournit que `pulseIntervalTicks()` et
+  `pulse()`. Alambic, Projecteur, Lance-fioles et Pylône en héritent ; la Cuve et le Condenseur
+  héritent directement de `AbstractTowerBlockEntity` (ils ne font rien à chaque tick).
+- **`SimpleTowerBlock` / `DirectionalTowerBlock`** : un seul bloc générique pour les six tours,
+  le block entity est passé au constructeur. Les six tours de l'Écuyer ont chacune leur classe de
+  bloc, identiques à une ligne près ; elles n'ont pas été migrées (aucun gain en jeu).
+- **Bonus de dégâts temporaire** (`AbstractTowerBlockEntity#applyDamageBoost`,
+  `damageMultiplier()`) : posé pour quelques ticks et renouvelé par le Pylône et par la Catalyse,
+  il expire seul. **Les bonus ne se cumulent pas**, le plus fort l'emporte — deux pylônes côte à
+  côte ne servent à rien, c'est voulu. Il s'applique à toutes les tours, Écuyer compris
+  (`AbstractTurretBlockEntity#getDamage`, dégâts de contact des Blockades). Purement serveur :
+  l'inspection d'une tour ne l'affiche pas.
+- **Corrosion** (`entity/Corrosion.java`) : table en mémoire monstre → multiplicateur, appliquée
+  dans `ModEvents#onCorrodedMonsterHurt` (`LivingIncomingDamageEvent`). Elle vaut pour les coups
+  du joueur et les sorts, pas seulement pour les tours.
+- **Condenseur** : les condenseurs s'inscrivent dans une table par monde
+  (`ManaCondenserBlockEntity#bonusManaAt`), lue par `ModEvents#onMonsterDeath`. Pas de cumul non
+  plus : un monstre compte pour le meilleur condenseur qui le couvre.
+- **Amélioration (touche U)** : comme pour les autres tours, +25 % de PV et de dégâts par niveau.
+  Pour les deux tours sans dégâts qui auraient sinon été inutiles à améliorer, le niveau augmente
+  aussi le bonus du Pylône et le mana du Condenseur. L'Alambic ne gagne que des PV.
+- **`TowerScan#towersNear`** : trouve les tours autour d'un point en parcourant les block
+  entities des chunks, pas chaque case du volume.
+
+### Limites connues
+
+- Textures : placeholders vanilla (glace bleue, tonneau, améthyste, lapis, table de forgeron,
+  distributeur).
+- Les flaques du Lance-fioles et la corrosion ne sont pas sauvegardées (elles durent 3 s).
+- La Fiole de givre vise le premier bloc sous le viseur ; dans le vide, elle éclate à 16 blocs.
+- Équilibrage entièrement théorique. Point à surveiller : le Condenseur (5 de mana par mort à
+  portée) peut rendre le mana trop abondant.
+
+
+## L'Ingénieur — troisième héros (`HeroDefinition.ENGINEER`)
+
+Ajouté le 2026-11-16, à la suite de l'Alchimiste, sur le même patron. **Conception propre au
+mod**, proposée par Claude, **jamais vue en jeu**.
+
+**Identité** : des machines. Deux tourelles aux profils opposés pour les dégâts, et tout ce qu'il
+faut pour faire **durer** une défense.
+
+| Tour | Rôle | Stats livrées |
+|---|---|---|
+| **Barricade blindée** `iron_barricade` | Mur passif très solide qui **se répare seul**. | 60 PV, 45 mana, `heal_amount` 1, `attack_interval_ticks` 40 |
+| **Tourelle à répétition** `repeater_turret` | Turret classique : cadence très élevée, petits dégâts. | 20 PV, 55 mana, `range` 9, `cone_angle_degrees` 60, `damage` 1.5, `attack_interval_ticks` 6 |
+| **Tourelle longue portée** `longshot_turret` | Turret classique : cône très étroit, portée double, gros tir lent. | 15 PV, 75 mana, `range` 24, `cone_angle_degrees` 20, `damage` 18, `attack_interval_ticks` 80 |
+| **Marteau-pilon** `piston_slammer` | Frappe le sol : blesse et **repousse** tout ce qui l'entoure. Première ligne. | 30 PV, 60 mana, `range` 3, `damage` 4, `attack_interval_ticks` 50, `knockback_strength` 1 |
+| **Bobine magnétique** `magnet_coil` | Aucun dégât : **attire** les monstres vers elle. | 25 PV, 50 mana, `range` 5, `attack_interval_ticks` 10, `knockback_strength` 0.35 |
+| **Station de réparation** `repair_station` | **Répare** les tours voisines, pas elle-même. | 20 PV, 70 mana, `range` 4, `heal_amount` 2, `attack_interval_ticks` 40 |
+
+| Sort | Type | Effet |
+|---|---|---|
+| **Réparation d'urgence** (sort 1) | salve, 70 mana, 20 s de recharge | Rend la moitié de leurs PV max aux tours à 10 blocs. |
+| **Champ de force** (sort 2) | maintenue, 3 mana/tick | Les tours à 8 blocs n'encaissent aucun dégât tant que la touche est tenue. |
+
+Côté code : les deux tourelles sont des `AbstractTurretBlockEntity` sans une ligne de
+comportement (seules leurs stats diffèrent du Harpoon Turret) ; les quatre autres sont des tours
+à impulsions. Deux ajouts à `AbstractTowerBlockEntity` : `repair(int)` et le **bouclier
+temporaire** (`applyShield`/`isShielded`, vérifié dans `damage`), sur le modèle du bonus de
+dégâts. `SimpleTowerBlock` fait désormais tourner aussi les Turrets et les Blockades.
+
+Limites : la Bobine et le Marteau-pilon se contrarient s'ils sont côte à côte (l'un attire,
+l'autre repousse) — c'est au joueur de s'en servir, par exemple pour faire revenir les monstres
+dans le rayon du Marteau. Équilibrage théorique ; point à surveiller : la Barricade (60 PV qui
+remontent seuls) face au Spike Blockade de l'Écuyer (30 PV).
+
+## Le Géomancien — quatrième héros (`HeroDefinition.GEOMANCER`)
+
+Ajouté le 2026-11-16, à la suite de l'Ingénieur. **Conception propre au mod**, proposée par
+Claude, **jamais vue en jeu**.
+
+**Identité** : la terre. Il contrôle le terrain (enliser, projeter en l'air), frappe fort sur peu
+de cibles, et possède la seule tour qui soigne les joueurs.
+
+| Tour | Rôle | Stats livrées |
+|---|---|---|
+| **Haie de ronces** `thorn_hedge` | Mur qui **rend les coups** : chaque coup encaissé blesse les monstres collés à lui. | 40 PV, 40 mana, `contact_damage` 3, `contact_range` 1.5 |
+| **Totem de boue** `mud_totem` | **Enlise** sur place les monstres de son rayon, 1,5 s toutes les 4 s. | 20 PV, 50 mana, `range` 5, `attack_interval_ticks` 80, `linger_ticks` 30 |
+| **Geyser** `geyser` | **Projette en l'air** les monstres proches : dégâts, puis chute. | 25 PV, 55 mana, `range` 3, `damage` 3, `attack_interval_ticks` 100, `knockback_strength` 0.9 (élan vertical) |
+| **Lance-rochers** `boulder_thrower` | Vise le monstre **le plus costaud** à portée, tout autour : gros coup et étourdissement d'une seconde. | 20 PV, 75 mana, `range` 12, `damage` 12, `attack_interval_ticks` 70, `linger_ticks` 20 |
+| **Flèche de cristal** `crystal_spire` | Éclair qui **rebondit** de monstre en monstre, 70 % des dégâts à chaque rebond. | 20 PV, 65 mana, `range` 8, `damage` 5, `attack_interval_ticks` 30, `splash_radius` 4 (distance d'un rebond), `chain_targets` 4 |
+| **Pierre de vie** `lifestone` | **Soigne les joueurs** dans son rayon. | 15 PV, 60 mana, `range` 6, `heal_amount` 2, `attack_interval_ticks` 40 |
+
+| Sort | Type | Effet |
+|---|---|---|
+| **Séisme** (sort 1) | salve, 60 mana, 10 s de recharge | 5 dégâts et projection en l'air de tous les monstres à 6 blocs du joueur. |
+| **Peau de pierre** (sort 2) | maintenue, 1 mana/tick | Résistance III (−60 % de dégâts subis) et Lenteur I tant que la touche est tenue. |
+
+Côté code : cinq tours à impulsions ; la Haie hérite directement de `AbstractTowerBlockEntity` et
+utilise le nouveau crochet `onDamaged` (appelé par `damage` quand la tour tient encore) plus
+`onDestroyedByMonsters` pour piquer une dernière fois en tombant.
+
+Limites : un monstre enlisé ou étourdi (Lenteur VII) ne bouge plus mais **frappe encore** ce qui
+est à sa portée ; un monstre projeté par le Geyser peut retomber derrière un mur. La Pierre de vie
+n'a pas de gametest (il faut un vrai joueur). Équilibrage théorique.
+
+## Les quatre héros en un coup d'œil
+
+| Héros | Origine | Rôle |
+|---|---|---|
+| Écuyer | plan d'origine du joueur | murs et tourelles, tenir un couloir |
+| Alchimiste | conception propre au mod | soutien : ralentir, fragiliser, renforcer, mana |
+| Ingénieur | conception propre au mod | tourelles spécialisées, faire durer la défense |
+| Géomancien | conception propre au mod | contrôle du terrain, gros coups, soin des joueurs |
+
+Chacun a six tours et deux sorts ; Soin et Réparation restent communs. Le gametest `hero_rosters`
+vérifie que chaque tour appartient à un seul héros et que chaque héros en a six.
+
+## Les armes de héros — `item/HeroWeaponItem.java`, `item/HeroWeapons.java`
+
+Ajoutées le 2026-11-16 (choix du joueur : « Armes de héros », avant le butin et les stats).
+Jusque-là le joueur n'avait rien pour se battre lui-même, à part ses sorts. **Jamais vu en jeu.**
+
+| Héros | Arme | Attaque de base |
+|---|---|---|
+| Écuyer | **Épée d'écuyer** `squire_sword` | Mêlée vanilla au clic gauche (stats d'une épée en fer : 6 dégâts). |
+| Alchimiste | **Sacoche de fioles** `alchemist_flasks` | Clic droit : éclate à l'endroit visé (16 blocs), 3 dégâts dans un rayon de 2,5. Recharge 0,7 s. |
+| Ingénieur | **Pistolet à rivets** `engineer_rivet_gun` | Clic droit : 4 dégâts au monstre visé, jusqu'à 24 blocs. Recharge 0,4 s. |
+| Géomancien | **Bâton de géomancien** `geomancer_staff` | Clic droit : 3 dégâts dans un rayon de 1,5 à 10 blocs, et Lenteur I pendant 2 s. Recharge 0,8 s. |
+
+- **L'arme fait partie du héros**, comme ses tours : `HeroWeapons#ensure` la donne et retire celle
+  des autres héros à la connexion, à la réapparition et au changement de héros. Elle ne se jette
+  pas (`ItemTossEvent` annulé) et ne tombe pas à la mort (`LivingDropsEvent`). L'arme d'un autre
+  héros, prise en créatif, refuse de tirer. Elle n'est dans aucun onglet créatif.
+- **Vrai projectile** (2026-11-24, avant : tir instantané par rayon) : `fire()` lance un
+  `entity/WeaponProjectileEntity` depuis les yeux, qui vole jusqu'au premier bloc ou au premier
+  monstre, puis appelle `HeroWeaponItem#impact` à cet endroit (même effet qu'avant). Au-delà de
+  la portée, la fiole et l'éclat éclatent en l'air, le rivet disparaît. Il traverse les joueurs.
+  | Arme | Ce qui vole | Vitesse | Trajectoire |
+  |---|---|---|---|
+  | Sacoche de fioles | une fiole (potion jetable) | 1,4 bloc/tick | légère cloche (gravité 0,03) |
+  | Pistolet à rivets | un rivet (pépite de fer) | 3 blocs/tick | droite |
+  | Bâton de géomancien | un éclat (silex) | 1,6 bloc/tick | droite |
+
+  Vitesse et gravité sont des constantes de `HeroWeaponItem.Kind` (le ressenti du vol, pas de
+  l'équilibrage). Rendu par le `ThrownItemRenderer` vanilla : aucun modèle. Le projectile n'est
+  jamais sauvegardé (`noSave`). Le gametest `hero_weapons` fait voler chaque projectile tick par
+  tick jusqu'à l'impact.
+- **Recharge** : celle des objets vanilla (voile sur l'icône de la barre d'accès rapide).
+- **Le niveau du personnage sert enfin à quelque chose** : tout ce qu'un joueur inflige à un
+  monstre (arme, épée, sorts) est multiplié par `1 + player_damage_per_level × (niveau − 1)`,
+  soit +5 % par niveau (`ModEvents#onPlayerDamageLevelBonus`). Les tours ne sont pas concernées.
+- **L'icône d'un héros** dans l'écran de choix est maintenant son arme, plus sa première tour.
+- Chiffres dans `balance/weapons.json` ([equilibrage.md](data-driven/equilibrage.md)).
+
+Limites : textures vanilla (épée en fer, fiole d'XP, arbalète, bâton de blaze). Pas encore de
+butin ni d'armes aux stats variables : c'est l'étape suivante, si le joueur la veut. Le clic
+droit pendant le mode pose de tour n'a pas été essayé.
+
+## Les caractéristiques — `init/HeroStat.java`, `client/gui/screen/HeroStatsScreen.java`
+
+Ajoutées le 2026-11-16. Chaque niveau gagné donne **un point**, à répartir dans l'écran des
+caractéristiques (touche **K**). **Jamais vu en jeu.**
+
+| Caractéristique | Effet par point | Comment |
+|---|---|---|
+| **Vitalité** | +2 PV max | modificateur d'attribut vanilla `MAX_HEALTH` |
+| **Puissance** | +3 % de dégâts infligés par le joueur (arme, épée, sorts) | `ModEvents#playerDamageMultiplier`, multiplié au bonus de niveau |
+| **Rapidité** | +2 % de vitesse de déplacement | modificateur d'attribut vanilla `MOVEMENT_SPEED` |
+| **Maîtrise des tours** | +3 % de dégâts des tours que le joueur pose | `AbstractTowerBlockEntity#ownerBonus` |
+
+- **Les points appartiennent au joueur**, pas au héros : changer de héros ne les remet pas à zéro.
+  Stockés dans l'attachment `HERO_STATS` (une liste d'entiers), synchronisé.
+- **Plafond** : 20 points par caractéristique. **Tout reprendre** est gratuit, mais refusé
+  pendant le Combat.
+- **Maîtrise des tours : un instantané.** Le bonus du poseur est relevé à la pose et réécrit à
+  chaque amélioration (avec celui de l'améliorateur s'il est meilleur). Des points dépensés
+  ensuite ne profitent donc pas aux tours déjà posées avant leur prochaine amélioration. Il ne
+  touche que les dégâts : pas le soin, le ralentissement ni le mana des tours de soutien.
+- Vitalité et Rapidité sont des modificateurs **transitoires**, reposés à chaque connexion et
+  réapparition (`HeroStat#applyAttributes`) : modifier `progression.json` ne laisse aucun reliquat.
+- Au passage de niveau, un message rappelle les points à répartir.
+- Chiffres dans `balance/progression.json` ([equilibrage.md](data-driven/equilibrage.md)).
+
+### Correctif lié : la progression survivait mal à la mort
+
+Aucun attachment joueur n'était marqué `copyOnDeath`. NeoForge ne recopie alors rien sur le joueur
+qui réapparaît : **mourir remettait le personnage au niveau 1, sans expérience, en Écuyer**.
+Corrigé le 2026-11-16 pour `EXPERIENCE`, `LEVEL`, `HERO`, `CHARACTER_NAME`, `FIRST_SPAWN_HANDLED`
+et `HERO_STATS`. Le mana n'est pas concerné (il repart plein). Trouvé à la lecture du code, pas
+observé en jeu : à confirmer en mourant une fois.
+
+## Le butin et la Forge — `loot/`, `block/ForgeBlock.java`, `client/gui/screen/ForgeScreen.java`
+
+Ajouté le 2026-11-17. **Jamais vu en jeu** : la logique est couverte par deux gametests, mais ni
+les touches, ni le message à l'écran, ni l'écran de la Forge n'ont été affichés une seule fois.
+
+### Les règles, fixées avec le joueur (2026-11-16)
+
+- **Le joueur n'a pas d'inventaire portatif.** Tout son butin est rangé dans **l'inventaire de la
+  Forge**, qui est un **onglet de la Forge** et comporte **plusieurs pages**.
+- Un objet au sol se **range** (touche E, il part dans l'inventaire) ou s'**équipe directement**
+  (touche F).
+- Équiper **remplace** l'arme en place, qui **part dans l'inventaire**.
+- On s'équipe aussi à la Forge. Les autres onglets et le détail : « on verra plus tard ».
+
+### Une arme de butin — `loot/LootWeapon.java`
+
+L'arme d'un héros précis, avec une **rareté** et des bonus tirés au hasard. Elle a toujours un
+bonus de **dégâts** (tout ce que le joueur inflige), plus 0 à 3 bonus secondaires selon la rareté,
+parmi **PV max**, **vitesse** et **dégâts des tours** posées.
+
+| Rareté | Chance | Force | Bonus secondaires | Couleur |
+|---|---|---|---|---|
+| Commun | 60 % | ×1 | 0 | blanc |
+| Peu commun | 25 % | ×1,5 | 1 | vert |
+| Rare | 10 % | ×2,2 | 1 | bleu clair |
+| Épique | 4 % | ×3 | 2 | violet |
+| Légendaire | 1 % | ×4 | 3 | or |
+
+À force 1 : dégâts +4 à +8 %, PV +1 à +3, vitesse +1 à +3 %, tours +3 à +6 %. La force est
+multipliée par la rareté, puis par `1 + power_per_wave × (vague − 1)` : le butin d'une vague
+avancée est meilleur (`loot/LootGenerator.java`).
+
+C'est une **donnée**, pas un objet d'inventaire vanilla. Elle ne prend la forme d'un `ItemStack`
+que posée au sol (l'item de l'arme du héros, nommé, avec ses données dans `CUSTOM_DATA`).
+
+### D'où vient le butin
+
+- Un monstre tué **en Combat** a 4 % de chances de lâcher une arme, pour le héros d'un des
+  joueurs présents.
+- À chaque **vague nettoyée**, chaque joueur reçoit une arme pour **son** héros, à ses pieds.
+  Après la **dernière vague**, elle va directement dans son inventaire : la victoire renvoie à la
+  taverne, un objet resté au sol serait perdu.
+- L'objet au sol brille, ne se ramasse jamais en marchant dessus, et disparaît au bout de cinq
+  minutes comme tout objet.
+
+### Ramasser — `client/LootPickupClientEvents.java`, `client/gui/LootPromptOverlay.java`
+
+À moins de 3 blocs d'un objet (le plus proche, sans avoir à le viser), un encadré sous le viseur,
+bordé de la couleur de sa rareté, montre son icône, son nom, ses bonus **comparés à l'arme que son
+héros porte déjà** (`client/gui/LootComparison.java` : écart en vert ou en rouge) et les touches.
+**E** range, **F** équipe.
+
+E et F sont aussi des touches vanilla (inventaire, échange de main). Quand un objet est à portée,
+l'appui est consommé avant que le jeu ne le traite : l'inventaire ne s'ouvre pas. Sans objet à
+portée, rien n'est intercepté. Les deux touches sont reconfigurables.
+
+### L'équipement — `loot/Equipment.java`
+
+- **Une arme n'est équipable que par son héros.** L'arme d'un autre héros se range mais ne
+  s'équipe pas (choix de Claude, à revoir si le joueur préfère autre chose).
+- **Chaque héros garde sa propre arme équipée** : changer de héros ne déséquipe rien.
+- Sans arme de butin, le héros a son arme de base, sans bonus. L'objet tenu en main ne change
+  pas : c'est toujours l'arme du héros, le butin n'en modifie que les chiffres.
+- Bonus appliqués : dégâts dans `ModEvents#playerDamageMultiplier` (avec le niveau et la
+  Puissance) ; PV et vitesse par modificateurs d'attributs transitoires ; dégâts des tours dans
+  l'instantané pris à la pose (`ownerBonus`, avec la Maîtrise des tours).
+- Inventaire : 100 objets (5 pages de 20). Plein : le ramassage est refusé avec un message, et
+  l'objet reste au sol.
+- Deux attachments joueur, persistants, synchronisés, conservés à la mort : `FORGE_INVENTORY` et
+  `EQUIPPED_WEAPONS` (par identifiant de héros).
+
+### La Forge — `block/ForgeBlock.java`, `ForgeScreen`
+
+Bloc de taverne (onglet créatif du mod). Clic droit : un panneau s'ouvre sur l'onglet
+**Inventaire** — grille paginée à gauche (cases creusées, cadre de la couleur de la rareté sauf
+pour Commun, armes d'un autre héros assombries, infobulle au survol), à droite l'arme équipée
+(avec Déséquiper) puis la case choisie, ses bonus comparés à l'arme que son héros porte, et
+Équiper / Détruire. **Détruire demande un second clic** (« Confirmer ? »). Un double-clic sur une
+case l'équipe. Sous la grille, **Tri** (récent, rareté, dégâts) et **Filtre** (tous les héros ou
+le sien) : une simple vue côté client, retenue le temps de la session ; l'inventaire garde son
+ordre côté serveur et les actions envoient toujours l'index réel. Un second onglet grisé « À
+venir » marque la place des suivants. Le bloc ne stocke rien : l'inventaire appartient au joueur.
+Les actions sont refusées pendant le Combat.
+
+### Limites connues
+
+- **Armes seulement** : pas encore d'armures.
+- En créatif, E près d'un objet de butin range l'objet au lieu d'ouvrir l'inventaire.
+- Équilibrage théorique ; les bonus de butin se **multiplient** avec le niveau et la Puissance.
 
 ## Le mana du joueur
 
@@ -1522,6 +2996,13 @@ map, pas d'une seule valeur qui conviendrait à toutes.
 
 ### Disparition et réapparition visuelles — `ManaChestBlock#OPENED`, `#respawnAll`
 
+> **Registre corrigé le 2026-11-10** : `ManaChestBlockEntity#setRemoved` retirait le coffre
+> d'`ACTIVE_MANA_CHESTS` au moment où son block entity en remplaçait un autre à la même position
+> (`LevelChunk#setBlockEntity` appelle `setLevel()` sur le nouveau puis `setRemoved()` sur
+> l'ancien). `respawnAll`, qui parcourt ce registre, ne le voyait alors plus. Le retrait est
+> maintenant différé et conditionné à l'absence de coffre à cette position, comme pour
+> `SpawnerBlockEntity`.
+
 Décidé avec le joueur (2026-08-24), comme dans le jeu de référence : un coffre ouvert ne reste
 pas visible mais inerte, il **disparaît** jusqu'à la vague suivante. `OPENED` est une vraie
 propriété de `BlockState` (`BooleanProperty`, comme `HORIZONTAL_FACING` sur le Harpoon Turret) :
@@ -1640,13 +3121,40 @@ public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> E
 
 `MAX_EXPERIENCE = 100` est un plafond **fixe par niveau** (pas de barème croissant du type
 "niveau N demande N×100") : valeur de test, pas encore équilibrée, comme les coûts de pose des
-tours.
+tours. **Depuis le 2026-11-10, le jeu ne lit plus cette constante** mais le réglage data-driven
+`xp_per_level` (`balance/progression.json`, même valeur par défaut) — la constante ne reste que
+comme référence.
 
 ### L'affichage — `client/gui/ExperienceOverlay.java`
 
 Contrairement à `ManaOverlay`/`HealthOverlay`, reste une **barre horizontale** classique
 (jauge + texte `Experience: X/Y` à sa droite, clé `dungeon_defenders.hud.experience`), en
 vert, tout en bas de l'écran, sous les deux losanges.
+
+### Les retours de progression — `client/gui/ProgressionFeedbackOverlay.java`
+
+Ajoutés le 2026-11-16 (deux idées du backlog). Deux retours, une seule couche HUD :
+
+- **« +X XP »** : monte et s'efface en 1,2 s, juste à droite du libellé « Expérience : x/y »,
+  sur la même ligne — donc sans recouvrir les losanges ni les emplacements de compétences.
+  Deux gains à moins de 0,4 s d'écart (plusieurs monstres tués par la même salve) sont
+  **cumulés** dans le même popup au lieu de s'empiler.
+- **« Niveau X ! »** : bannière jaune, deux fois la taille du texte normal, au quart haut de
+  l'écran pendant 2,5 s (fondu sur les 0,6 dernières secondes).
+
+**Aucun paquet réseau** : `EXPERIENCE` et `LEVEL` sont déjà synchronisés par attachment, la
+couche compare simplement leur valeur d'une image à l'autre. Le gain se reconstitue sans
+ambiguïté parce que l'XP ne fait que monter : `passages de niveau × XP par niveau + différence
+d'XP`. Une valeur qui baisse n'affiche rien. Le repère est remis à zéro quand le joueur suivi
+change (reconnexion, autre monde), sinon rejoindre une partie au niveau 5 afficherait la
+bannière.
+
+Côté serveur, `ModEvents#celebrateLevelUp` joue le son vanilla de passage de niveau et une
+gerbe de particules vertes autour du joueur : contrairement à la bannière, **tous les joueurs
+proches** les perçoivent. Le message système dans le chat est conservé.
+
+Deux options d'affichage, activées par défaut : `showExperienceGainPopup` et
+`showLevelUpBanner` (`ClientDisplayConfig`).
 
 ## Le groupe bas-gauche — mana, vie, expérience
 
@@ -1847,6 +3355,63 @@ qui pouvait gêner un monstre essayant de se frayer un chemin près de son propr
 **Conséquence sur la position de spawn** : `findSafeSpawnPos` (voir plus haut) ne peut plus
 compter sur le bloc du spawner comme sol — corrigé au même moment, voir la remarque plus haut.
 
+### Les ennemis data-driven — `init/EnemyRegistry.java`, `data/<ns>/dungeon_defenders/enemy/*.json`
+
+Depuis le 2026-09-29 (plan complet : [data-driven/ennemis.md](data-driven/ennemis.md)), un
+ennemi n'est plus une constante de l'enum `SpawnableEnemy` (supprimé) mais un **fichier JSON**,
+identifié par `<namespace>:<nom>`. Les deux ennemis livrés reprennent exactement les valeurs
+d'avant :
+
+| Fichier | `entity_type` | `icon` | `xp_value` | `order` | `behavior` |
+|---|---|---|---|---|---|
+| `data/dungeon_defenders/dungeon_defenders/enemy/zombie.json` | `minecraft:zombie` | `minecraft:zombie_spawn_egg` | 10 | 0 | `dungeon_defenders:melee_priority` |
+| `data/dungeon_defenders/dungeon_defenders/enemy/skeleton.json` | `minecraft:skeleton` | `minecraft:skeleton_spawn_egg` | 15 | 1 | `dungeon_defenders:ranged_crystal` (`damage_per_shot` 3, `ticks_between_shots` 20, `shoot_range` 10.0) |
+
+Depuis le 2026-11-10, trois ennemis de plus sont livrés — `brute` (zombie, 60 PV, lent, grand,
+12 dégâts), `runner` (husk, 12 PV, rapide, petit) et `marksman` (stray, tir à 14 blocs) — grâce
+à des champs optionnels (`max_health`, `movement_speed`, `scale`, `damage_per_hit`) et au
+marquage de chaque mob par l'identifiant de son ennemi (`ModAttachments.ENEMY_ID`), qui permet à
+plusieurs ennemis de partager un type de mob. Détail dans
+[data-driven/ennemis.md](data-driven/ennemis.md#extension-du-2026-11-10--stats-optionnelles-et-variantes).
+
+- **Chargement** : `EnemyRegistry` est un `SimpleJsonResourceReloadListener` (vanilla) ajouté
+  via `AddServerReloadListenersEvent`, donc relu au démarrage **et à chaque `/reload`**, sans
+  redémarrer. Un JSON invalide est loggé par vanilla (`Couldn't parse data file ...`) et ignoré ;
+  les autres se chargent. `entity_type` et `icon` sont validés **strictement** : les registres
+  d'entités et d'items sont des `DefaultedRegistry`, dont le codec standard transformerait une
+  faute de frappe en cochon ou en air sans rien dire.
+- **Comportement** (`init/EnemyBehavior.java`) : « types en Java, paramètres en JSON ». Deux
+  types, qui reproduisent la répartition d'avant : `melee_priority` (`AttackPriorityTargetGoal`
+  priorité 0 + `SeekEterniaCrystalGoal` priorité 1) et `ranged_crystal`
+  (`RangedAttackEterniaCrystalGoal` priorité 1 + `SeekEterniaCrystalGoal` priorité 2). Un
+  `type` inconnu est une erreur de parse (fichier ignoré, loggé). `ModEvents.onMonsterSpawn`
+  applique le comportement de la définition dont l'`entity_type` correspond au mob ; **sans
+  définition, l'ancienne règle s'applique** (`instanceof AbstractSkeleton` → distance, sinon
+  mêlée), pour qu'un zombie `/summon` d'un type sans JSON, un stray ou un wither skeleton garde
+  son IA.
+- **XP/score** : `EnemyRegistry.xpValueFor(EntityType)`, `DEFAULT_XP_VALUE` = 5 pour un monstre
+  sans définition, comme avant.
+- **Synchro client** : `EnemyDefinitionsPayload` (identifiant, `entity_type`, icône, ordre — pas
+  le comportement), envoyé depuis `OnDatapackSyncEvent` (connexion, et à tout le monde après un
+  `/reload`), stocké dans `client/ClientEnemyDefinitions` — classe **distincte** de
+  `EnemyRegistry`, pour qu'en solo (même JVM) un bug de synchro ne soit pas masqué.
+- **Nom affiché** : clé `<namespace>.enemy.<nom>`, déduite de l'identifiant — les clés d'avant
+  (`dungeon_defenders.enemy.zombie`) restent valables. Repli sur l'identifiant brut s'il n'y a
+  pas de traduction.
+- **Ennemi inconnu** dans un spawner (pack retiré, JSON invalide) : l'entrée est **conservée**
+  telle quelle, ne fait rien apparaître, est **exclue du total de vague** (sinon la vague ne se
+  terminerait jamais), et un seul avertissement est loggé par spawner et par chargement de
+  données (réarmé à chaque `/reload`). Voir la section du spawner ci-dessous.
+
+**Migration de l'ancien format** : `"Enemy"` est lu indifféremment comme un nombre (ancien
+ordinal, traduit par la table **figée** `init/LegacyEnemyIds.java` : `0` → zombie, `1` →
+squelette, tout autre nombre → `dungeon_defenders:legacy_unknown_<n>`) ou comme un identifiant,
+et toujours réécrit en identifiant. Chaque conversion est loggée
+(`Spawner à x, y, z : ennemi n°0 (ancien format) converti en dungeon_defenders:zombie`), puis
+le spawner est marqué modifié pour que son chunk soit resauvegardé au nouveau format — la
+conversion n'a lieu qu'une fois par spawner d'un monde. `/dd_export` convertit aussi les maps
+qu'il emballe (voir « `/dd_export <namespace>` » plus haut).
+
 ### L'état — `block/entity/SpawnerBlockEntity.java`
 
 `BaseEntityBlock` + `BlockEntityTicker`, sur le même principe qu'`EterniaCrystalBlockEntity`
@@ -1855,8 +3420,8 @@ un. `serverTick(...)` :
 
 1. Sort immédiatement si `ModAttachments.GAME_PHASE != COMBAT` — le spawner ne tourne qu'en
    combat.
-2. Sort aussi si `CURRENT_WAVE` est en dehors de `[waveStart, waveEnd]` — un spawner peut être
-   configuré pour ne s'activer que sur une plage de vagues.
+2. Sort aussi si le spawner ne participe pas à `CURRENT_WAVE` (`isActiveOnWave`) : en dehors
+   de `[waveStart, waveEnd]`, ou pas sur son pas (`waveStep`, voir plus bas).
 3. Si une nouvelle session de combat a commencé depuis le dernier passage
    (`lastCombatSessionHandled` vs `ModAttachments.COMBAT_SESSION`, voir "Le déroulement d'une
    vague" plus bas), recalcule le plafond de chaque type (`resetForWave`, voir plus bas) et
@@ -1868,26 +3433,47 @@ un. `serverTick(...)` :
 
 **La composition** (`List<SpawnEntry>`) est modifiable par spawner — deux entrées par défaut,
 zombie (nombre de base 15) et squelette (nombre de base 5), reprenant exactement les chiffres
-de l'exemple du joueur. Chaque `SpawnEntry` combine son ennemi (`init/SpawnableEnemy.java`,
-plutôt qu'un `EntityType<?>` brut), son nombre de base et sa progression pour la vague en
-cours (`spawned`, `accumulator`, `effectiveTotal`), le tout persistant via un `Codec` dédié
-(`ValueOutput/ValueInput#list(...)`, la liste ayant une longueur variable contrairement aux
-compteurs simples du reste du mod ; l'ennemi est stocké par ordinal, comme `GamePhase`).
+de l'exemple du joueur. Chaque `SpawnEntry` combine son ennemi (un **identifiant**
+data-driven, voir « Les ennemis data-driven » ci-dessus), son nombre de base et sa progression
+pour la vague en cours (`spawned`, `accumulator`, `effectiveTotal`), le tout persistant via un
+`Codec` dédié (`ValueOutput/ValueInput#list(...)`, la liste ayant une longueur variable
+contrairement aux compteurs simples du reste du mod). L'ennemi est résolu dans `EnemyRegistry`
+**au moment de chaque spawn**, jamais au chargement : un `/reload` s'applique donc aux spawners
+déjà posés, et un ennemi inconnu n'empêche pas le spawner de se charger.
 
-`init/SpawnableEnemy.java` est la liste fermée des ennemis choisissables dans un spawner
-(`ZOMBIE`, `SKELETON` pour l'instant). Il n'existe pas de tag vanilla générique "tout ce qui
-est hostile" dans cette version de Minecraft (vérifié) : cet enum sert à la fois de source de
-vérité réseau (transmis par ordinal, voir plus bas) et de liste pour le bouton "cycler le
-type" du GUI. Ajouter un ennemi au jeu et vouloir le rendre choisissable dans un spawner se
-résume à une ligne dans cet enum — rien d'autre à toucher côté GUI/réseau/persistance.
+Ajouter un ennemi choisissable dans un spawner se résume à ajouter un JSON (dans le mod ou
+dans n'importe quel pack) — rien à toucher côté GUI/réseau/persistance.
+
+**Registre des spawners actifs, corrigé le 2026-09-29** : quand un block entity en remplace un
+autre à la même position (pose d'une structure de map notamment), `LevelChunk#setBlockEntity`
+appelle `setLevel()` sur le nouveau **puis** `setRemoved()` sur l'ancien. `setRemoved()` retirait
+alors d'`ACTIVE_SPAWNERS` la position que le nouveau venait d'y ajouter : le spawner disparaissait
+du calcul de `wave_enemies_total`, d'où le « total bloqué à 0, la vague ne se termine jamais »
+du 2026-09-12. Le retrait est désormais différé et n'a lieu que s'il n'y a plus de spawner
+vivant à cette position (vérifié par le gametest `enemy_unknown_excluded_from_wave`, qui
+échouait avec 0 avant le correctif).
 
 **Paramètres configurables par spawner**, en plus de la composition : `intervalTicks` (défaut
 20), `spawnRadius` (défaut 0 — spawn pile au-dessus du bloc ; au-delà, une position aléatoire
 dans ce rayon, pour éviter que tout s'empile sur la même case), `waveStart`/`waveEnd` (défaut
-1 à `MAX_WAVE`). Tous persistants. Pas encore de GUI pour les éditer en jeu — en cours, voir
+1 à `MAX_WAVE`), `waveStep` (défaut 1). Tous persistants.
+
+**Vagues périodiques — `waveStep`** (2026-11-16). Le spawner s'active une vague sur
+`waveStep`, en comptant depuis `waveStart` : avec `waveStart = 4`, `waveEnd = 12`,
+`waveStep = 4`, il tourne aux vagues 4, 8 et 12. C'est le mécanisme de la **vague de boss
+périodique** : un spawner de brutes réglé ainsi, à côté des spawners ordinaires. Un pas de 1
+est le comportement d'avant ; une map sauvegardée avant l'ajout du champ se lit avec un pas
+de 1. `SpawnerBlockEntity#isActiveOnWave` est la seule source de vérité, utilisée à la fois
+par le tick du spawner et par le calcul du total d'ennemis de la vague (`PhaseTransitions`)
+— gametest `spawner_wave_step`. Champ « Une vague sur » dans l'écran de configuration. Pas encore de GUI pour les éditer en jeu — en cours, voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 
 ### Le multiplicateur de difficulté — `init/DifficultyScaling.java`
+
+> **Data-driven depuis le 2026-11-10** : les trois multiplicateurs et le « +10 % par vague »
+> décrits ci-dessous sont les valeurs par défaut de `balance/difficulty.json`
+> (`easy_multiplier`, `normal_multiplier`, `hard_multiplier`, `per_wave_increase`), lues par
+> `init/GameBalance` — voir « Les réglages globaux d'équilibrage » juste après.
 
 `effectiveTotal = round(baseCount × DifficultyScaling.getMultiplier(level))`, recalculé à
 chaque nouvelle vague (pas à chaque tick — sinon un type déjà épuisé pourrait redevenir actif
@@ -1905,6 +3491,26 @@ Comme `effectiveTotal` sert à la fois de fréquence d'apparition (`accumulator 
 effectiveTotal`) et de plafond (`spawned >= effectiveTotal`), une difficulté plus élevée
 rend un type d'ennemi **à la fois** plus nombreux et plus fréquent sur la vague — pas
 seulement plus nombreux.
+
+### Les réglages globaux d'équilibrage — `init/GameBalance.java`, `data/dungeon_defenders/dungeon_defenders/balance/*.json`
+
+Étape 3 du passage en data-driven ([data-driven/equilibrage.md](data-driven/equilibrage.md)) :
+tout nombre d'équilibrage qui n'appartient ni à un ennemi ni à une tour. Chaque réglage est une
+constante de l'enum `init/BalanceValue.java` (fichier, clé, valeur par défaut, minimum) :
+
+| Fichier | Clé | Défaut | Utilisé par |
+|---|---|---|---|
+| `balance/difficulty.json` | `easy_multiplier` / `normal_multiplier` / `hard_multiplier` | 0.75 / 1.0 / 1.5 | `GameDifficulty#multiplier` |
+| `balance/difficulty.json` | `per_wave_increase` | 0.1 | `DifficultyScaling#getMultiplier` |
+| `balance/towers.json` | `refund_ratio` | 0.5 | `ModNetworking#handleRemoveTower` |
+| `balance/progression.json` | `xp_per_level` | 100 | `ModEvents#grantExperience`, `ExperienceOverlay` |
+
+Même mécanique que les ennemis et les tours : reload listener (démarrage + `/reload`), synchro
+client (`GameBalancePayload`), deux copies distinctes. Un fichier est un objet plat
+`"clé": nombre` ; à la moindre clé inconnue ou valeur invalide, le fichier **entier** est refusé
+(message dans le log) et ses réglages gardent leur défaut. Un `/reload` recalcule aussi le total
+d'ennemis de la vague, qui dépend du multiplicateur. Ajouter un réglage = une ligne dans
+`BalanceValue` + sa clé dans le JSON.
 
 ### Le harnais de test — clic droit (maj/shift = bascule de phase)
 
@@ -1931,11 +3537,12 @@ mode créatif**, comme un bloc de structure vanilla : la configuration d'un spaw
 Premier GUI custom du mod, **pas de slot ni d'item** — les paramètres décidés avec le joueur :
 intervalle (ticks), rayon de spawn, vague de début, vague de fin, et une **liste dynamique**
 de lignes de composition (une par ennemi choisi). Chaque ligne a un bouton qui affiche le nom
-de l'ennemi et le fait cycler vers le suivant au clic (`SpawnableEnemy.next()`, en sautant les
-ennemis déjà utilisés par une autre ligne), un champ pour son nombre de base, et un bouton "X"
+de l'ennemi et le fait cycler vers le suivant au clic (ordre des JSON : `order` puis
+identifiant, en sautant les ennemis déjà utilisés par une autre ligne ; une ligne sur un ennemi
+inconnu affiche son identifiant brut et passe au premier ennemi connu disponible), un champ pour son nombre de base, et un bouton "X"
 pour la retirer (cachée s'il ne reste qu'une seule ligne — on garde toujours au moins un
-ennemi). Un bouton "+ Ajouter" en bas de la liste, cachée une fois que toutes les valeurs de
-`SpawnableEnemy` sont utilisées (la liste d'ennemis possibles est fermée). Pré-rempli avec la
+ennemi). Un bouton "+ Ajouter" en bas de la liste, cachée une fois que tous les ennemis
+connus du client (`ClientEnemyDefinitions`) sont utilisés. Pré-rempli avec la
 configuration actuelle du spawner ciblé.
 
 **Pourquoi l'état est gardé en mémoire, pas seulement dans les widgets** : ajouter ou retirer
@@ -1980,9 +3587,10 @@ ne touche **pas** au nombre de lignes : pas besoin de rebuild, juste
 7. **`ModNetworking`** (enregistré via `RegisterPayloadHandlersEvent`, voir plus haut) reçoit
    le paquet côté serveur : revérifie que le bloc à cette position est toujours un
    `SpawnerBlockEntity` et que le joueur est encore à portée (8 blocs), reconstruit la liste
-   de `SpawnEntry` en validant chaque ordinal d'ennemi reçu (`0 <= ordinal <
-   SpawnableEnemy.values().length` — jamais faire confiance à une valeur reçue par le réseau
-   pour indexer un tableau), puis appelle `spawner.applyConfig(...)`.
+   de `SpawnEntry` en validant chaque identifiant d'ennemi reçu (accepté s'il existe dans
+   `EnemyRegistry`, **ou** s'il était déjà présent dans ce spawner — une ligne sur un ennemi
+   inconnu que le créateur n'a pas touchée survit ainsi à « Valider » ; un client ne peut jamais
+   introduire un identifiant inconnu), puis appelle `spawner.applyConfig(...)`.
 
 > **Pourquoi pas de vérification de portée dans `SpawnerConfigMenu#stillValid` ?** Parce que
 > ce menu ne contient ni slot ni item : la seule action possible dessus est d'envoyer le
@@ -2004,8 +3612,7 @@ nouvelles entrées.
 - Pas de choix de difficulté ici — c'est un réglage de partie (`ModAttachments.DIFFICULTY`),
   pas du spawner, voir plus haut.
 - Pas de défilement (scroll) si la liste d'ennemis grandit au point de dépasser la hauteur de
-  l'écran — non géré pour l'instant, acceptable tant que `SpawnableEnemy` ne contient que
-  deux valeurs.
+  l'écran — non géré pour l'instant, acceptable tant qu'il n'y a que deux ennemis.
 - **Pas accessible en survie** (`SpawnerBlock.openConfigScreen` vérifie `player.isCreative()`
   avant d'ouvrir l'écran, message système sinon) : l'idée à terme est que les maps soient des
   structures pré-construites (spawners déjà configurés en créatif, puis sauvegardées) posées
@@ -2036,9 +3643,9 @@ prochaine vague fera spawn, tant que la difficulté ne change pas entre-temps.
 **Ce qui n'y est pas, volontairement** (voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md)) :
 
-- Pas d'icône par type de monstre, texte seul pour l'instant ("Zombie : 12") — à ajouter plus
-  tard si besoin, sans revoir cette classe puisque `SpawnableEnemy` porte déjà tout ce qu'il
-  faut (`translationKey()`) pour brancher une icône dessus.
+- Icône par ligne : l'`icon` du JSON de l'ennemi. Un ennemi inconnu affiche une **barrière** et
+  la ligne « `<identifiant>` : ennemi inconnu », et n'est pas compté dans le total (même règle
+  que côté serveur).
 - Portée d'affichage plafonnée à 32 blocs (`MAX_DISTANCE_SQ`) pour éviter d'encombrer l'écran
   si beaucoup de spawners sont proches les uns des autres — valeur arbitraire, à ajuster si
   besoin une fois testée en jeu.
@@ -2295,7 +3902,7 @@ plus.
 public class ScoreGainOverlay implements GuiLayer {
     public static final ScoreGainOverlay INSTANCE = new ScoreGainOverlay();
     ...
-    public void addPopup(int amount, ScoreSource source, SpawnableEnemy enemy) {
+    public void addPopup(int amount, ScoreSource source, @Nullable Identifier enemy) {
         this.popups.add(new Popup(amount, source, enemy, Util.getMillis()));
     }
 }
@@ -2328,14 +3935,13 @@ l'aperçu de composition du Spawner (`SpawnerBlockEntityRenderer`, qui réutilis
 comme icônes reconnaissables — mais celui-là dessine en 3D dans le monde, celui-ci en 2D dans le
 HUD).
 
-**Transport** : `ScoreGainPayload` porte un troisième champ, `enemyOrdinal` — l'ordinal du
-`SpawnableEnemy` tué, transmis comme `sourceOrdinal`, ou `ScoreGainPayload.NO_ENEMY` (`-1`) si
-ce gain n'a pas d'ennemi associé (toute future source hors kill). Pas d'`Optional<Integer>` sur
-le réseau : ce mod n'utilise ce patron nulle part ailleurs, une sentinelle entière suffit et
-reste lisible. Résolu côté serveur dans `ModEvents.awardExperienceAndScore` via
-`SpawnableEnemy.find(EntityType<?>)` (rendue publique à cette occasion — auparavant un détail
-privé de `xpValueFor`), avec le même repli `NO_ENEMY` que `DEFAULT_XP_VALUE` si jamais le
-monstre tué n'est pas dans la liste fermée du Spawner.
+**Transport** : `ScoreGainPayload` porte un troisième champ, `Optional<Identifier> enemy` —
+l'identifiant data-driven de l'ennemi tué (depuis le 2026-09-29 ; c'était auparavant un ordinal
+d'enum avec la sentinelle `NO_ENEMY = -1`), vide si ce gain n'a pas d'ennemi associé (toute
+future source hors kill) ou si le monstre tué n'a pas de définition. Résolu côté serveur dans
+`ModEvents.awardExperienceAndScore` via `EnemyRegistry.idFor(EntityType<?>)`. Côté client,
+l'icône vient de `ClientEnemyDefinitions` ; un identifiant inconnu du client donne un popup
+sans icône.
 
 **Rendu** : `guiGraphics.item(ItemStack, x, y)` — la même méthode que la hotbar vanilla, pas une
 API spéciale à découvrir. Positionnée à gauche du texte (`ICON_GAP` = 2px d'écart), centrée
@@ -2370,12 +3976,10 @@ Décidé avec le joueur (2026-08-27) : tuer un monstre (toute phase, comme le dr
 mana ci-dessus) donne à la fois du score (carte) et de l'expérience (joueur), branché dans le
 même `onMonsterDeath` que le cristal de mana.
 
-**Valeur par monstre** — `init/SpawnableEnemy.xpValue()`, un champ de plus sur l'enum déjà
-utilisé par le Spawner (zombie = 10, squelette = 15, valeurs de test pas encore équilibrées,
-le squelette rapportant plus car il attaque à distance). `SpawnableEnemy.xpValueFor(EntityType)`
-fait la correspondance depuis le monstre tué ; 5 en repli si jamais un monstre hors de cette
-liste venait à mourir (défensif, ne devrait pas arriver tant que le Spawner reste l'unique
-source de monstres).
+**Valeur par monstre** — le champ `xp_value` du JSON de l'ennemi (zombie = 10, squelette = 15,
+valeurs de test pas encore équilibrées, le squelette rapportant plus car il attaque à distance ;
+modifiable puis appliqué par `/reload`, sans redémarrer). `EnemyRegistry.xpValueFor(EntityType)`
+fait la correspondance depuis le monstre tué ; 5 en repli pour un monstre sans définition.
 
 **Le score** est incrémenté sans conditions : `level.getData(SCORE) + xpValue`.
 
@@ -2409,7 +4013,40 @@ l'origine (voir "L'expérience custom du joueur" plus haut).
 l'instant purement un compteur affiché, voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 
-### Feuille de route du score (décidée avec le joueur, pas codée pour l'instant)
+### Bonus et multiplicateurs de score — `init/ScoreKeeper.java`
+
+La feuille de route ci-dessous a été codée en entier le 2026-11-10.
+`ScoreKeeper.grant(level, base, source, ennemi)` est désormais le point de passage unique de
+tout gain de score (l'ancien `ModEvents.grantScore`). Toutes les valeurs sont dans
+`balance/score.json` :
+
+| Clé | Défaut | Effet |
+|---|---|---|
+| `wave_clear_bonus` | 50 | Bonus quand une vague est nettoyée (y compris la dernière) |
+| `no_player_damage_multiplier` | 1.5 | Multiplie ce bonus si aucun joueur n'a pris de dégât pendant la vague |
+| `no_crystal_damage_multiplier` | 1.5 | Le multiplie encore si le cristal n'a pris aucun dégât |
+| `no_tower_lost_multiplier` | 1.25 | Le multiplie encore si aucune tour n'a été détruite par les monstres (un retrait volontaire ne compte pas) |
+| `victory_bonus` | 200 | Bonus de fin de map (victoire) |
+| `easy_multiplier` / `normal_multiplier` / `hard_multiplier` | 0.75 / 1.0 / 1.5 | Multiplie **tout** gain de score selon la difficulté |
+
+- **Multiplicateur de la map** : le champ « multiplicateur de score » du bloc de configuration
+  existait mais n'était lu nulle part. `MapInstance#startGame` le pose dans
+  `ModAttachments.MAP_SCORE_MULTIPLIER`, et il multiplie lui aussi tout gain. Montant final :
+  `round(base × difficulté × map)`. En Normal sur une map à ×1, un kill rapporte donc
+  exactement ce qu'il rapportait avant.
+- **L'expérience n'est pas concernée** : seuls les kills en donnent, à leur valeur brute.
+- **Suivi « aucun dégât »** : deux booléens de la `Level`, `WAVE_PLAYER_DAMAGED` et
+  `WAVE_CRYSTAL_DAMAGED`, remis à faux par `enterCombat`. Le premier passe à vrai sur
+  `LivingDamageEvent.Post` d'un joueur en phase Combat (n'importe quelle source) ; le second
+  dans `EterniaCrystalBlockEntity#damage`, point de passage unique des dégâts au cristal.
+- **Chaque part est créditée à part**, donc avec son propre popup : « +50 Vague terminée »,
+  « +25 Aucun dégât subi », « +38 Cristal intact » (50 × 1.5 × 1.5 = 112.5, arrondi part par
+  part à 113).
+- **Score final** : la victoire et la défaite remettent le score à zéro. Il est donc relevé
+  juste avant et envoyé dans `GameOverPayload` ; `GameOverScreen` affiche « Score : N » sous
+  son titre. Avant, le score de la partie n'était visible nulle part une fois celle-ci finie.
+
+### Feuille de route du score (décidée avec le joueur le 2026-08-27 — codée le 2026-11-10, voir ci-dessus)
 
 Le kill est **une seule source de score parmi plusieurs prévues** — confirmé avec le joueur
 (2026-08-27) : "le score est officieusement l'XP gagnée sur ce niveau", donc toute future
@@ -2469,6 +4106,74 @@ de position en dur.
 documente juste l'ordre attendu, en attendant que chaque slot ait sa propre icône et sa propre
 logique. Contrairement aux autres overlays, pas d'attachment ici non plus : il n'y a encore
 aucun état à lire (pas de cooldown, pas de "sort débloqué ou non"), voir
+[05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
+
+## Le plan plein écran — `client/MapOverlay*.java`, `MapInstance.java`, `TavernSpawn.java`
+
+Décidé avec le joueur (2026-09-07), en parallèle de la reconstruction de la taverne et des
+tests du système de héros — approche explicitement expérimentale ("on essaie comme ça et on
+verra sinon on fera autrement"), pas peaufinée avant un premier retour en jeu. Touche maintenue
+(`ModKeyMappings.MAP_OVERLAY`, `Tab` par défaut) : affiche un plan schématique de la zone
+actuelle (taverne ou map) en plein écran, avec un point par joueur connecté et un marqueur pour
+le cristal — comme dans le jeu de référence. Relâchée : disparaît. Comme le Tab vanilla (liste
+des joueurs), pas une bascule.
+
+### Tab libérée de la liste des joueurs vanilla — `DungeonDefendersModClient#onClientSetup`
+
+`key.playerList` (la liste des joueurs vanilla) est aussi bindée sur Tab par défaut, et lue via
+`isDown()` sans exclusivité comme notre propre touche : sans rien faire, maintenir Tab aurait
+affiché les deux superposées. Réglé au démarrage du client (`FMLClientSetupEvent`, travail
+différé sur le thread principal via `event.enqueueWork(...)` puisque cet événement tourne en
+parallèle des autres mods) : `Minecraft.getInstance().options.keyPlayerList.setKey(InputConstants.UNKNOWN)`
+— demandé en jeu (2026-09-07), le mod n'a plus l'usage de la liste vanilla.
+
+Simple changement de la touche **vive**, pas de la touche par défaut (`KeyMapping#defaultKey`
+n'est pas mutable après construction) : refait à chaque lancement du jeu. Un joueur qui
+rebinderait `key.playerList` sur une autre touche manuellement ne verrait donc pas son choix
+survivre à un redémarrage — assumé, cette touche n'a plus de rôle dans ce mod.
+
+### Ce qui manquait pour le faire — la taille de la zone
+
+Ni `MapDefinition`/`MapRegistry` ni `ModAttachments.CURRENT_MAP` ne transportaient la taille
+réellement posée (structure ou repli) — juste de quoi identifier/relancer une map, pas de quoi
+savoir où se trouvent ses limites. Trois nouveaux attachments génériques,
+`ModAttachments.PLAYFIELD_SIZE_X/Y/Z` (int, synced, même patron que `CURRENT_MAP`), remplis à
+deux endroits : `MapInstance#startGame` (réutilise `sizeOf(level, map)`, déjà calculé pour
+`ModChunkTickets.forceZone`) et `TavernSpawn#placeTavern` (réutilise `template.getSize()` pour
+une vraie structure, ou l'emprise du repli plateforme sinon). Génériques et pas spécifiques aux
+maps parce que le plan doit aussi fonctionner à la Taverne — demande explicite du joueur.
+
+**L'origine du rectangle** n'est jamais synchronisée séparément : le client la recalcule avec la
+même formule que `MapInstance#originOf`/`TavernSpawn#originOf` (`ancre.getX() - sizeX/2`,
+`ancre.getZ() - sizeZ/2`), dupliquée en quelques lignes côté client. L'ancre dépend d'où on se
+trouve : `GamePhase.of(level) == GamePhase.TAVERN` → `TavernSpawn.SPAWN_POS`, sinon →
+`MapInstance.MAP_POS` — les deux constantes sont déjà publiques, aucune classe cliente n'est
+nommée par ce choix.
+
+### Le scan du cristal — `MapOverlayClientEvents`
+
+Pendant que le plan est affiché, un scan périodique (toutes les 20 ticks) cherche le cristal de
+la zone actuelle : le Cristal d'Eternia (`EterniaCrystalBlockEntity`) en map, le cristal de la
+taverne (`TavernCrystalBlock`, pas de block entity, comparaison de `Block` directement) à la
+Taverne. **Borné exactement** à la zone connue (les trois attachments de taille), pas à un rayon
+arbitraire autour du joueur — contrairement au scan similaire de `MarkerOverlayClientEvents`
+(marqueurs d'édition en créatif), la zone entière est ici petite et exactement connue, inutile
+de deviner un rayon. Résultat caché dans `MapOverlayState.crystalPos`, lu par le rendu.
+
+### Le rendu — `client/gui/MapOverlay.java`
+
+`GuiLayer` plein écran (`registerAboveAll`) : fond semi-transparent, rectangle centré aux vraies
+proportions (largeur/profondeur synced, mis à l'échelle pour tenir dans 70% de l'écran), un
+point par joueur de `Level#players()` (position normalisée dans le rectangle, écrêtée aux
+bords), le marqueur du cristal si trouvé. Le joueur local a une couleur fixe distincte des
+autres joueurs, qui piochent dans une petite palette choisie de façon déterministe par le hash
+de leur UUID (pas de système de couleur/équipe par joueur dans le mod). Pas d'interpolation de
+mouvement (positions tick-à-tick brutes) ni de rendu de terrain façon carte vanilla — juste un
+rectangle schématique. **Jamais vérifié en jeu.**
+
+**Ce qui n'est PAS fait, volontairement** : pas de marqueurs pour les spawners, pas de mini-carte
+permanente en coin d'écran, pas d'étiquette de nom au-dessus des points (la couleur suffit à
+distinguer "moi" des autres pour cette première version) — voir
 [05-etat-et-problemes-connus.md](05-etat-et-problemes-connus.md).
 
 ## Le HUD vanilla masqué

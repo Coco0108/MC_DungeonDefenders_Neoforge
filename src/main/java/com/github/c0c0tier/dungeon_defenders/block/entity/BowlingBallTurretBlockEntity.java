@@ -2,6 +2,8 @@ package com.github.c0c0tier.dungeon_defenders.block.entity;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.entity.BowlingBallEntity;
+import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -16,19 +18,14 @@ import net.minecraft.world.phys.Vec3;
 // réelle d'AbstractArrow, pas une simulation).
 public class BowlingBallTurretBlockEntity extends AbstractTurretBlockEntity {
 
-    public static final int MAX_HEALTH = 20;
-    public static final int MANA_COST = 55;
-    public static final double RANGE = 12.0D;
-    private static final float DAMAGE = 5.0F;
-    private static final long ATTACK_INTERVAL_TICKS = 40L;
-    private static final float BALL_VELOCITY = 1.5F;
-    // La boule continue au-delà d'un premier ennemi touché (perforation) jusqu'à cette
-    // distance, indépendamment du nombre d'ennemis rencontrés en chemin.
-    private static final double MAX_BALL_DISTANCE = RANGE + 4.0D;
-
+    // Chiffres : data-driven, voir data/dungeon_defenders/dungeon_defenders/tower/
+    // bowling_ball_turret.json et TowerDefinition.BOWLING_BALL_TURRET pour les valeurs par défaut.
+    //
+    // projectile_extra_distance : la boule continue au-delà d'un premier ennemi touché
+    // (perforation) jusqu'à "range + projectile_extra_distance", indépendamment du nombre
+    // d'ennemis rencontrés en chemin.
     public BowlingBallTurretBlockEntity(BlockPos pos, BlockState state) {
-        super(DungeonDefendersMod.BOWLING_BALL_TURRET_BE.get(), pos, state,
-                MAX_HEALTH, MANA_COST, RANGE, 45.0D, DAMAGE, ATTACK_INTERVAL_TICKS);
+        super(DungeonDefendersMod.BOWLING_BALL_TURRET_BE.get(), pos, state, TowerDefinition.BOWLING_BALL_TURRET);
     }
 
     // Redéfinit entièrement le tir par défaut (flèche cosmétique + dégâts directs à une seule
@@ -50,7 +47,9 @@ public class BowlingBallTurretBlockEntity extends AbstractTurretBlockEntity {
         ).normalize();
 
         BowlingBallEntity ball = new BowlingBallEntity(
-                level, origin.x, origin.y, origin.z, direction, BALL_VELOCITY, getDamage(), MAX_BALL_DISTANCE);
+                level, origin.x, origin.y, origin.z, direction,
+                stats().floatValue(TowerStat.PROJECTILE_VELOCITY), getDamage(),
+                getRange() + stats().get(TowerStat.PROJECTILE_EXTRA_DISTANCE));
         level.addFreshEntity(ball);
     }
 }

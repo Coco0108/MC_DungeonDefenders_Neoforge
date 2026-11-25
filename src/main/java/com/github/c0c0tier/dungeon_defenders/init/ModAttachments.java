@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.init;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.loot.LootWeapon;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -11,6 +12,9 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -22,6 +26,8 @@ public class ModAttachments {
 
     // Expérience custom maximale par défaut (rien à voir avec l'XP vanilla). Valeur
     // provisoire tant que la façon d'en gagner/monter de niveau n'est pas définie.
+    // N'est plus lue par le jeu depuis le 2026-11-10 : l'expérience par niveau est data-driven
+    // (BalanceValue.XP_PER_LEVEL, même valeur par défaut). Gardée comme référence du défaut.
     public static final int MAX_EXPERIENCE = 100;
 
     // Nombre de vagues par défaut. Valeur provisoire tant que le déroulement d'une partie
@@ -51,6 +57,7 @@ public class ModAttachments {
             () -> AttachmentType.builder(() -> 0)
                     .serialize(Codec.INT.fieldOf("Experience"))
                     .sync(ByteBufCodecs.VAR_INT)
+                    .copyOnDeath()
                     .build());
 
     // Vague en cours : commence à 1, persistante, synchronisée au client pour le HUD.
@@ -60,6 +67,54 @@ public class ModAttachments {
             "current_wave",
             () -> AttachmentType.builder(() -> 1)
                     .serialize(Codec.INT.fieldOf("CurrentWave"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Nombre de vagues de la map en cours. Vient du bloc de configuration de la map (voir
+    // MapDefinition), posé à startGame ; MAX_WAVE n'en est plus que le repli, pour une map qui
+    // ne le précise pas et pour la taverne. État de la Level, comme la vague courante.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> MAP_WAVE_COUNT = ATTACHMENT_TYPES.register(
+            "map_wave_count",
+            () -> AttachmentType.builder(() -> MAX_WAVE)
+                    .serialize(Codec.INT.fieldOf("MapWaveCount"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Identifiant de structure de la map en cours ("" à la taverne). Synchronisé parce que le
+    // bouton "Rejouer" de l'écran de fin de partie doit savoir QUELLE map relancer : le client
+    // n'a plus la liste sous la main à ce moment-là, l'écran de choix est fermé depuis longtemps.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<String>> CURRENT_MAP = ATTACHMENT_TYPES.register(
+            "current_map",
+            () -> AttachmentType.<String>builder(() -> "")
+                    .serialize(Codec.STRING.fieldOf("CurrentMap"))
+                    .sync(ByteBufCodecs.STRING_UTF8)
+                    .build());
+
+    // Taille (en blocs) de la zone actuellement occupée — taverne ou map, peu importe : ces
+    // trois attachments sont génériques, remplis à la fois par TavernSpawn#placeTavern et par
+    // MapInstance#startGame, chacun réexposant une taille déjà calculée sur place
+    // (StructureTemplate#getSize(), ou le repli placeholder). Ajoutés pour le plan de la
+    // mini-map (MapOverlay, client), qui a besoin de connaître les dimensions réelles pour
+    // placer le rectangle et les points des joueurs dedans — rien d'autre n'exposait cette
+    // information au client jusqu'ici (voir doc/02-gameplay.md).
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> PLAYFIELD_SIZE_X = ATTACHMENT_TYPES.register(
+            "playfield_size_x",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.INT.fieldOf("PlayfieldSizeX"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> PLAYFIELD_SIZE_Y = ATTACHMENT_TYPES.register(
+            "playfield_size_y",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.INT.fieldOf("PlayfieldSizeY"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> PLAYFIELD_SIZE_Z = ATTACHMENT_TYPES.register(
+            "playfield_size_z",
+            () -> AttachmentType.builder(() -> 0)
+                    .serialize(Codec.INT.fieldOf("PlayfieldSizeZ"))
                     .sync(ByteBufCodecs.VAR_INT)
                     .build());
 
@@ -88,10 +143,14 @@ public class ModAttachments {
     // le nom de la constante plutôt que son ordinal : contrairement à l'ordinal, il reste
     // correct même si l'ordre des valeurs de GamePhase change un jour (insertion d'une phase
     // avant COMBAT, par exemple) — sans ça une sauvegarde existante se retrouverait avec la
-    // mauvaise phase au chargement. Démarre en phase de construction.
+    // mauvaise phase au chargement.
+    //
+    // Démarre à la TAVERNE (et plus en Construction depuis le 2026-09-01) : c'est là que tout
+    // joueur apparaît, et TavernSpawn force de toute façon cette phase à chaque chargement du
+    // monde — autant que la valeur par défaut dise la vérité.
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> GAME_PHASE = ATTACHMENT_TYPES.register(
             "game_phase",
-            () -> AttachmentType.builder(() -> GamePhase.BUILD.ordinal())
+            () -> AttachmentType.builder(() -> GamePhase.TAVERN.ordinal())
                     .serialize(Codec.STRING.xmap(
                             name -> GamePhase.valueOf(name).ordinal(),
                             ordinal -> GamePhase.values()[ordinal].name()
@@ -110,6 +169,27 @@ public class ModAttachments {
                     .sync(ByteBufCodecs.VAR_INT)
                     .build());
 
+    // Vrai dès que la toute première position de ce joueur sur ce monde a été corrigée vers
+    // l'arrivée de la taverne (voir ModEvents.onPlayerLoggedIn) — persistant (pour ne corriger
+    // qu'une seule fois par joueur, jamais à chaque reconnexion), jamais synchronisé : pure
+    // comptabilité serveur, jamais lue côté client.
+    //
+    // Pourquoi ce correctif existe : setRespawnData (TavernSpawn#onLevelLoad) met bien à jour le
+    // point de spawn du monde à chaque chargement, et ça fonctionne pour tout téléport explicite
+    // (mort, /dd_leave, retour de map). Mais en jeu (2026-09-11), le tout premier joueur à
+    // rejoindre un monde tout neuf n'atterrissait PAS au marqueur `player_spawn` de la taverne —
+    // seulement au centre par défaut. Vraisemblablement un cas particulier vanilla où le tout
+    // premier placement d'un joueur ne relit pas les données de respawn en vigueur au moment où
+    // sa position initiale est calculée. Non reproduit ailleurs : uniquement ce tout premier
+    // placement, jamais vérifié précisément pourquoi côté moteur — ce correctif contourne le
+    // problème plutôt que de le comprendre en profondeur.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> FIRST_SPAWN_HANDLED = ATTACHMENT_TYPES.register(
+            "first_spawn_handled",
+            () -> AttachmentType.builder(() -> Boolean.FALSE)
+                    .serialize(Codec.BOOL.fieldOf("FirstSpawnHandled"))
+                    .copyOnDeath()
+                    .build());
+
     // Niveau du personnage : état du joueur (contrairement au score), commence à 1,
     // persistant, synchronisé au client pour le HUD. Rien ne le fait encore monter.
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> LEVEL = ATTACHMENT_TYPES.register(
@@ -117,17 +197,70 @@ public class ModAttachments {
             () -> AttachmentType.builder(() -> 1)
                     .serialize(Codec.INT.fieldOf("Level"))
                     .sync(ByteBufCodecs.VAR_INT)
+                    .copyOnDeath()
                     .build());
 
     // Nom de personnage : distinct du pseudo Minecraft, éditable indépendamment (pas encore
     // de commande/écran pour le faire). Par défaut, prend le pseudo Minecraft du joueur au
     // premier accès — juste pour ne pas afficher une chaîne vide tant qu'aucune valeur n'a
     // été choisie, ça reste un champ à part qui peut diverger du compte ensuite.
+    // Héros choisi par le joueur. Persisté par NOM (comme GAME_PHASE) et non par ordinal :
+    // l'ordre des membres de HeroDefinition changera forcément quand les trois autres héros
+    // s'ajouteront, et une sauvegarde existante ne doit pas se retrouver avec le mauvais héros.
+    // La valeur synchronisée reste un ordinal, les deux côtés partageant le même enum.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> HERO = ATTACHMENT_TYPES.register(
+            "hero",
+            () -> AttachmentType.builder(() -> HeroDefinition.DEFAULT.ordinal())
+                    .serialize(Codec.STRING.xmap(
+                            name -> HeroDefinition.valueOf(name).ordinal(),
+                            ordinal -> HeroDefinition.values()[ordinal].name()
+                    ).fieldOf("Hero"))
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .copyOnDeath()
+                    .build());
+
+    // Points répartis dans les caractéristiques (init/HeroStat) : un entier par caractéristique,
+    // dans l'ordre de l'enum. Persistant, synchronisé (l'écran et les bonus côté client en ont
+    // besoin), conservé à la mort.
+    //
+    // copyOnDeath : ajouté le 2026-11-16 ici ET sur EXPERIENCE, LEVEL, HERO, CHARACTER_NAME et
+    // FIRST_SPAWN_HANDLED. Sans lui, NeoForge ne recopie pas un attachment sur le joueur qui
+    // réapparaît : mourir remettait le personnage au niveau 1, sans XP, en Écuyer.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<List<Integer>>> HERO_STATS = ATTACHMENT_TYPES.register(
+            "hero_stats",
+            () -> AttachmentType.<List<Integer>>builder(() -> List.of())
+                    .serialize(Codec.INT.listOf().fieldOf("HeroStats"))
+                    .sync(ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list()))
+                    .copyOnDeath()
+                    .build());
+
+    // Inventaire de la Forge (loot/Equipment) : tout le butin rangé par le joueur. Il lui
+    // appartient (aucun bloc ne le stocke), persiste, survit à la mort, et est synchronisé pour
+    // l'écran de la Forge.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<List<LootWeapon>>> FORGE_INVENTORY = ATTACHMENT_TYPES.register(
+            "forge_inventory",
+            () -> AttachmentType.<List<LootWeapon>>builder(() -> List.of())
+                    .serialize(LootWeapon.CODEC.listOf().fieldOf("ForgeInventory"))
+                    .sync(LootWeapon.STREAM_CODEC.apply(ByteBufCodecs.list()))
+                    .copyOnDeath()
+                    .build());
+
+    // Arme de butin équipée, PAR HÉROS (clé : HeroDefinition#id) : changer de héros ne déséquipe
+    // rien. Un héros absent de la table a simplement son arme de base.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Map<String, LootWeapon>>> EQUIPPED_WEAPONS = ATTACHMENT_TYPES.register(
+            "equipped_weapons",
+            () -> AttachmentType.<Map<String, LootWeapon>>builder(() -> Map.of())
+                    .serialize(Codec.unboundedMap(Codec.STRING, LootWeapon.CODEC).fieldOf("EquippedWeapons"))
+                    .sync(ByteBufCodecs.map(HashMap::new, ByteBufCodecs.STRING_UTF8, LootWeapon.STREAM_CODEC))
+                    .copyOnDeath()
+                    .build());
+
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<String>> CHARACTER_NAME = ATTACHMENT_TYPES.register(
             "character_name",
             () -> AttachmentType.builder(holder -> holder instanceof Player player ? player.getGameProfile().name() : "")
                     .serialize(Codec.STRING.fieldOf("CharacterName"))
                     .sync(ByteBufCodecs.STRING_UTF8)
+                    .copyOnDeath()
                     .build());
 
     // Difficulté de la partie : état de la Level (comme current_wave), censée être choisie
@@ -176,6 +309,19 @@ public class ModAttachments {
             "active_mana_chests",
             () -> AttachmentType.<Set<BlockPos>>builder((Supplier<Set<BlockPos>>) HashSet::new).build());
 
+    // Position connue du Cristal d'Eternia actuellement chargé sur cette Level (ou null s'il
+    // n'y en a aucun) : EterniaCrystalBlockEntity s'y enregistre/se retire lui-même (voir
+    // #setLevel/#setRemoved), même principe qu'ACTIVE_SPAWNERS. Sert à entity/ai/
+    // SeekEterniaCrystalGoal.java pour naviguer directement vers le cristal quelle que soit la
+    // distance, sans avoir à le re-chercher par une recherche en spirale coûteuse à chaque
+    // monstre à chaque fois (ce que fait déjà AttackPriorityTargetGoal/
+    // RangedAttackEterniaCrystalGoal, mais seulement dans un rayon local court). Ni persistant
+    // ni synchronisé : usage strictement serveur, se reconstruit naturellement au (dé)chargement
+    // du chunk du cristal, comme ACTIVE_SPAWNERS.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<BlockPos>> CRYSTAL_POS = ATTACHMENT_TYPES.register(
+            "crystal_pos",
+            () -> AttachmentType.<BlockPos>builder(() -> null).build());
+
     // "Prêt" : état du joueur (clic droit sur le Cristal d'Eternia en phase Construction, voir
     // EterniaCrystalBlock), pas de la Level, comme mana/experience. Faux par défaut, remis à
     // faux pour tout le monde dès que le Combat démarre (voir PhaseTransitions#enterCombat) —
@@ -186,6 +332,71 @@ public class ModAttachments {
             () -> AttachmentType.builder(() -> Boolean.FALSE)
                     .sync(ByteBufCodecs.BOOL)
                     .build());
+
+    // Suivi "aucun dégât" de la vague en cours, pour les multiplicateurs du bonus de fin de vague
+    // (ScoreKeeper#awardWaveCleared) : remis à faux à chaque début de Combat
+    // (PhaseTransitions#enterCombat), mis à vrai par le premier dégât reçu par un joueur
+    // (ModEvents#onPlayerDamaged) ou par le Cristal d'Eternia (EterniaCrystalBlockEntity#damage).
+    // Persistants (une sauvegarde en plein combat ne doit pas offrir une vague "parfaite"), jamais
+    // synchronisés : comptabilité serveur.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> WAVE_PLAYER_DAMAGED = ATTACHMENT_TYPES.register(
+            "wave_player_damaged",
+            () -> AttachmentType.builder(() -> Boolean.FALSE)
+                    .serialize(Codec.BOOL.fieldOf("WavePlayerDamaged"))
+                    .build());
+
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> WAVE_CRYSTAL_DAMAGED = ATTACHMENT_TYPES.register(
+            "wave_crystal_damaged",
+            () -> AttachmentType.builder(() -> Boolean.FALSE)
+                    .serialize(Codec.BOOL.fieldOf("WaveCrystalDamaged"))
+                    .build());
+
+    // Vrai dès qu'une tour est détruite par les monstres pendant la vague (PV à 0, voir
+    // AbstractTowerBlockEntity#setHealth) — jamais par un retrait volontaire du joueur, qui ne
+    // passe pas par là. Même cycle de vie que les deux drapeaux ci-dessus.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> WAVE_TOWER_LOST = ATTACHMENT_TYPES.register(
+            "wave_tower_lost",
+            () -> AttachmentType.builder(() -> Boolean.FALSE)
+                    .serialize(Codec.BOOL.fieldOf("WaveTowerLost"))
+                    .build());
+
+    // Multiplicateur de score de la map en cours (champ du bloc de configuration, voir
+    // MapDefinition#scoreMultiplier), posé par MapInstance#startGame ; x1 à la taverne. Lu par
+    // ScoreKeeper, côté serveur uniquement.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Float>> MAP_SCORE_MULTIPLIER = ATTACHMENT_TYPES.register(
+            "map_score_multiplier",
+            () -> AttachmentType.builder(() -> 1.0F)
+                    .serialize(Codec.FLOAT.fieldOf("MapScoreMultiplier"))
+                    .build());
+
+    // Ticks restants avant le début du Combat (voir CombatCountdown), 0 = aucun décompte en
+    // cours. Synchronisé pour l'affichage (CombatCountdownOverlay), pas persistant : un monde
+    // rechargé repart de toute façon de la taverne.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<Integer>> COMBAT_COUNTDOWN = ATTACHMENT_TYPES.register(
+            "combat_countdown",
+            () -> AttachmentType.builder(() -> 0)
+                    .sync(ByteBufCodecs.VAR_INT)
+                    .build());
+
+    // Identifiant de l'ennemi data-driven (init/EnemyRegistry) dont ce mob est une instance, posé
+    // par le spawner AVANT que le mob rejoigne le monde (voir EnemyDefinition#spawn) ; "" pour
+    // tout mob qui ne vient pas d'un spawner. C'est ce qui permet à plusieurs ennemis de partager
+    // un même type de mob (un zombie normal et une "brute", par exemple) : l'IA, l'XP et le score
+    // se décident sur cet identifiant, plus seulement sur le type. Persistant : un monstre
+    // rechargé avec son chunk reste l'ennemi qu'il était. Jamais synchronisé.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<String>> ENEMY_ID = ATTACHMENT_TYPES.register(
+            "enemy_id",
+            () -> AttachmentType.<String>builder(() -> "")
+                    .serialize(Codec.STRING.fieldOf("EnemyId"))
+                    .build());
+
+    /**
+     * Nombre de vagues de la partie en cours — celui de la map jouée, ou {@link #MAX_WAVE} par
+     * défaut. À préférer à MAX_WAVE partout où il s'agit de "la dernière vague de CETTE partie".
+     */
+    public static int waveCount(net.minecraft.world.level.Level level) {
+        return level.getData(MAP_WAVE_COUNT);
+    }
 
     public static void register(IEventBus modEventBus) {
         ATTACHMENT_TYPES.register(modEventBus);

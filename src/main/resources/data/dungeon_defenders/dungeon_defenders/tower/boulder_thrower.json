@@ -1,0 +1,8 @@
+{
+  "max_health": 20,
+  "mana_cost": 75,
+  "range": 12.0,
+  "damage": 12.0,
+  "attack_interval_ticks": 70,
+  "linger_ticks": 20
+}

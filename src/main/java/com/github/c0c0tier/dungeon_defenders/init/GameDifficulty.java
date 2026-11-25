@@ -6,18 +6,29 @@ import java.util.Locale;
 // lancement n'existe encore, voir 05-etat-et-problemes-connus.md). Consultée par
 // DifficultyScaling pour calculer le multiplicateur appliqué aux compositions de spawner.
 public enum GameDifficulty {
-    EASY(0.75D),
-    NORMAL(1.0D),
-    HARD(1.5D);
+    EASY(BalanceValue.DIFFICULTY_EASY_MULTIPLIER, BalanceValue.SCORE_EASY_MULTIPLIER),
+    NORMAL(BalanceValue.DIFFICULTY_NORMAL_MULTIPLIER, BalanceValue.SCORE_NORMAL_MULTIPLIER),
+    HARD(BalanceValue.DIFFICULTY_HARD_MULTIPLIER, BalanceValue.SCORE_HARD_MULTIPLIER);
 
-    private final double multiplier;
+    // Le multiplicateur lui-même est data-driven depuis le 2026-11-10 (balance/difficulty.json,
+    // voir GameBalance) : ×0.75 / ×1.0 / ×1.5 par défaut, comme avant.
+    private final BalanceValue multiplier;
+    // Multiplicateur de score de cette difficulté (balance/score.json, voir ScoreKeeper).
+    private final BalanceValue scoreMultiplier;
 
-    GameDifficulty(double multiplier) {
+    GameDifficulty(BalanceValue multiplier, BalanceValue scoreMultiplier) {
         this.multiplier = multiplier;
+        this.scoreMultiplier = scoreMultiplier;
     }
 
-    public double multiplier() {
-        return this.multiplier;
+    /** Multiplicateur de tout gain de score en cette difficulté (lu côté serveur uniquement). */
+    public double scoreMultiplier() {
+        return GameBalance.get(this.scoreMultiplier, false);
+    }
+
+    /** @param clientSide quelle copie des réglages lire (voir GameBalance). */
+    public double multiplier(boolean clientSide) {
+        return GameBalance.get(this.multiplier, clientSide);
     }
 
     public String translationKey() {

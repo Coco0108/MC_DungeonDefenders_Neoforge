@@ -1,0 +1,7 @@
+{
+  "comment": "Placeholder : réutilise des textures vanilla en attendant une texture dédiée.",
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "minecraft:block/blue_ice"
+  }
+}

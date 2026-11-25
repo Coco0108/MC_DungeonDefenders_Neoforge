@@ -1,5 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.client.gui;
 
+import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
+import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -18,6 +20,7 @@ import net.neoforged.neoforge.client.gui.GuiLayer;
 // au-dessus).
 public class ExperienceOverlay implements GuiLayer {
     private static final int BAR_WIDTH = 100;
+    private static final int LABEL_GAP = 6;
     private static final int FILLED_COLOR = 0xFF22C55E;
     private static final int EMPTY_COLOR = 0xFF2B2B2B;
     private static final int TEXT_COLOR = 0xFFFFFFFF;
@@ -31,7 +34,8 @@ public class ExperienceOverlay implements GuiLayer {
         }
 
         int currentExperience = player.getData(ModAttachments.EXPERIENCE);
-        int maxExperience = ModAttachments.MAX_EXPERIENCE;
+        // Copie CLIENT du réglage data-driven (balance/progression.json), reçue du serveur.
+        int maxExperience = GameBalance.getInt(BalanceValue.XP_PER_LEVEL, true);
 
         int barY = barTop(guiGraphics);
         int filledWidth = maxExperience <= 0 ? 0 : (int) ((long) BAR_WIDTH * currentExperience / maxExperience);
@@ -41,11 +45,26 @@ public class ExperienceOverlay implements GuiLayer {
             guiGraphics.fill(HudLayout.MARGIN, barY, HudLayout.MARGIN + filledWidth, barY + HudLayout.EXPERIENCE_BAR_HEIGHT, FILLED_COLOR);
         }
 
-        int textX = HudLayout.MARGIN + BAR_WIDTH + 6;
-        int textY = barY + HudLayout.EXPERIENCE_BAR_HEIGHT / 2 - minecraft.font.lineHeight / 2;
-        guiGraphics.text(minecraft.font,
-                Component.translatable("dungeon_defenders.hud.experience", currentExperience, maxExperience),
-                textX, textY, TEXT_COLOR);
+        guiGraphics.text(minecraft.font, label(player), labelLeft(), labelTop(guiGraphics, minecraft), TEXT_COLOR);
+    }
+
+    private static Component label(Player player) {
+        return Component.translatable("dungeon_defenders.hud.experience",
+                player.getData(ModAttachments.EXPERIENCE), GameBalance.getInt(BalanceValue.XP_PER_LEVEL, true));
+    }
+
+    private static int labelLeft() {
+        return HudLayout.MARGIN + BAR_WIDTH + LABEL_GAP;
+    }
+
+    // Les deux méthodes ci-dessous servent aussi à ProgressionFeedbackOverlay, qui pose son
+    // "+X XP" juste à droite de ce libellé, sur la même ligne.
+    static int labelTop(GuiGraphicsExtractor guiGraphics, Minecraft minecraft) {
+        return barTop(guiGraphics) + HudLayout.EXPERIENCE_BAR_HEIGHT / 2 - minecraft.font.lineHeight / 2;
+    }
+
+    static int labelRight(Minecraft minecraft, Player player) {
+        return labelLeft() + minecraft.font.width(label(player));
     }
 
     // Position Y du haut de cette barre, ancrée en bas de l'écran.

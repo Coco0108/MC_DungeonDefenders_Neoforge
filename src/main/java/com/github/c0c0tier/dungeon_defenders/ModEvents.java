@@ -1,33 +1,63 @@
 package com.github.c0c0tier.dungeon_defenders;
 
+import com.github.c0c0tier.dungeon_defenders.ability.AbilityRegistry;
+import com.github.c0c0tier.dungeon_defenders.ability.ChannelAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.PlayerAbilityChannels;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ManaCondenserBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.entity.Corrosion;
 import com.github.c0c0tier.dungeon_defenders.entity.ManaCrystalEntity;
+import com.github.c0c0tier.dungeon_defenders.loot.Equipment;
+import com.github.c0c0tier.dungeon_defenders.loot.LootWeapon;
+import com.github.c0c0tier.dungeon_defenders.loot.LootGenerator;
+import com.github.c0c0tier.dungeon_defenders.item.HeroWeapons;
+import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.AttackPriorityTargetGoal;
 import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
+import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
+import com.github.c0c0tier.dungeon_defenders.init.EnemyBehavior;
+import com.github.c0c0tier.dungeon_defenders.init.EnemyDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.EnemyRegistry;
+import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
+import com.github.c0c0tier.dungeon_defenders.init.AbilitySlot;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ManaCrystalType;
+import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.HeroStat;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
+import com.github.c0c0tier.dungeon_defenders.init.ScoreKeeper;
 import com.github.c0c0tier.dungeon_defenders.init.ScoreSource;
-import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.network.ScoreGainPayload;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Monster;
-import net.minecraft.world.entity.monster.skeleton.AbstractSkeleton;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.item.ItemTossEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+
+import java.util.Optional;
 
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class ModEvents {
@@ -42,12 +72,33 @@ public class ModEvents {
     // que d'essayer d'annuler chaque source d'exhaustion une par une.
     private static final int FULL_FOOD_LEVEL = 20;
     private static final float FULL_SATURATION = 20.0F;
+    private static final float LEVEL_UP_SOUND_VOLUME = 0.75F;
+    private static final int LEVEL_UP_PARTICLE_COUNT = 30;
+
+    // Portée de suivi (attribut vanilla FOLLOW_RANGE) donnée à tout monstre équipé de l'IA du
+    // mod : c'est ce même attribut que le pathfinder vanilla utilise pour borner la recherche
+    // de chemin (pas seulement la détection de cible). La valeur vanilla d'un zombie (35) ou
+    // d'un squelette (16) suffit pour un couloir court, mais pas pour traverser une grande map
+    // (ex. Sanctuaire en Ruines, 63 blocs de large) jusqu'au cristal — voir
+    // SeekEterniaCrystalGoal, qui a justement besoin de pouvoir calculer un chemin sur toute la
+    // distance, quelle que soit la taille de la map.
+    private static final double MONSTER_FOLLOW_RANGE = 128.0D;
+    // Fréquence de synchronisation du mana pendant une canalisation (voir tickAbilityChannel) —
+    // toutes les 4 ticks, assez réactif pour un HUD sans envoyer vingt paquets par seconde.
+    private static final long MANA_SYNC_INTERVAL_TICKS = 4L;
 
     @SubscribeEvent
     public static void onMonsterSpawn(EntityJoinLevelEvent event) {
         // Généralisé de Zombie à Monster (les deux goals n'exigent qu'un PathfinderMob, que
         // Monster étend) pour couvrir tout futur ennemi sans avoir à énumérer chaque type.
         if (event.getLevel().isClientSide() || !(event.getEntity() instanceof Monster monster)) {
+            return;
+        }
+
+        // Le mannequin d'entraînement est un Monster (obligatoire pour que les tourelles le
+        // ciblent, voir TrainingDummyEntity) mais ne doit surtout pas recevoir de goal : il est
+        // censé rester planté là, pas partir attaquer le Cristal d'Eternia.
+        if (monster instanceof TrainingDummyEntity) {
             return;
         }
 
@@ -61,17 +112,37 @@ public class ModEvents {
             return;
         }
 
-        // Les squelettes (et tout futur AbstractSkeleton) attaquent à distance avec l'arc
-        // déjà équipé par défaut, et ignorent Blockade/Turret (un archer peut tirer par-dessus/
-        // à côté sans avoir besoin de les détruire) ; les autres reçoivent un seul goal qui
-        // choisit lui-même la meilleure cible à portée selon les paliers de priorité (voir
-        // AiAttackTarget) : Block, puis Corps à corps, puis Cristal, puis Tourelle en dernier
-        // recours.
-        if (monster instanceof AbstractSkeleton) {
-            monster.goalSelector.addGoal(1, new RangedAttackEterniaCrystalGoal(monster));
-        } else {
-            monster.goalSelector.addGoal(0, new AttackPriorityTargetGoal(monster));
+        AttributeInstance followRange = monster.getAttribute(Attributes.FOLLOW_RANGE);
+        if (followRange != null) {
+            followRange.setBaseValue(MONSTER_FOLLOW_RANGE);
         }
+
+        // Le TYPE d'IA vient du JSON de l'ennemi (init/EnemyBehavior, doc/data-driven/
+        // ennemis.md §3) : "melee_priority" (goal à paliers Block > Corps à corps > Cristal >
+        // Tourelle, puis SeekEterniaCrystalGoal) ou "ranged_crystal" (tir sur le cristal
+        // uniquement, puis SeekEterniaCrystalGoal). Un monstre SANS définition (zombie
+        // /summon d'un type sans JSON, stray, wither skeleton...) garde exactement la règle
+        // d'avant la migration — distance pour tout AbstractSkeleton, mêlée sinon — pour
+        // qu'aucun monstre ne perde l'IA qu'il avait.
+        // Un monstre apparu SANS spawner (/summon, œuf) dont le type de mob est celui d'un ennemi
+        // devient cet ennemi à part entière : il est marqué et reçoit ses stats, au lieu d'en
+        // avoir seulement l'IA et l'XP. Le marquage persistant évite de les réappliquer au
+        // rechargement du chunk.
+        if (monster.getData(ModAttachments.ENEMY_ID).isEmpty()) {
+            EnemyRegistry.idFor(monster.getType()).ifPresent(id -> {
+                monster.setData(ModAttachments.ENEMY_ID, id.toString());
+                EnemyDefinition definition = EnemyRegistry.byId(id);
+                if (definition != null) {
+                    definition.applyStats(monster);
+                }
+            });
+        }
+
+        // L'ennemi est celui marqué (par le spawner, ou juste au-dessus), sinon la règle d'avant.
+        EnemyBehavior behavior = EnemyRegistry.definitionFor(monster)
+                .map(EnemyDefinition::behavior)
+                .orElseGet(() -> EnemyBehavior.legacyFor(monster));
+        behavior.applyGoals(monster);
     }
 
     // Générique à TOUTE catégorie de tour (Blockade, Turret, ...) : filtre sur
@@ -92,12 +163,21 @@ public class ModEvents {
             return;
         }
 
-        // Décidé avec le joueur : les tours ne se posent qu'en phase Construction, jamais
-        // pendant le Combat — vérifié avant même le mana, pour ne pas laisser croire qu'un
-        // refus vient d'un manque de mana alors que c'est la phase qui bloque.
-        if (level.getData(ModAttachments.GAME_PHASE) != GamePhase.BUILD.ordinal()) {
+        // Décidé avec le joueur : les tours ne se posent qu'en Construction (pendant une
+        // partie) ou à la Taverne (zone d'essai) — jamais pendant le Combat. Vérifié avant même
+        // le mana, pour ne pas laisser croire qu'un refus vient d'un manque de mana alors que
+        // c'est la phase qui bloque.
+        GamePhase phase = GamePhase.of(level);
+        if (!phase.allowsTowerBuilding()) {
             player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.build_phase_only"));
             event.setCanceled(true);
+            return;
+        }
+
+        // Gratuites à la Taverne (décidé avec le joueur, 2026-09-01) : il n'y a aucun monstre à
+        // tuer dans le hub, donc aucune façon d'y gagner du mana — faire payer les essais les
+        // rendrait impossibles au bout de deux ou trois tours.
+        if (phase == GamePhase.TAVERN) {
             return;
         }
 
@@ -166,6 +246,34 @@ public class ModEvents {
         }
     }
 
+    // Corrige le tout premier placement d'un joueur qui n'avait jamais rejoint ce monde — voir
+    // ModAttachments.FIRST_SPAWN_HANDLED pour le pourquoi (setRespawnData, mis à jour à chaque
+    // chargement du monde par TavernSpawn, ne suffit pas pour ce cas précis, retour en jeu
+    // 2026-09-11). Le drapeau persistant garantit que ça ne se déclenche qu'une seule fois par
+    // joueur, jamais aux reconnexions suivantes une fois sa position déjà correcte.
+    @SubscribeEvent
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        Player player = event.getEntity();
+        if (!player.level().isClientSide()) {
+            // À chaque connexion, pas seulement la première : couvre aussi une sauvegarde
+            // d'avant les armes de héros.
+            HeroWeapons.ensure(player);
+            // Vitalité et Rapidité : modificateurs transitoires, à reposer à chaque connexion.
+            HeroStat.applyAttributes(player);
+            Equipment.applyAttributes(player);
+        }
+        if (player.level().isClientSide() || player.getData(ModAttachments.FIRST_SPAWN_HANDLED)) {
+            return;
+        }
+        player.setData(ModAttachments.FIRST_SPAWN_HANDLED, true);
+
+        if (!(player.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        BlockPos arrival = TavernSpawn.arrivalPos(serverLevel);
+        player.teleportTo(arrival.getX() + 0.5, arrival.getY(), arrival.getZ() + 0.5);
+    }
+
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
@@ -175,6 +283,156 @@ public class ModEvents {
 
         player.getFoodData().setFoodLevel(FULL_FOOD_LEVEL);
         player.getFoodData().setSaturation(FULL_SATURATION);
+
+        if (player instanceof ServerPlayer serverPlayer) {
+            tickAbilityChannel(serverPlayer);
+        }
+    }
+
+    // Fait avancer la canalisation en cours du joueur, s'il y en a une — voir
+    // PlayerAbilityChannels/ChannelAbility pour le raisonnement complet (pourquoi le serveur
+    // est seul juge de quand ça s'arrête).
+    private static void tickAbilityChannel(ServerPlayer player) {
+        AbilitySlot slot = PlayerAbilityChannels.activeSlot(player.getUUID());
+        if (slot == null) {
+            return;
+        }
+
+        ChannelAbility ability = AbilityRegistry.resolveChannel(player, slot);
+        BlockPos target = PlayerAbilityChannels.activeTarget(player.getUUID());
+
+        if (ability == null || !ability.canContinue(player, target)) {
+            PlayerAbilityChannels.stop(player.getUUID());
+            return;
+        }
+
+        ability.applyTick(player, target);
+
+        // Synchroniser le mana à chaque tick de canalisation serait vingt paquets par seconde
+        // pour rien — un intervalle de quelques ticks reste largement assez réactif pour un
+        // HUD.
+        if (player.level().getGameTime() % MANA_SYNC_INTERVAL_TICKS == 0) {
+            player.syncData(ModAttachments.MANA);
+        }
+    }
+
+    // Interrompt le soin dès qu'un coup est encaissé — comportement confirmé pour Heal Self
+    // dans le jeu de référence (voir HealAbility), volontairement PAS étendu à Repair ni Blood
+    // Rage, qu'aucune source ne documente comme interrompues par des dégâts.
+    @SubscribeEvent
+    public static void onPlayerDamagedInterruptHeal(LivingDamageEvent.Post event) {
+        if (!(event.getEntity() instanceof ServerPlayer player) || event.getHealthDamage() <= 0.0F) {
+            return;
+        }
+        if (PlayerAbilityChannels.activeSlot(player.getUUID()) == AbilitySlot.HEAL) {
+            PlayerAbilityChannels.stop(player.getUUID());
+            player.sendSystemMessage(Component.translatable("dungeon_defenders.ability.heal_interrupted"));
+        }
+    }
+
+    // Un joueur a pris un dégât pendant le Combat : plus de multiplicateur "aucun dégât subi"
+    // sur le bonus de fin de cette vague (voir ScoreKeeper). N'importe quelle source compte.
+    @SubscribeEvent
+    public static void onPlayerDamaged(LivingDamageEvent.Post event) {
+        if (!(event.getEntity() instanceof Player player) || player.level().isClientSide()
+                || event.getHealthDamage() <= 0.0F) {
+            return;
+        }
+        Level level = player.level();
+        if (level.getData(ModAttachments.GAME_PHASE) == GamePhase.COMBAT.ordinal()) {
+            level.setData(ModAttachments.WAVE_PLAYER_DAMAGED, true);
+        }
+    }
+
+    // Récompense de vague nettoyée : wave_clear_drops armes par joueur, chacune pour SON héros.
+    // Posées à ses pieds en cours de partie ; rangées directement dans l'inventaire de la Forge
+    // après la dernière vague, puisque la victoire renvoie tout le monde à la taverne et qu'un
+    // objet resté au sol de la map serait perdu.
+    private static void awardWaveClearLoot(Level level, boolean lastWave) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        int drops = GameBalance.getInt(BalanceValue.LOOT_WAVE_CLEAR_DROPS, false);
+        int wave = level.getData(ModAttachments.CURRENT_WAVE);
+        for (Player player : serverLevel.players()) {
+            for (int i = 0; i < drops; i++) {
+                LootWeapon weapon = LootGenerator.roll(serverLevel.getRandom(), HeroDefinition.of(player),
+                        LootGenerator.rollRarity(serverLevel.getRandom()), wave);
+                if (lastWave) {
+                    Equipment.store(player, weapon);
+                } else {
+                    LootGenerator.drop(serverLevel, player.position(), weapon);
+                }
+            }
+        }
+    }
+
+    // --- ARMES DE HÉROS (item/HeroWeapons) ---
+
+    // Un joueur qui réapparaît retrouve son arme (elle n'est pas lâchée à la mort, voir plus bas).
+    @SubscribeEvent
+    public static void onPlayerRespawnGiveWeapon(PlayerEvent.PlayerRespawnEvent event) {
+        if (!event.getEntity().level().isClientSide()) {
+            HeroWeapons.ensure(event.getEntity());
+            HeroStat.applyAttributes(event.getEntity());
+            Equipment.applyAttributes(event.getEntity());
+            // Le joueur réapparaît avec les PV max vanilla : on le remet à son vrai maximum.
+            event.getEntity().setHealth(event.getEntity().getMaxHealth());
+        }
+    }
+
+    // L'arme d'un héros ne se jette pas : l'objet au sol est annulé et l'arme rendue.
+    @SubscribeEvent
+    public static void onHeroWeaponTossed(ItemTossEvent event) {
+        if (HeroWeapons.isHeroWeapon(event.getEntity().getItem().getItem())) {
+            event.setCanceled(true);
+            HeroWeapons.ensure(event.getPlayer());
+        }
+    }
+
+    // ... et ne tombe pas à la mort du joueur : sinon un autre joueur pourrait la ramasser.
+    @SubscribeEvent
+    public static void onPlayerDropsHeroWeapon(LivingDropsEvent event) {
+        if (event.getEntity() instanceof Player) {
+            event.getDrops().removeIf(drop -> HeroWeapons.isHeroWeapon(drop.getItem().getItem()));
+        }
+    }
+
+    // Bonus de niveau : tout ce qu'un joueur inflige à un monstre (arme, épée, sorts) est
+    // multiplié par 1 + player_damage_per_level x (niveau - 1). Les tours ne sont pas concernées
+    // (leurs dégâts n'ont pas de joueur pour source). Priorité haute : avant la corrosion, pour
+    // que les deux bonus se multiplient dans un ordre fixe.
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void onPlayerDamageLevelBonus(LivingIncomingDamageEvent event) {
+        if (event.getEntity().level().isClientSide()
+                || !(event.getEntity() instanceof Monster)
+                || !(event.getSource().getEntity() instanceof Player player)) {
+            return;
+        }
+        event.setAmount((float) (event.getAmount() * playerDamageMultiplier(player)));
+    }
+
+    /** Multiplicateur de dégâts d'un joueur selon son niveau : x1 au niveau 1. */
+    public static double playerDamageMultiplier(Player player) {
+        int level = Math.max(1, player.getData(ModAttachments.LEVEL));
+        double levelBonus = 1.0D + (level - 1) * GameBalance.get(BalanceValue.PLAYER_DAMAGE_PER_LEVEL, false);
+        // ... multiplié par la caractéristique Puissance (init/HeroStat).
+        // ... et par l'arme de butin équipée (loot/Equipment).
+        return levelBonus * (1.0D + HeroStat.POWER.bonus(player)) * Equipment.damageMultiplier(player);
+    }
+
+    // Corrosion (Projecteur d'acide de l'Alchimiste) : un monstre marqué subit plus de dégâts,
+    // quelle qu'en soit la source. Incoming et non Post : c'est le seul moment où le montant
+    // peut encore être modifié.
+    @SubscribeEvent
+    public static void onCorrodedMonsterHurt(LivingIncomingDamageEvent event) {
+        if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof Monster monster)) {
+            return;
+        }
+        double factor = Corrosion.factor(monster);
+        if (factor != 1.0D) {
+            event.setAmount((float) (event.getAmount() * factor));
+        }
     }
 
     @SubscribeEvent
@@ -189,6 +447,14 @@ public class ModEvents {
         if (level instanceof ServerLevel serverLevel) {
             serverLevel.addFreshEntity(new ManaCrystalEntity(
                     serverLevel, monster.getX(), monster.getY(), monster.getZ(), ManaCrystalType.SMALL.value()));
+
+            // Condenseur de mana (Alchimiste) : un cristal en plus si le monstre meurt dans le
+            // rayon d'un condenseur.
+            int bonusMana = ManaCondenserBlockEntity.bonusManaAt(serverLevel, monster.position());
+            if (bonusMana > 0) {
+                serverLevel.addFreshEntity(new ManaCrystalEntity(
+                        serverLevel, monster.getX(), monster.getY(), monster.getZ(), bonusMana));
+            }
         }
 
         awardExperienceAndScore(level, monster);
@@ -197,6 +463,14 @@ public class ModEvents {
         // de construction (rechargement de chunk, etc.) ne doit pas fausser le compteur.
         if (level.getData(ModAttachments.GAME_PHASE) != GamePhase.COMBAT.ordinal()) {
             return;
+        }
+
+        // Butin : un monstre tué en Combat a une petite chance de lâcher une arme, pour le héros
+        // d'un des joueurs présents (loot/LootGenerator).
+        if (level instanceof ServerLevel lootLevel
+                && lootLevel.getRandom().nextDouble() < GameBalance.get(BalanceValue.LOOT_DROP_CHANCE, false)) {
+            LootGenerator.drop(lootLevel, monster.position(),
+                    LootGenerator.rollFor(lootLevel, level.getData(ModAttachments.CURRENT_WAVE)));
         }
 
         int killed = level.getData(ModAttachments.WAVE_ENEMIES_KILLED) + 1;
@@ -211,7 +485,13 @@ public class ModEvents {
             // Capturé avant enterBuild/onVictory, qui font tous les deux avancer/réinitialiser
             // current_wave : c'est la vague qu'on vient de nettoyer qui détermine la victoire,
             // pas celle qui suit.
-            boolean wasLastWave = level.getData(ModAttachments.CURRENT_WAVE) >= ModAttachments.MAX_WAVE;
+            // Bonus de fin de vague (et ses multiplicateurs "aucun dégât"), crédité pendant que
+            // la vague et son suivi de dégâts sont encore ceux qu'on vient de terminer.
+            ScoreKeeper.awardWaveCleared(level);
+
+            boolean wasLastWave = level.getData(ModAttachments.CURRENT_WAVE) >= ModAttachments.waveCount(level);
+            // Avant le changement de phase : la récompense a la force de la vague qu'on termine.
+            awardWaveClearLoot(level, wasLastWave);
             if (wasLastWave) {
                 PhaseTransitions.onVictory(level);
             } else {
@@ -229,49 +509,30 @@ public class ModEvents {
     // notion de "quel joueur a tué quoi" n'existe aujourd'hui) — même logique co-op que le
     // ramassage des cristaux de mana, ouvert à tous.
     private static void awardExperienceAndScore(Level level, Monster monster) {
-        int xpValue = SpawnableEnemy.xpValueFor(monster.getType());
+        // "xp_value" du JSON de l'ennemi ; EnemyRegistry.DEFAULT_XP_VALUE (5, comme avant) pour
+        // un monstre sans définition.
+        int xpValue = EnemyRegistry.xpValueFor(monster);
 
-        // NO_ENEMY en repli si jamais ce monstre n'est pas dans la liste fermée du Spawner
-        // (même repli défensif que SpawnableEnemy.xpValueFor juste au-dessus).
-        int enemyOrdinal = SpawnableEnemy.find(monster.getType())
-                .map(SpawnableEnemy::ordinal)
-                .orElse(ScoreGainPayload.NO_ENEMY);
-        grantScore(level, xpValue, ScoreSource.MONSTER_KILLED, enemyOrdinal);
+        // Pas d'ennemi associé (donc pas d'icône dans le popup) si ce monstre n'a pas de
+        // définition — même repli qu'avant la migration.
+        ScoreKeeper.grant(level, xpValue, ScoreSource.MONSTER_KILLED, EnemyRegistry.idFor(monster));
 
         for (Player player : level.players()) {
             grantExperience(player, xpValue);
         }
     }
 
-    // Centralise tout gain de score : met à jour ModAttachments.SCORE (le total, lu par
-    // ScoreOverlay) ET diffuse un ScoreGainPayload à chaque joueur présent (le détail, lu par
-    // ScoreGainOverlay côté client — voir ce paquet pour le pourquoi des deux canaux distincts).
-    // Toute future source de score (fin de vague, fin de map, multiplicateurs — voir
-    // doc/02-gameplay.md) doit passer par ici plutôt que toucher SCORE directement, pour ne pas
-    // dupliquer cette double mise à jour ; passer ScoreGainPayload.NO_ENEMY si le gain n'a pas
-    // d'ennemi associé (tout ce qui n'est pas un kill).
-    private static void grantScore(Level level, int amount, ScoreSource source, int enemyOrdinal) {
-        int score = level.getData(ModAttachments.SCORE) + amount;
-        level.setData(ModAttachments.SCORE, score);
-        level.syncData(ModAttachments.SCORE);
-
-        for (Player player : level.players()) {
-            if (player instanceof ServerPlayer serverPlayer) {
-                serverPlayer.connection.send(
-                        new ScoreGainPayload(amount, source.ordinal(), enemyOrdinal).toVanillaClientbound());
-            }
-        }
-    }
-
     // Boucle plutôt qu'un seul passage : un futur ennemi à forte valeur d'XP pourrait franchir
-    // plusieurs paliers de niveau d'un coup. MAX_EXPERIENCE reste un plafond fixe par niveau
-    // pour l'instant (pas de barème croissant), comme les autres valeurs de test du mod.
+    // plusieurs paliers de niveau d'un coup. L'expérience par niveau reste un plafond fixe (pas
+    // de barème croissant), data-driven : BalanceValue.XP_PER_LEVEL, 100 par défaut
+    // (balance/progression.json).
     private static void grantExperience(Player player, int xpValue) {
         int experience = player.getData(ModAttachments.EXPERIENCE) + xpValue;
         int level = player.getData(ModAttachments.LEVEL);
 
-        while (experience >= ModAttachments.MAX_EXPERIENCE) {
-            experience -= ModAttachments.MAX_EXPERIENCE;
+        int xpPerLevel = Math.max(1, GameBalance.getInt(BalanceValue.XP_PER_LEVEL, false));
+        while (experience >= xpPerLevel) {
+            experience -= xpPerLevel;
             level++;
         }
 
@@ -284,7 +545,26 @@ public class ModEvents {
 
         if (leveledUp) {
             player.sendSystemMessage(Component.translatable("dungeon_defenders.level.up", level));
+            int points = HeroStat.available(player);
+            if (points > 0) {
+                player.sendSystemMessage(Component.translatable("dungeon_defenders.stats.points_to_spend", points));
+            }
+            celebrateLevelUp(player);
         }
+    }
+
+    // Son et particules du passage de niveau, joués par le serveur pour que TOUS les joueurs
+    // proches les perçoivent (la bannière à l'écran, elle, n'est que pour le joueur concerné —
+    // voir ProgressionFeedbackOverlay). Le son vanilla de passage de niveau est repris tel quel.
+    private static void celebrateLevelUp(Player player) {
+        if (!(player.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        serverLevel.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, LEVEL_UP_SOUND_VOLUME, 1.0F);
+        serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER,
+                player.getX(), player.getY() + player.getBbHeight() / 2.0D, player.getZ(),
+                LEVEL_UP_PARTICLE_COUNT, 0.4D, 0.6D, 0.4D, 0.0D);
     }
 
     // Les monstres de ce mod n'ont thématiquement aucune raison de donner de la vraie XP

@@ -252,9 +252,34 @@ catégorie de tour existante (mur à PV type "Blockade", ou tour à distance typ
   une orientation, déclarer `BlockStateProperties.HORIZONTAL_FACING` sur le bloc (voir
   `HarpoonTurretBlock` — la rotation choisie dans la roue est déjà appliquée automatiquement par
   `ModNetworking.handlePlaceTower`, rien à faire côté réseau).
+- **Tour à impulsions** (soutien, effet de zone répété) : étendre
+  `block/entity/AbstractPulseTowerBlockEntity.java` et ne fournir que `pulseIntervalTicks()` et
+  `pulse()` (voir `FrostStillBlockEntity`, le plus court). `monstersInRange`/`monstersInCone`
+  donnent les monstres concernés.
+- **Pas de classe de bloc à écrire** depuis le 2026-11-16 : enregistrer la tour avec
+  `new SimpleTowerBlock(properties, MaTourBlockEntity::new)` (ou `DirectionalTowerBlock` si elle
+  s'oriente), comme les six tours de l'Alchimiste dans `ModBlocks`.
+- Enregistrer son `BlockEntityType` dans `DungeonDefendersMod` **et** sa barre de vie dans
+  `DungeonDefendersModClient#onRegisterRenderers` (`TowerHealthBarRenderer::new`) — oubli resté
+  inaperçu pour quatre tours de l'Écuyer jusqu'au 2026-11-16.
+- L'ajouter à la liste de tours d'un héros dans `init/HeroDefinition.java` : le gametest
+  `hero_rosters` échoue si une tour n'appartient à aucun héros, ou si un héros n'en a pas six.
 - Dans tous les cas, ajouter un membre à `init/TowerDefinition.java` pour que la tour
   apparaisse dans la roue (`TowerWheelScreen`) — c'est l'unique façon de la poser, voir
   `block/TowerBlockItem.java`.
+- **Ses chiffres ne s'écrivent plus dans le block entity** (depuis le 2026-11-10, voir
+  [data-driven/tours.md](data-driven/tours.md)) : le membre de `TowerDefinition` porte ses
+  **valeurs par défaut** (`TowerStats.builder().with(TowerStat.MAX_HEALTH, 30)...`), le block
+  entity passe simplement ce membre à son constructeur parent et lit `stats()`, et un fichier
+  `data/dungeon_defenders/dungeon_defenders/tower/<id>.json` reprend ces mêmes valeurs. Un
+  nouveau type de chiffre (ex. durée d'un ralentissement) = une constante de plus dans
+  `init/TowerStat.java`.
+
+**Rééquilibrer sans recompiler** : modifier `tower/<id>.json` (stats d'une tour),
+`enemy/<nom>.json` (ennemi) ou `balance/*.json` (difficulté, remboursement, XP par niveau), puis
+`/reload` en jeu. Pour essayer sans toucher au jar, mettre une copie du fichier dans un datapack
+du monde, au même chemin. Ajouter un réglage global : une ligne dans `init/BalanceValue.java`,
+sa clé dans le JSON, et `GameBalance.get(...)` à la place de la constante.
 
 ## Ajouter une donnée persistante sur le joueur (data attachment)
 
@@ -323,6 +348,29 @@ static void onRegisterGuiLayers(RegisterGuiLayersEvent event) {
 (voir les constantes de `VanillaGuiLayers`, ex. `HOTBAR`, `PLAYER_HEALTH`) si l'overlay doit
 s'insérer dans l'empilement du HUD plutôt que flotter au-dessus.
 
+## Dessiner un écran ou un encadré dans le style du mod (`client/gui/UiStyle.java`)
+
+Depuis le 2026-11-24, la roue des tours, la fiche de tour, la Forge, les caractéristiques, le
+choix de héros et l'encadré du butin partagent un même style, dessiné en aplats (`fill`), sans
+texture. Pour qu'un nouvel écran s'y accorde, passer par `UiStyle` plutôt que par des couleurs
+locales :
+
+- `titledPanel(g, font, titre, x, y, largeur, hauteur)` : panneau sombre biseauté avec bandeau
+  doré ; le contenu commence à `y + UiStyle.HEADER_HEIGHT + 4`. `panel(...)` sans titre.
+- `inset(...)` : case creusée (encart, fond de jauge) ; `itemSlot(g, stack, x, y, cadre, survol)`
+  : emplacement 18x18 avec icône.
+- `bar(...)` : jauge ; `pips(...)` : rangée de pastilles (niveau, points) ; `divider(...)` :
+  filet ; `keyCap(...)` : touche dessinée en pastille (`[E]`).
+- Couleurs : `TEXT`, `DIM`, `GOLD` (titres), `MANA`, `POSITIVE` / `NEGATIVE`, `healthColor(f)`.
+
+Dans un `Screen`, dessiner le panneau **avant** `super.extractRenderState(...)` (qui ne dessine
+que les widgets ; le fond flou est fait à part) pour que les boutons vanilla passent par-dessus,
+puis le texte et les icônes **après**. Les infobulles passent par
+`setComponentTooltipForNextFrame` (ou `setTooltipForNextFrame` avec des lignes déjà découpées par
+`font.split`, une infobulle de composants ne passant pas à la ligne). Vérifier la mise en page à
+l'échelle d'interface la plus grande : un écran de 427x240 (720p en échelle 3) doit tout
+contenir.
+
 ## Ajouter un GUI de configuration (menu + écran + réseau)
 
 Pour un écran ouvert par clic droit sur un bloc, qui édite l'état d'un `BlockEntity` (pas un
@@ -375,6 +423,21 @@ Les pièces, dans l'ordre où elles interviennent :
    portée du joueur avant d'appliquer quoi que ce soit (voir `ModNetworking`) — le client est
    toujours considéré non fiable.
 
+> **Règle absolue quel que soit le chemin choisi** : le bloc (chargé aussi sur un serveur
+> dédié) ne doit **jamais** nommer l'écran, ni `Minecraft`, ni aucune classe
+> `net.minecraft.client.*` — même dans une branche `if (level.isClientSide())` qui ne
+> s'exécutera jamais côté serveur. Le mod refuserait de se charger sur un serveur dédié, voir
+> [01-architecture.md](01-architecture.md#la-règle-clientserveur--nommer-une-classe-cliente-suffit-à-casser-un-serveur-dédié).
+> Vérifier avec `python3 tools/verifier-dist.py build/libs/dungeon_defenders-<version>.jar`.
+
+**Écran sans donnée propre au bloc** : si l'écran n'a besoin d'aucune information de *ce*
+bloc-là (liste statique, attachment déjà synchronisé...), tout le mécanisme
+`Menu`/`MenuProvider`/`MenuType` ci-dessus est inutile — un simple paquet **clientbound** sans
+champ suffit : `StreamCodec.unit(INSTANCE)`, `registrar.playToClient(TYPE, STREAM_CODEC)` dans
+`ModNetworking`, `event.register(TYPE, ...)` dans `DungeonDefendersModClient`, et le bloc fait
+`serverPlayer.connection.send(MonPayload.INSTANCE.toVanillaClientbound())`. Exemple complet :
+`network/OpenMapSelectionPayload.java` + `block/TavernCrystalBlock.java`.
+
 **Nombre de lignes variable dans l'écran (ajouter/retirer)** : si l'écran doit permettre
 d'ajouter/retirer des lignes de widgets (pas juste des champs fixes), garder l'état
 (valeurs actuelles) dans des champs Java ordinaires de l'écran (pas seulement dans les
@@ -385,23 +448,35 @@ la section correspondante de [02-gameplay.md](02-gameplay.md)). Un changement qu
 pas le nombre de lignes (ex. cycler la valeur d'un bouton) n'a pas besoin de tout reconstruire :
 `AbstractWidget#setMessage(...)` suffit pour changer son libellé en place.
 
-**Ajouter un ennemi choisissable dans le spawner** : une seule ligne dans
-`init/SpawnableEnemy.java` (nom + `EntityType`), plus sa clé de traduction
-(`dungeon_defenders.enemy.<nom>`) dans les deux fichiers de lang. Rien d'autre à toucher : le
-GUI, le réseau et la persistance passent déjà par cet enum (voir 02-gameplay.md).
+**Ajouter un ennemi choisissable dans le spawner** : un fichier JSON, sans une ligne de Java
+(depuis le 2026-09-29, voir [data-driven/ennemis.md](data-driven/ennemis.md)) :
+`data/<namespace>/dungeon_defenders/enemy/<nom>.json`, dans le mod ou dans n'importe quel
+datapack/jar de pack. Même forme que `zombie.json`/`skeleton.json` : `entity_type`, `icon`,
+`xp_value`, `order` (facultatif), les stats facultatives `max_health`/`movement_speed`/`scale`
+et `behavior` (`dungeon_defenders:melee_priority`, ou
+`dungeon_defenders:ranged_crystal` avec `damage_per_shot`/`ticks_between_shots`/`shoot_range`
+facultatifs). Plus la clé de traduction `<namespace>.enemy.<nom>` dans les fichiers de lang (sans
+elle, l'identifiant brut s'affiche). `/reload` suffit pour l'essayer, sans redémarrer. Le GUI, le
+réseau et la persistance n'ont rien à changer.
+
+> **Règle absolue : ne jamais modifier `init/LegacyEnemyIds.java`.** C'est la traduction des
+> anciens fichiers (ennemi sauvegardé par numéro), pas la liste des ennemis actuels.
+
+**Nouveau TYPE de comportement** (pas seulement d'autres chiffres) : c'est le seul cas qui
+demande du Java — un record de plus dans `init/EnemyBehavior.java` (avec son `MapCodec` et son
+`applyGoals`), ajouté à `CODECS_BY_TYPE`.
 
 **Donner à un nouvel ennemi une attaque sur le cristal** : dans la grande majorité des cas,
-**pas besoin d'écrire de nouvelle classe**. `AttackEterniaCrystalGoal` (corps à corps) et
-`RangedAttackEterniaCrystalGoal` (distance) ont toutes les deux un constructeur
-`(mob, damagePerHit, ticksBetweenX, ...)` — il suffit de brancher le bon type dans
-`ModEvents.onMonsterSpawn` avec les chiffres voulus (voir
-[02-gameplay.md](02-gameplay.md#ia-des-ennemis)) :
+**pas besoin d'écrire de Java**. Le `behavior` de son JSON suffit : `melee_priority` (paliers
+Block > Corps à corps > Cristal > Tourelle) ou `ranged_crystal` avec ses propres chiffres, par
+exemple :
 
-```java
-if (monster instanceof AbstractSkeleton) {
-    monster.goalSelector.addGoal(1, new RangedAttackEterniaCrystalGoal(monster, 3, 20, 10.0D));
-} else {
-    monster.goalSelector.addGoal(1, new AttackEterniaCrystalGoal(monster));
+```json
+"behavior": {
+  "type": "dungeon_defenders:ranged_crystal",
+  "damage_per_shot": 3,
+  "ticks_between_shots": 20,
+  "shoot_range": 10.0
 }
 ```
 
@@ -441,7 +516,10 @@ Pour une préférence propre à **ce joueur** (masquer un overlay, désactiver u
 pas la config de gameplay ci-dessus : [`client/ClientDisplayConfig.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/client/ClientDisplayConfig.java)
 est le spec dédié, type `CLIENT` plutôt que `COMMON` — un fichier **local**
 (`config/dungeon_defenders-client.toml`), jamais lu ni synchronisé côté serveur. Exemple
-existant : `showScoreGainPopup` (affichage du popup de `ScoreGainOverlay`).
+existants : `showScoreGainPopup` (affichage du popup de `ScoreGainOverlay`) et
+`showTowerBlockOutline` (contour de sélection sur les tours/cristaux, voir la recette « Masquer
+le contour de sélection d'un bloc » plus bas — l'étape 3 y est différente, ce n'est pas un
+`GuiLayer`).
 
 1. Déclarer le champ dans `ClientDisplayConfig.java` :
 
@@ -478,3 +556,96 @@ constructeur de `DungeonDefendersModClient`
 (`container.registerConfig(ModConfig.Type.CLIENT, ClientDisplayConfig.SPEC)`) — pas la peine d'y
 retoucher pour une nouvelle option, seulement pour la toute première fois que ce fichier a été
 créé.
+
+## Masquer le contour de sélection d'un bloc (sans casser son ciblage)
+
+Le contour noir filaire dessiné autour du bloc visé se supprime **au rendu**, dans
+[`client/BlockOutlineClientEvents.java`](../src/main/java/com/github/c0c0tier/dungeon_defenders/client/BlockOutlineClientEvents.java) :
+il suffit d'ajouter une condition à `hidesOutline(...)` (reconnaissance par block entity de
+préférence — générique à toute une famille de blocs — sinon par classe de bloc).
+
+> **Ne surtout pas passer par `getShape` → `Shapes.empty()`** pour ça. `getShape` est la forme
+> lue par le rayon de visée du joueur : la vider ne masque pas seulement le contour, elle rend
+> le bloc **impossible à viser et à cliquer** (`useWithoutItem` ne se déclenche plus, le mode
+> suppression de tour ne le reconnaît plus). C'est un choix délibéré et documenté pour
+> `SpawnerBlock` (introuvable en survie, voir [02-gameplay.md](02-gameplay.md)), mais c'est un
+> bug pour tout bloc avec lequel le joueur doit encore interagir.
+
+L'événement à utiliser est `ExtractBlockOutlineRenderStateEvent`, annulable — annulé, aucun
+render state de contour n'est soumis. **`RenderHighlightEvent` n'existe plus** dans cette
+version de NeoForge : les tutoriels qui le mentionnent sont périmés.
+
+## Livrer la structure de la taverne (ou d'une map)
+
+Côté **constructeur** (dans le jeu, en créatif) :
+
+1. Construire la taverne **n'importe où sauf** autour de `MapInstance.MAP_POS`
+   (10000, 65, 0) : cette zone est rasée à chaque démarrage de partie.
+2. Poser le `tavern_crystal` dedans — sans lui, aucun accès à l'écran de choix de map.
+3. Poser (optionnel) **un seul** `player_spawn` à l'endroit exact où les joueurs doivent
+   arriver. Sans marqueur, l'arrivée retombe sur `TavernSpawn.SPAWN_POS`, c'est-à-dire le
+   centre horizontal de la structure, un bloc au-dessus de sa couche la plus basse.
+4. Encadrer le tout avec un **bloc de structure** vanilla en mode « Sauvegarder », puis
+   récupérer le fichier écrit dans `<monde>/generated/minecraft/structures/<nom>.nbt`.
+
+Côté **dépôt** : déposer le fichier en
+`src/main/resources/data/dungeon_defenders/structure/tavern.nbt` — c'est le chemin que
+`TavernSpawn.TAVERN_STRUCTURE` (`dungeon_defenders:tavern`) résout. Rien d'autre à changer :
+si le fichier est là il est chargé, sinon le mod retombe sur sa plateforme de repli.
+
+Deux contraintes à respecter à la construction :
+
+- **Prévoir des murs ou un garde-corps** : le monde est vide, rien ne retient dans le vide en
+  dehors de la structure.
+- **La taille est libre**, la zone nettoyée avant de poser se calcule depuis
+  `template.getSize()` — mais elle est reposée **entièrement** à chaque chargement du monde,
+  blocs **et entités** : tout ce qu'un joueur y aurait modifié ou laissé traîner est écrasé au
+  redémarrage. Les entités décoratives (cadres, supports à armure, tableaux) sont bien posées.
+
+## Créer et publier une map
+
+Tout se fait **en jeu**, sans toucher au code ni écrire de JSON.
+
+1. Construire la map en créatif, **loin de (0, 65, 0) et de (10000, 65, 0)** — ces deux zones
+   sont rasées, l'une à chaque chargement du monde, l'autre au lancement d'une partie.
+2. Y poser : un `eternia_crystal` (l'objectif), au moins un `spawner` configuré, un
+   `player_spawn` (point d'arrivée, consommé au démarrage), des marqueurs `no_build_zone` où
+   la pose de tours doit être interdite, et un **`map_config`** (nom, ordre dans le pack,
+   nombre de vagues, multiplicateur de score).
+3. Encadrer le tout avec un **bloc de structure** vanilla en mode « Sauvegarder », en la
+   nommant **`<namespace>:map/<id>`** — le namespace est l'identité du pack
+   (`dungeon_defenders` pour la campagne, le sien pour une extension).
+4. C'est fini : la map apparaît dans l'écran de choix du cristal de la taverne, sans
+   redémarrage. Le fichier est écrit dans `<monde>/generated/<namespace>/structure/map/<id>.nbt`.
+
+> **Le nom de sauvegarde est le seul identifiant.** Le bloc de configuration ne le connaît pas
+> et ne peut donc pas l'afficher — c'est pour ça que la suppression d'une map demande de le
+> saisir à la main dans son écran.
+
+### Publier
+
+Une map créée en jeu vit dans la sauvegarde du monde : elle ne part pas avec le mod. Pour la
+distribuer, copier son `.nbt` dans les ressources d'un jar :
+
+```
+mon_pack.jar
+├── META-INF/neoforge.mods.toml      (dépendance à dungeon_defenders)
+├── data/mon_pack/structure/map/ma_map.nbt
+└── assets/mon_pack/textures/gui/maps/ma_map.png     (aperçu 128x72)
+```
+
+**Aucun code dans le jar.** Il est découvert automatiquement (voir `MapRegistry`). Le nom
+affiché du pack peut venir d'un `assets/mon_pack/lang/fr_fr.json` contenant
+`"dungeon_defenders.map_pack.mon_pack": "Mon Pack"` ; sans ça c'est le namespace qui s'affiche.
+
+Un datapack seul fonctionne pour la structure mais ne peut pas embarquer l'image d'aperçu.
+
+**Tu n'as pas à construire ce jar à la main** : `/dd_export <namespace>` le génère dans
+`<dossier du serveur>/dungeon_defenders_export/<namespace>.jar`, avec le `mods.toml`, toutes les
+maps du pack, leurs aperçus s'ils existent, et un fichier de langue de départ à retoucher pour
+donner un vrai nom au pack. Un jar par **pack**, pas par map. Seules les maps créées en jeu sont
+exportées — celles qui viennent déjà d'un jar sont en lecture seule.
+
+> **Piège** : une structure du monde est cherchée **avant** celle d'un jar. Une map publiée puis
+> re-sauvegardée en jeu sous le même identifiant est remplacée par la version locale tant qu'on
+> ne la supprime pas de la sauvegarde.

@@ -44,10 +44,121 @@ public class ModKeyMappings {
             GLFW.GLFW_KEY_X,
             CATEGORY);
 
+    // Pressée en regardant une tour posée : demande son amélioration au serveur (voir
+    // TowerInspectClientEvents). U comme "upgrade", libre en vanilla.
+    public static final KeyMapping UPGRADE_TOWER = new KeyMapping(
+            "key.dungeon_defenders.upgrade_tower",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_U,
+            CATEGORY);
+
+    // Maintenue : affiche le plan de la zone actuelle (taverne ou map) en plein écran, avec les
+    // joueurs dessus — voir MapOverlayClientEvents. Relâchée : disparaît. Premier usage de
+    // isDown() sur cette branche (pollée chaque tick client, comme le sera le mécanisme des
+    // compétences canalisées sur la branche héros/sorts) plutôt que consumeClick() : un
+    // affichage "tant que maintenu", pas une bascule.
+    //
+    // Tab (2026-09-07, retour du joueur : plus confortable à maintenir que M). Ce code physique
+    // était aussi celui de key.playerList (liste des joueurs vanilla) ; comme les deux touches
+    // sont lues via isDown() sans exclusivité, les garder toutes les deux sur Tab aurait affiché
+    // les deux superposées. Réglé en libérant key.playerList (voir
+    // DungeonDefendersModClient#onClientSetup) : le mod n'en a plus l'usage, Tab n'affiche donc
+    // plus que ce plan.
+    public static final KeyMapping MAP_OVERLAY = new KeyMapping(
+            "key.dungeon_defenders.map_overlay",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_TAB,
+            CATEGORY);
+
+    // Ouvre l'écran de choix de héros. H libre côté vanilla ; à terme ce choix se fera aussi
+    // depuis la taverne, mais une touche évite de dépendre d'un bloc pour un système qui doit
+    // être testable tout de suite.
+    public static final KeyMapping HERO_SELECTION = new KeyMapping(
+            "key.dungeon_defenders.hero_selection",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_H,
+            CATEGORY);
+
+    // Butin au sol : ranger dans l'inventaire de la Forge / équiper directement. E et F, comme
+    // demandé par le joueur — ce sont aussi les touches vanilla de l'inventaire et de l'échange
+    // de main, voir LootPickupClientEvents pour la cohabitation.
+    public static final KeyMapping LOOT_STORE = new KeyMapping(
+            "key.dungeon_defenders.loot_store",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_E,
+            CATEGORY);
+
+    public static final KeyMapping LOOT_EQUIP = new KeyMapping(
+            "key.dungeon_defenders.loot_equip",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_F,
+            CATEGORY);
+
+    // Ouvre l'écran des caractéristiques (HeroStatsScreen). K est libre côté vanilla.
+    public static final KeyMapping HERO_STATS = new KeyMapping(
+            "key.dungeon_defenders.hero_stats",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_K,
+            CATEGORY);
+
+    // Les quatre emplacements de compétence — touches 1 à 4, l'ordre du HUD (voir
+    // AbilitySlotsOverlay) et de init.AbilitySlot : soin, sort 1, sort 2, réparation. Les
+    // touches vanilla de hotbar utilisent les mêmes codes physiques, mais la hotbar est déjà
+    // neutralisée en survie (voir DungeonDefendersModClient) — rien ne s'y oppose. En créatif,
+    // où la hotbar reste active, appuyer sur 1-4 change donc AUSSI le slot sélectionné en plus
+    // de déclencher la compétence ; effet de bord mineur, accepté (les compétences n'ont de
+    // toute façon d'utilité qu'en jeu, pas en train de construire).
+    public static final KeyMapping ABILITY_HEAL = new KeyMapping(
+            "key.dungeon_defenders.ability_heal",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_1,
+            CATEGORY);
+
+    public static final KeyMapping ABILITY_SPELL_1 = new KeyMapping(
+            "key.dungeon_defenders.ability_spell_1",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_2,
+            CATEGORY);
+
+    public static final KeyMapping ABILITY_SPELL_2 = new KeyMapping(
+            "key.dungeon_defenders.ability_spell_2",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_3,
+            CATEGORY);
+
+    public static final KeyMapping ABILITY_REPAIR = new KeyMapping(
+            "key.dungeon_defenders.ability_repair",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_4,
+            CATEGORY);
+
+    /** Indexé par {@code AbilitySlot.ordinal()} — même ordre que le HUD : soin, sort 1, sort 2, réparation. */
+    public static final KeyMapping[] ABILITY_KEYS = {ABILITY_HEAL, ABILITY_SPELL_1, ABILITY_SPELL_2, ABILITY_REPAIR};
+
+    // Déclenche la capture d'aperçu d'une map, une fois armée depuis l'écran de choix (voir
+    // MapPreviewCapture). F9 : libre en vanilla, et hors des touches de jeu — c'est un outil de
+    // mappeur, utilisé rarement.
+    public static final KeyMapping CAPTURE_MAP_PREVIEW = new KeyMapping(
+            "key.dungeon_defenders.capture_map_preview",
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_F9,
+            CATEGORY);
+
     public static void register(RegisterKeyMappingsEvent event) {
         event.registerCategory(CATEGORY);
         event.register(TOWER_WHEEL);
         event.register(ROTATE_TOWER);
         event.register(REMOVE_TOWER_MODE);
+        event.register(UPGRADE_TOWER);
+        event.register(MAP_OVERLAY);
+        event.register(HERO_SELECTION);
+        event.register(HERO_STATS);
+        event.register(LOOT_STORE);
+        event.register(LOOT_EQUIP);
+        event.register(ABILITY_HEAL);
+        event.register(ABILITY_SPELL_1);
+        event.register(ABILITY_SPELL_2);
+        event.register(ABILITY_REPAIR);
+        event.register(CAPTURE_MAP_PREVIEW);
     }
 }

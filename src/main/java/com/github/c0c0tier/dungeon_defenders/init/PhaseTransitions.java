@@ -36,6 +36,11 @@ public final class PhaseTransitions {
         level.setData(ModAttachments.WAVE_ENEMIES_KILLED, 0);
         level.syncData(ModAttachments.WAVE_ENEMIES_KILLED);
 
+        // Nouvelle vague : le suivi "aucun dégât" repart de zéro (voir ScoreKeeper).
+        level.setData(ModAttachments.WAVE_PLAYER_DAMAGED, false);
+        level.setData(ModAttachments.WAVE_CRYSTAL_DAMAGED, false);
+        level.setData(ModAttachments.WAVE_TOWER_LOST, false);
+
         for (Player player : level.players()) {
             player.setData(ModAttachments.READY, false);
             player.syncData(ModAttachments.READY);
@@ -50,7 +55,7 @@ public final class PhaseTransitions {
      * précédente.
      */
     public static void enterBuild(Level level) {
-        int nextWave = Math.min(level.getData(ModAttachments.CURRENT_WAVE) + 1, ModAttachments.MAX_WAVE);
+        int nextWave = Math.min(level.getData(ModAttachments.CURRENT_WAVE) + 1, ModAttachments.waveCount(level));
         level.setData(ModAttachments.CURRENT_WAVE, nextWave);
         level.syncData(ModAttachments.CURRENT_WAVE);
 
@@ -76,9 +81,12 @@ public final class PhaseTransitions {
      * boutons "Rejouer"/"Retour à la taverne") — voir doc/02-gameplay.md.
      */
     public static void onVictory(Level level) {
-        resetGameState(level);
+        ScoreKeeper.awardMapCompleted(level);
+        // Relevé AVANT la remise à zéro : c'est le score final affiché par GameOverScreen.
+        int finalScore = level.getData(ModAttachments.SCORE);
+        resetGameState(level, GamePhase.BUILD);
         for (Player player : level.players()) {
-            sendGameOverScreen(player, true);
+            sendGameOverScreen(player, true, finalScore);
         }
     }
 
@@ -89,10 +97,44 @@ public final class PhaseTransitions {
      * lui-même n'est pas replacé automatiquement — même remarque que pour {@link #onVictory}.
      */
     public static void onDefeat(Level level) {
-        resetGameState(level);
+        int finalScore = level.getData(ModAttachments.SCORE);
+        resetGameState(level, GamePhase.BUILD);
         for (Player player : level.players()) {
-            sendGameOverScreen(player, false);
+            sendGameOverScreen(player, false, finalScore);
         }
+    }
+
+    /**
+     * Entre (ou revient) à la Taverne : remet toute la partie à zéro — vague 1, compteurs,
+     * score — et pose la phase {@code TAVERN}. Appelée au chargement du monde
+     * ({@code TavernSpawn}) et au retour de map ({@code MapInstance#returnToTavern}).
+     *
+     * <p>La Taverne n'est pas une phase de partie : aucun spawner ne tourne, aucune vague ne
+     * progresse, mais les tours s'y posent librement pour les essais (voir
+     * doc/02-gameplay.md).
+     */
+    public static void enterTavern(Level level) {
+        // Le nombre de vagues repart au défaut : la taverne n'est la map de personne, et une
+        // valeur héritée de la partie précédente n'aurait aucun sens dans le HUD.
+        level.setData(ModAttachments.MAP_WAVE_COUNT, ModAttachments.MAX_WAVE);
+        level.syncData(ModAttachments.MAP_WAVE_COUNT);
+        level.setData(ModAttachments.MAP_SCORE_MULTIPLIER, 1.0F);
+        resetGameState(level, GamePhase.TAVERN);
+    }
+
+    /**
+     * Démarre une partie sur une map : vague 1, phase Construction, compteurs et score à zéro.
+     * Appelée par {@code MapInstance#startGame}.
+     *
+     * <p>Volontairement distincte d'{@link #enterBuild} : celle-ci fait <b>avancer</b> la vague
+     * (elle sert au retour en Construction entre deux vagues), ce qui démarrerait une partie à
+     * la vague 2. Cette remise à zéro explicite était implicite tant que la phase par défaut
+     * était {@code BUILD} ; elle ne l'est plus depuis que c'est {@code TAVERN}.
+     */
+    public static void startNewGame(Level level, int waveCount) {
+        level.setData(ModAttachments.MAP_WAVE_COUNT, Math.max(1, waveCount));
+        level.syncData(ModAttachments.MAP_WAVE_COUNT);
+        resetGameState(level, GamePhase.BUILD);
     }
 
     // level.players() est statiquement typé Player (Level est commun client/serveur), mais
@@ -100,17 +142,17 @@ public final class PhaseTransitions {
     // logique serveur) : le cast est donc toujours valide en pratique, gardé quand même par
     // sécurité plutôt que supposé, même principe que les `instanceof ServerLevel` ailleurs
     // dans le mod.
-    private static void sendGameOverScreen(Player player, boolean victory) {
+    private static void sendGameOverScreen(Player player, boolean victory, int finalScore) {
         if (player instanceof ServerPlayer serverPlayer) {
-            serverPlayer.connection.send(new GameOverPayload(victory).toVanillaClientbound());
+            serverPlayer.connection.send(new GameOverPayload(victory, finalScore).toVanillaClientbound());
         }
     }
 
-    private static void resetGameState(Level level) {
+    private static void resetGameState(Level level, GamePhase phase) {
         level.setData(ModAttachments.CURRENT_WAVE, 1);
         level.syncData(ModAttachments.CURRENT_WAVE);
 
-        level.setData(ModAttachments.GAME_PHASE, GamePhase.BUILD.ordinal());
+        level.setData(ModAttachments.GAME_PHASE, phase.ordinal());
         level.syncData(ModAttachments.GAME_PHASE);
 
         level.setData(ModAttachments.WAVE_ENEMIES_KILLED, 0);
@@ -122,6 +164,10 @@ public final class PhaseTransitions {
         // d'une carte — pas touchés ici.
         level.setData(ModAttachments.SCORE, 0);
         level.syncData(ModAttachments.SCORE);
+
+        // Un décompte en cours n'a plus de sens après une remise à zéro (abandon, défaite...).
+        level.setData(ModAttachments.COMBAT_COUNTDOWN, 0);
+        level.syncData(ModAttachments.COMBAT_COUNTDOWN);
 
         recomputeWaveEnemiesTotal(level);
         ManaChestBlock.respawnAll(level);
@@ -147,10 +193,16 @@ public final class PhaseTransitions {
             if (!(level.getBlockEntity(pos) instanceof SpawnerBlockEntity spawner)) {
                 continue;
             }
-            if (currentWave < spawner.getWaveStart() || currentWave > spawner.getWaveEnd()) {
+            if (!spawner.isActiveOnWave(currentWave)) {
                 continue;
             }
             for (SpawnerBlockEntity.SpawnEntry entry : spawner.getEntries()) {
+                // Un ennemi inconnu (pack retiré, JSON invalide...) ne fera jamais rien apparaître
+                // (voir SpawnEntry#tickAndMaybeSpawn) : le compter bloquerait la vague, qui
+                // attendrait des monstres qui ne viendront pas.
+                if (EnemyRegistry.byId(entry.enemy()) == null) {
+                    continue;
+                }
                 // Même formule que SpawnEntry.resetForWave(...) / l'aperçu du renderer, pour
                 // que ce total corresponde à ce qui sera effectivement spawné.
                 total += Math.max(1, (int) Math.round(entry.baseCount() * multiplier));

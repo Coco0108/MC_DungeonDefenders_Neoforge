@@ -2,19 +2,42 @@ package com.github.c0c0tier.dungeon_defenders.network;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.MapInstance;
+import com.github.c0c0tier.dungeon_defenders.ability.AbilityCooldowns;
+import com.github.c0c0tier.dungeon_defenders.ability.AbilityRegistry;
+import com.github.c0c0tier.dungeon_defenders.ability.BurstAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.ChannelAbility;
+import com.github.c0c0tier.dungeon_defenders.ability.PlayerAbilityChannels;
 import com.github.c0c0tier.dungeon_defenders.block.entity.AbstractTowerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.BalanceValue;
+import com.github.c0c0tier.dungeon_defenders.init.EnemyRegistry;
+import com.github.c0c0tier.dungeon_defenders.init.GameBalance;
+import com.github.c0c0tier.dungeon_defenders.init.AbilitySlot;
 import com.github.c0c0tier.dungeon_defenders.init.GameDifficulty;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
+import com.github.c0c0tier.dungeon_defenders.init.HeroDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.HeroStat;
+import com.github.c0c0tier.dungeon_defenders.loot.Equipment;
+import com.github.c0c0tier.dungeon_defenders.item.HeroWeapons;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MapConfigBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.MapRegistry;
+import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.PhaseTransitions;
-import com.github.c0c0tier.dungeon_defenders.init.SpawnableEnemy;
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import com.mojang.logging.LogUtils;
+import com.github.c0c0tier.dungeon_defenders.init.MapPreviews;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.Identifier;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -27,9 +50,14 @@ import net.neoforged.neoforge.event.EventHooks;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import org.slf4j.Logger;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 // Enregistrement des paquets custom du mod. Sans "bus" explicite sur @EventBusSubscriber,
 // RegisterPayloadHandlersEvent (qui implémente IModBusEvent) part automatiquement sur le bus
@@ -39,19 +67,30 @@ import java.util.List;
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class ModNetworking {
 
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     // Distance max (au carré) entre le joueur et le spawner pour accepter le paquet — même
     // ordre de grandeur que la portée d'interaction avec un bloc à conteneur vanilla.
     private static final double MAX_DISTANCE_SQ = 64.0D;
 
-    // Part du coût en mana rendue à la suppression volontaire d'une tour (touche dédiée, voir
-    // handleRemoveTower) — valeur de test, pas encore équilibrée, comme les coûts de pose
-    // (TowerDefinition). Ne s'applique jamais à une tour détruite au combat (voir
+    // Pose, retrait et amélioration de tour : le joueur vise jusqu'à TowerDefinition.REACH blocs
+    // depuis ses yeux. La distance est mesurée ici depuis ses pieds jusqu'au centre du bloc, d'où
+    // une marge. Corrige un refus silencieux (2026-11-10) : ces trois actions utilisaient la
+    // limite de 8 blocs des écrans de configuration, alors que le client laissait viser à 20.
+    private static final double TOWER_REACH_SQ = (TowerDefinition.REACH + 3.0D) * (TowerDefinition.REACH + 3.0D);
+
+    // La part du coût en mana rendue à la suppression volontaire d'une tour (touche dédiée, voir
+    // handleRemoveTower) est data-driven : BalanceValue.TOWER_REFUND_RATIO, 0.5 par défaut
+    // (balance/towers.json). Ne s'applique jamais à une tour détruite au combat (voir
     // AbstractTowerBlockEntity#setHealth, qui ne passe jamais par ce chemin).
-    private static final float TOWER_MANA_REFUND_RATIO = 0.5F;
 
     @SubscribeEvent
     static void onRegisterPayloadHandlers(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1");
+        // "2" depuis le passage des ennemis en data-driven (2026-09-29) : SpawnerConfigPayload et
+        // ScoreGainPayload portent désormais un identifiant au lieu d'un ordinal. Un client resté
+        // sur l'ancienne version est ainsi refusé proprement à la connexion, au lieu de décoder
+        // des paquets de forme différente.
+        PayloadRegistrar registrar = event.registrar("2");
         registrar.playToServer(
                 SpawnerConfigPayload.TYPE,
                 SpawnerConfigPayload.STREAM_CODEC,
@@ -82,6 +121,66 @@ public class ModNetworking {
                 RemoveTowerPayload.STREAM_CODEC,
                 ModNetworking::handleRemoveTower
         );
+        registrar.playToServer(
+                UpgradeTowerPayload.TYPE,
+                UpgradeTowerPayload.STREAM_CODEC,
+                ModNetworking::handleUpgradeTower
+        );
+        registrar.playToServer(
+                LeaveMapPayload.TYPE,
+                LeaveMapPayload.STREAM_CODEC,
+                ModNetworking::handleLeaveMap
+        );
+        registrar.playToServer(
+                MapConfigPayload.TYPE,
+                MapConfigPayload.STREAM_CODEC,
+                ModNetworking::handleMapConfig
+        );
+        registrar.playToServer(
+                DeleteMapPayload.TYPE,
+                DeleteMapPayload.STREAM_CODEC,
+                ModNetworking::handleDeleteMap
+        );
+        registrar.playToServer(
+                SelectHeroPayload.TYPE,
+                SelectHeroPayload.STREAM_CODEC,
+                ModNetworking::handleSelectHero
+        );
+        registrar.playToServer(
+                StartChannelAbilityPayload.TYPE,
+                StartChannelAbilityPayload.STREAM_CODEC,
+                ModNetworking::handleStartChannelAbility
+        );
+        registrar.playToServer(
+                StopChannelAbilityPayload.TYPE,
+                StopChannelAbilityPayload.STREAM_CODEC,
+                ModNetworking::handleStopChannelAbility
+        );
+        registrar.playToServer(
+                ActivateBurstAbilityPayload.TYPE,
+                ActivateBurstAbilityPayload.STREAM_CODEC,
+                ModNetworking::handleActivateBurstAbility
+        );
+        registrar.playToServer(
+                LootPickupPayload.TYPE,
+                LootPickupPayload.STREAM_CODEC,
+                ModNetworking::handleLootPickup
+        );
+        registrar.playToServer(
+                ForgeActionPayload.TYPE,
+                ForgeActionPayload.STREAM_CODEC,
+                ModNetworking::handleForgeAction
+        );
+        registrar.playToServer(
+                SpendStatPointPayload.TYPE,
+                SpendStatPointPayload.STREAM_CODEC,
+                ModNetworking::handleSpendStatPoint
+        );
+        registrar.playToServer(
+                UploadMapPreviewPayload.TYPE,
+                UploadMapPreviewPayload.STREAM_CODEC,
+                ModNetworking::handleUploadMapPreview
+        );
         // Sans handler ici : paquets clientbound du mod, le handler vit côté client
         // uniquement (DungeonDefendersModClient#onRegisterClientPayloadHandlers), pour ne
         // jamais charger de classe cliente (Minecraft, Screen...) sur un serveur dédié — cette
@@ -93,6 +192,34 @@ public class ModNetworking {
         registrar.playToClient(
                 ScoreGainPayload.TYPE,
                 ScoreGainPayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                OpenMapSelectionPayload.TYPE,
+                OpenMapSelectionPayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                EnemyDefinitionsPayload.TYPE,
+                EnemyDefinitionsPayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                TowerStatsPayload.TYPE,
+                TowerStatsPayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                GameBalancePayload.TYPE,
+                GameBalancePayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                AbilityCooldownPayload.TYPE,
+                AbilityCooldownPayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                MapPreviewPayload.TYPE,
+                MapPreviewPayload.STREAM_CODEC
+        );
+        registrar.playToClient(
+                OpenForgePayload.TYPE,
+                OpenForgePayload.STREAM_CODEC
         );
     }
 
@@ -116,7 +243,16 @@ public class ModNetworking {
             }
 
             BlockPos pos = payload.pos();
-            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > MAX_DISTANCE_SQ) {
+            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > TOWER_REACH_SQ) {
+                return;
+            }
+
+            // Le marqueur de zone interdite occupe la case, donc le test canBeReplaced()
+            // ci-dessous suffirait déjà à refuser la pose — mais silencieusement. Testé à part
+            // pour pouvoir expliquer le refus : le bloc étant invisible, le joueur n'a aucun
+            // moyen de deviner pourquoi sa tour ne passe pas.
+            if (serverLevel.getBlockState(pos).is(ModBlocks.NO_BUILD_ZONE.get())) {
+                player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.no_build_zone"));
                 return;
             }
 
@@ -126,6 +262,13 @@ public class ModNetworking {
 
             TowerDefinition tower = towers[payload.towerOrdinal()];
             Direction direction = directions[payload.directionOrdinal()];
+
+            // Le client ne montre déjà que les tours du héros dans la roue, mais il n'est jamais
+            // l'autorité : un paquet forgé pourrait demander la tour d'une autre classe.
+            if (!HeroDefinition.of(player).canPlace(tower)) {
+                player.sendSystemMessage(Component.translatable("dungeon_defenders.hero.wrong_tower"));
+                return;
+            }
 
             BlockState state = tower.block().defaultBlockState();
             // La rotation n'a d'effet que si le bloc a une propriété d'orientation - Spike
@@ -144,6 +287,9 @@ public class ModNetworking {
             boolean cancelled = EventHooks.onBlockPlace(player, before, Direction.UP);
             if (cancelled) {
                 before.restore(Block.UPDATE_ALL);
+            } else if (serverLevel.getBlockEntity(pos) instanceof AbstractTowerBlockEntity placed) {
+                // Maîtrise des tours du poseur (init/HeroStat).
+                placed.setOwnerBonus(1.0D + HeroStat.TOWER_MASTERY.bonus(player) + Equipment.towerDamageBonus(player));
             }
         });
     }
@@ -161,15 +307,15 @@ public class ModNetworking {
                 return;
             }
 
-            // Symétrique à la pose (ModEvents.onTowerPlace) : les tours ne se retirent qu'en
-            // phase Construction.
-            if (level.getData(ModAttachments.GAME_PHASE) != GamePhase.BUILD.ordinal()) {
+            // Symétrique à la pose (ModEvents.onTowerPlace) : Construction ou Taverne.
+            GamePhase phase = GamePhase.of(level);
+            if (!phase.allowsTowerBuilding()) {
                 player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.build_phase_only"));
                 return;
             }
 
             BlockPos pos = payload.pos();
-            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > MAX_DISTANCE_SQ) {
+            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > TOWER_REACH_SQ) {
                 return;
             }
 
@@ -177,7 +323,12 @@ public class ModNetworking {
                 return;
             }
 
-            int refund = Math.round(tower.getManaCost() * TOWER_MANA_REFUND_RATIO);
+            // Aucun remboursement à la Taverne : la pose y est déjà gratuite, rembourser
+            // reviendrait à imprimer du mana à volonté. Ailleurs, le remboursement porte sur tout
+            // le mana investi : la pose ET les améliorations.
+            int refund = phase == GamePhase.TAVERN
+                    ? 0
+                    : (int) Math.round(tower.getInvestedMana() * GameBalance.get(BalanceValue.TOWER_REFUND_RATIO, false));
 
             // false : pas de drop d'item, comme une tour détruite au combat (setHealth) — la
             // touche dédiée est l'unique façon "propre" de retirer une tour, symétrique à la
@@ -195,6 +346,56 @@ public class ModNetworking {
         });
     }
 
+    // Amélioration de la tour regardée (touche dédiée). Mêmes règles que la pose : Construction
+    // ou Taverne seulement, payante sauf à la Taverne.
+    private static void handleUpgradeTower(UpgradeTowerPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (!(level instanceof ServerLevel serverLevel)) {
+                return;
+            }
+
+            GamePhase phase = GamePhase.of(level);
+            if (!phase.allowsTowerBuilding()) {
+                player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.build_phase_only"));
+                return;
+            }
+
+            BlockPos pos = payload.pos();
+            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > TOWER_REACH_SQ) {
+                return;
+            }
+            if (!(serverLevel.getBlockEntity(pos) instanceof AbstractTowerBlockEntity tower)) {
+                return;
+            }
+            if (!tower.canUpgrade()) {
+                player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.upgrade_max_level"));
+                return;
+            }
+
+            int cost = phase == GamePhase.TAVERN ? 0 : tower.getUpgradeCost();
+            int currentMana = player.getData(ModAttachments.MANA);
+            if (currentMana < cost) {
+                player.sendSystemMessage(Component.translatable(
+                        "dungeon_defenders.tower.upgrade_not_enough_mana", cost, currentMana));
+                return;
+            }
+
+            tower.upgrade();
+            // L'amélioration remet aussi à jour la Maîtrise des tours, avec celle de l'améliorateur
+            // si elle est meilleure.
+            tower.setOwnerBonus(Math.max(tower.ownerBonus(),
+                    1.0D + HeroStat.TOWER_MASTERY.bonus(player) + Equipment.towerDamageBonus(player)));
+            if (cost > 0) {
+                player.setData(ModAttachments.MANA, currentMana - cost);
+                player.syncData(ModAttachments.MANA);
+            }
+            player.sendSystemMessage(Component.translatable(
+                    "dungeon_defenders.tower.upgraded", tower.definition().displayName(), tower.getTowerLevel(), cost));
+        });
+    }
+
     private static void handleStartGame(StartGamePayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = context.player();
@@ -202,7 +403,301 @@ public class ModNetworking {
             if (!(level instanceof ServerLevel serverLevel)) {
                 return;
             }
-            MapInstance.startGame(serverLevel);
+            // Revérifié côté serveur : le client a listé les maps à l'ouverture de l'écran, mais
+            // l'identifiant reçu reste une valeur venue du réseau. Introuvable (map supprimée
+            // entre-temps, client bricolé...), on retombe sur l'arène provisoire plutôt que de
+            // refuser silencieusement.
+            MapInstance.startGame(serverLevel, MapRegistry.find(serverLevel, payload.structureId()).orElse(null));
+        });
+    }
+
+    // Réglages d'une map, envoyés par MapConfigScreen. Créatif uniquement, comme la config d'un
+    // spawner : une map est censée être figée une fois construite.
+    private static void handleMapConfig(MapConfigPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (level.isClientSide() || !player.isCreative()) {
+                return;
+            }
+
+            BlockPos pos = payload.pos();
+            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > MAX_DISTANCE_SQ) {
+                return;
+            }
+
+            if (level.getBlockEntity(pos) instanceof MapConfigBlockEntity mapConfig) {
+                mapConfig.applyConfig(payload.displayName(), payload.order(), payload.waveCount(),
+                        payload.scoreMultiplier(), payload.timeOfDay());
+            }
+        });
+    }
+
+    // Suppression d'une map créée en jeu, après confirmation côté client. Ne peut effacer qu'un
+    // fichier du dossier `generated/` de la sauvegarde : une map livrée dans un jar (la campagne,
+    // un pack tiers) est une ressource en lecture seule, d'où le message d'échec.
+    private static void handleDeleteMap(DeleteMapPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (!(level instanceof ServerLevel serverLevel) || !player.isCreative()) {
+                return;
+            }
+            if (!MapDefinition.isMapStructure(payload.structureId())) {
+                return;
+            }
+
+            boolean deleted = MapRegistry.delete(serverLevel.getStructureManager(), payload.structureId());
+            player.sendSystemMessage(Component.translatable(deleted
+                    ? "dungeon_defenders.map_config.deleted"
+                    : "dungeon_defenders.map_config.delete_failed", payload.structureId().toString()));
+        });
+    }
+
+    // Aperçu capturé par un mappeur (voir client/MapPreviewCapture). Mêmes garde-fous que la
+    // suppression : créatif seulement, et uniquement pour une map créée en jeu — celle d'un jar
+    // est une ressource en lecture seule, son aperçu vient de son pack. L'image est revalidée
+    // (taille, signature PNG) et le chemin borné au dossier des aperçus par MapPreviews.
+    private static void handleUploadMapPreview(UploadMapPreviewPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            if (!(player.level() instanceof ServerLevel serverLevel) || !player.isCreative()) {
+                return;
+            }
+            Identifier structureId = payload.structureId();
+            if (!MapDefinition.isMapStructure(structureId)
+                    || !MapRegistry.isFromWorld(serverLevel.getStructureManager(), structureId)) {
+                return;
+            }
+
+            boolean saved = MapPreviews.save(serverLevel.getServer(), structureId, payload.png());
+            player.sendSystemMessage(Component.translatable(saved
+                    ? "dungeon_defenders.map_preview.saved"
+                    : "dungeon_defenders.map_preview.failed", structureId.toString()));
+            if (!saved) {
+                return;
+            }
+            // Les autres joueurs connectés reçoivent le nouvel aperçu tout de suite ; l'auteur
+            // l'a déjà chargé de son côté.
+            for (ServerPlayer other : serverLevel.getServer().getPlayerList().getPlayers()) {
+                if (other != player) {
+                    other.connection.send(new MapPreviewPayload(structureId, payload.png()).toVanillaClientbound());
+                }
+            }
+        });
+    }
+
+    // Bouton "Abandonner le niveau" du menu pause (voir client/PauseMenuClientEvents), après
+    // confirmation côté client. Ramène TOUT LE MONDE à la taverne, pas seulement celui qui a
+    // cliqué : une seule partie active à la fois sur tout le serveur, les joueurs vont et
+    // viennent ensemble (même comportement que /dd_leave et que le bouton de GameOverScreen).
+    private static void handleLeaveMap(LeaveMapPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (!(level instanceof ServerLevel serverLevel)) {
+                return;
+            }
+
+            // Revérifié ici comme tout paquet : le client masque déjà le bouton hors partie,
+            // mais il n'est jamais l'autorité. Abandonner depuis la taverne n'aurait aucun sens
+            // (et relancerait un nettoyage de la zone de map pour rien).
+            if (!GamePhase.of(level).isInGame()) {
+                return;
+            }
+
+            MapInstance.returnToTavern(serverLevel);
+        });
+    }
+
+    // Choix de héros. Refusé en Combat : changer de classe au milieu d'une vague reviendrait à
+    // se retrouver avec des tours posées qu'on ne peut plus poser, et à esquiver toute notion de
+    // choix. La Construction (et plus tard la taverne) est le bon moment.
+    // Envoyé par HeroStatsScreen. Dépenser un point est permis à tout moment ; tout reprendre est
+    // refusé pendant le Combat, pour qu'on ne change pas de profil au milieu d'une vague.
+    private static void handleSpendStatPoint(SpendStatPointPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (level.isClientSide()) {
+                return;
+            }
+
+            if (payload.statOrdinal() == SpendStatPointPayload.RESET) {
+                if (level.getData(ModAttachments.GAME_PHASE) == GamePhase.COMBAT.ordinal()) {
+                    player.sendSystemMessage(Component.translatable("dungeon_defenders.stats.reset_not_in_combat"));
+                    return;
+                }
+                HeroStat.reset(player);
+                return;
+            }
+
+            HeroStat[] stats = HeroStat.values();
+            if (payload.statOrdinal() < 0 || payload.statOrdinal() >= stats.length) {
+                return;
+            }
+            // Refus silencieux : l'écran grise déjà le bouton, seul un paquet forgé arrive ici.
+            stats[payload.statOrdinal()].spend(player);
+        });
+    }
+
+    // Ranger ou équiper un objet de butin au sol (touches du client, voir LootPickupClientEvents).
+    private static void handleLootPickup(LootPickupPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            if (player.level().isClientSide()) {
+                return;
+            }
+            // Identifiant d'entité reçu du réseau : n'importe quoi peut arriver, Equipment#pickUp
+            // vérifie que c'est bien du butin à portée.
+            if (player.level().getEntity(payload.entityId()) instanceof ItemEntity itemEntity) {
+                Equipment.pickUp(player, itemEntity, payload.equip());
+            }
+        });
+    }
+
+    // Actions de l'écran de la Forge. Pas de vérification de distance au bloc : l'inventaire
+    // appartient au joueur, et s'équiper depuis l'inventaire n'est permis que hors Combat pour
+    // que la Forge reste un lieu où l'on passe ENTRE les vagues.
+    private static void handleForgeAction(ForgeActionPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (level.isClientSide()) {
+                return;
+            }
+            if (level.getData(ModAttachments.GAME_PHASE) == GamePhase.COMBAT.ordinal()) {
+                player.sendSystemMessage(Component.translatable("dungeon_defenders.forge.not_in_combat"));
+                return;
+            }
+            switch (payload.action()) {
+                case ForgeActionPayload.EQUIP -> Equipment.equipFromInventory(player, payload.index());
+                case ForgeActionPayload.DISCARD -> Equipment.discard(player, payload.index());
+                case ForgeActionPayload.UNEQUIP -> Equipment.unequip(player);
+                default -> {
+                }
+            }
+        });
+    }
+
+    private static void handleSelectHero(SelectHeroPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            Level level = player.level();
+            if (level.isClientSide()) {
+                return;
+            }
+
+            // Ordinal reçu du réseau : validé avant indexation, comme partout ailleurs.
+            HeroDefinition[] heroes = HeroDefinition.values();
+            if (payload.heroOrdinal() < 0 || payload.heroOrdinal() >= heroes.length) {
+                return;
+            }
+
+            if (level.getData(ModAttachments.GAME_PHASE) == GamePhase.COMBAT.ordinal()) {
+                player.sendSystemMessage(Component.translatable("dungeon_defenders.hero.not_in_combat"));
+                return;
+            }
+
+            player.setData(ModAttachments.HERO, payload.heroOrdinal());
+            player.syncData(ModAttachments.HERO);
+            // L'arme suit le héros : l'ancienne disparaît, la nouvelle arrive.
+            HeroWeapons.ensure(player);
+            // Chaque héros a sa propre arme de butin équipée : ses bonus suivent le changement.
+            Equipment.applyAttributes(player);
+            player.sendSystemMessage(Component.translatable(
+                    "dungeon_defenders.hero.selected", heroes[payload.heroOrdinal()].displayName()));
+        });
+    }
+
+    // Démarre une canalisation (Heal, Repair, ou le sort 2 du héros — jamais le sort 1, une
+    // salve, voir handleActivateBurstAbility). Le serveur ne fait que ENREGISTRER l'intention :
+    // c'est ModEvents.onPlayerTick, à chaque tick suivant, qui appelle réellement
+    // ChannelAbility#canContinue/applyTick — cette séparation est ce qui permet au serveur
+    // d'arrêter une canalisation de son propre chef (mana épuisé, PV pleins, coup reçu) sans
+    // dépendre d'un nouveau paquet du client.
+    private static void handleStartChannelAbility(StartChannelAbilityPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            if (!(player instanceof ServerPlayer serverPlayer)) {
+                return;
+            }
+
+            AbilitySlot[] slots = AbilitySlot.values();
+            if (payload.slotOrdinal() < 0 || payload.slotOrdinal() >= slots.length) {
+                return;
+            }
+            AbilitySlot slot = slots[payload.slotOrdinal()];
+
+            ChannelAbility ability = AbilityRegistry.resolveChannel(serverPlayer, slot);
+            if (ability == null) {
+                return;
+            }
+
+            BlockPos target = payload.target().orElse(null);
+            if (ability.requiresTarget()) {
+                if (target == null) {
+                    return;
+                }
+                // Portée revérifiée ici : le client a déjà raycasté au moment du clic, mais il
+                // n'est jamais l'autorité — un paquet forgé pourrait viser n'importe où.
+                if (serverPlayer.distanceToSqr(target.getX() + 0.5, target.getY() + 0.5, target.getZ() + 0.5) > MAX_DISTANCE_SQ) {
+                    return;
+                }
+            }
+
+            PlayerAbilityChannels.start(serverPlayer.getUUID(), slot, target);
+        });
+    }
+
+    private static void handleStopChannelAbility(StopChannelAbilityPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (context.player() instanceof ServerPlayer serverPlayer) {
+                PlayerAbilityChannels.stop(serverPlayer.getUUID());
+            }
+        });
+    }
+
+    // La compétence en salve (Circular Slice pour l'Écuyer aujourd'hui) : mana et recharge
+    // vérifiés ici, l'effet lui-même délégué à BurstAbility#activate.
+    private static void handleActivateBurstAbility(ActivateBurstAbilityPayload payload, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            Player player = context.player();
+            if (!(player instanceof ServerPlayer serverPlayer) || !(player.level() instanceof ServerLevel level)) {
+                return;
+            }
+
+            AbilitySlot[] slots = AbilitySlot.values();
+            if (payload.slotOrdinal() < 0 || payload.slotOrdinal() >= slots.length) {
+                return;
+            }
+            AbilitySlot slot = slots[payload.slotOrdinal()];
+            // Seul emplacement en salve pour l'instant (voir HeroDefinition) ; toute autre
+            // valeur reçue par le réseau est ignorée plutôt que de deviner quoi faire.
+            if (slot != AbilitySlot.SPELL_1) {
+                return;
+            }
+
+            BurstAbility ability = HeroDefinition.of(serverPlayer).spell1();
+            long now = level.getGameTime();
+            if (!AbilityCooldowns.isReady(serverPlayer.getUUID(), slot, now, ability.cooldownTicks())) {
+                return;
+            }
+
+            int currentMana = serverPlayer.getData(ModAttachments.MANA);
+            if (currentMana < ability.manaCost()) {
+                serverPlayer.sendSystemMessage(Component.translatable(
+                        "dungeon_defenders.ability.not_enough_mana", ability.manaCost(), currentMana));
+                return;
+            }
+
+            serverPlayer.setData(ModAttachments.MANA, currentMana - ability.manaCost());
+            serverPlayer.syncData(ModAttachments.MANA);
+            AbilityCooldowns.markUsed(serverPlayer.getUUID(), slot, now);
+            // Affichage seulement (voir AbilityCooldownPayload) : la recharge reste jugée ici.
+            serverPlayer.connection.send(
+                    new AbilityCooldownPayload(slot.ordinal(), ability.cooldownTicks()).toVanillaClientbound());
+            ability.activate(serverPlayer);
         });
     }
 
@@ -243,15 +738,22 @@ public class ModNetworking {
                 return;
             }
 
+            // Ennemis déjà présents dans ce spawner : une ligne sur un ennemi inconnu (pack retiré)
+            // que le créateur n'a pas touchée doit survivre à un "Valider", sinon réenregistrer la
+            // config effacerait silencieusement l'identifiant que remettre le pack aurait restauré.
+            Set<Identifier> alreadyPresent = spawner.getEntries().stream()
+                    .map(SpawnerBlockEntity.SpawnEntry::enemy)
+                    .collect(Collectors.toSet());
+
             List<SpawnerBlockEntity.SpawnEntry> entries = new ArrayList<>();
-            SpawnableEnemy[] enemies = SpawnableEnemy.values();
             for (SpawnerConfigPayload.Entry entry : payload.entries()) {
-                // Ordinal envoyé par un client : à valider avant indexation, jamais faire confiance
-                // à une valeur reçue par le réseau pour indexer un tableau.
-                if (entry.enemyOrdinal() < 0 || entry.enemyOrdinal() >= enemies.length) {
+                // Identifiant envoyé par un client : refusé s'il ne désigne ni un ennemi chargé ni
+                // un ennemi déjà présent (même principe que l'ancien contrôle de bornes sur
+                // l'ordinal) — un client ne doit jamais pouvoir introduire un ennemi inconnu.
+                if (EnemyRegistry.byId(entry.enemy()) == null && !alreadyPresent.contains(entry.enemy())) {
                     continue;
                 }
-                entries.add(new SpawnerBlockEntity.SpawnEntry(enemies[entry.enemyOrdinal()], entry.baseCount()));
+                entries.add(new SpawnerBlockEntity.SpawnEntry(entry.enemy(), entry.baseCount()));
             }
 
             spawner.applyConfig(
@@ -259,6 +761,7 @@ public class ModNetworking {
                     payload.spawnRadius(),
                     payload.waveStart(),
                     payload.waveEnd(),
+                    payload.waveStep(),
                     entries
             );
 

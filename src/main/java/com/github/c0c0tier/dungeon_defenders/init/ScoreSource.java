@@ -5,11 +5,17 @@ import java.util.Locale;
 // Source d'un gain de score (voir ModEvents.grantScore et network/ScoreGainPayload.java) : sert
 // à afficher un popup détaillé ("+10 Ennemi tué") plutôt qu'un simple total qui monte
 // (ScoreGainOverlay). Un seul membre pour l'instant, même principe extensible que
-// ManaCrystalType/SpawnableEnemy : les futures sources de score (fin de vague, fin de map,
+// ManaCrystalType : les futures sources de score (fin de vague, fin de map,
 // multiplicateurs — voir doc/02-gameplay.md) ajouteront leur propre membre le moment venu,
 // transmis par ordinal comme le reste des enums réseau du mod (GamePhase, GameDifficulty...).
 public enum ScoreSource {
-    MONSTER_KILLED;
+    MONSTER_KILLED,
+    // Ajoutées le 2026-11-10 (voir ScoreKeeper). Toujours en FIN de liste : transmises par ordinal.
+    WAVE_CLEARED,
+    NO_PLAYER_DAMAGE,
+    CRYSTAL_UNTOUCHED,
+    MAP_COMPLETED,
+    NO_TOWER_LOST;
 
     public String translationKey() {
         return "dungeon_defenders.score_source." + name().toLowerCase(Locale.ROOT);

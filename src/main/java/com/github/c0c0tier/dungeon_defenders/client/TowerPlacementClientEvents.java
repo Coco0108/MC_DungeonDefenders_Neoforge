@@ -1,10 +1,15 @@
 package com.github.c0c0tier.dungeon_defenders.client;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.client.gui.screen.HeroSelectionScreen;
+import com.github.c0c0tier.dungeon_defenders.client.gui.screen.HeroStatsScreen;
 import com.github.c0c0tier.dungeon_defenders.client.gui.screen.TowerWheelScreen;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
+import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
 import com.github.c0c0tier.dungeon_defenders.init.TowerDefinition;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStat;
+import com.github.c0c0tier.dungeon_defenders.init.TowerStats;
 import com.github.c0c0tier.dungeon_defenders.network.PlaceTowerPayload;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -26,7 +31,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -45,12 +49,13 @@ public class TowerPlacementClientEvents {
 
     // Portée du rayon de visée, en blocs — assez pour poser à bonne distance sans viser à
     // travers toute la carte.
-    private static final double MAX_REACH = 20.0D;
+    private static final double MAX_REACH = TowerDefinition.REACH;
     private static final int CIRCLE_SEGMENTS = 32;
-    private static final float LINE_WIDTH = 2.0F;
+    // Pas private : réutilisés par TowerInspectClientEvents (portée d'une tour déjà posée).
+    static final float LINE_WIDTH = 2.0F;
     private static final int COLOR_VALID = ARGB.color(220, 0, 255, 0);
     private static final int COLOR_INVALID = ARGB.color(220, 255, 0, 0);
-    private static final int COLOR_RANGE = ARGB.color(180, 255, 255, 0);
+    static final int COLOR_RANGE = ARGB.color(180, 255, 255, 0);
 
     private static final ContextKey<TowerPlacementRenderState> RENDER_KEY =
             new ContextKey<>(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "tower_placement"));
@@ -61,6 +66,16 @@ public class TowerPlacementClientEvents {
     @SubscribeEvent
     static void onClientTick(ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
+
+        if (ModKeyMappings.HERO_SELECTION.consumeClick() && minecraft.screen == null
+                && !TowerPlacementState.isActive() && !TowerRemovalState.isActive()) {
+            minecraft.setScreen(new HeroSelectionScreen());
+        }
+
+        if (ModKeyMappings.HERO_STATS.consumeClick() && minecraft.screen == null
+                && !TowerPlacementState.isActive() && !TowerRemovalState.isActive()) {
+            minecraft.setScreen(new HeroStatsScreen());
+        }
 
         if (ModKeyMappings.TOWER_WHEEL.consumeClick() && minecraft.screen == null
                 && !TowerRemovalState.isActive()) {
@@ -74,7 +89,7 @@ public class TowerPlacementClientEvents {
             // (TowerPlacementClientEvents) ET une suppression de la tour visée
             // (TowerRemovalClientEvents), les deux handlers traitant le même événement.
             if (minecraft.level != null && minecraft.player != null
-                    && minecraft.level.getData(ModAttachments.GAME_PHASE) == GamePhase.BUILD.ordinal()) {
+                    && GamePhase.of(minecraft.level).allowsTowerBuilding()) {
                 minecraft.setScreen(new TowerWheelScreen());
             } else if (minecraft.player != null) {
                 minecraft.player.sendSystemMessage(Component.translatable("dungeon_defenders.tower.build_phase_only"));
@@ -139,6 +154,25 @@ public class TowerPlacementClientEvents {
 
         if (TowerPlacementState.isTargetValid() && TowerPlacementState.targetPos() != null) {
             confirmPlacement();
+            return;
+        }
+
+        // Cible refusée : si c'est à cause d'une zone interdite, le dire. Sans ça le joueur voit
+        // un hologramme rouge sans aucune raison apparente — le marqueur est invisible. Message
+        // local (le paquet n'est jamais envoyé pour une cible invalide) ; le serveur envoie le
+        // même s'il refuse de son côté, voir ModNetworking#handlePlaceTower.
+        warnIfNoBuildZone();
+    }
+
+    private static void warnIfNoBuildZone() {
+        Minecraft minecraft = Minecraft.getInstance();
+        BlockPos pos = TowerPlacementState.targetPos();
+        if (minecraft.level == null || minecraft.player == null || pos == null) {
+            return;
+        }
+        if (minecraft.level.getBlockState(pos).is(ModBlocks.NO_BUILD_ZONE.get())) {
+            minecraft.player.sendSystemMessage(
+                    Component.translatable("dungeon_defenders.tower.no_build_zone"));
         }
     }
 
@@ -172,8 +206,11 @@ public class TowerPlacementClientEvents {
         state.pos = pos;
         state.valid = TowerPlacementState.isTargetValid();
         state.rotation = TowerPlacementState.rotation();
-        state.range = tower.range();
-        state.coneAngleDegrees = tower.coneAngleDegrees();
+        // Copie CLIENT des stats data-driven (reçue du serveur) : pas de portée pour une
+        // Blockade (0 = aucun cercle), cône complet si la tour n'en déclare pas.
+        TowerStats stats = tower.stats(true);
+        state.range = stats.getOr(TowerStat.RANGE, 0.0D);
+        state.coneAngleDegrees = stats.getOr(TowerStat.CONE_ANGLE_DEGREES, TowerDefinition.FULL_CIRCLE_DEGREES);
         event.getRenderState().setRenderData(RENDER_KEY, state);
     }
 
@@ -197,7 +234,7 @@ public class TowerPlacementClientEvents {
         poseStack.mulPose(Axis.YP.rotationDegrees(facingYRot(state.rotation)));
         poseStack.translate(-0.5D, -0.5D, -0.5D);
         event.getSubmitNodeCollector().submitCustomGeometry(poseStack, RenderTypes.lines(),
-                (pose, buffer) -> renderBoxOutline(pose, buffer, Shapes.block(), color, LINE_WIDTH));
+                (pose, buffer) -> LineBoxRenderer.renderBoxOutline(pose, buffer, Shapes.block(), color, LINE_WIDTH));
         poseStack.popPose();
 
         if (state.range > 0.0D) {
@@ -212,18 +249,6 @@ public class TowerPlacementClientEvents {
                     (pose, buffer) -> renderRangeArea(pose, buffer, state.range, coneAngle, COLOR_RANGE, LINE_WIDTH));
             poseStack.popPose();
         }
-    }
-
-    // Même principe que ShapeRenderer.renderShape (vanilla), adapté pour prendre un
-    // PoseStack.Pose plutôt qu'un PoseStack complet : submitCustomGeometry ne fournit que le
-    // Pose au moment différé où ce rendu est réellement exécuté.
-    private static void renderBoxOutline(
-            PoseStack.Pose pose, VertexConsumer buffer, VoxelShape shape, int color, float width) {
-        shape.forAllEdges((x1, y1, z1, x2, y2, z2) -> {
-            Vector3f normal = new Vector3f((float) (x2 - x1), (float) (y2 - y1), (float) (z2 - z1)).normalize();
-            buffer.addVertex(pose, (float) x1, (float) y1, (float) z1).setColor(color).setNormal(pose, normal).setLineWidth(width);
-            buffer.addVertex(pose, (float) x2, (float) y2, (float) z2).setColor(color).setNormal(pose, normal).setLineWidth(width);
-        });
     }
 
     // Rotation Y (degrés) à appliquer via Axis.YP.rotationDegrees(...) au gabarit du
@@ -244,7 +269,7 @@ public class TowerPlacementClientEvents {
     // (deuxième bug constaté en jeu, EST/OUEST inversés — NORD/SUD par symétrie n'étaient pas
     // affectés, d'où un décalage de 180° pile sur les rotations testées). EST et OUEST sont
     // donc inversés ici par rapport au blockstate.
-    private static float facingYRot(Direction direction) {
+    static float facingYRot(Direction direction) {
         return switch (direction) {
             case EAST -> 270.0F;
             case SOUTH -> 180.0F;
@@ -262,7 +287,7 @@ public class TowerPlacementClientEvents {
     // vérifiée pour les 4 directions (voir facingYRot ci-dessus ; ce gabarit utilisait
     // auparavant Direction.toYRot(), qui a une convention différente et faisait pointer le
     // cône à 180° de la vraie direction de tir — corrigé).
-    private static void renderRangeArea(
+    static void renderRangeArea(
             PoseStack.Pose pose, VertexConsumer buffer, double radius, double coneAngleDegrees, int color, float width) {
         Vector3f normal = new Vector3f(0.0F, 1.0F, 0.0F);
         boolean omnidirectional = coneAngleDegrees >= 360.0D;

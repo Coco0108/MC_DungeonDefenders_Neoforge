@@ -8,6 +8,8 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.MoveToBlockGoal;
 import net.minecraft.world.level.LevelReader;
 
+import java.util.Optional;
+
 // Remplace AttackBlockadeGoal + AttackEterniaCrystalGoal : un seul goal, générique à toute
 // cible implémentant AiAttackTarget (Blockade, Turret, Cristal d'Eternia — et toute future
 // catégorie), qui choisit la cible selon les paliers de priorité décidés avec le joueur (voir
@@ -42,11 +44,19 @@ public class AttackPriorityTargetGoal extends MoveToBlockGoal {
 
     private int hitCooldown;
 
+    // Dégâts par coup propres à cet ennemi ("damage_per_hit" de son JSON), sinon ceux de la config.
+    private final Optional<Integer> damagePerHitOverride;
+
     public AttackPriorityTargetGoal(PathfinderMob mob) {
+        this(mob, Optional.empty());
+    }
+
+    public AttackPriorityTargetGoal(PathfinderMob mob, Optional<Integer> damagePerHitOverride) {
         // searchRange passé au super constructeur n'est jamais utilisé : findNearestBlock()
         // est entièrement réimplémenté ci-dessous (une passe par palier, chacune avec sa
         // propre portée).
         super(mob, SPEED_MODIFIER, Config.SEARCH_RANGE.get());
+        this.damagePerHitOverride = damagePerHitOverride;
     }
 
     @Override
@@ -137,7 +147,7 @@ public class AttackPriorityTargetGoal extends MoveToBlockGoal {
             return;
         }
 
-        target.damage(Config.DAMAGE_PER_HIT.get());
+        target.damage(this.damagePerHitOverride.orElseGet(Config.DAMAGE_PER_HIT::get));
         this.mob.swing(InteractionHand.MAIN_HAND);
         this.hitCooldown = TICKS_BETWEEN_HITS;
     }

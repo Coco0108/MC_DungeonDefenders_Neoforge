@@ -1,0 +1,116 @@
+# Data-driven, étape 3 : les réglages globaux d'équilibrage
+
+> **Statut : implémenté le 2026-11-10** sur `feature/data-driven`, à la suite des étapes
+> [1 (ennemis)](ennemis.md) et [2 (tours)](tours.md). **Pas encore testé en jeu** : procédure
+> dans [06-a-tester.md](../06-a-tester.md).
+>
+> **Aucune valeur de gameplay ne change.** Les JSON livrés reprennent les constantes d'avant
+> (gametest `balance_shipped_values`).
+
+## À quoi ça sert
+
+Les nombres d'équilibrage qui n'appartiennent ni à un ennemi ni à une tour vivaient dans des
+constantes Java éparpillées. Ils sont maintenant dans des JSON relus par `/reload`. Les
+**vagues** elles-mêmes (quels ennemis, combien, à quelles vagues) ne sont pas concernées :
+elles sont déjà des données, dans les spawners de chaque map.
+
+## Les réglages
+
+Fichiers : `data/dungeon_defenders/dungeon_defenders/balance/<fichier>.json`, chacun un objet
+plat `"clé": nombre`. Liste complète (`init/BalanceValue.java`) :
+
+| Fichier | Clé | Défaut | Minimum | Effet |
+|---|---|---|---|---|
+| `difficulty.json` | `easy_multiplier` | 0.75 | 0.01 | Nombre d'ennemis par spawner en Facile |
+| `difficulty.json` | `normal_multiplier` | 1.0 | 0.01 | Idem en Normal |
+| `difficulty.json` | `hard_multiplier` | 1.5 | 0.01 | Idem en Difficile |
+| `difficulty.json` | `per_wave_increase` | 0.1 | 0 | Ennemis en plus par vague au-delà de la première (0.1 = +10 %) |
+| `towers.json` | `refund_ratio` | 0.5 | 0 | Part du coût en mana rendue quand on retire une tour |
+| `progression.json` | `xp_per_level` | 100 (entier) | 1 | Expérience nécessaire pour passer un niveau |
+
+**Ajoutés avec les bonus de score et le compte à rebours** (2026-11-10, voir
+[02-gameplay.md](../02-gameplay.md#bonus-et-multiplicateurs-de-score--initscorekeeperjava)) :
+
+| Fichier | Clé | Défaut | Minimum | Effet |
+|---|---|---|---|---|
+| `score.json` | `wave_clear_bonus` | 50 | 0 | Bonus de score à chaque vague nettoyée |
+| `score.json` | `victory_bonus` | 200 | 0 | Bonus de score à la victoire |
+| `score.json` | `no_player_damage_multiplier` | 1.5 | 1 | Multiplie le bonus de vague si aucun joueur n'a été blessé |
+| `score.json` | `no_crystal_damage_multiplier` | 1.5 | 1 | Le multiplie encore si le cristal est intact |
+| `score.json` | `no_tower_lost_multiplier` | 1.25 | 1 | Le multiplie encore si aucune tour n'a été détruite par les monstres |
+| `score.json` | `easy_multiplier` / `normal_multiplier` / `hard_multiplier` | 0.75 / 1.0 / 1.5 | 0 | Multiplie tout gain de score selon la difficulté |
+| `towers.json` | `max_level` | 4 (entier) | 1 | Niveau maximum d'une tour |
+| `towers.json` | `upgrade_cost_ratio` | 0.75 | 0 | Prix d'un niveau d'amélioration, en part du coût de pose |
+| `towers.json` | `upgrade_stat_bonus` | 0.25 | 0 | Bonus de PV max et de dégâts par niveau au-delà du premier |
+| `pacing.json` | `combat_countdown_seconds` | 3 (entier) | 0 | Secondes entre le vote « prêt » unanime et le Combat (0 = immédiat) |
+
+**Ajoutés avec les armes de héros** (2026-11-16, voir
+[02-gameplay.md](../02-gameplay.md#les-armes-de-héros--itemheroweaponitemjava-itemheroweaponsjava)) :
+
+| Fichier | Clé | Défaut | Minimum | Effet |
+|---|---|---|---|---|
+| `weapons.json` | `flask_damage` / `flask_range` / `flask_radius` / `flask_cooldown_ticks` | 3 / 16 / 2.5 / 14 | 0 / 1 / 0 / 1 | Sacoche de fioles (Alchimiste) : dégâts, portée, rayon de la zone, ticks entre deux tirs |
+| `weapons.json` | `rivet_damage` / `rivet_range` / `rivet_cooldown_ticks` | 4 / 24 / 8 | 0 / 1 / 1 | Pistolet à rivets (Ingénieur) : une seule cible |
+| `weapons.json` | `staff_damage` / `staff_range` / `staff_radius` / `staff_cooldown_ticks` | 3 / 10 / 1.5 / 16 | 0 / 1 / 0 / 1 | Bâton de géomancien |
+| `weapons.json` | `player_damage_per_level` | 0.05 | 0 | Bonus de dégâts de tout ce qu'un joueur inflige, par niveau au-delà du premier |
+
+**Ajoutés avec les caractéristiques** (2026-11-16, voir
+[02-gameplay.md](../02-gameplay.md#les-caractéristiques--initherostatjava-clientguiscreenherostatsscreenjava)) :
+
+| Fichier | Clé | Défaut | Minimum | Effet |
+|---|---|---|---|---|
+| `progression.json` | `stat_points_per_level` | 1 (entier) | 0 | Points de caractéristique gagnés par niveau |
+| `progression.json` | `stat_max_points` | 20 (entier) | 0 | Plafond de points dans une même caractéristique |
+| `progression.json` | `vitality_health_per_point` | 2 | 0 | PV max par point de Vitalité |
+| `progression.json` | `power_damage_per_point` | 0.03 | 0 | Dégâts du joueur par point de Puissance (0.03 = +3 %) |
+| `progression.json` | `swiftness_speed_per_point` | 0.02 | 0 | Vitesse par point de Rapidité |
+| `progression.json` | `tower_mastery_damage_per_point` | 0.03 | 0 | Dégâts des tours posées par point de Maîtrise des tours |
+
+**Ajoutés avec le butin** (2026-11-17, voir
+[02-gameplay.md](../02-gameplay.md#le-butin-et-la-forge--loot-blockforgeblockjava-clientguiscreenforgescreenjava)) :
+
+| Fichier | Clé | Défaut | Minimum | Effet |
+|---|---|---|---|---|
+| `loot.json` | `drop_chance` | 0.04 | 0 | Chance qu'un monstre tué en Combat lâche une arme |
+| `loot.json` | `wave_clear_drops` | 1 (entier) | 0 | Armes offertes à chaque joueur à chaque vague nettoyée |
+| `loot.json` | `power_per_wave` | 0.05 | 0 | Force gagnée par le butin à chaque vague au-delà de la première |
+
+Les chances et la force de chaque rareté sont des constantes (`loot/LootRarity.java`).
+
+L'épée de l'Écuyer n'est pas ici : c'est une épée vanilla (stats d'une épée en fer).
+
+Attention : `score.json` et `difficulty.json` ont chacun des clés `easy_multiplier`... La
+première règle le **score**, la seconde le **nombre d'ennemis**.
+
+## Règles
+
+- **Une clé absente garde sa valeur par défaut.**
+- **À la moindre erreur, le fichier entier est refusé** (clé inconnue, valeur non numérique, non
+  entière là où il le faut, sous son minimum) et tous ses réglages gardent leur défaut. Jamais
+  de fichier à moitié appliqué. Exemple de log :
+  `Fichier d'équilibrage dungeon_defenders:dungeon_defenders/balance/difficulty.json invalide : clé inconnue "hard_multiplierr" (clés de ce fichier : ...) — les valeurs par défaut du code sont utilisées pour ce fichier.`
+- **Les réglages sont ceux du mod** : pour les modifier, un datapack **remplace** le fichier du
+  mod (même chemin, namespace `dungeon_defenders`). Un fichier sous un autre namespace est
+  ignoré avec un avertissement.
+- Au démarrage et à chaque `/reload` : `Réglages d'équilibrage chargés : 6 sur 6`.
+- Un `/reload` recalcule le total d'ennemis de la vague en cours, qui dépend du multiplicateur
+  de difficulté. Les spawners, eux, ne recalculent leur plafond qu'au début de la vague
+  suivante (comportement existant).
+
+## Synchronisation client
+
+`GameBalancePayload`, à la connexion et après chaque `/reload`. Le client s'en sert pour
+l'aperçu au-dessus des spawners (multiplicateur de difficulté) et la barre d'expérience
+(`xp_per_level`). Deux copies distinctes, serveur et client, comme pour les tours.
+
+## Ajouter un réglage
+
+1. Une ligne dans `BalanceValue` (fichier, clé, défaut, minimum, entier ou non).
+2. La clé dans le JSON correspondant.
+3. `GameBalance.get(BalanceValue.X, clientSide)` à la place de la constante.
+
+Le chargement, `/reload`, la validation et la synchro sont génériques.
+
+## Vérification
+
+- Gametests `balance_shipped_values` et `balance_validation`.

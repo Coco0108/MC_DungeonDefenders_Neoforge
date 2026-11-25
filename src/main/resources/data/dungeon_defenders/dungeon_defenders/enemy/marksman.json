@@ -1,0 +1,13 @@
+{
+  "entity_type": "minecraft:stray",
+  "icon": "minecraft:stray_spawn_egg",
+  "xp_value": 25,
+  "order": 4,
+  "max_health": 16.0,
+  "behavior": {
+    "type": "dungeon_defenders:ranged_crystal",
+    "damage_per_shot": 5,
+    "ticks_between_shots": 30,
+    "shoot_range": 14.0
+  }
+}

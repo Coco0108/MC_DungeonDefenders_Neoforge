@@ -14,23 +14,60 @@ MC_DungeonDefenders_Neoforge/
     │   ├── DungeonDefendersMod.java          # Point d'entrée @Mod (commun)
     │   ├── DungeonDefendersModClient.java    # Point d'entrée @Mod côté CLIENT uniquement
     │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA, vie max du joueur)
-    │   ├── TavernSpawn.java                  # Point de spawn fixe + plateforme provisoire (monde vide)
+    │   ├── TavernSpawn.java                  # Point de spawn fixe + chargement de la structure de la taverne (monde vide)
+    │   ├── CombatCountdown.java              # Compte à rebours entre le vote "prêt" unanime et le début du Combat
+    │   ├── WorldTime.java                    # Heure du monde figée (taverne, puis heure propre à chaque map) ; météo arrêtée
     │   ├── MapInstance.java                  # "La map active" : emplacement partagé, placeholder, téléportation
-    │   ├── ModCommands.java                  # /dd_leave (retour à la taverne, harnais de test)
+    │   ├── ModCommands.java                  # /dd_leave (harnais) et /dd_export (jar de pack de maps)
+    │   ├── MapExporter.java                  # Emballe les maps d'un pack dans un jar d'extension prêt à publier
     │   ├── Config.java                       # Spec de config COMMON (PV cristal, dégâts, portée), branchée
     │   ├── init/
     │   │   ├── ModBlocks.java                # DeferredRegister blocs + items
     │   │   ├── ModAttachments.java           # DeferredRegister des data attachments (mana, vagues, phase...)
     │   │   ├── ModMenus.java                 # DeferredRegister des MenuType (GUI de config)
-    │   │   ├── GamePhase.java                # Enum des phases de partie (BUILD, COMBAT)
+    │   │   ├── GamePhase.java                # Enum des phases (BUILD, COMBAT, TAVERN) + allowsTowerBuilding()/isInGame()
     │   │   ├── GameDifficulty.java           # Enum de difficulté (EASY, NORMAL, HARD)
     │   │   ├── DifficultyScaling.java        # Multiplicateur difficulté x vague, pour les spawners
-    │   │   ├── SpawnableEnemy.java           # Liste fermée des ennemis choisissables dans un spawner
-    │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild : transitions de phase centralisées
-    │   │   ├── GameMap.java                  # Liste des maps proposées dans l'écran de choix (visible = false pour masquer une map en cours de conception)
+    │   │   ├── EnemyDefinition.java          # Un ennemi data-driven (entity_type, icône, XP, ordre, comportement) + codec strict
+    │   │   ├── EnemyBehavior.java            # Types d'IA en Java (melee_priority, ranged_crystal), paramètres en JSON
+    │   │   ├── EnemyRegistry.java            # Ennemis côté serveur : reload listener (/reload) + synchro client (OnDatapackSyncEvent)
+    │   │   ├── LegacyEnemyIds.java           # Table FIGÉE ancien ordinal -> identifiant (0 zombie, 1 squelette) + conversion NBT pour /dd_export
+    │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild/enterTavern/startNewGame : transitions centralisées
+    │   │   ├── MapDefinition.java            # Une map jouable (structure + nom + ordre + vagues + multiplicateur) ; le namespace fait office de pack
+    │   │   ├── MapRegistry.java              # Découverte des maps parmi TOUTES les structures disponibles (monde, datapacks, jars)
+    │   │   ├── MapPreviews.java              # Aperçus des maps créées en jeu : rangement dans la sauvegarde, validation (taille, PNG, chemin)
+    │   │   ├── ModChunkTickets.java          # Force-chargement (et tick) de la zone de map pendant une partie
     │   │   ├── TowerDefinition.java          # Catalogue des tours posables via la roue (voir client/gui/screen/TowerWheelScreen.java)
+    │   │   ├── TowerStat.java                # Les chiffres réglables d'une tour (PV, coût, dégâts, portée, cadence...)
+    │   │   ├── TowerStats.java               # Les chiffres d'UNE tour + validation stricte d'un JSON par-dessus ses défauts
+    │   │   ├── TowerStatsRegistry.java       # Stats des tours : reload listener (/reload), copies serveur ET client, synchro
+    │   │   ├── ScoreKeeper.java              # Point de passage unique des gains de score : bonus de vague/de map, multiplicateurs
+    │   │   ├── BalanceValue.java             # Réglages globaux d'équilibrage (difficulté, remboursement, XP par niveau) et leurs défauts
+    │   │   ├── GameBalance.java              # Réglages globaux : reload listener (/reload), copies serveur ET client, synchro
+    │   │   ├── ManaCrystalType.java           # Paliers de cristaux de mana (un seul pour l'instant, extensible)
+    │   │   └── ModEntities.java               # DeferredRegister.Entities (cristal de mana, mannequin d'entraînement)
+    │   │   ├── HeroStat.java                 # Caractéristiques à répartir (Vitalité, Puissance, Rapidité, Maîtrise des tours) et leurs effets
+    │   │   ├── HeroDefinition.java           # Catalogue des héros : ses tours, ses deux sorts (spell1/spell2), son libellé
+    │   │   ├── AbilitySlot.java              # Les 4 emplacements de compétence (HEAL, SPELL_1, SPELL_2, REPAIR), même ordre que le HUD
     │   │   ├── ManaCrystalType.java           # Paliers de cristaux de mana (un seul pour l'instant, extensible)
     │   │   └── ModEntities.java               # DeferredRegister.Entities (premier Entity custom du mod : le cristal de mana)
+    │   ├── ability/
+    │   │   ├── HeroAbility.java              # Contrat minimal (nom, icône) partagé par toute compétence
+    │   │   ├── BurstAbility.java             # Salve instantanée + recharge (Circular Slice)
+    │   │   ├── ChannelAbility.java           # Maintenue, mana en continu (Heal, Repair, Blood Rage)
+    │   │   ├── HealAbility.java              # Générique à tout héros : 1 mana = 1 PV/tick, interrompue par un coup reçu
+    │   │   ├── RepairAbility.java            # Générique à tout héros : 1 mana = 1 PV de tour/tick, cible visée au clic
+    │   │   ├── CircularSliceAbility.java     # Sort 1 de l'Écuyer : dégâts + repousse en cercle, valeurs du jeu de référence
+    │   │   ├── BloodRageAbility.java         # Sort 2 de l'Écuyer : buff Speed+Strength tant que maintenue
+    │   │   ├── FrostFlaskAbility.java        # Sort 1 de l'Alchimiste : gèle les monstres autour du point visé
+    │   │   ├── CatalysisAbility.java         # Sort 2 de l'Alchimiste : +50 % de dégâts aux tours proches tant que maintenue
+    │   │   ├── EmergencyRepairAbility.java   # Sort 1 de l'Ingénieur : rend la moitié de leurs PV aux tours proches
+    │   │   ├── ForceFieldAbility.java        # Sort 2 de l'Ingénieur : tours proches invulnérables tant que maintenue
+    │   │   ├── EarthquakeAbility.java        # Sort 1 du Géomancien : blesse et projette en l'air les monstres autour du joueur
+    │   │   ├── StoneSkinAbility.java         # Sort 2 du Géomancien : Résistance + Lenteur tant que maintenue
+    │   │   ├── AbilityRegistry.java          # Résout la ChannelAbility d'un (joueur, emplacement) — partagé réseau/tick
+    │   │   ├── PlayerAbilityChannels.java    # Canalisation active de chaque joueur (état runtime serveur, non persisté)
+    │   │   └── AbilityCooldowns.java         # Dernier usage d'une BurstAbility, par joueur et par emplacement
     │   ├── menu/
     │   │   ├── SpawnerConfigMenu.java        # AbstractContainerMenu sans slot, transmet juste le BlockPos
     │   │   ├── SpawnerConfigMenuProvider.java # MenuProvider ouvert par SpawnerBlock au clic droit
@@ -42,22 +79,63 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── StartGamePayload.java         # Paquet C2S (déclenche MapInstance.startGame, pas de champ)
     │   │   ├── PlaceTowerPayload.java        # Paquet C2S (tour + position + rotation, confirmation finale de la roue)
     │   │   ├── ManaChestConfigPayload.java   # Paquet C2S (BlockPos + quantité de mana du coffre)
+    │   │   ├── UpgradeTowerPayload.java      # Paquet C2S (BlockPos de la tour à améliorer, touche dédiée)
+    │   │   ├── RemoveTowerPayload.java       # Paquet C2S (BlockPos de la tour à retirer, mode suppression)
+    │   │   ├── LeaveMapPayload.java          # Paquet C2S sans champ (abandon du niveau depuis le menu pause)
+    │   │   ├── MapConfigPayload.java         # Paquet C2S (BlockPos + réglages d'une map)
+    │   │   ├── DeleteMapPayload.java         # Paquet C2S (id de structure à supprimer de la sauvegarde)
+    │   │   ├── SelectHeroPayload.java        # Paquet C2S (héros choisi dans HeroSelectionScreen)
+    │   │   ├── SpendStatPointPayload.java    # Paquet C2S (point de caractéristique dépensé, ou tout reprendre)
+    │   │   ├── StartChannelAbilityPayload.java # Paquet C2S (emplacement + cible optionnelle, début d'une compétence maintenue)
+    │   │   ├── StopChannelAbilityPayload.java  # Paquet C2S sans champ (fin d'une compétence maintenue)
+    │   │   ├── ActivateBurstAbilityPayload.java # Paquet C2S (emplacement, déclenchement d'une compétence en salve)
+    │   │   ├── AbilityCooldownPayload.java   # Paquet S2C (emplacement + durée de recharge, pour l'affichage du HUD)
+    │   │   ├── UploadMapPreviewPayload.java  # Paquet C2S (id de structure + PNG de l'aperçu capturé)
+    │   │   ├── MapPreviewPayload.java        # Paquet S2C (id de structure + PNG), avant l'ouverture de l'écran de choix
+    │   │   ├── GameOverPayload.java          # Paquet S2C (victoire/défaite, ouvre GameOverScreen)
+    │   │   ├── ScoreGainPayload.java         # Paquet S2C (montant + source du gain + identifiant de l'ennemi tué, alimente ScoreGainOverlay)
+    │   │   ├── EnemyDefinitionsPayload.java  # Paquet S2C (ennemis data-driven : id, entity_type, icône, ordre), à la connexion et après /reload
+    │   │   ├── TowerStatsPayload.java        # Paquet S2C (stats data-driven des tours), à la connexion et après /reload
+    │   │   ├── GameBalancePayload.java       # Paquet S2C (réglages globaux d'équilibrage), à la connexion et après /reload
+    │   │   ├── OpenMapSelectionPayload.java  # Paquet S2C sans champ (ouvre MapSelectionScreen depuis TavernCrystalBlock)
     │   │   └── ModNetworking.java            # Enregistrement des paquets custom (RegisterPayloadHandlersEvent)
     │   ├── client/
     │   │   ├── ModKeyMappings.java           # Touches roue des tours + rotation (RegisterKeyMappingsEvent)
     │   │   ├── TowerPlacementState.java      # État transitoire du mode pose (AIMING/ORIENTING, tour choisie, rotation)
     │   │   ├── TowerPlacementRenderState.java # Instantané pour le rendu de l'hologramme (ContextKey sur LevelRenderState)
     │   │   ├── TowerPlacementClientEvents.java # Ouverture roue, rayon de visée, rotation, confirmation, rendu hologramme/portée
+    │   │   ├── BlockOutlineClientEvents.java # Masque le contour noir de sélection sur les tours et cristaux (ExtractBlockOutlineRenderStateEvent)
+    │   │   ├── TowerInspectState.java        # La tour que le joueur regarde (état de rendu, client)
+    │   │   ├── TowerInspectClientEvents.java # Regarder une tour posée : raycast, portée dessinée au sol
+    │   │   ├── LineBoxRenderer.java          # Contour filaire coloré partagé (pose/suppression de tour, repérage des marqueurs)
+    │   │   ├── MarkerOverlayClientEvents.java # Repérage en créatif des 5 blocs marqueurs invisibles : contour + étiquette à travers les murs
+    │   │   ├── MapOverlayState.java          # État transitoire du plan plein écran (visible, position du cristal trouvé)
+    │   │   ├── MapOverlayClientEvents.java   # Touche maintenue (MAP_OVERLAY) + scan borné du cristal de la zone actuelle
+    │   │   ├── PauseMenuClientEvents.java   # Bouton "Abandonner le niveau" ajouté au menu pause (ScreenEvent.Init.Post)
+    │   │   ├── MapPreviewCapture.java        # Capture de l'aperçu : armement, touche, HUD masqué, recadrage 128x72, envoi
+    │   │   ├── ClientMapPreviews.java        # Aperçus reçus du serveur, chargés en textures dynamiques
+    │   │   ├── ClientEnemyDefinitions.java   # Copie CLIENT des ennemis data-driven (distincte d'EnemyRegistry, voir doc/data-driven/ennemis.md)
+    │   │   ├── AbilityClientEvents.java      # Touches 1-4 : Start/Stop des compétences maintenues, salve pour le sort 1
+    │   │   ├── ClientAbilityState.java       # État d'affichage des compétences : recharge en cours, emplacement canalisé
     │   │   └── ClientDisplayConfig.java      # Spec de config CLIENT (options d'affichage HUD facultatives), branchée dans DungeonDefendersModClient
     │   ├── client/gui/screen/
     │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
     │   │   ├── ManaChestConfigScreen.java    # Écran de config du coffre de mana, un seul champ (client uniquement)
-    │   │   ├── MapSelectionScreen.java       # Écran de choix de map + difficulté (client uniquement, pas de Menu)
+    │   │   ├── MapSelectionScreen.java       # Écran de choix : packs / map / difficulté (liste reçue du serveur)
+    │   │   ├── MapConfigScreen.java          # Écran de configuration d'une map (créatif uniquement)
+    │   │   ├── HeroSelectionScreen.java      # Écran de choix de héros (touche H, client uniquement, pas de Menu)
+    │   │   ├── HeroStatsScreen.java          # Écran des caractéristiques (touche K, client uniquement, pas de Menu)
     │   │   └── TowerWheelScreen.java         # Roue radiale de sélection des tours (client uniquement, pas de Menu)
     │   ├── client/gui/
     │   │   ├── HudLayout.java                # Constantes de mise en page du groupe bas-gauche (mana/vie/exp)
     │   │   ├── DiamondGauge.java             # Dessine une jauge en forme de losange (fill() empilés, sans texture)
     │   │   ├── CircleSlot.java               # Dessine un rond (fond + bordure) (fill() empilés, sans texture)
+    │   │   ├── UiStyle.java                  # Style commun des écrans : panneaux, cases creusées, jauges, pastilles, touches (couleurs centralisées)
+    │   │   ├── TowerStatSummary.java         # Chiffres lisibles d'une tour (« Dégâts : 6 ») pour la roue et la fiche de tour
+    │   │   ├── LootComparison.java           # Bonus d'une arme de butin comparés à l'arme déjà portée par son héros (vert/rouge)
+    │   │   ├── CombatCountdownOverlay.java   # "Combat dans 3..." pendant le compte à rebours (client uniquement)
+    │   │   ├── ProgressionFeedbackOverlay.java # "+X XP" près de la barre d'expérience et bannière "Niveau X !" (client uniquement)
+    │   │   ├── TowerInspectOverlay.java      # Fiche de la tour regardée, à droite du viseur : niveau, PV, chiffres, amélioration
     │   │   ├── ManaOverlay.java              # Losange mana, bas gauche (client uniquement)
     │   │   ├── HealthOverlay.java            # Losange vie, bas gauche (client uniquement)
     │   │   ├── ExperienceOverlay.java        # Barre horizontale expérience custom, bas gauche (client uniquement)
@@ -66,15 +144,29 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── PhaseOverlay.java             # Couche HUD affichant la phase (construction/combat) (client uniquement)
     │   │   ├── ScoreOverlay.java             # Couche HUD affichant le score de la carte, bas centre (client uniquement)
     │   │   ├── CharacterOverlay.java         # Couche HUD affichant "Nom - niv X", bas centre (client uniquement)
-    │   │   └── AbilitySlotsOverlay.java      # 4 emplacements de compétences, bas gauche, à côté des losanges (client uniquement)
+    │   │   ├── AbilitySlotsOverlay.java      # 4 emplacements de compétences : icône, recharge, canalisation, manque de mana (client uniquement)
+    │   │   └── MapOverlay.java               # Plan plein écran (touche maintenue) : rectangle + points des joueurs + cristal (client uniquement)
+    │   ├── item/
+    │   │   ├── HeroWeaponItem.java            # Arme à distance d'un héros : lance un projectile au clic droit (fioles, rivets, bâton), effet à l'impact
+    │   │   ├── HeroWeapons.java               # Donne à chaque joueur l'arme de son héros, retire les autres
+    │   │   ├── ManaTestWandItem.java / ManaFillWandItem.java  # Baguettes de test du mana
+    │   ├── loot/
+    │   │   ├── LootRarity.java                # Raretés : chance, force, nombre de bonus secondaires, couleur
+    │   │   ├── LootWeapon.java                # Une arme de butin (héros, rareté, bonus) ; forme objet au sol
+    │   │   ├── LootGenerator.java             # Tire une arme au hasard et la pose au sol
+    │   │   ├── Equipment.java                 # Inventaire de la Forge et arme équipée par héros : ranger, équiper, bonus
     │   ├── entity/
     │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
+    │   │   ├── Corrosion.java                 # Marque en mémoire : un monstre corrodé subit plus de dégâts (Projecteur d'acide)
+    │   │   ├── TrainingDummyEntity.java       # extends Zombie : cible immobile à vie infinie, pour mesurer les dégâts des tours
+    │   │   ├── WeaponProjectileEntity.java      # Projectile des armes de héros (fiole, rivet, éclat), rendu par ThrownItemRenderer
     │   │   ├── MobHealthBarRenderer.java      # RenderLivingEvent.Post : barre de vie zombie/squelette, cachée à PV pleins/hors portée (client)
     │   │   ├── BowlingBallEntity.java         # extends Arrow : perforation réelle (Bowling Ball Turret), voir 02-gameplay.md
     │   │   └── ai/
     │   │       ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal (un seul sous-classeur : la version à distance)
     │   │       ├── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal (archers, ignorent Blockade/Turret)
-    │   │       └── AttackPriorityTargetGoal.java         # Goal unique des monstres de mêlée : choisit Block > Corps à corps > Cristal > Tourelle selon AiAttackTarget
+    │   │       ├── AttackPriorityTargetGoal.java         # Goal unique des monstres de mêlée : choisit Block > Corps à corps > Cristal > Tourelle selon AiAttackTarget
+    │   │       └── SeekEterniaCrystalGoal.java           # Goal de secours (priorité plus basse) : navigue vers ModAttachments.CRYSTAL_POS sans limite de distance
     │   ├── gametest/
     │   │   ├── DungeonDefendersGameTests.java # Fonctions de test + enregistrement (RegisterGameTestsEvent)
     │   │   └── ModGameTestInstance.java       # GameTestInstance custom (contourne Registries.TEST_FUNCTION, hors d'atteinte d'un mod)
@@ -86,12 +178,18 @@ MC_DungeonDefenders_Neoforge/
     │       ├── HarpoonTurretBlock.java       # Tower "Turret" : HORIZONTAL_FACING + tir en cône, cible unique
     │       ├── BowlingBallTurretBlock.java   # Tower "Turret" : tir perforant (BowlingBallEntity)
     │       ├── MortarTurretBlock.java        # Tower "Turret" : dégâts de zone à l'impact
+    │       ├── SimpleTowerBlock.java         # Bloc de tour générique (block entity passé au constructeur) : les six tours de l'Alchimiste
+    │       ├── DirectionalTowerBlock.java    # SimpleTowerBlock + HORIZONTAL_FACING (Projecteur d'acide)
     │       ├── TowerBlockItem.java           # Item commun à toute tour (Blockade, Turret...) : useOn() ne pose plus rien (roue uniquement)
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
     │       ├── ManaChestBlock.java           # Meuble de map : donne du mana au clic droit (survie, 1x/vague) ou config (créatif)
+    │       ├── TrainingDummyBlock.java       # Support de mannequin : invisible, garantit qu'un TrainingDummyEntity existe juste au-dessus
+    │       ├── NoBuildZoneBlock.java         # Marqueur de zone interdite à la pose de tours : invisible, occupe la case
+    │       ├── MapConfigBlock.java           # Réglages d'une map, posé DANS la map : voyagent dans le .nbt de la structure
+    │       ├── PlayerSpawnBlock.java         # Marqueur de spawn des joueurs : invisible, traversable, ciblable en créatif seulement
     │       └── entity/
-    │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal)
+    │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal) + enregistre CRYSTAL_POS
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
     │           ├── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D, toujours affichée (client)
     │           ├── AiAttackTarget.java                     # Interface : contrat + paliers de priorité IA (Block/Corps à corps/Cristal/Tourelle)
@@ -104,6 +202,26 @@ MC_DungeonDefenders_Neoforge/
     │           ├── HarpoonTurretBlockEntity.java           # Sous-classe : fixe les stats du Harpoon Turret (voir 02-gameplay.md)
     │           ├── BowlingBallTurretBlockEntity.java       # Sous-classe : fireAt surchargé, lance une BowlingBallEntity
     │           ├── MortarTurretBlockEntity.java            # Sous-classe : fireAt surchargé, dégâts de zone via AABB
+    │           ├── AbstractPulseTowerBlockEntity.java      # Catégorie "à impulsions" : agit à intervalle régulier sur tout ce qui l'entoure
+    │           ├── FrostStillBlockEntity.java              # Alchimiste : ralentit les monstres à portée
+    │           ├── AcidSprayerBlockEntity.java             # Alchimiste : arrose un cône, pose la corrosion
+    │           ├── FlaskLauncherBlockEntity.java           # Alchimiste : laisse des flaques brûlantes
+    │           ├── CatalystPylonBlockEntity.java           # Alchimiste : bonus de dégâts aux tours voisines
+    │           ├── VolatileVatBlockEntity.java             # Alchimiste : mur qui explose à sa destruction
+    │           ├── ManaCondenserBlockEntity.java           # Alchimiste : mana en plus pour les morts à portée
+    │           ├── IronBarricadeBlockEntity.java           # Ingénieur : mur qui se répare seul
+    │           ├── RepeaterTurretBlockEntity.java          # Ingénieur : Turret à cadence élevée (stats seulement)
+    │           ├── LongshotTurretBlockEntity.java          # Ingénieur : Turret à longue portée (stats seulement)
+    │           ├── PistonSlammerBlockEntity.java           # Ingénieur : onde de choc, dégâts et repousse
+    │           ├── MagnetCoilBlockEntity.java              # Ingénieur : attire les monstres
+    │           ├── RepairStationBlockEntity.java           # Ingénieur : répare les tours voisines
+    │           ├── ThornHedgeBlockEntity.java              # Géomancien : mur qui rend les coups (onDamaged)
+    │           ├── MudTotemBlockEntity.java                # Géomancien : enlise les monstres par à-coups
+    │           ├── GeyserBlockEntity.java                  # Géomancien : projette les monstres en l'air
+    │           ├── BoulderThrowerBlockEntity.java          # Géomancien : vise le monstre le plus costaud
+    │           ├── CrystalSpireBlockEntity.java            # Géomancien : éclair qui rebondit
+    │           ├── LifestoneBlockEntity.java               # Géomancien : soigne les joueurs à portée
+    │           ├── TowerScan.java                          # Recherche des tours autour d'un point (par chunks)
     │           ├── TowerHealthBarRenderState.java          # Instantané pour le rendu (client)
     │           ├── TowerHealthBarRenderer.java             # Barre de vie 3D générique à toute tour, cachée à PV pleins/hors portée (client)
     │           ├── HealthLerp.java                         # Animation temps réel d'un ratio de PV (client, partagée cristal/tours)
@@ -111,7 +229,9 @@ MC_DungeonDefenders_Neoforge/
     │           ├── SpawnerBlockEntity.java                 # Algorithme de spawn pondéré (voir 02-gameplay.md)
     │           ├── SpawnerRenderState.java                 # Instantané pour le rendu (client)
     │           ├── SpawnerBlockEntityRenderer.java         # Aperçu de composition en phase Construction, à travers les murs (client)
-    │           └── ManaChestBlockEntity.java               # PV: aucun ; manaAmount configurable, lastOpenedWave (1x/vague, recharge auto)
+    │           ├── ManaChestBlockEntity.java               # PV: aucun ; manaAmount configurable, lastOpenedWave (1x/vague, recharge auto)
+    │           ├── TrainingDummyBlockEntity.java           # Aucun état : un tick serveur qui réinvoque le mannequin s'il a disparu
+    │           └── MapConfigBlockEntity.java               # Nom/ordre/vagues/multiplicateur d'une map, relus sans poser la structure
     ├── resources/
     │   ├── assets/dungeon_defenders/
     │   │   ├── lang/{en_us,fr_fr}.json                     # Traductions
@@ -123,7 +243,11 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── textures/gui/maps/<id>.png                  # Aperçu de chaque GameMap (une image par map)
     │   ├── data/dungeon_defenders/loot_table/blocks/*.json  # Un par bloc (drop de lui-même)
     │   ├── data/dungeon_defenders/structure/gametest/empty.nbt  # Gabarit 3x3x3 sans bloc, partagé par les gametests
+    │   ├── data/dungeon_defenders/dungeon_defenders/enemy/*.json  # Ennemis data-driven (zombie, skeleton), relus par /reload
+    │   ├── data/dungeon_defenders/dungeon_defenders/tower/*.json    # Stats data-driven des 24 tours, relues par /reload
+    │   ├── data/dungeon_defenders/dungeon_defenders/balance/*.json  # Réglages globaux (difficulty, towers, progression, score, pacing, weapons, loot), relus par /reload
     │   ├── data/minecraft/tags/block/             # mineable/pickaxe (+ needs_diamond_tool pour le cristal)
+    │   ├── data/minecraft/timeline/day.json        # Timeline "day" vanilla SANS la brûlure des monstres au soleil (générée, voir tools/)
     │   └── data/minecraft/dimension/overworld.json # Remplace le générateur de l'Overworld par "The Void"
     └── templates/META-INF/neoforge.mods.toml      # Métadonnées, expansées par Gradle
 ```
@@ -187,15 +311,63 @@ référencé sans risque.
   `SpawnerConfigScreen::new`. Contrairement à `RegisterGuiLayersEvent`, ce n'est pas
   `MenuScreens.register(...)` qu'on appelle directement (privée dans cette version) mais cet
   événement, sur le même principe.
-- `onRegisterClientPayloadHandlers(RegisterClientPayloadHandlersEvent)` : associe le handler de
-  `ScoreGainPayload` (paquet clientbound) à `ScoreGainOverlay.INSTANCE` — le type/codec est
-  enregistré côté partagé (`ModNetworking`), mais le handler ne peut vivre qu'ici, voir
+- `onRegisterClientPayloadHandlers(RegisterClientPayloadHandlersEvent)` : associe les handlers
+  des paquets clientbound du mod — `ScoreGainPayload` → `ScoreGainOverlay.INSTANCE`,
+  `GameOverPayload` → `GameOverScreen`, `OpenMapSelectionPayload` → `MapSelectionScreen`. Les
+  types/codecs sont enregistrés côté partagé (`ModNetworking`), mais les handlers ne peuvent
+  vivre qu'ici, voir
   [02-gameplay.md](02-gameplay.md#le-gain-de-score-flottant--clientguiscoregainoverlayjava-networkscoregainpayloadjava).
 
 > `@EventBusSubscriber` n'a pas de paramètre `bus` dans cette version : les événements qui
 > implémentent `IModBusEvent` (comme `RegisterRenderers`) partent automatiquement sur le bus
 > du mod, les autres sur `NeoForge.EVENT_BUS`. C'est ce qui permet à `ModEvents` et à cette
 > classe d'utiliser la même annotation pour des bus différents.
+
+### La règle client/serveur : *nommer* une classe cliente suffit à casser un serveur dédié
+
+Contrainte à connaître avant d'écrire quoi que ce soit qui touche à un écran ou à un rendu, et
+qui a réellement empêché le mod de démarrer sur le serveur dédié du joueur (2026-08-30) :
+
+> Un serveur dédié n'embarque **aucune** classe cliente. Il ne suffit donc pas qu'une ligne de
+> code cliente ne s'*exécute* jamais côté serveur — il faut qu'aucune classe chargée par le
+> serveur ne **mentionne** une classe cliente, où que ce soit dans ses champs, signatures ou
+> corps de méthodes.
+
+En pratique, ce patron pourtant naturel est un piège :
+
+```java
+// NE PAS FAIRE dans une classe chargée par le serveur (bloc, block entity, item...)
+if (level.isClientSide()) {
+    Minecraft.getInstance().setScreen(new MonEcran());   // jamais exécuté côté serveur...
+}
+```
+
+La branche n'est jamais exécutée sur un serveur, mais charger la classe force la JVM à
+résoudre tout ce qu'elle nomme : `NoClassDefFoundError: net/minecraft/client/gui/screens/Screen`
+dès `constructMods`, et le mod ne charge pas du tout. C'est exactement ce qui est arrivé à
+`TavernCrystalBlock` (chargé par `ModBlocks`, donc par `DungeonDefendersMod`).
+
+Deux façons correctes d'ouvrir un écran depuis un bloc :
+
+1. **Paquet clientbound** quand l'écran n'a besoin d'aucune donnée du bloc — le serveur envoie
+   un signal, le handler client (enregistré dans `DungeonDefendersModClient`) ouvre l'écran.
+   C'est ce que fait `OpenMapSelectionPayload` pour `MapSelectionScreen`, et
+   `GameOverPayload` pour `GameOverScreen`.
+2. **`MenuProvider` + `RegisterMenuScreensEvent`** quand l'écran doit lire des données
+   synchronisées du bloc (`SpawnerBlock` → `SpawnerConfigScreen`,
+   `ManaChestBlock` → `ManaChestConfigScreen`).
+
+Attention aussi à la contagion : la classe cliente citée entraîne tout ce qu'elle cite. Ici
+`TavernCrystalBlock` traînait `MapSelectionScreen`, donc `Screen`, `Button`, `ClientLevel`…
+Les renderers rangés dans `block/entity/` (`TowerHealthBarRenderer`,
+`EterniaCrystalBlockEntityRenderer`, `SpawnerBlockEntityRenderer`, `HealthBarRendering`,
+`HealthLerp` et les `RenderState`) sont, eux, sains : ils citent bien du code client, mais
+aucune classe chargée par le serveur ne les nomme — seul `DungeonDefendersModClient` les
+atteint.
+
+Le compilateur ne détecte rien de tout ça (l'environnement de dev contient les deux côtés), et
+`./gradlew runServer` non plus, pour la même raison — d'où l'intérêt de vérifier le jar
+produit, voir [06-a-tester.md](06-a-tester.md#le-mod-sur-un-serveur-dédié).
 
 ## Chaîne d'enregistrement
 
@@ -215,7 +387,8 @@ Chargement FML
    ├─ RegisterEvent(ATTACHMENT_TYPE)   → mana, experience, current_wave,
    │                                      wave_enemies_total, wave_enemies_killed, game_phase,
    │                                      score, level, character_name, difficulty,
-   │                                      combat_session, active_spawners, active_mana_chests, ready
+   │                                      combat_session, active_spawners, active_mana_chests,
+   │                                      crystal_pos, ready
    ├─ RegisterEvent(MENU)              → spawner_config, mana_chest_config (MenuType)
    ├─ RegisterEvent(BLOCK_ENTITY)      → eternia_crystal, spawner, mana_chest (BlockEntityType)
    ├─ RegisterEvent(CREATIVE_TAB)      → dungeon_defenders_tab
@@ -230,20 +403,35 @@ Chargement FML
    │                                      ScoreOverlay, CharacterOverlay, AbilitySlotsOverlay
    ├─ RegisterMenuScreensEvent [client] → spawner_config -> SpawnerConfigScreen,
    │                                       mana_chest_config -> ManaChestConfigScreen
-   └─ RegisterGameTestsEvent           → eternia_crystal_damage, phase_transitions
+   └─ RegisterGameTestsEvent           → eternia_crystal_damage, phase_transitions,
+                                          enemy_legacy_format, enemy_shipped_values,
+                                          enemy_unknown_excluded_from_wave, enemy_export_conversion,
+                                          tower_shipped_values, tower_stats_validation,
+                                          balance_shipped_values, balance_validation, mana_chest_respawn,
+                                          world_time_frozen, score_bonuses, combat_countdown,
+                                          monsters_do_not_burn, enemy_variants, tower_upgrade
                                           (DungeonDefendersGameTests, voir 05-etat-et-problemes-connus.md)
 
 Bus de jeu (NeoForge.EVENT_BUS)
    ├─ MobHealthBarRenderer.onRenderLiving(RenderLivingEvent.Post) [client] → billboard de vie
-   │    filtré sur zombie/squelette, lit HEALTH/MAX_HEALTH/ENTITY_ID posés ci-dessus
+   │    filtré sur les entity_type des ennemis data-driven (ClientEnemyDefinitions),
+   │    lit HEALTH/MAX_HEALTH/ENTITY_ID posés ci-dessus
+   ├─ EnemyRegistry.onAddReloadListeners(AddServerReloadListenersEvent)
+   │    └─ au démarrage ET à chaque /reload : relit data/*/dungeon_defenders/enemy/*.json
+   ├─ EnemyRegistry.onDatapackSync(OnDatapackSyncEvent)
+   │    └─ à la connexion d'un joueur, et à tous après /reload : EnemyDefinitionsPayload
+   ├─ TowerStatsRegistry / GameBalance : mêmes deux événements, mêmes moments
+   │    └─ tower/*.json -> TowerStatsPayload ; balance/*.json -> GameBalancePayload
    ├─ ModEvents.onMonsterSpawn(EntityJoinLevelEvent)
+   │    └─ comportement de la définition de l'ennemi (EnemyBehavior), sinon règle d'avant
    ├─ ModEvents.onPlayerJoin(EntityJoinLevelEvent)
    ├─ ModEvents.onMonsterDeath(LivingDeathEvent)
    │    └─ si wave_enemies_killed >= wave_enemies_total :
    │         PhaseTransitions.enterBuild(level) (vague suivante)
    │         ou PhaseTransitions.onVictory(level) si c'était déjà MAX_WAVE
    ├─ TavernSpawn.onLevelLoad(LevelEvent.Load)
-   │    └─ si Overworld : fixe le point de spawn (0,65,0) + pose la plateforme provisoire
+   │    └─ si Overworld : pose la structure dungeon_defenders:tavern (repli plateforme si absente),
+   │       force la phase TAVERN, et fixe le point de spawn sur son marqueur player_spawn
    └─ ModCommands.onRegisterCommands(RegisterCommandsEvent)
         └─ enregistre /dd_leave -> MapInstance.returnToTavern(level)
 
@@ -253,6 +441,10 @@ EterniaCrystalBlockEntity#setCrystalHealth, à 0 PV :
 Chaque SpawnerBlockEntity, en plus de ces événements :
    ├─ setLevel(...)/setRemoved()   → s'ajoute/se retire de ModAttachments.ACTIVE_SPAWNERS
    └─ BlockEntityTicker [serveur]  → SpawnerBlockEntity.serverTick(...), une fois par tick de bloc
+
+EterniaCrystalBlockEntity, même principe :
+   └─ setLevel(...)/setRemoved()   → pose/retire ModAttachments.CRYSTAL_POS (voir 02-gameplay.md,
+                                      "Le goal de longue distance" — lu par SeekEterniaCrystalGoal)
 
 Clic droit sur un SpawnerBlock, sans shift, en créatif uniquement (voir 02-gameplay.md) :
    └─ player.openMenu(SpawnerConfigMenuProvider)

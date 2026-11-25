@@ -1,0 +1,12 @@
+{
+  "entity_type": "minecraft:skeleton",
+  "icon": "minecraft:skeleton_spawn_egg",
+  "xp_value": 15,
+  "order": 1,
+  "behavior": {
+    "type": "dungeon_defenders:ranged_crystal",
+    "damage_per_shot": 3,
+    "ticks_between_shots": 20,
+    "shoot_range": 10.0
+  }
+}

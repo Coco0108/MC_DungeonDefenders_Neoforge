@@ -5,12 +5,34 @@ import com.github.c0c0tier.dungeon_defenders.block.entity.BowlingBallTurretBlock
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.HarpoonTurretBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.ManaChestBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MapConfigBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.FrostStillBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.AcidSprayerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.VolatileVatBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.CatalystPylonBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ManaCondenserBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.FlaskLauncherBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.IronBarricadeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.RepeaterTurretBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.LongshotTurretBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MagnetCoilBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.RepairStationBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.PistonSlammerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ThornHedgeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.MudTotemBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.GeyserBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.BoulderThrowerBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.CrystalSpireBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.LifestoneBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.MortarTurretBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SliceNDiceBlockadeBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpikeBlockadeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.block.entity.TrainingDummyBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
 import com.github.c0c0tier.dungeon_defenders.init.ModBlocks;
+import com.github.c0c0tier.dungeon_defenders.init.ModChunkTickets;
 import com.github.c0c0tier.dungeon_defenders.init.ModEntities;
 import com.github.c0c0tier.dungeon_defenders.init.ModMenus;
 import com.mojang.logging.LogUtils;
@@ -23,6 +45,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
@@ -94,6 +117,129 @@ public class DungeonDefendersMod {
                     ModBlocks.MORTAR_TURRET.get()
             ));
 
+    // Roster de l'Alchimiste (2026-11-16), voir ModBlocks.
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<FrostStillBlockEntity>> FROST_STILL_BE =
+            BLOCK_ENTITIES.register("frost_still", () -> new BlockEntityType<>(
+                    FrostStillBlockEntity::new,
+                    ModBlocks.FROST_STILL.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AcidSprayerBlockEntity>> ACID_SPRAYER_BE =
+            BLOCK_ENTITIES.register("acid_sprayer", () -> new BlockEntityType<>(
+                    AcidSprayerBlockEntity::new,
+                    ModBlocks.ACID_SPRAYER.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<VolatileVatBlockEntity>> VOLATILE_VAT_BE =
+            BLOCK_ENTITIES.register("volatile_vat", () -> new BlockEntityType<>(
+                    VolatileVatBlockEntity::new,
+                    ModBlocks.VOLATILE_VAT.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CatalystPylonBlockEntity>> CATALYST_PYLON_BE =
+            BLOCK_ENTITIES.register("catalyst_pylon", () -> new BlockEntityType<>(
+                    CatalystPylonBlockEntity::new,
+                    ModBlocks.CATALYST_PYLON.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ManaCondenserBlockEntity>> MANA_CONDENSER_BE =
+            BLOCK_ENTITIES.register("mana_condenser", () -> new BlockEntityType<>(
+                    ManaCondenserBlockEntity::new,
+                    ModBlocks.MANA_CONDENSER.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<FlaskLauncherBlockEntity>> FLASK_LAUNCHER_BE =
+            BLOCK_ENTITIES.register("flask_launcher", () -> new BlockEntityType<>(
+                    FlaskLauncherBlockEntity::new,
+                    ModBlocks.FLASK_LAUNCHER.get()
+            ));
+
+    // Roster de l'Ingénieur (2026-11-16), voir ModBlocks.
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<IronBarricadeBlockEntity>> IRON_BARRICADE_BE =
+            BLOCK_ENTITIES.register("iron_barricade", () -> new BlockEntityType<>(
+                    IronBarricadeBlockEntity::new,
+                    ModBlocks.IRON_BARRICADE.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<RepeaterTurretBlockEntity>> REPEATER_TURRET_BE =
+            BLOCK_ENTITIES.register("repeater_turret", () -> new BlockEntityType<>(
+                    RepeaterTurretBlockEntity::new,
+                    ModBlocks.REPEATER_TURRET.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<LongshotTurretBlockEntity>> LONGSHOT_TURRET_BE =
+            BLOCK_ENTITIES.register("longshot_turret", () -> new BlockEntityType<>(
+                    LongshotTurretBlockEntity::new,
+                    ModBlocks.LONGSHOT_TURRET.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MagnetCoilBlockEntity>> MAGNET_COIL_BE =
+            BLOCK_ENTITIES.register("magnet_coil", () -> new BlockEntityType<>(
+                    MagnetCoilBlockEntity::new,
+                    ModBlocks.MAGNET_COIL.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<RepairStationBlockEntity>> REPAIR_STATION_BE =
+            BLOCK_ENTITIES.register("repair_station", () -> new BlockEntityType<>(
+                    RepairStationBlockEntity::new,
+                    ModBlocks.REPAIR_STATION.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PistonSlammerBlockEntity>> PISTON_SLAMMER_BE =
+            BLOCK_ENTITIES.register("piston_slammer", () -> new BlockEntityType<>(
+                    PistonSlammerBlockEntity::new,
+                    ModBlocks.PISTON_SLAMMER.get()
+            ));
+
+    // Roster de du Géomancien (2026-11-16), voir ModBlocks.
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ThornHedgeBlockEntity>> THORN_HEDGE_BE =
+            BLOCK_ENTITIES.register("thorn_hedge", () -> new BlockEntityType<>(
+                    ThornHedgeBlockEntity::new,
+                    ModBlocks.THORN_HEDGE.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MudTotemBlockEntity>> MUD_TOTEM_BE =
+            BLOCK_ENTITIES.register("mud_totem", () -> new BlockEntityType<>(
+                    MudTotemBlockEntity::new,
+                    ModBlocks.MUD_TOTEM.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<GeyserBlockEntity>> GEYSER_BE =
+            BLOCK_ENTITIES.register("geyser", () -> new BlockEntityType<>(
+                    GeyserBlockEntity::new,
+                    ModBlocks.GEYSER.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BoulderThrowerBlockEntity>> BOULDER_THROWER_BE =
+            BLOCK_ENTITIES.register("boulder_thrower", () -> new BlockEntityType<>(
+                    BoulderThrowerBlockEntity::new,
+                    ModBlocks.BOULDER_THROWER.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CrystalSpireBlockEntity>> CRYSTAL_SPIRE_BE =
+            BLOCK_ENTITIES.register("crystal_spire", () -> new BlockEntityType<>(
+                    CrystalSpireBlockEntity::new,
+                    ModBlocks.CRYSTAL_SPIRE.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<LifestoneBlockEntity>> LIFESTONE_BE =
+            BLOCK_ENTITIES.register("lifestone", () -> new BlockEntityType<>(
+                    LifestoneBlockEntity::new,
+                    ModBlocks.LIFESTONE.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TrainingDummyBlockEntity>> TRAINING_DUMMY_BE =
+            BLOCK_ENTITIES.register("training_dummy", () -> new BlockEntityType<>(
+                    TrainingDummyBlockEntity::new,
+                    ModBlocks.TRAINING_DUMMY.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MapConfigBlockEntity>> MAP_CONFIG_BE =
+            BLOCK_ENTITIES.register("map_config", () -> new BlockEntityType<>(
+                    MapConfigBlockEntity::new,
+                    ModBlocks.MAP_CONFIG.get()
+            ));
+
     // 3. L'onglet Créatif
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> DUNGEON_DEFENDERS_TAB = CREATIVE_MODE_TABS.register("dungeon_defenders_tab",
             () -> CreativeModeTab.builder()
@@ -111,6 +257,10 @@ public class DungeonDefendersMod {
                         output.accept(ModBlocks.TAVERN_CRYSTAL_ITEM.get());
                         output.accept(ModBlocks.MANA_CHEST_ITEM.get());
                         output.accept(ModBlocks.PLAYER_SPAWN_ITEM.get());
+                        output.accept(ModBlocks.TRAINING_DUMMY_ITEM.get());
+                        output.accept(ModBlocks.NO_BUILD_ZONE_ITEM.get());
+                        output.accept(ModBlocks.MAP_CONFIG_ITEM.get());
+                        output.accept(ModBlocks.FORGE_ITEM.get());
                     })
                     .build());
 
@@ -120,11 +270,21 @@ public class DungeonDefendersMod {
         ModAttachments.register(modEventBus);
         ModMenus.register(modEventBus);
         ModEntities.register(modEventBus);
+        ModChunkTickets.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
+
+        // Tout Mob custom doit fournir ses attributs par défaut, sinon le jeu plante à la
+        // première invocation. Événement du bus MOD, d'où l'inscription ici plutôt qu'un
+        // @SubscribeEvent (cette classe n'est pas un @EventBusSubscriber).
+        modEventBus.addListener(DungeonDefendersMod::onEntityAttributeCreation);
 
         container.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
         LOGGER.info("Le mod Dungeon Defenders est initialisé proprement !");
+    }
+
+    private static void onEntityAttributeCreation(EntityAttributeCreationEvent event) {
+        event.put(ModEntities.TRAINING_DUMMY.get(), TrainingDummyEntity.createAttributes().build());
     }
 }

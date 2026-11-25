@@ -1,0 +1,8 @@
+{
+  "max_health": 20,
+  "mana_cost": 55,
+  "range": 9.0,
+  "cone_angle_degrees": 60.0,
+  "damage": 1.5,
+  "attack_interval_ticks": 6
+}

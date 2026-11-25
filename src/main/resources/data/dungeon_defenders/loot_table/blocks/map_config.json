@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:block",
+  "random_sequence": "dungeon_defenders:blocks/map_config",
+  "pools": [
+    {
+      "rolls": 1.0,
+      "bonus_rolls": 0.0,
+      "conditions": [{ "condition": "minecraft:survives_explosion" }],
+      "entries": [{ "type": "minecraft:item", "name": "dungeon_defenders:map_config" }]
+    }
+  ]
+}

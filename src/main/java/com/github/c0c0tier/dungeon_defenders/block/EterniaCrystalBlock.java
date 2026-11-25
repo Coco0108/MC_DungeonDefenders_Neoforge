@@ -1,5 +1,6 @@
 package com.github.c0c0tier.dungeon_defenders.block;
 
+import com.github.c0c0tier.dungeon_defenders.CombatCountdown;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.GamePhase;
 import com.github.c0c0tier.dungeon_defenders.init.ModAttachments;
@@ -98,11 +99,12 @@ public class EterniaCrystalBlock extends BaseEntityBlock {
         }
 
         if (readyCount == players.size()) {
-            PhaseTransitions.enterCombat(level);
-            for (Player p : players) {
-                p.sendSystemMessage(Component.translatable(
-                        "dungeon_defenders.spawner.phase_toggled", Component.translatable(GamePhase.COMBAT.translationKey())));
-            }
+            // Plus de démarrage à l'instant du dernier clic : un court compte à rebours laisse
+            // le temps de se placer (voir CombatCountdown, qui lance le Combat et annonce le
+            // changement de phase). Un vote retiré pendant le décompte l'annule.
+            CombatCountdown.start(level);
+        } else {
+            CombatCountdown.cancel(level);
         }
 
         return InteractionResult.SUCCESS;

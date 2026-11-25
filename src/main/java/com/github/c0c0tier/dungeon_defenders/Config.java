@@ -22,5 +22,11 @@ public class Config {
                     + "que ce soit pour l'attaquer au corps à corps ou à distance.")
             .defineInRange("searchRange", 16, 1, 64);
 
+    public static final ModConfigSpec.IntValue DEFAULT_TIME_OF_DAY = BUILDER
+            .comment("Heure figée du monde, en ticks (0 = lever du soleil, 6000 = midi, 12000 = "
+                    + "coucher, 18000 = minuit) : celle de la taverne, et de toute map qui ne fixe "
+                    + "pas la sienne dans son bloc de configuration. Le cycle jour/nuit est arrêté.")
+            .defineInRange("defaultTimeOfDay", 6000, 0, 23999);
+
     static final ModConfigSpec SPEC = BUILDER.build();
 }

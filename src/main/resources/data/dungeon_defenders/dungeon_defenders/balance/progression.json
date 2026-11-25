@@ -1,0 +1,9 @@
+{
+  "xp_per_level": 100,
+  "stat_points_per_level": 1,
+  "stat_max_points": 20,
+  "vitality_health_per_point": 2.0,
+  "power_damage_per_point": 0.03,
+  "swiftness_speed_per_point": 0.02,
+  "tower_mastery_damage_per_point": 0.03
+}
