@@ -1,5 +1,9 @@
 package com.github.c0c0tier.dungeon_defenders;
 
+import com.github.c0c0tier.dungeon_defenders.atelier.Atelier;
+import com.github.c0c0tier.dungeon_defenders.atelier.AtelierEntities;
+import com.github.c0c0tier.dungeon_defenders.atelier.FicheMonstre;
+import com.github.c0c0tier.dungeon_defenders.client.atelier.AtelierMonsterRenderer;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntityRenderer;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntityRenderer;
 import com.github.c0c0tier.dungeon_defenders.block.entity.TowerHealthBarRenderer;
@@ -235,6 +239,11 @@ public class DungeonDefendersModClient {
                 ModEntities.WEAPON_PROJECTILE.get(),
                 ThrownItemRenderer::new
         );
+        // Monstres de l'Atelier (doc/ATELIER.md) : un seul renderer GeckoLib, réglé par la fiche.
+        AtelierEntities.types().forEach((id, type) -> {
+            FicheMonstre fiche = Atelier.monstre(id);
+            event.registerEntityRenderer(type.get(), context -> new AtelierMonsterRenderer(context, fiche));
+        });
     }
 
     // La vie n'existe pas nativement sur un EntityRenderState vanilla (voir

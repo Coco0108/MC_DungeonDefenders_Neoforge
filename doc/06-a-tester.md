@@ -1743,6 +1743,28 @@ rendu n'ont jamais été vus.
 - [ ] Le projectile part bien du centre de l'écran (pas décalé à gauche/droite).
 - [ ] Avis attendu : vitesses et cloche de la fiole, à régler si besoin.
 
+## Monstres de l'Atelier (2026-11-25)
+
+Voir [ATELIER.md](ATELIER.md). Rien à tester tant qu'aucun monstre n'est déployé depuis l'Atelier : le code a été
+essayé en local avec une copie du « gluant » (chargement, IA de vague, impact, gametests), jamais affiché à l'écran.
+
+- [ ] **GeckoLib** : `build/mod-deps/geckolib-neoforge-26.1.2-5.5.2.jar` est dans `mods/` (client **et** serveur
+      dédié), sinon le mod refuse de se charger.
+- [ ] Le log de démarrage dit `Atelier : N monstre(s) chargé(s) [...]`, sans fiche rejetée (sinon, chaque problème est
+      listé juste au-dessus).
+- [ ] L'œuf est dans l'onglet « Dungeon Defenders » (et « Œufs d'apparition »), avec son apparence et son nom.
+- [ ] Le monstre s'affiche avec son modèle, à la bonne taille ; `idle` à l'arrêt, `walk` en marchant.
+- [ ] Variantes : plusieurs œufs donnent des textures différentes ; `/summon dungeon_defenders:<id> ~ ~ ~ {Variante:"<id>"}`
+      force une variante ; elle reste après avoir quitté et relancé le monde.
+- [ ] Glowmask : les parties lumineuses brillent dans le noir (seulement si la texture en a un).
+- [ ] En survie, un monstre `hostile` vient te frapper : l'animation `attack` se joue et les dégâts tombent **au moment
+      du coup** (pas au début du geste) ; reculer pendant le geste permet d'esquiver.
+- [ ] Dans une vague (spawner avec l'ennemi `dungeon_defenders:<id>`) : il attaque tours et cristal avec son animation,
+      les dégâts tombent à l'impact ; les tours le visent ; il donne XP, score, mana.
+- [ ] Blessé, il joue `hurt` (s'il l'a) ; mort, il joue `death` sans basculer sur le côté puis disparaît.
+- [ ] Sons `ambient`, `hurt`, `death` de sa fiche, et sons des keyframes de ses animations.
+- [ ] Un monstre volant (`"deplacement": "vol"`) vole, reste suspendu à l'arrêt, ne prend pas de dégâts de chute.
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni

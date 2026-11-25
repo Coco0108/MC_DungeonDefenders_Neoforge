@@ -1,0 +1,150 @@
+# Ce que Dungeon Defenders lit de l'Atelier
+
+L'**Atelier** est le mod bac à sable de Corentin (repo privé `Coco0108/MC_Atelier_Neoforge`). Chaque modèle
+Blockbench y est testé en jeu et réglé dans une **fiche** JSON, puis **déployé** vers les mods qui le demandent
+(`destinations` de la fiche). Ce document dit ce que Dungeon Defenders lit de ce qui arrive, où, et ce qu'il ignore.
+Le format exact des fiches est dans le `CLAUDE.md` de l'Atelier (« Format de la fiche », « Objets et blocs ») et dans
+ses `schemas/`.
+
+## Les règles
+
+- **L'Atelier est la seule source de vérité des modèles.** Les fichiers qu'il déploie ne se retouchent **jamais** ici :
+  ni modèle, ni texture, ni fiche, ni son. Chaque fiche copiée porte un bloc `origine` avec une empreinte : une copie
+  modifiée à la main bloque les déploiements suivants. Un fichier reçu qui pose problème se corrige **dans l'Atelier**,
+  puis se redéploie.
+- **Un monstre = des fichiers, pas du code.** Aucune classe par monstre, par objet ni par bloc : tout passe par le code
+  générique du package `atelier/`. Si un besoin ne rentre pas dans la fiche, on fait évoluer le format (dans l'Atelier)
+  et ce code générique, jamais un cas particulier.
+- **Une fiche invalide est ignorée avec un message de log clair**, elle ne fait jamais planter le jeu.
+- Les déploiements arrivent par GitHub, en commits `modele: <id> depuis l'atelier @<commit>`.
+
+## Où arrivent les fichiers
+
+Le namespace `atelier:` devient `dungeon_defenders:` dans tout ce qui est copié.
+
+| Quoi | Où (sous `src/main/resources/`) | Lu par |
+|---|---|---|
+| Fiche d'un monstre | `data/dungeon_defenders/atelier_monstres/<id>.json` | `AtelierLoader` |
+| Géométrie, animations (GeckoLib) | `assets/dungeon_defenders/geckolib/models/entity/<id>.geo.json`, `geckolib/animations/entity/<id>.animation.json` | GeckoLib (client), `AtelierLoader` (vérification, instants d'impact) |
+| Textures, variantes, glowmask | `assets/dungeon_defenders/textures/entity/<id>/…` (`<texture>_glowmask.png` à côté si elle existe) | `AtelierMonsterRenderer` |
+| Sons | `assets/dungeon_defenders/sounds/entity/<id>/<nom>.ogg` + entrées `entity.<id>.<nom>` de `assets/dungeon_defenders/sounds.json` | `AtelierSounds` |
+| Ennemi de vague | `data/dungeon_defenders/dungeon_defenders/enemy/<id>.json` | `EnemyRegistry` (le système d'ennemis du mod, voir [data-driven/ennemis.md](data-driven/ennemis.md)) |
+| Effets, projectiles | `data/dungeon_defenders/atelier_effets/<id>.json`, `atelier_projectiles/<id>.json` | **rien** (références inertes, voir plus bas) |
+
+## Au démarrage
+
+`AtelierLoader.load` tourne à la **construction du mod** (`DungeonDefendersMod`), avant le gel des registres :
+chaque fiche devient son propre type d'entité, et chaque son son événement. On ne peut pas en ajouter à chaud : ce
+chargement ne passe donc **pas** par un reload listener de datapack, et les fiches doivent être **dans le jar**.
+Ajouter ou modifier un monstre demande de rebâtir le mod (le `/reload` ne le relit pas).
+
+Le log résume ce qui a été chargé :
+
+```
+Atelier : 1 monstre(s) chargé(s) [gluant], 0 fiche(s) rejetée(s) []
+```
+
+### Vérifications
+
+Pour chaque fiche, un message par problème, puis la fiche est ignorée (repris de `FicheLoader` de l'Atelier) :
+
+- nom de fichier invalide, `id` différent du nom du fichier, `id` déjà pris par une entité du mod
+  (`mana_crystal`, `training_dummy`, `weapon_projectile`) ;
+- valeur inconnue ou mal formée (le codec s'arrête à la première erreur de forme : `comportement`, `hitbox`…) ;
+- modèle, animations ou texture introuvable, hors du namespace `dungeon_defenders`, ou hors du dossier que le jeu lit
+  (GeckoLib 5 ne charge que `geckolib/models/` et `geckolib/animations/`) ; modèle sans `minecraft:geometry` ;
+- rôle `idle` ou `walk` manquant, rôle vers une animation absente du `.animation.json` ;
+- marqueur `impact` après la fin de son animation, instant de timeline qui n'est pas un nombre ;
+- son de la fiche (`sons`) absent du `sounds.json` ;
+- variante sans texture, déclarée deux fois, ou d'id invalide.
+
+Simples avertissements (la fiche est chargée) : une section que Dungeon Defenders ne lit pas (voir « Ignoré »), un
+champ inconnu, un monstre `neutre`/`hostile` sans rôle `attack`, une animation `attack` sans marqueur `impact`,
+plusieurs marqueurs `impact`, une keyframe de son vers un événement non déclaré (elle serait muette), un comportement
+`fuyard`/`marchand`.
+
+## Les monstres
+
+Un **type d'entité par fiche**, `dungeon_defenders:<id>`, et son œuf `dungeon_defenders:<id>_spawn_egg` (onglets
+« Œufs d'apparition » et « Dungeon Defenders »). **Une seule classe d'entité** (`atelier/AtelierMonster`), **un seul
+modèle et un seul renderer** (`client/atelier/`), qui prennent tout dans la fiche.
+
+| Champ de la fiche | Effet dans Dungeon Defenders |
+|---|---|
+| `modele`, `animations`, `texture` | Modèle et animations GeckoLib, texture principale |
+| `variantes` | Tirée au hasard à l'apparition (la texture principale compte comme une variante), synchronisée, sauvegardée sous `Variante` : `/summon dungeon_defenders:<id> ~ ~ ~ {Variante:"rouge"}` |
+| glowmask | Calque lumineux GeckoLib si `<texture>_glowmask.png` existe, pour cette texture seulement ; rien sinon |
+| `roles_animation` | `idle`/`walk` selon le mouvement ; `attack` à chaque coup ; `hurt` quand il est blessé (jamais au milieu d'un coup) ; `death` à sa mort (le corps reste le temps de l'animation, 5 s au plus, sans basculer sur le côté) |
+| `echelle`, `hitbox` | Taille du rendu (et de l'ombre), boîte de collision |
+| `stats.pv`, `degats`, `vitesse` | Attributs vanilla : PV max, dégâts d'un coup **sur un joueur**, vitesse |
+| `stats.recharge_attaque` | Secondes entre deux coups (défaut 1), jamais moins que l'animation `attack` |
+| `comportement` | La réaction aux **joueurs** : `passif` ne les attaque jamais, `neutre` riposte, `hostile` les attaque à vue comme un zombie. `fuyard`/`marchand` se comportent en `passif` |
+| `deplacement` | `sol` ; `vol` vole comme une abeille (pas de gravité ni de chute, vitesse de vol 2 × `vitesse`) |
+| `sons` | `ambient`, `hurt`, `death` joués automatiquement (sinon les sons par défaut d'un monstre vanilla) ; les autres ne servent qu'aux keyframes des animations |
+| `nom` | Nom affiché si le fichier de langue n'a pas `entity.dungeon_defenders.<id>` |
+| `origine` | Réservé au déploiement : le jeu l'ignore |
+
+### Le coup et son impact
+
+Les dégâts d'un coup tombent à l'instruction `impact;` de la timeline de l'animation `attack`
+(`"timeline": { "0.4": "impact;" }`), sinon à la moitié de l'animation. GeckoLib ne lit les instructions que côté client :
+le serveur lit donc cet instant dans le `.animation.json` au démarrage (`Impact`, repris de l'Atelier). Une nouvelle
+attaque ne part pas avant la fin de l'animation, ni avant `stats.recharge_attaque` secondes.
+
+C'est vrai pour **tous** ses coups :
+- sur un joueur (`comportement` `neutre`/`hostile`) : touché seulement s'il est encore à portée à l'impact, avec 1 bloc
+  de marge pour un recul pendant le geste ;
+- sur une tour ou le cristal, et pour un tir sur le cristal : les goals de Dungeon Defenders (`AttackPriorityTargetGoal`,
+  `RangedAttackEterniaCrystalGoal`) passent par `AnimatedAttacker.strike`. Un zombie ou un squelette vanilla frappe
+  toujours tout de suite ; un monstre de l'Atelier joue `attack` et les dégâts tombent à l'impact.
+
+### C'est un `Monster`
+
+L'entité générique étend `Monster`, pas seulement `PathfinderMob` : dans Dungeon Defenders, les tours, les armes des
+héros, l'IA des vagues (`ModEvents.onMonsterSpawn`), l'XP, le score et le butin ne visent que des `Monster`.
+Catégorie `MONSTER`, sans aucune apparition naturelle : il n'apparaît que par un spawner de map, un œuf ou `/summon`.
+
+## Le lien avec les vagues
+
+Un monstre de l'Atelier devient un ennemi de vague par un fichier `enemy/<id>.json` du système d'ennemis du mod
+([data-driven/ennemis.md](data-driven/ennemis.md)), qui pointe vers son type d'entité :
+
+```json
+{
+  "entity_type": "dungeon_defenders:orc",
+  "icon": "dungeon_defenders:orc_spawn_egg",
+  "xp_value": 20,
+  "order": 10,
+  "behavior": { "type": "dungeon_defenders:melee_priority", "damage_per_hit": 4 }
+}
+```
+
+- `entity_type` : `dungeon_defenders:<id>`. `icon` : un objet, l'œuf du monstre est le choix naturel.
+- `xp_value` (XP et score), `order` (rang dans l'éditeur de spawner).
+- `behavior` : `dungeon_defenders:melee_priority` (tours puis cristal, au corps à corps ; `damage_per_hit` optionnel, les
+  dégâts **sur les tours et le cristal**) ou `dungeon_defenders:ranged_crystal` (tir sur le cristal ; `damage_per_shot`,
+  `ticks_between_shots`, `shoot_range`).
+- Optionnels, par-dessus la fiche : `max_health`, `movement_speed`, `scale`.
+- Nom dans l'éditeur de spawner : clé `dungeon_defenders.enemy.<id>` des fichiers de langue (sinon l'identifiant brut).
+
+Sans ce fichier, le monstre reçoit quand même l'IA de mêlée par défaut s'il apparaît (œuf, `/summon`), mais ne peut pas
+être choisi dans un spawner. Les deux sources de dégâts sont distinctes : `stats.degats` de la fiche sur un joueur,
+`damage_per_hit` (ou la config) sur les tours et le cristal.
+
+## Ignoré (pour l'instant)
+
+Présent dans une fiche, sans erreur (un avertissement au démarrage) : `capacites` (et l'ancien `tir`), effets et
+projectiles (`atelier_effets/`, `atelier_projectiles/` restent des références inertes), `apparition` (les ennemis
+viennent des vagues), `butin` (les vagues ont leur propre économie : mana, butin de héros), `fuite`/`commerce` (la monnaie
+vivante), `oeuf`, `cibles`, `destinations`.
+
+Plus tard : les **blocs animés** (forge, mannequin, cristal ont des animations GeckoLib qu'un bloc fixe ne joue pas :
+il faudra un `GeoBlockEntity` générique, une fois le format défini dans l'Atelier).
+
+## Tester
+
+- `./gradlew runGameTestServer` : le test `atelier_monsters` fait apparaître **chaque** monstre chargé et vérifie sa
+  fiche (PV, dégâts), l'IA de vague, l'apparition par son `enemy/<id>.json`, et que son coup ne tombe qu'à l'impact.
+  Sans monstre déployé, il n'a rien à vérifier.
+- En jeu : l'œuf dans l'onglet « Dungeon Defenders », ou `/summon dungeon_defenders:<id>` ; voir
+  [06-a-tester.md](06-a-tester.md#monstres-de-latelier).

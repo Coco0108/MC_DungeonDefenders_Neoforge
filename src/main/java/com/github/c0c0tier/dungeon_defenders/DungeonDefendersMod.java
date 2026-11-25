@@ -39,6 +39,9 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
+import com.github.c0c0tier.dungeon_defenders.atelier.AtelierEntities;
+import com.github.c0c0tier.dungeon_defenders.atelier.AtelierLoader;
+import com.github.c0c0tier.dungeon_defenders.atelier.AtelierSounds;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
@@ -270,6 +273,15 @@ public class DungeonDefendersMod {
         ModAttachments.register(modEventBus);
         ModMenus.register(modEventBus);
         ModEntities.register(modEventBus);
+        // Monstres de l'Atelier (doc/ATELIER.md) : les fiches sont lues AVANT leur enregistrement,
+        // chaque monstre ayant son propre type d'entité et chaque son son événement. Un id déjà pris
+        // par une entité du mod est refusé (avec un message), jamais enregistré deux fois.
+        AtelierLoader.load(container.getModInfo().getOwningFile().getFile().getContents(),
+                ModEntities.ENTITY_TYPES.getEntries().stream()
+                        .map(entry -> entry.getId().getPath())
+                        .collect(java.util.stream.Collectors.toSet()));
+        AtelierEntities.register(modEventBus);
+        AtelierSounds.register(modEventBus);
         ModChunkTickets.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);

@@ -1,5 +1,14 @@
 package com.github.c0c0tier.dungeon_defenders.gametest;
 
+import com.github.c0c0tier.dungeon_defenders.atelier.Atelier;
+import com.github.c0c0tier.dungeon_defenders.atelier.AtelierEntities;
+import com.github.c0c0tier.dungeon_defenders.atelier.AtelierMonster;
+import com.github.c0c0tier.dungeon_defenders.atelier.FicheMonstre;
+import com.github.c0c0tier.dungeon_defenders.entity.ai.RangedAttackEterniaCrystalGoal;
+import net.minecraft.world.entity.EntitySpawnReason;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.ArrayList;
+import java.util.HashMap;
 import com.github.c0c0tier.dungeon_defenders.CombatCountdown;
 import com.github.c0c0tier.dungeon_defenders.Config;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
@@ -168,7 +177,13 @@ public final class DungeonDefendersGameTests {
         // Réglages globaux en data-driven (doc/data-driven/equilibrage.md).
         register(event, environment, "balance_shipped_values", DungeonDefendersGameTests::balanceShippedValues);
         register(event, environment, "balance_validation", DungeonDefendersGameTests::balanceValidation);
+        // Monstres de l'Atelier (doc/ATELIER.md) : plus long, pour laisser l'animation d'attaque arriver à son impact.
+        Identifier atelierId = Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "atelier_monsters");
+        event.registerTest(atelierId, ModGameTestInstance.create(atelierId, DungeonDefendersGameTests::atelierMonsters,
+                new TestData<>(environment, EMPTY_STRUCTURE, ATELIER_MAX_TICKS, 0, true)));
     }
+
+    private static final int ATELIER_MAX_TICKS = 200;
 
     private static void register(RegisterGameTestsEvent event, Holder<TestEnvironmentDefinition<?>> environment,
                                  String name, Consumer<GameTestHelper> test) {
@@ -1145,5 +1160,69 @@ public final class DungeonDefendersGameTests {
         tag.putInt("Accumulator", 0);
         tag.putInt("EffectiveTotal", 5);
         return SpawnerBlockEntity.SpawnEntry.CODEC.parse(NbtOps.INSTANCE, tag).getOrThrow();
+    }
+
+    /**
+     * Chaque monstre de l'Atelier chargé (doc/ATELIER.md), sans rien de propre à un monstre : il apparaît en
+     * AtelierMonster (donc Monster, ce que visent les tours), avec les PV, dégâts et vitesse de sa fiche, il reçoit l'IA
+     * de vague de Dungeon Defenders (celle de son enemy/<id>.json, sinon la mêlée par défaut), et son coup ne tombe
+     * qu'à l'impact de son animation « attack », puis pas de second coup avant la fin de l'animation. Sans monstre
+     * chargé, rien à vérifier.
+     */
+    static void atelierMonsters(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<AtelierMonster> spawned = new ArrayList<>();
+        Map<AtelierMonster, AtomicInteger> hits = new HashMap<>();
+        Map<AtelierMonster, Integer> expectedTicks = new HashMap<>();
+        for (Map.Entry<String, FicheMonstre> entry : Atelier.monstres().entrySet()) {
+            FicheMonstre fiche = entry.getValue();
+            EntityType<AtelierMonster> type = AtelierEntities.types().get(entry.getKey()).get();
+            Entity entity = type.spawn(level, helper.absolutePos(new BlockPos(1, 1, 1)), EntitySpawnReason.COMMAND);
+            helper.assertTrue(entity instanceof AtelierMonster, fiche.id() + " apparaît en AtelierMonster");
+            AtelierMonster monster = (AtelierMonster) entity;
+            monster.setNoAi(true);
+            helper.assertValueEqual(monster.fiche(), fiche, fiche.id() + " : fiche retrouvée par son type");
+            EnemyDefinition definition = EnemyRegistry.definitionFor(type).orElse(null);
+            if (definition == null || definition.maxHealth().isEmpty()) {
+                helper.assertValueEqual(monster.getMaxHealth(), fiche.stats().pv(), fiche.id() + " : PV de la fiche");
+            }
+            helper.assertValueEqual((float) monster.getAttributeValue(Attributes.ATTACK_DAMAGE), fiche.stats().degats(),
+                    fiche.id() + " : dégâts de la fiche");
+            helper.assertTrue(monster.goalSelector.getAvailableGoals().stream().anyMatch(goal ->
+                            goal.getGoal() instanceof AttackPriorityTargetGoal || goal.getGoal() instanceof RangedAttackEterniaCrystalGoal),
+                    fiche.id() + " : IA de vague reçue");
+
+            AtomicInteger counter = new AtomicInteger();
+            helper.assertTrue(monster.beginAttack(counter::incrementAndGet), fiche.id() + " : premier coup lancé");
+            helper.assertFalse(monster.beginAttack(counter::incrementAndGet), fiche.id() + " : pas de second coup pendant le premier");
+            Optional<String> attack = fiche.animation("attack");
+            if (attack.isPresent()) {
+                helper.assertValueEqual(counter.get(), 0, fiche.id() + " : les dégâts attendent l'impact");
+                expectedTicks.put(monster, 4 + Math.round(Atelier.impact(fiche.id(), attack.get()).secondes() * 20.0F));
+            } else {
+                helper.assertValueEqual(counter.get(), 1, fiche.id() + " : sans animation, le coup tombe tout de suite");
+                expectedTicks.put(monster, 0);
+            }
+            spawned.add(monster);
+            hits.put(monster, counter);
+
+            // Le lien avec les vagues : son enemy/<id>.json (écrit par l'Atelier) le fait apparaître comme le ferait un
+            // spawner de map, marqué de son identité d'ennemi (XP, score, total de vague).
+            if (definition != null) {
+                Identifier enemyId = EnemyRegistry.idFor(type).orElseThrow();
+                Entity wave = definition.spawn(level, enemyId, helper.absolutePos(new BlockPos(1, 1, 1)));
+                helper.assertTrue(wave instanceof AtelierMonster, fiche.id() + " : apparaît dans une vague");
+                helper.assertValueEqual(EnemyRegistry.idFor(wave), Optional.of(enemyId), fiche.id() + " : identité d'ennemi");
+                wave.discard();
+            }
+        }
+        int longest = expectedTicks.values().stream().max(Integer::compare).orElse(0);
+        helper.runAfterDelay(longest + 2, () -> {
+            for (AtelierMonster monster : spawned) {
+                helper.assertValueEqual(hits.get(monster).get(), 1, monster.fiche().id() + " : un seul coup, tombé à l'impact");
+                monster.discard();
+            }
+            helper.succeed();
+        });
     }
 }

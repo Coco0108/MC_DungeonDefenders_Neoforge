@@ -118,6 +118,9 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── AbilityClientEvents.java      # Touches 1-4 : Start/Stop des compétences maintenues, salve pour le sort 1
     │   │   ├── ClientAbilityState.java       # État d'affichage des compétences : recharge en cours, emplacement canalisé
     │   │   └── ClientDisplayConfig.java      # Spec de config CLIENT (options d'affichage HUD facultatives), branchée dans DungeonDefendersModClient
+    │   ├── client/atelier/                    # Rendu GeckoLib des monstres de l'Atelier (client seulement)
+    │   │   ├── AtelierMonsterModel.java       # GeoModel : chemins de la fiche, texture de la variante (DataTicket)
+    │   │   └── AtelierMonsterRenderer.java    # GeoEntityRenderer : échelle, ombre, glowmask, pas de bascule si animation death
     │   ├── client/gui/screen/
     │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
     │   │   ├── ManaChestConfigScreen.java    # Écran de config du coffre de mana, un seul champ (client uniquement)
@@ -155,6 +158,15 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── LootWeapon.java                # Une arme de butin (héros, rareté, bonus) ; forme objet au sol
     │   │   ├── LootGenerator.java             # Tire une arme au hasard et la pose au sol
     │   │   ├── Equipment.java                 # Inventaire de la Forge et arme équipée par héros : ranger, équiper, bonus
+    │   ├── atelier/                          # Monstres, objets et blocs reçus de l'Atelier (voir ATELIER.md) : aucun code par monstre
+    │   │   ├── AtelierLoader.java             # Lit et vérifie les fiches du jar à la construction du mod ; fiche invalide = ignorée + log
+    │   │   ├── Atelier.java                   # Ce qui a été chargé (fiches, animations, instants d'impact, sons, glowmasks)
+    │   │   ├── FicheMonstre.java              # Format d'une fiche de monstre (codec) ; sections non lues listées dans IGNOREES
+    │   │   ├── Fields.java / Impact.java      # Repris de l'Atelier : champs nommés dans les erreurs ; instant du marqueur « impact; »
+    │   │   ├── AtelierMonster.java            # extends Monster + GeoEntity : l'unique entité de tous les monstres de l'Atelier
+    │   │   ├── ReturningAnimationController.java # Repris de l'Atelier : revient à idle/walk après une animation déclenchée
+    │   │   ├── AtelierEntities.java           # Un EntityType + un œuf par fiche ; attributs ; onglets créatifs
+    │   │   └── AtelierSounds.java             # Un SoundEvent par entrée de sounds.json
     │   ├── entity/
     │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
     │   │   ├── Corrosion.java                 # Marque en mémoire : un monstre corrodé subit plus de dégâts (Projecteur d'acide)
@@ -166,6 +178,7 @@ MC_DungeonDefenders_Neoforge/
     │   │       ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal (un seul sous-classeur : la version à distance)
     │   │       ├── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal (archers, ignorent Blockade/Turret)
     │   │       ├── AttackPriorityTargetGoal.java         # Goal unique des monstres de mêlée : choisit Block > Corps à corps > Cristal > Tourelle selon AiAttackTarget
+    │   │       ├── AnimatedAttacker.java                 # Coup animé : les goals passent par strike() ; dégâts à l'impact pour un monstre de l'Atelier
     │   │       └── SeekEterniaCrystalGoal.java           # Goal de secours (priorité plus basse) : navigue vers ModAttachments.CRYSTAL_POS sans limite de distance
     │   ├── gametest/
     │   │   ├── DungeonDefendersGameTests.java # Fonctions de test + enregistrement (RegisterGameTestsEvent)
