@@ -5,6 +5,11 @@ vérifie la CI.
 
 ## Ce qui est implémenté
 
+- **Monstres, objets et blocs de l'Atelier** (2026-11-25, branche `feature/atelier`) : lus au démarrage depuis les
+  fiches déployées par l'Atelier, sans code par monstre, avec GeckoLib 5.5.2 en dépendance (à installer avec le mod sur
+  le client et le serveur dédié). Testé en local avec des copies non commitées ; aucun monstre réel déployé, rendu jamais
+  vu. Voir [ATELIER.md](ATELIER.md).
+
 - ✅ Bloc `eternia_crystal` + son item, hitbox 1×3×1, très résistant.
 - ✅ Block entity avec PV persistants (100 par défaut) **et synchronisés vers le client**.
 - ✅ Destruction du bloc et message « Game Over » à 0 PV.

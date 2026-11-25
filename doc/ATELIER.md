@@ -161,6 +161,42 @@ Sans ce fichier, le monstre reçoit quand même l'IA de mêlée par défaut s'il
 être choisi dans un spawner. Les deux sources de dégâts sont distinctes : `stats.degats` de la fiche sur un joueur,
 `damage_per_hit` (ou la config) sur les tours et le cristal.
 
+## Ce que Dungeon Defenders attend de l'Atelier
+
+Le code est prêt à lire ce qui arrive ; voici ce qui doit arriver avec le déploiement, en plus de la copie habituelle
+(fiche, modèle, animations, textures, glowmasks, sons et entrées de `sounds.json`).
+
+1. **Branche de déploiement.** Le code qui lit les fiches est sur `feature/atelier` (au-dessus de `integration/tout`,
+   PR #67, qui contient `feature/data-driven`), pas encore dans `main`. **À terme : `main`**, une fois ces deux PR
+   fusionnées. D'ici là, `atelier/modeles` convient, mais créée **depuis `feature/atelier`** (`"depuis":
+   "feature/atelier"` dans `deploiement.json`) plutôt que depuis `main`, qui n'a ni le système d'ennemis ni ce code.
+2. **Un `format: "dungeon_defenders"`** qui écrit `data/dungeon_defenders/dungeon_defenders/enemy/<id>.json` depuis une
+   carte « Réglages Dungeon Defenders » (`cibles.dungeon_defenders`) :
+   - toujours : `entity_type` = `dungeon_defenders:<id>`, `icon` = `dungeon_defenders:<id>_spawn_egg` ;
+   - réglables : `xp_value` (défaut conseillé 10), `order`, `behavior` (`type` `dungeon_defenders:melee_priority` avec
+     `damage_per_hit` optionnel, ou `dungeon_defenders:ranged_crystal` avec `damage_per_shot`, `ticks_between_shots`,
+     `shoot_range`), et en option `max_health`, `movement_speed`, `scale` ;
+   - le nom de l'ennemi : clé `dungeon_defenders.enemy.<id>` des fichiers de langue.
+   Rien ne reste à fusionner de ce côté : l'Atelier écrit tout le fichier de ses monstres. Les ennemis propres au mod
+   (`zombie`, `skeleton`, `brute`, `runner`, `marksman`) restent écrits à la main et ne sont jamais touchés.
+   Sans section `cibles.dungeon_defenders`, pas de fichier : le monstre existe (œuf, `/summon`) mais n'est pas dans
+   les spawners.
+3. **L'œuf** `dungeon_defenders:<id>_spawn_egg` sert d'icône (spawners, HUD des vagues). Le code l'enregistre ; son
+   apparence doit arriver comme dans l'Atelier : `assets/dungeon_defenders/items/<id>_spawn_egg.json` (le modèle
+   partagé teinté de ses deux couleurs), le modèle `models/item/oeuf.json` et ses textures `textures/item/oeuf.png`,
+   `oeuf_taches.png`. Sans eux, l'œuf s'affiche en damier violet et noir.
+4. **Les noms**, dans `lang/fr_fr.json` et `lang/en_us.json` du mod (seulement les lignes de l'Atelier, comme pour
+   DQM) : `entity.dungeon_defenders.<id>`, `item.dungeon_defenders.<id>_spawn_egg`, `dungeon_defenders.enemy.<id>`,
+   `item.dungeon_defenders.<objet>`, `block.dungeon_defenders.<bloc>`. Sans nom de monstre, son `nom` de fiche sert de
+   repli.
+5. **Les fichiers natifs des objets et des blocs**, comme le build de l'Atelier les génère pour lui-même : états de bloc
+   (`blockstates/<id>.json`), modèles (`models/block/<id>.json`, `models/item/<id>.json`), définitions d'objet
+   (`items/<id>.json`), butin du bloc (`data/dungeon_defenders/loot_table/blocks/<id>.json` : il se ramasse lui-même),
+   tags d'outil (`data/minecraft/tags/block/mineable/<outil>.json`, `needs_<niveau>_tool.json` : à **compléter**, jamais
+   à écraser), et pour un bloc `modele` sa forme en `data/dungeon_defenders/atelier_formes_bloc/<id>.json`.
+6. **Des ids libres** : un id déjà pris par le mod est refusé au démarrage (entités `mana_crystal`, `training_dummy`,
+   `weapon_projectile` ; tous les objets et blocs du mod, dont `forge`, `eternia_crystal`, les tours…).
+
 ## Ignoré (pour l'instant)
 
 Présent dans une fiche, sans erreur (un avertissement au démarrage) : `capacites` (et l'ancien `tir`), effets et
