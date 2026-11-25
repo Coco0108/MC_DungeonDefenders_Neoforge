@@ -21,8 +21,9 @@ import org.jspecify.annotations.Nullable;
 // éclat de pierre qui vole, à la place de l'ancien tir instantané par rayon. L'EFFET reste celui
 // de l'arme (HeroWeaponItem#impact) : ce projectile ne décide que d'OÙ et QUAND il s'applique.
 //
-//   - il ne touche que les monstres (canHitEntity) : il traverse les joueurs et le mannequin
-//     d'entraînement n'en est pas un (comme l'ancien rayon) ; un bloc l'arrête ;
+//   - il ne touche que les monstres (canHitEntity) : il traverse les joueurs, mais touche le
+//     mannequin d'entraînement (un Zombie, donc un Monster) pour qu'on puisse s'y essayer ; un
+//     bloc l'arrête ;
 //   - au-delà de la portée de l'arme, il éclate en l'air (armes à zone) ou disparaît (rivet) ;
 //   - il n'est pas sauvegardé : rechargé sans son arme, il disparaît au premier tick.
 //

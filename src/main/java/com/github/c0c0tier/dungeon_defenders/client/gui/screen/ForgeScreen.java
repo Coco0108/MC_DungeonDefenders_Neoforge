@@ -129,7 +129,7 @@ public class ForgeScreen extends Screen {
 
         int actionsY = this.panelTop + PANEL_HEIGHT - 25;
         this.equipButton = this.addRenderableWidget(Button.builder(
-                        Component.translatable("dungeon_defenders.forge.equip"), b -> send(ForgeActionPayload.EQUIP, this.selected))
+                        Component.translatable("dungeon_defenders.forge.equip"), b -> equipSelected())
                 .bounds(this.rightLeft, actionsY, 100, 20).build());
         this.discardButton = this.addRenderableWidget(Button.builder(
                         Component.translatable("dungeon_defenders.forge.discard"), b -> onDiscard())
@@ -138,6 +138,14 @@ public class ForgeScreen extends Screen {
         this.addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> this.onClose())
                 .bounds(this.gridLeft, actionsY, gridWidth, 20).build());
         refresh();
+    }
+
+    // Le serveur échange l'arme choisie avec l'ancienne SUR PLACE : la case garde son index mais
+    // contient désormais une autre arme. On désarme donc une confirmation de Détruire en cours,
+    // sinon un clic de plus détruirait l'ancienne arme sans nouvelle confirmation.
+    private void equipSelected() {
+        send(ForgeActionPayload.EQUIP, this.selected);
+        this.confirmDiscard = -1;
     }
 
     private void onDiscard() {
@@ -269,7 +277,7 @@ public class ForgeScreen extends Screen {
             select(index);
             // Double-clic sur une arme de son héros : l'équiper tout de suite.
             if (doubleClick && this.equipButton.active) {
-                send(ForgeActionPayload.EQUIP, index);
+                equipSelected();
             }
             refresh();
             return true;
