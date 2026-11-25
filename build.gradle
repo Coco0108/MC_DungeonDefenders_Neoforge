@@ -27,7 +27,18 @@ sourceSets.main.resources {
 }
 
 repositories {
-    // Add here additional repositories if required by some of the dependencies below.
+    // GeckoLib 5 est publié sous le groupe com.geckolib, sur son maven Cloudsmith (comme dans l'Atelier).
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "GeckoLib"
+                url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/"
+            }
+        }
+        filter {
+            includeGroup "com.geckolib"
+        }
+    }
 }
 
 base {
@@ -113,6 +124,9 @@ configurations {
 }
 
 dependencies {
+    // GeckoLib : modèles et animations des monstres reçus de l'Atelier (doc/ATELIER.md).
+    implementation "com.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
@@ -149,6 +163,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             mod_version            : mod_version,
             mod_authors            : mod_authors,
             mod_description        : mod_description,
+            geckolib_version_range : geckolib_version_range,
     ]
     inputs.properties replaceProperties
     expand replaceProperties
@@ -158,6 +173,14 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
 // Include the output of "generateModMetadata" as an input directory for the build
 // this works with both building through Gradle and the IDE.
 sourceSets.main.resources.srcDir generateModMetadata
+
+// Copie dans build/mod-deps les jars des mods dont Dungeon Defenders a besoin pour tourner
+// (GeckoLib) : à mettre dans le dossier mods du client ET du serveur dédié, à côté du mod.
+tasks.register('collectModDeps', Copy) {
+    from(configurations.runtimeClasspath.filter { it.name.startsWith('geckolib') })
+    into layout.buildDirectory.dir('mod-deps')
+}
+build.finalizedBy 'collectModDeps'
 // To avoid having to run "generateModMetadata" manually, make it run on every project reload
 neoForge.ideSyncTask generateModMetadata
 

@@ -76,6 +76,10 @@ Tout nettoyer (n'affecte pas le code source) :
 
 - Jar : `build/libs/dungeon_defenders-0.0.1.jar` (le nom vient de `base.archivesName = mod_id`).
 - Métadonnées générées : `build/generated/sources/modMetadata/META-INF/neoforge.mods.toml`.
+- **Dépendances à installer avec le mod** : `build/mod-deps/` (tâche `collectModDeps`, lancée
+  après chaque `build`). Aujourd'hui, le seul jar est GeckoLib (`geckolib-neoforge-26.1.2-5.5.2.jar`).
+  Il doit être dans le dossier `mods/` du **client et du serveur dédié**, à côté du jar du mod.
+  Sans lui, le mod refuse de se charger (« requires geckolib »).
 
 `sourceSets.main.resources` inclut aussi `src/generated/resources` (datagen) et exclut des
 sorties finales les `**/*.bbmodel` (projets BlockBench) et le cache de datagen.
@@ -104,7 +108,14 @@ Aucune étape de publication ou de release n'est configurée.
 
 ## Ajouter une dépendance
 
-Le bloc `dependencies` de `build.gradle` est vide mais commenté avec les patterns usuels
+Depuis le 2026-11-25, le mod dépend de **GeckoLib 5.5.2** (`com.geckolib:geckolib-neoforge-26.1.2`).
+Il sert aux modèles et aux animations des monstres reçus de l'Atelier (voir
+[ATELIER.md](ATELIER.md)). C'est la même version que l'Atelier, et elle accepte NeoForge 26.1.2.0
+et plus. Elle vient du maven officiel de GeckoLib (Cloudsmith, en `exclusiveContent` pour le
+groupe `com.geckolib`). Version et plage dans `gradle.properties` (`geckolib_version`,
+`geckolib_version_range`), dépendance `required` dans `neoforge.mods.toml`.
+
+Le reste du bloc `dependencies` est commenté avec les patterns usuels
 (JEI, jar local dans `./libs`, projet frère). Noter la configuration `localRuntime` :
 
 ```groovy
