@@ -1,6 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.gametest;
 
 import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import com.github.c0c0tier.dungeon_defenders.atelier.BlocModele;
 import com.github.c0c0tier.dungeon_defenders.atelier.BlocModeleOriente;
 import net.minecraft.world.level.block.DoorBlock;
@@ -174,6 +175,7 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "mana_chest_respawn", DungeonDefendersGameTests::manaChestRespawn);
         register(event, environment, "world_time_frozen", DungeonDefendersGameTests::worldTimeFrozen);
         register(event, environment, "test_instances_serializable", DungeonDefendersGameTests::testInstancesSerializable);
+        register(event, environment, "tavern_furniture_models", DungeonDefendersGameTests::tavernFurnitureModels);
         register(event, environment, "monsters_do_not_burn", DungeonDefendersGameTests::monstersDoNotBurn);
         register(event, environment, "score_bonuses", DungeonDefendersGameTests::scoreBonuses);
         register(event, environment, "combat_countdown", DungeonDefendersGameTests::combatCountdown);
@@ -522,6 +524,33 @@ public final class DungeonDefendersGameTests {
      */
     // Le registre test_instance est envoyé aux clients quand les gametests sont actifs : chaque instance doit pouvoir être
     // encodée, sinon aucun client ne rejoint le monde (type de ModGameTestInstance non enregistré, 2026-11-27).
+    // Cristal de la taverne, forge et mannequin prennent la forme des blocs de décor de l'Atelier (dd_cristal_v2,
+    // dd_forge_v2, dd_dummy) ; forge et mannequin sont orientés, sud par défaut (2026-11-27).
+    static void tavernFurnitureModels(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 1, 1);
+        for (String forme : List.of("dd_cristal_v2", "dd_forge_v2", "dd_dummy")) {
+            helper.assertTrue(!Atelier.forme(forme).isEmpty(), "Forme de l'Atelier absente : " + forme);
+        }
+        helper.setBlock(pos, ModBlocks.TAVERN_CRYSTAL.get().defaultBlockState());
+        AABB cristal = helper.getBlockState(pos).getShape(helper.getLevel(), helper.absolutePos(pos)).bounds();
+        helper.assertTrue(cristal.maxY == 2.0D, "Le cristal devrait faire 32 px de haut (forme dd_cristal_v2) : " + cristal);
+        for (var block : List.of(ModBlocks.FORGE.get(), ModBlocks.TRAINING_DUMMY.get())) {
+            BlockState state = block.defaultBlockState();
+            helper.assertTrue(state.getValue(HorizontalDirectionalBlock.FACING) == Direction.SOUTH,
+                    block + " devrait regarder le sud par défaut");
+            helper.assertTrue(state.rotate(net.minecraft.world.level.block.Rotation.CLOCKWISE_90)
+                    .getValue(HorizontalDirectionalBlock.FACING) == Direction.WEST, block + " devrait tourner avec la structure");
+        }
+        helper.setBlock(pos, ModBlocks.FORGE.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.NORTH));
+        AABB nord = helper.getBlockState(pos).getShape(helper.getLevel(), helper.absolutePos(pos)).bounds();
+        helper.setBlock(pos, ModBlocks.FORGE.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, Direction.EAST));
+        AABB est = helper.getBlockState(pos).getShape(helper.getLevel(), helper.absolutePos(pos)).bounds();
+        // Un quart de tour emmène (x, z) en (16 - z, x) : les bornes en z du nord deviennent celles en x de l'est.
+        helper.assertTrue(Math.abs(est.minX - (1.0D - nord.maxZ)) < 1e-6 && Math.abs(est.minZ - nord.minX) < 1e-6,
+                "La forme de la forge ne tourne pas avec elle : nord " + nord + ", est " + est);
+        helper.succeed();
+    }
+
     static void testInstancesSerializable(GameTestHelper helper) {
         var access = helper.getLevel().registryAccess();
         var ops = net.minecraft.resources.RegistryOps.create(NbtOps.INSTANCE, access);

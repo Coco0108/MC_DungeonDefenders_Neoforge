@@ -8,6 +8,10 @@ import com.github.c0c0tier.dungeon_defenders.network.OpenMapSelectionPayload;
 import com.mojang.serialization.MapCodec;
 import java.util.List;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
@@ -33,8 +37,16 @@ public class TavernCrystalBlock extends Block {
 
     public static final MapCodec<TavernCrystalBlock> CODEC = simpleCodec(TavernCrystalBlock::new);
 
+    // Modèle et forme du bloc de décor dd_cristal_v2 de l'Atelier (2026-11-27).
+    private static final FormeAtelier FORME = new FormeAtelier("dd_cristal_v2");
+
     public TavernCrystalBlock(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return FORME.get(Direction.NORTH);
     }
 
     @Override

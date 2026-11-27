@@ -550,8 +550,8 @@ vérifie la CI.
   coup. Le bloc support (invisible/traversable, comme le spawner) réinvoque le mannequin s'il a
   disparu, une fois par seconde — choisi plutôt qu'une entité posée directement dans le `.nbt`
   de la taverne pour qu'aucun doublon ne puisse s'accumuler même si le nettoyage d'entités
-  ratait l'ancien. **Deux limites assumées** : le mannequin **ressemble à un zombie** (pas de
-  modèle de mannequin de paille), et l'absence de barre de vie tient au filtre par type de
+  ratait l'ancien. **Limites assumées** : le mannequin ressemblait à un zombie jusqu'au 2026-11-27
+  (c'est désormais son bloc qui le dessine, modèle `dd_dummy` de l'Atelier), et l'absence de barre de vie tient au filtre par type de
   `MobHealthBarRenderer`, pas à une exclusion explicite. **Corrigé (2026-09-06, retour en jeu)** :
   le mannequin apparaissait un bloc plus haut que le support, invoqué à `pos.above()` plutôt qu'à
   la position du bloc lui-même — même principe que `PlayerSpawnBlock` désormais, le marqueur EST

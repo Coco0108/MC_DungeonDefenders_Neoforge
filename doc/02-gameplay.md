@@ -2254,8 +2254,11 @@ Deux contraintes de l'existant, pas un choix esthétique :
    `Zombie`, donc valide pour une sous-classe), sans créer ni modèle ni texture — exactement le
    même procédé que `ManaCrystalEntity extends ExperienceOrb` + `ExperienceOrbRenderer`.
 
-> **Limite assumée** : le mannequin ressemble donc à un zombie planté là, pas à un mannequin de
-> paille. Placeholder, comme les textures vanilla réutilisées ailleurs dans le mod.
+> **Depuis le 2026-11-27**, l'entité n'est plus dessinée (`NoopRenderer`) : c'est le **bloc** qui montre le
+> mannequin, avec le modèle `dd_dummy` de l'Atelier (orienté, sud par défaut). Avant, le mannequin ressemblait à un
+> zombie planté là. Même chose pour la forge (`dd_forge_v2`, orientée) et le cristal de la taverne (`dd_cristal_v2`) :
+> leurs états de bloc pointent vers les modèles des blocs de décor de l'Atelier, et leur forme vient du même fichier
+> (`FormeAtelier`, repli sur un bloc plein si l'Atelier n'a rien déployé). Voir [ATELIER.md](ATELIER.md).
 
 Tout ce qui fait d'un zombie un zombie est ensuite neutralisé :
 

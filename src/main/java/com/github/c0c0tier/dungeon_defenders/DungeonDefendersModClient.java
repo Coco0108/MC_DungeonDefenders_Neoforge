@@ -56,7 +56,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.entity.ExperienceOrbRenderer;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
-import net.minecraft.client.renderer.entity.ZombieRenderer;
+import net.minecraft.client.renderer.entity.NoopRenderer;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.resources.Identifier;
@@ -225,13 +225,11 @@ public class DungeonDefendersModClient {
                 ModEntities.MANA_CRYSTAL.get(),
                 ExperienceOrbRenderer::new
         );
-        // Même principe pour le mannequin d'entraînement : ZombieRenderer est paramétré sur
-        // Zombie, donc valide pour TrainingDummyEntity qui en hérite. Il ressemble donc à un
-        // zombie planté là, pas à un mannequin de paille — placeholder assumé en attendant un
-        // vrai modèle, voir doc/05-etat-et-problemes-connus.md.
+        // Mannequin d'entraînement : l'entité n'est plus dessinée. C'est son bloc (TrainingDummyBlock) qui montre le
+        // mannequin avec le modèle dd_dummy de l'Atelier (2026-11-27) ; l'entité reste la cible invisible des tours.
         event.registerEntityRenderer(
                 ModEntities.TRAINING_DUMMY.get(),
-                ZombieRenderer::new
+                NoopRenderer::new
         );
         // Projectile des armes de héros : l'item porté dessiné à plat face à la caméra, comme une
         // boule de neige vanilla — aucun modèle à faire (voir WeaponProjectileEntity).

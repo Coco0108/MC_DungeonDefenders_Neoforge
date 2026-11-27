@@ -286,7 +286,10 @@ public class ModBlocks {
     // choix de map au clic droit (voir TavernCrystalBlock).
     public static final DeferredBlock<TavernCrystalBlock> TAVERN_CRYSTAL = BLOCKS.registerBlock("tavern_crystal",
             TavernCrystalBlock::new,
+            // Modèle dd_cristal_v2 de l'Atelier : pas un cube plein, et il luit comme le bloc de décor (10).
             properties -> properties
+                    .noOcclusion()
+                    .lightLevel(state -> 10)
                     .destroyTime(50.0F)
                     .explosionResistance(1200.0F)
                     .requiresCorrectToolForDrops());
@@ -322,7 +325,7 @@ public class ModBlocks {
     // et traversable comme le spawner — toute la logique vit dans TrainingDummyBlockEntity.
     public static final DeferredBlock<TrainingDummyBlock> TRAINING_DUMMY = BLOCKS.registerBlock("training_dummy",
             TrainingDummyBlock::new,
-            properties -> properties.strength(2.0F));
+            properties -> properties.strength(2.0F).noOcclusion());
 
     public static final DeferredItem<BlockItem> TRAINING_DUMMY_ITEM =
             ITEMS.registerSimpleBlockItem("training_dummy", TRAINING_DUMMY);
@@ -350,7 +353,8 @@ public class ModBlocks {
     // 12. Forge : meuble de la taverne, ouvre l'inventaire du joueur (voir ForgeBlock).
     public static final DeferredBlock<ForgeBlock> FORGE = BLOCKS.registerBlock("forge",
             ForgeBlock::new,
-            properties -> properties.strength(3.5F));
+            // Modèle dd_forge_v2 de l'Atelier : pas un cube plein, et son foyer éclaire comme le bloc de décor (13).
+            properties -> properties.strength(3.5F).noOcclusion().lightLevel(state -> 13));
 
     public static final DeferredItem<BlockItem> FORGE_ITEM =
             ITEMS.registerSimpleBlockItem("forge", FORGE);

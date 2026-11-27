@@ -199,8 +199,9 @@ MC_DungeonDefenders_Neoforge/
     │       ├── TowerBlockItem.java           # Item commun à toute tour (Blockade, Turret...) : useOn() ne pose plus rien (roue uniquement)
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
     │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
+    │       ├── FormeAtelier.java             # Forme d'un bloc du mod qui prend le modèle d'un bloc de décor de l'Atelier (cristal, forge, mannequin)
     │       ├── ManaChestBlock.java           # Meuble de map : donne du mana au clic droit (survie, 1x/vague) ou config (créatif)
-    │       ├── TrainingDummyBlock.java       # Support de mannequin : invisible, garantit qu'un TrainingDummyEntity existe juste au-dessus
+    │       ├── TrainingDummyBlock.java       # Support de mannequin : dessine le mannequin (modèle dd_dummy), garantit qu'un TrainingDummyEntity (invisible) existe à sa place
     │       ├── NoBuildZoneBlock.java         # Marqueur de zone interdite à la pose de tours : invisible, occupe la case
     │       ├── MapConfigBlock.java           # Réglages d'une map, posé DANS la map : voyagent dans le .nbt de la structure
     │       ├── PlayerSpawnBlock.java         # Marqueur de spawn des joueurs : invisible, traversable, ciblable en créatif seulement

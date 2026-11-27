@@ -3,6 +3,16 @@ package com.github.c0c0tier.dungeon_defenders.block;
 import com.github.c0c0tier.dungeon_defenders.network.OpenForgePayload;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -24,6 +34,38 @@ public class ForgeBlock extends Block {
 
     public ForgeBlock(Properties properties) {
         super(properties);
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.SOUTH));
+    }
+
+    // Orientée comme le bloc de décor dont elle prend le modèle (dd_forge_v2, dessiné devant au nord) : posée, elle
+    // regarde le joueur. Par défaut (structure sans la propriété, comme la taverne déployée avant qu'elle existe),
+    // elle regarde le sud.
+    public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
+    private static final FormeAtelier FORME = new FormeAtelier("dd_forge_v2");
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING);
+    }
+
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+    }
+
+    @Override
+    protected BlockState rotate(BlockState state, Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
+    }
+
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        return FORME.get(state.getValue(FACING));
     }
 
     @Override

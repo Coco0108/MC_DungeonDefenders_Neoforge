@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
-      "model": "dungeon_defenders:block/training_dummy"
+    "facing=north": {
+      "model": "dungeon_defenders:block/dd_dummy"
+    },
+    "facing=east": {
+      "model": "dungeon_defenders:block/dd_dummy",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "dungeon_defenders:block/dd_dummy",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "dungeon_defenders:block/dd_dummy",
+      "y": 270
     }
   }
 }

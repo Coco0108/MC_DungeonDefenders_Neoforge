@@ -1824,3 +1824,18 @@ Voir [ATELIER.md](ATELIER.md#les-objets-et-les-blocs). Captures de référence :
 - [ ] Le rendu ressemble aux captures de l'Atelier (pas de damier violet et noir, blocs orientés dans le bon sens).
 - [ ] Après un redémarrage, la taverne est reposée à l'identique.
 
+## Taverne mise à jour : flammes, chaîne, colombages, cristal, forge et mannequin (2026-11-27)
+
+Voir [ATELIER.md](ATELIER.md#les-objets-et-les-blocs).
+
+- [ ] Les flammes (lustre, lanternes, torches, bougies, foyer) bougent, et restent lumineuses dans l'ombre.
+- [ ] `taverne_chaine` empilée au-dessus d'un lustre s'y raccorde sans trou ; le grand lustre dépasse de son bloc sans
+      disparaître quand on tourne la caméra.
+- [ ] Murs à colombages : poteaux et traverses lisibles en mur, l'écharpe inverse fait des chevrons.
+- [ ] Escalier : toutes les faces sont visibles dans les 4 directions, en bas et en haut.
+- [ ] Le **cristal de la taverne**, la **forge** et le **mannequin** ont leurs modèles (plus de textures vanilla) ; leur
+      boîte de sélection suit le modèle ; la forge éclaire.
+- [ ] Posés à la main, la forge et le mannequin regardent le joueur. Dans la taverne, la forge regarde la salle (sud) ;
+      le mannequin regarde le sud tant que l'Atelier n'a pas redéployé avec l'orientation (il devrait regarder l'est).
+- [ ] Le mannequin n'est plus un zombie : seul le modèle se voit, et les tours lui tirent toujours dessus.
+

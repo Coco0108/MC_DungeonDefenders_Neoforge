@@ -237,6 +237,15 @@ sud-ouest, comptoir sous une mezzanine à l'est. Un cristal, un point d'arrivée
 l'historique git). Comme tout fichier déployé, `tavern.nbt` ne se retouche plus ici : la taverne se modifie dans
 l'Atelier (`maps/taverne/` : `construire.py` écrit le plan, avec la fiche et neuf captures), puis se redéploie.
 
+**Taverne mise à jour et blocs du jeu** (2026-11-27) : 101 blocs (commit `2a2e2dd` : flammes animées en
+`.mcmeta`, `taverne_chaine`, colombages refaits, `taverne_mur_colombage_inverse`, escalier et dalle corrigés) et la
+nouvelle taverne (`3deee55`). Trois blocs de décor sont les modèles des blocs du jeu : `dd_cristal_v2`, `dd_forge_v2`,
+`dd_dummy`. `tavern_crystal`, `forge` et `training_dummy` pointent vers ces modèles (états de bloc et objets), prennent
+leur forme dans `atelier_formes_bloc/` (`block/FormeAtelier`), et la forge et le mannequin ont maintenant `facing`
+(sud par défaut). Dans la taverne déployée, l'Atelier les avait posés tournés (forge au sud, mannequin à l'est) mais le
+remplacement a perdu l'orientation, puisque nos blocs n'en avaient pas : **à redéployer en gardant `facing`**. Les blocs
+de décor restent enregistrés aussi, sous leur propre id.
+
 ## Tester
 
 - `./gradlew runGameTestServer` : le test `atelier_monsters` fait apparaître **chaque** monstre chargé et vérifie sa

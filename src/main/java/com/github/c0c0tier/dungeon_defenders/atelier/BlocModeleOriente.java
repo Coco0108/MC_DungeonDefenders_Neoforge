@@ -46,7 +46,7 @@ public class BlocModeleOriente extends BlocModele {
      * A box of the north-facing model, turned clockwise (seen from above) as many quarter turns as {@code y} in the block
      * state: 90 for east, 180 for south, 270 for west. A quarter turn takes (x, z) to (16 - z, x).
      */
-    static double[] turn(double[] box, Direction facing) {
+    public static double[] turn(double[] box, Direction facing) {
         double[] b = box.clone();
         int turns = Math.floorMod(facing.get2DDataValue() - Direction.NORTH.get2DDataValue(), 4);
         for (int i = 0; i < turns; i++) {
