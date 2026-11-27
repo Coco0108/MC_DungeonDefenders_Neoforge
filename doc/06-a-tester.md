@@ -1786,11 +1786,11 @@ testées.
 
 ## Blocs de la taverne (2026-11-27)
 
-Voir [ATELIER.md](ATELIER.md#les-objets-et-les-blocs). À tester **une fois les blocs déployés depuis l'Atelier** (son
-déploiement des blocs n'existe pas encore). Le code est prêt : les 39 fiches réelles se chargent et passent le gametest.
+Voir [ATELIER.md](ATELIER.md#les-objets-et-les-blocs). Déployés avec les blocs du puits (96 en tout) : les 96 fiches se
+chargent sans rejet et passent le gametest.
 
-- [ ] Le log de démarrage dit `Atelier : … 39 bloc(s) [taverne_banc, …]`, sans bloc rejeté.
-- [ ] Les 39 blocs sont dans l'onglet « Dungeon Defenders », avec leur modèle et leur nom (pas de damier violet et noir).
+- [ ] Le log de démarrage dit `Atelier : … 96 bloc(s) [puits_arche_cle, …]`, sans bloc rejeté.
+- [ ] Les 96 blocs (taverne et puits) sont dans l'onglet « Dungeon Defenders », avec leur modèle et leur nom (pas de damier violet et noir).
 - [ ] **Orientés** (banc, comptoir, étagère, console, torche murale, fenêtres, foyer…) : posés, ils regardent le joueur ;
       un objet mural se retrouve dos au mur visé ; la boîte de sélection tourne avec le modèle.
 - [ ] **Poutre** (`taverne_poutre`) : posée contre un mur, elle se couche dans l'axe, bouts en section.
@@ -1801,4 +1801,9 @@ déploiement des blocs n'existe pas encore). Le code est prêt : les 39 fiches r
       **portillon** (s'ouvre, laisse passer).
 - [ ] Le verre des fenêtres et des lanternes est translucide.
 - [ ] Les lanternes, la torche, le lustre, les bougies et le foyer éclairent.
+- [ ] **Variantes** (`puits_roche`, `puits_mur_*`, `taverne_mur_pierre`) : un mur posé mélange plusieurs aspects au
+      hasard, sans couture.
+- [ ] **Puits** : la margelle droite et ses angles en arc forment un anneau fermé ; arche de 3 blocs (côtés tournés au
+      placement + clé) ; grand portail (montants, linteau, battants) ; estrade du cristal 3 × 3 avec ses bords et angles.
+- [ ] `puits_eau` et les toiles sont translucides ; on marche le long de la passerelle à corde.
 

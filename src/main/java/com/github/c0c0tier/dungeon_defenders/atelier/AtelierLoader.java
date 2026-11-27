@@ -97,7 +97,7 @@ public final class AtelierLoader {
         Map<String, List<double[]>> formes = new TreeMap<>();
         Map<String, FicheBloc> blocs = loader.lireDossier(BLOCS, "Bloc", FicheBloc.CODEC, FicheBloc::id,
                 Set.of("id", "nom", "nom_en", "durete", "resistance", "outil", "niveau", "lumiere", "son", "modele", "transparent",
-                        "orientation", "type", "destinations", "origine"), Set.of("cache"),
+                        "orientation", "type", "variantes", "destinations", "origine"), Set.of("cache"),
                 (bloc, erreurs) -> loader.verifierBloc(bloc, oeufs, objets, formes, erreurs));
         formes.keySet().retainAll(blocs.keySet());
         Atelier.initObjets(objets, blocs, formes);
