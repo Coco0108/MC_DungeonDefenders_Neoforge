@@ -207,6 +207,13 @@ vivante), `oeuf`, `cibles`, `destinations`.
 Plus tard : les **blocs animés** (forge, mannequin, cristal ont des animations GeckoLib qu'un bloc fixe ne joue pas :
 il faudra un `GeoBlockEntity` générique, une fois le format défini dans l'Atelier).
 
+Plus tard aussi : les **blocs de la taverne** (2026-11-27, 7 demandes `dungeon_defenders-taverne_*` déposées chez le
+concepteur de modèles, livrées dans `modeles/blocs/taverne_*/` de l'Atelier). Ils sont dessinés pour les deux sortes de
+bloc qui existent (cube, `modele`), mais il leur faudra un champ de fiche générique, défini **dans l'Atelier** puis lu
+ici : `oriente` (rotation horizontale au placement : fenêtres, consoles, torche murale, banc, comptoir, étagère, foyer ;
+modèle dessiné devant au nord) et `axe` (comme une bûche : `taverne_poutre`). Pas prévus : portes, escaliers, dalles, et
+rambardes qui se raccordent d'elles-mêmes (ce sont des segments droits + un poteau d'angle).
+
 ## Tester
 
 - `./gradlew runGameTestServer` : le test `atelier_monsters` fait apparaître **chaque** monstre chargé et vérifie sa
