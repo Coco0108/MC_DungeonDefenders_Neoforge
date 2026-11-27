@@ -1,0 +1,9 @@
+{
+    "id": "taverne_mur_colombage_inverse",
+    "nom": "Colombage inversé de taverne",
+    "nom_en": "Tavern Half-Timbering (Reversed)",
+    "durete": 1.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

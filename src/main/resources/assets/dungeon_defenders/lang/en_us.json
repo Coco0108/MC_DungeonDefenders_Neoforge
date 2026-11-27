@@ -424,5 +424,10 @@
   "block.dungeon_defenders.taverne_tonneau_couche": "Tavern Lying Barrel",
   "block.dungeon_defenders.taverne_torche_murale": "Tavern Wall Torch",
   "block.dungeon_defenders.taverne_trappe": "Tavern Trapdoor",
-  "block.dungeon_defenders.taverne_volets": "Tavern Shuttered Window"
+  "block.dungeon_defenders.taverne_volets": "Tavern Shuttered Window",
+  "block.dungeon_defenders.dd_cristal_v2": "Tavern Crystal (Decor)",
+  "block.dungeon_defenders.dd_dummy": "Training Dummy (Decor)",
+  "block.dungeon_defenders.dd_forge_v2": "Forge (Decor)",
+  "block.dungeon_defenders.taverne_chaine": "Tavern Chain",
+  "block.dungeon_defenders.taverne_mur_colombage_inverse": "Tavern Half-Timbering (Reversed)"
 }

@@ -424,5 +424,10 @@
   "block.dungeon_defenders.taverne_tonneau_couche": "Tonneau couché de taverne",
   "block.dungeon_defenders.taverne_torche_murale": "Torche murale de taverne",
   "block.dungeon_defenders.taverne_trappe": "Trappe de taverne",
-  "block.dungeon_defenders.taverne_volets": "Fenêtre à volets de taverne"
+  "block.dungeon_defenders.taverne_volets": "Fenêtre à volets de taverne",
+  "block.dungeon_defenders.dd_cristal_v2": "Cristal de la taverne (décor)",
+  "block.dungeon_defenders.dd_dummy": "Mannequin d'entraînement (décor)",
+  "block.dungeon_defenders.dd_forge_v2": "Forge (décor)",
+  "block.dungeon_defenders.taverne_chaine": "Chaîne de taverne",
+  "block.dungeon_defenders.taverne_mur_colombage_inverse": "Colombage inversé de taverne"
 }

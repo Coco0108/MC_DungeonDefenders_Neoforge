@@ -42,6 +42,8 @@
     "dungeon_defenders:taverne_tonneau",
     "dungeon_defenders:taverne_tonneau_couche",
     "dungeon_defenders:taverne_trappe",
-    "dungeon_defenders:taverne_volets"
+    "dungeon_defenders:taverne_volets",
+    "dungeon_defenders:dd_dummy",
+    "dungeon_defenders:taverne_mur_colombage_inverse"
   ]
 }
