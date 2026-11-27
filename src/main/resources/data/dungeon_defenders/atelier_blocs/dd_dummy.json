@@ -1,0 +1,11 @@
+{
+    "id": "dd_dummy",
+    "nom": "Mannequin d'entraînement (décor)",
+    "nom_en": "Training Dummy (Decor)",
+    "modele": true,
+    "durete": 1.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "laine",
+    "orientation": "horizontale"
+}

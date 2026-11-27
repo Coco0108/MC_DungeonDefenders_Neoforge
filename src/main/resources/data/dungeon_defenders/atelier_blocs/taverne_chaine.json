@@ -1,0 +1,11 @@
+{
+    "id": "taverne_chaine",
+    "nom": "Chaîne de taverne",
+    "nom_en": "Tavern Chain",
+    "modele": true,
+    "durete": 1.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "transparent": true
+}

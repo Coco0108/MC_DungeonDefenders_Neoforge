@@ -1,0 +1,12 @@
+{
+    "id": "dd_cristal_v2",
+    "nom": "Cristal de la taverne (décor)",
+    "nom_en": "Tavern Crystal (Decor)",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 10,
+    "son": "amethyste",
+    "transparent": true
+}

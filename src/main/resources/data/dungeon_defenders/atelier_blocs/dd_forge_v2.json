@@ -1,0 +1,12 @@
+{
+    "id": "dd_forge_v2",
+    "nom": "Forge (décor)",
+    "nom_en": "Forge (Decor)",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 13,
+    "son": "pierre",
+    "orientation": "horizontale"
+}
