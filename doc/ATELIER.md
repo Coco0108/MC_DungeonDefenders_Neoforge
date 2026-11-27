@@ -215,7 +215,8 @@ modèle dessiné devant au nord) et `axe` (comme une bûche : `taverne_poutre`).
 `taverne_menuiserie`, livre les modèles **par état** de la porte (bas/haut, charnière gauche/droite), de la trappe, de
 l'escalier (droit, intérieur, extérieur, comme vanilla), de la dalle (bas/haut), de la barrière qui se raccorde (poteau +
 bras nord, en multipart) et du portillon (fermé/ouvert) : il faudra ici des sortes de bloc génériques correspondantes
-(`porte`, `trappe`, `escalier`, `dalle`, `barriere`, `portillon`), à définir dans le format de fiche de l'Atelier.
+(`porte`, `trappe`, `escalier`, `dalle`, `barriere`, `portillon`), à définir dans le format de fiche de l'Atelier. La proposition à transmettre à l'Atelier est dans
+[DEMANDE_ATELIER_BLOCS.md](DEMANDE_ATELIER_BLOCS.md) ; le code côté Dungeon Defenders se fera une fois le format décidé.
 
 ## Tester
 
