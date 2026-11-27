@@ -16,7 +16,8 @@ ses `schemas/`.
   générique du package `atelier/`. Si un besoin ne rentre pas dans la fiche, on fait évoluer le format (dans l'Atelier)
   et ce code générique, jamais un cas particulier.
 - **Une fiche invalide est ignorée avec un message de log clair**, elle ne fait jamais planter le jeu.
-- Les déploiements arrivent par GitHub, en commits `modele: <id> depuis l'atelier @<commit>`.
+- Les déploiements arrivent par GitHub, en commits `modele: <id> depuis l'atelier @<commit>` (`blocs: …` pour les
+  blocs, `map: <id> …` pour une structure).
 
 ## Où arrivent les fichiers
 
@@ -33,6 +34,7 @@ Le namespace `atelier:` devient `dungeon_defenders:` dans tout ce qui est copié
 | Fiche d'un bloc, sa texture | `data/dungeon_defenders/atelier_blocs/<id>.json`, `assets/dungeon_defenders/textures/block/<id>.png` (et `_top`, `_bottom`, `_side`) | `AtelierLoader`, `AtelierObjets` |
 | Bloc `modele` : modèle converti, forme | `assets/dungeon_defenders/models/block/<id>.json`, `data/dungeon_defenders/atelier_formes_bloc/<id>.json` | Minecraft (modèle), `BlocModele` (forme) |
 | Fichiers natifs des objets et blocs | états de bloc, modèles et définitions d'objet (`items/<id>.json`), butin du bloc, tags d'outil, noms | Minecraft : **écrits par le déploiement**, pas par ce code |
+| Structure de la taverne | `data/dungeon_defenders/structure/tavern.nbt` (blocs `atelier:` déjà renommés, blocs de réservation remplacés) et sa référence `data/dungeon_defenders/atelier_maps/taverne.json` (taille, remplacements, nombre de blocs, `origine`) | `TavernSpawn` (la structure) ; la référence n'est lue par aucun code |
 | Effets, projectiles | `data/dungeon_defenders/atelier_effets/<id>.json`, `atelier_projectiles/<id>.json` | **rien** (références inertes, voir plus bas) |
 
 ## Au démarrage
@@ -225,6 +227,15 @@ donjon, échafaudages et passerelles, éclairage, araignées, ossements et déco
 `modele`, `orientation`, `type`) : rien à coder ici. Pas demandés, faute de sorte de bloc : une **échelle** (il faudrait un
 `type: echelle`, `LadderBlock`) et une toile qui ralentit (`type: toile`, `WebBlock`) : les toiles demandées sont du
 décor.
+
+**La taverne** (2026-11-27) : construite en jeu par l'Atelier à partir de
+[DEMANDE_ATELIER_TAVERNE.md](DEMANDE_ATELIER_TAVERNE.md), avec les seuls blocs `taverne_*`, puis déployée (commit
+`1d8f795`, « map: taverne depuis l'atelier @9f1731a ») et fusionnée dans `feature/atelier`. 35 × 28 × 30, plan original :
+salle commune, estrade du cristal au nord, cheminée à l'ouest, forge au nord-ouest, aire d'entraînement 8 × 8 au
+sud-ouest, comptoir sous une mezzanine à l'est. Un cristal, un point d'arrivée, une forge, un mannequin, aucun bloc
+`atelier:` ni vanilla (vérifié en lisant le `.nbt`). Elle remplace le premier jet de Corentin (2026-09-11, dans
+l'historique git). Comme tout fichier déployé, `tavern.nbt` ne se retouche plus ici : la taverne se modifie dans
+l'Atelier (`maps/taverne/` : `construire.py` écrit le plan, avec la fiche et neuf captures), puis se redéploie.
 
 ## Tester
 

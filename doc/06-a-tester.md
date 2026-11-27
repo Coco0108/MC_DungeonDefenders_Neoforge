@@ -1807,3 +1807,20 @@ chargent sans rejet et passent le gametest.
       placement + clé) ; grand portail (montants, linteau, battants) ; estrade du cristal 3 × 3 avec ses bords et angles.
 - [ ] `puits_eau` et les toiles sont translucides ; on marche le long de la passerelle à corde.
 
+## Taverne construite par l'Atelier (2026-11-27)
+
+Voir [ATELIER.md](ATELIER.md#les-objets-et-les-blocs). Captures de référence : `maps/taverne/captures/` de l'Atelier.
+
+- [ ] **Rejoindre un monde** fonctionne (solo, et serveur lancé par `runServer`) : plus d'erreur « Failed to serialize
+      ResourceKey[minecraft:test_instance / …] ». Corrigé le 2026-11-27, vérifié par le gametest
+      `test_instances_serializable`.
+- [ ] Nouveau monde (ou monde existant rechargé) : la nouvelle taverne remplace l'ancienne, sans morceau de
+      l'ancienne qui dépasse autour.
+- [ ] On arrive sur le tapis, trois blocs après la porte d'entrée, regard vers l'intérieur.
+- [ ] Le **cristal** sur l'estrade au fond ouvre l'écran de choix de map ; partir en map puis revenir ramène sur le tapis.
+- [ ] La **forge** (coin nord-ouest) ouvre son écran ; le **mannequin** (aire d'entraînement, sud-ouest) est en place.
+- [ ] Portes, portillons et trappe s'ouvrent ; l'escalier mène à la mezzanine ; on ne peut tomber nulle part dans le vide.
+- [ ] Éclairage : lustres, lanternes, torches et cheminée suffisent, de jour comme la nuit (heure figée).
+- [ ] Le rendu ressemble aux captures de l'Atelier (pas de damier violet et noir, blocs orientés dans le bon sens).
+- [ ] Après un redémarrage, la taverne est reposée à l'identique.
+

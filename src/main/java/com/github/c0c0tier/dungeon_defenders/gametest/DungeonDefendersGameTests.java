@@ -173,6 +173,7 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "enemy_variants", DungeonDefendersGameTests::enemyVariants);
         register(event, environment, "mana_chest_respawn", DungeonDefendersGameTests::manaChestRespawn);
         register(event, environment, "world_time_frozen", DungeonDefendersGameTests::worldTimeFrozen);
+        register(event, environment, "test_instances_serializable", DungeonDefendersGameTests::testInstancesSerializable);
         register(event, environment, "monsters_do_not_burn", DungeonDefendersGameTests::monstersDoNotBurn);
         register(event, environment, "score_bonuses", DungeonDefendersGameTests::scoreBonuses);
         register(event, environment, "combat_countdown", DungeonDefendersGameTests::combatCountdown);
@@ -519,6 +520,28 @@ public final class DungeonDefendersGameTests {
      * l'heure par défaut de la config pour une valeur absente ou hors plage, et un bloc de
      * configuration de map transporte bien son heure.
      */
+    // Le registre test_instance est envoyé aux clients quand les gametests sont actifs : chaque instance doit pouvoir être
+    // encodée, sinon aucun client ne rejoint le monde (type de ModGameTestInstance non enregistré, 2026-11-27).
+    static void testInstancesSerializable(GameTestHelper helper) {
+        var access = helper.getLevel().registryAccess();
+        var ops = net.minecraft.resources.RegistryOps.create(NbtOps.INSTANCE, access);
+        var instances = access.lookupOrThrow(Registries.TEST_INSTANCE);
+        int count = 0;
+        for (var entry : instances.listElements().toList()) {
+            var result = net.minecraft.gametest.framework.GameTestInstance.DIRECT_CODEC.encodeStart(ops, entry.value());
+            if (result.isError()) {
+                helper.fail("Instance non sérialisable " + entry.key().identifier() + " : " + result.error().get().message());
+                return;
+            }
+            count++;
+        }
+        if (count == 0) {
+            helper.fail("Aucune instance de gametest dans le registre");
+            return;
+        }
+        helper.succeed();
+    }
+
     static void worldTimeFrozen(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Holder<WorldClock> clock = level.registryAccess().lookupOrThrow(Registries.WORLD_CLOCK).getOrThrow(WorldClocks.OVERWORLD);

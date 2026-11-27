@@ -273,6 +273,9 @@ public class DungeonDefendersMod {
         ModBlocks.register(modEventBus);
         ModAttachments.register(modEventBus);
         ModMenus.register(modEventBus);
+        // Type des gametests du mod (voir ModGameTestInstance) : sans lui, un client ne peut pas rejoindre un monde
+        // quand les gametests sont actifs.
+        com.github.c0c0tier.dungeon_defenders.gametest.ModGameTestInstance.TYPES.register(modEventBus);
         ModEntities.register(modEventBus);
         // Monstres de l'Atelier (doc/ATELIER.md) : les fiches sont lues AVANT leur enregistrement,
         // chaque monstre ayant son propre type d'entité et chaque son son événement. Un id déjà pris

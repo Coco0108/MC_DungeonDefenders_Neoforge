@@ -1,6 +1,9 @@
 # Demande à l'Atelier : construire la taverne en jeu
 
-> **En attente** (2026-11-27). À transmettre à la session de l'Atelier (`~/MC_Atelier_Neoforge`). Dungeon Defenders ne
+> **Traitée** (2026-11-27) : livrée par le commit `1d8f795` (« map: taverne depuis l'atelier @9f1731a »), voir
+> [ATELIER.md](ATELIER.md#les-objets-et-les-blocs). Ce fichier reste pour l'historique.
+>
+> Demande faite le 2026-11-27. À transmettre à la session de l'Atelier (`~/MC_Atelier_Neoforge`). Dungeon Defenders ne
 > modifie pas l'Atelier : ce fichier est une **demande**, et c'est l'Atelier qui décide de la façon de la ranger chez lui.
 
 ## Ce qui est demandé
