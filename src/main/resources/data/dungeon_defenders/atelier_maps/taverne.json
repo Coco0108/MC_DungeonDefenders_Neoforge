@@ -8,10 +8,10 @@
     30
   ],
   "remplacements": {
-    "minecraft:beacon": "dungeon_defenders:tavern_crystal",
+    "atelier:dd_cristal_v2": "dungeon_defenders:tavern_crystal",
     "minecraft:lodestone": "dungeon_defenders:player_spawn",
-    "minecraft:smithing_table": "dungeon_defenders:forge",
-    "minecraft:target": "dungeon_defenders:training_dummy"
+    "atelier:dd_forge_v2": "dungeon_defenders:forge",
+    "atelier:dd_dummy": "dungeon_defenders:training_dummy"
   },
   "blocs": {
     "dungeon_defenders:forge": 1,
@@ -20,6 +20,7 @@
     "dungeon_defenders:taverne_banc": 70,
     "dungeon_defenders:taverne_barriere": 36,
     "dungeon_defenders:taverne_bougies": 10,
+    "dungeon_defenders:taverne_chaine": 7,
     "dungeon_defenders:taverne_chopes": 13,
     "dungeon_defenders:taverne_comptoir": 9,
     "dungeon_defenders:taverne_console": 9,
@@ -29,14 +30,15 @@
     "dungeon_defenders:taverne_etagere": 90,
     "dungeon_defenders:taverne_fenetre": 24,
     "dungeon_defenders:taverne_fenetre_haut": 24,
-    "dungeon_defenders:taverne_foyer": 4,
+    "dungeon_defenders:taverne_foyer": 3,
     "dungeon_defenders:taverne_lanterne_posee": 9,
     "dungeon_defenders:taverne_lanterne_suspendue": 17,
     "dungeon_defenders:taverne_lustre": 7,
-    "dungeon_defenders:taverne_mur_colombage": 77,
-    "dungeon_defenders:taverne_mur_colombage_croix": 257,
+    "dungeon_defenders:taverne_mur_colombage": 50,
+    "dungeon_defenders:taverne_mur_colombage_croix": 234,
+    "dungeon_defenders:taverne_mur_colombage_inverse": 50,
     "dungeon_defenders:taverne_mur_enduit": 571,
-    "dungeon_defenders:taverne_mur_pierre": 427,
+    "dungeon_defenders:taverne_mur_pierre": 416,
     "dungeon_defenders:taverne_plancher": 592,
     "dungeon_defenders:taverne_plancher_sombre": 986,
     "dungeon_defenders:taverne_porte": 4,
@@ -52,15 +54,15 @@
     "dungeon_defenders:taverne_tabouret": 17,
     "dungeon_defenders:taverne_tapis": 87,
     "dungeon_defenders:taverne_tonneau": 21,
-    "dungeon_defenders:taverne_tonneau_couche": 15,
+    "dungeon_defenders:taverne_tonneau_couche": 14,
     "dungeon_defenders:taverne_torche_murale": 18,
     "dungeon_defenders:taverne_trappe": 1,
     "dungeon_defenders:taverne_volets": 6,
     "dungeon_defenders:training_dummy": 1
   },
   "origine": {
-    "atelier_commit": "9d2e2c9",
-    "empreinte": "89a1f4e9592f8339093280618230e6fe907901eb95558e1ff492dd44f7170313",
+    "atelier_commit": "3c94885",
+    "empreinte": "16e746acebf78da94179caefcc9a36a784b8241518869be8ba6e91176f4fb011",
     "generes": [
       "src/main/resources/data/dungeon_defenders/structure/tavern.nbt"
     ],
