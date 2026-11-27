@@ -29,7 +29,10 @@ que les monstres tentent de détruire, et peut se défendre avec des pièges com
 **Atelier** : [ATELIER.md](ATELIER.md) — ce que le mod lit des monstres, objets et blocs
 déployés depuis l'Atelier (le mod bac à sable des modèles Blockbench), où, et ce qu'il ignore.
 
-**Demande à l'Atelier** : [DEMANDE_ATELIER_BLOCS.md](DEMANDE_ATELIER_BLOCS.md) — blocs orientés et blocs à états (porte, escalier, barrière…) pour la taverne
+**Demandes à l'Atelier** :
+
+- [DEMANDE_ATELIER_BLOCS.md](DEMANDE_ATELIER_BLOCS.md) — blocs orientés et blocs à états (porte, escalier, barrière…) pour la taverne (traitée)
+- [DEMANDE_ATELIER_TAVERNE.md](DEMANDE_ATELIER_TAVERNE.md) — construire la taverne en jeu avec les blocs `taverne_*`, captures, structure déployée
 
 **Data-driven** (équilibrer avec des JSON et `/reload`, sans recompiler) :
 [ennemis](data-driven/ennemis.md), [stats des tours](data-driven/tours.md),
