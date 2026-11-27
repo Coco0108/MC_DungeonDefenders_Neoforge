@@ -217,6 +217,14 @@ simplifiant. Les 39 fiches réelles ont été chargées ici à l'essai (copiées
 acceptées, `atelier_items_and_blocks` passe. **Le déploiement des blocs n'existe pas encore côté Atelier** : rien à
 voir en jeu avant lui.
 
+**Les blocs de la première map** (« puits », 2026-11-27) : 8 demandes `dungeon_defenders-puits_*` déposées chez le
+concepteur (`~/homelab/modeles/a-faire/`), 57 blocs livrés dans `modeles/blocs/puits_*/` de l'Atelier : sols, murs,
+arches, piliers, grand portail des monstres, le puits (margelle, treuil, seau, eau), l'estrade du cristal, menuiseries de
+donjon, échafaudages et passerelles, éclairage, araignées, ossements et décor. Tout rentre dans le format v2 (cubes,
+`modele`, `orientation`, `type`) : rien à coder ici. Pas demandés, faute de sorte de bloc : une **échelle** (il faudrait un
+`type: echelle`, `LadderBlock`) et une toile qui ralentit (`type: toile`, `WebBlock`) : les toiles demandées sont du
+décor.
+
 ## Tester
 
 - `./gradlew runGameTestServer` : le test `atelier_monsters` fait apparaître **chaque** monstre chargé et vérifie sa
