@@ -1783,3 +1783,22 @@ Reporter les résultats dans [05-etat-et-problemes-connus.md](05-etat-et-problem
 (déplacer ce qui fonctionne vers « Ce qui est implémenté », et ce qui casse vers
 « Ce qui reste »), puis vider ou réduire ce fichier aux prochaines fonctionnalités non
 testées.
+
+## Blocs de la taverne (2026-11-27)
+
+Voir [ATELIER.md](ATELIER.md#les-objets-et-les-blocs). À tester **une fois les blocs déployés depuis l'Atelier** (son
+déploiement des blocs n'existe pas encore). Le code est prêt : les 39 fiches réelles se chargent et passent le gametest.
+
+- [ ] Le log de démarrage dit `Atelier : … 39 bloc(s) [taverne_banc, …]`, sans bloc rejeté.
+- [ ] Les 39 blocs sont dans l'onglet « Dungeon Defenders », avec leur modèle et leur nom (pas de damier violet et noir).
+- [ ] **Orientés** (banc, comptoir, étagère, console, torche murale, fenêtres, foyer…) : posés, ils regardent le joueur ;
+      un objet mural se retrouve dos au mur visé ; la boîte de sélection tourne avec le modèle.
+- [ ] **Poutre** (`taverne_poutre`) : posée contre un mur, elle se couche dans l'axe, bouts en section.
+- [ ] **Porte** : pose les deux moitiés, s'ouvre au clic, charnière du bon côté (deux portes côte à côte s'ouvrent en
+      miroir), son du chêne ; cassée, ne donne qu'une porte.
+- [ ] **Trappe** (en haut / en bas d'un bloc, ouverte), **escalier** (angles intérieur et extérieur qui se forment seuls),
+      **dalle** (haut, bas, deux dalles qui font un bloc plein), **barrière** (se raccorde aux voisines et au portillon),
+      **portillon** (s'ouvre, laisse passer).
+- [ ] Le verre des fenêtres et des lanternes est translucide.
+- [ ] Les lanternes, la torche, le lustre, les bougies et le foyer éclairent.
+

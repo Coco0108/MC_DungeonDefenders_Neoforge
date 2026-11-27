@@ -1,6 +1,15 @@
 package com.github.c0c0tier.dungeon_defenders.gametest;
 
+import net.minecraft.core.Direction;
 import com.github.c0c0tier.dungeon_defenders.atelier.BlocModele;
+import com.github.c0c0tier.dungeon_defenders.atelier.BlocModeleOriente;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.FenceBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.RotatedPillarBlock;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
 import com.github.c0c0tier.dungeon_defenders.atelier.FicheBloc;
 import com.github.c0c0tier.dungeon_defenders.atelier.FicheObjet;
 import net.minecraft.core.component.DataComponents;
@@ -1266,8 +1275,32 @@ public final class DungeonDefendersGameTests {
             helper.assertValueEqual(state.getDestroySpeed(helper.getLevel(), helper.absolutePos(pos)), bloc.durete(), bloc.id() + " : dureté");
             helper.assertValueEqual(state.getLightEmission(), bloc.lumiere(), bloc.id() + " : lumière");
             helper.assertValueEqual(state.requiresCorrectToolForDrops(), bloc.niveau() != FicheBloc.Niveau.AUCUN, bloc.id() + " : outil requis");
-            if (bloc.modele()) {
+            if (bloc.type() != FicheBloc.Type.SIMPLE) {
+                Class<? extends Block> attendue = switch (bloc.type()) {
+                    case PORTE -> DoorBlock.class;
+                    case TRAPPE -> TrapDoorBlock.class;
+                    case ESCALIER -> StairBlock.class;
+                    case DALLE -> SlabBlock.class;
+                    case BARRIERE -> FenceBlock.class;
+                    case PORTILLON -> FenceGateBlock.class;
+                    case SIMPLE -> Block.class;
+                };
+                helper.assertTrue(attendue.isInstance(block), bloc.id() + " : " + bloc.type().getSerializedName() + " vanilla");
+            } else if (bloc.orientation() == FicheBloc.Orientation.AXE) {
+                helper.assertTrue(block instanceof RotatedPillarBlock, bloc.id() + " : dans un axe, comme une bûche");
+            } else if (bloc.modele()) {
                 helper.assertTrue(block instanceof BlocModele, bloc.id() + " : bloc modèle");
+                if (bloc.orientation() == FicheBloc.Orientation.HORIZONTALE) {
+                    helper.assertTrue(block instanceof BlocModeleOriente, bloc.id() + " : se tourne vers le joueur");
+                    // Tourné vers l'est (un quart de tour horaire) : (x, z) -> (16 - z, x).
+                    helper.setBlock(pos, state.setValue(BlocModeleOriente.FACING, Direction.EAST));
+                    AABB est = helper.getBlockState(pos).getShape(helper.getLevel(), helper.absolutePos(pos)).bounds();
+                    double minX = Atelier.forme(bloc.id()).stream().mapToDouble(b -> 16 - b[5]).min().orElseThrow() / 16.0D;
+                    double maxX = Atelier.forme(bloc.id()).stream().mapToDouble(b -> 16 - b[2]).max().orElseThrow() / 16.0D;
+                    helper.assertTrue(Math.abs(est.minX - minX) < 1.0E-6 && Math.abs(est.maxX - maxX) < 1.0E-6,
+                            bloc.id() + " : la forme tourne avec le bloc");
+                    helper.setBlock(pos, state);
+                }
                 AABB bounds = state.getShape(helper.getLevel(), helper.absolutePos(pos)).bounds();
                 double minY = Atelier.forme(bloc.id()).stream().mapToDouble(b -> b[1]).min().orElseThrow() / 16.0D;
                 double maxY = Atelier.forme(bloc.id()).stream().mapToDouble(b -> b[4]).max().orElseThrow() / 16.0D;

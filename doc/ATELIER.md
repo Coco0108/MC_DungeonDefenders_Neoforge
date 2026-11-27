@@ -128,11 +128,14 @@ couleur du nom), `brillant` (reflet d'enchantement), `nourriture` (`faim`, `satu
 | `son` | `pierre`, `bois`, `terre`, `herbe`, `sable`, `metal`, `verre`, `laine`, `amethyste` |
 | `transparent` | Comme le verre : ne cache rien derrière lui, rien n'y apparaît, on n'y étouffe pas |
 | `modele: true` | Modèle Blockbench converti en modèle de bloc : sélection et collision suivent les boîtes de sa forme (`BlocModele`, repris de l'Atelier), il ne cache jamais les faces voisines et laisse passer la lumière du ciel |
+| `orientation` (prompt v2) | `aucune` (défaut) ; `horizontale` (bloc `modele` seulement) : dessiné devant au nord, il regarde le joueur qui le pose, comme un four (état `facing`, forme tournée par quarts, `rotate`/`mirror` pour les structures : `BlocModeleOriente`, repris de l'Atelier) ; `axe` (cube seulement) : comme une bûche (`RotatedPillarBlock` vanilla, état `axis`) |
+| `type` (prompt v2) | `simple` (défaut) ou une **menuiserie**, la classe vanilla de l'équivalent en chêne : `porte` (`DoorBlock`, `BlockSetType.OAK`, `noOcclusion`, détruite par un piston), `trappe` (`TrapDoorBlock`, rien n'y apparaît), `escalier` (`StairBlock` des planches de chêne), `dalle` (`SlabBlock`), `barriere` (`FenceBlock`), `portillon` (`FenceGateBlock`, `WoodType.OAK`) ; barrière et portillon `forceSolidOn`. Forme du vanilla, pas de `.forme.json`. Avec `modele`, un modèle par état `models/block/<id>_<suffixe>.json` (porte : `bas_gauche`, `haut_gauche`, `bas_droite`, `haut_droite` ; trappe : —, `haut`, `ouverte` ; escalier : —, `interieur`, `exterieur` ; dalle : —, `haut` ; barrière : `poteau`, `cote` ; portillon : —, `ouvert`) ; sans, les templates vanilla avec sa texture. Les tags (`wooden_doors`, `wooden_fences`… : c'est eux qui font raccorder les barrières) et le butin (une porte ne donne qu'un objet) arrivent avec le déploiement |
 
 Vérifications (fichier ignoré, un message par problème) : texture absente, `id` différent du nom du fichier, `id` déjà
 pris (par un objet ou un bloc du mod, un œuf de monstre, ou entre un objet et un bloc de l'Atelier), `_spawn_egg`
 réservé, `niveau` sans `outil`, bloc `modele` sans son modèle ou avec une forme invalide (boîtes de 6 nombres, de -16 à
-32 pixels). `cache` (bloc-cachette) : ignoré, avec un avertissement.
+32 pixels), menuiserie `modele` sans l'un de ses modèles d'état, menuiserie avec une `orientation`, `horizontale` sur un
+cube, `axe` sur un bloc `modele` (les mêmes refus que l'Atelier). `cache` (bloc-cachette) : ignoré, avec un avertissement.
 
 ## Le lien avec les vagues
 
@@ -207,16 +210,12 @@ vivante), `oeuf`, `cibles`, `destinations`.
 Plus tard : les **blocs animés** (forge, mannequin, cristal ont des animations GeckoLib qu'un bloc fixe ne joue pas :
 il faudra un `GeoBlockEntity` générique, une fois le format défini dans l'Atelier).
 
-Plus tard aussi : les **blocs de la taverne** (2026-11-27, 7 demandes `dungeon_defenders-taverne_*` déposées chez le
-concepteur de modèles, livrées dans `modeles/blocs/taverne_*/` de l'Atelier). Ils sont dessinés pour les deux sortes de
-bloc qui existent (cube, `modele`), mais il leur faudra un champ de fiche générique, défini **dans l'Atelier** puis lu
-ici : `oriente` (rotation horizontale au placement : fenêtres, consoles, torche murale, banc, comptoir, étagère, foyer ;
-modèle dessiné devant au nord) et `axe` (comme une bûche : `taverne_poutre`). Une 8ᵉ demande,
-`taverne_menuiserie`, livre les modèles **par état** de la porte (bas/haut, charnière gauche/droite), de la trappe, de
-l'escalier (droit, intérieur, extérieur, comme vanilla), de la dalle (bas/haut), de la barrière qui se raccorde (poteau +
-bras nord, en multipart) et du portillon (fermé/ouvert) : il faudra ici des sortes de bloc génériques correspondantes
-(`porte`, `trappe`, `escalier`, `dalle`, `barriere`, `portillon`), à définir dans le format de fiche de l'Atelier. La proposition à transmettre à l'Atelier est dans
-[DEMANDE_ATELIER_BLOCS.md](DEMANDE_ATELIER_BLOCS.md) ; le code côté Dungeon Defenders se fera une fois le format décidé.
+**Les blocs de la taverne** (2026-11-27) : 39 fiches `taverne_*` (murs, sols, charpente, fenêtres, mobilier, décor,
+éclairage, menuiseries), premier lot de blocs destiné à Dungeon Defenders. Leur format (`orientation`, `type`) est celui
+du prompt v2 de l'Atelier, qui a repris la proposition [DEMANDE_ATELIER_BLOCS.md](DEMANDE_ATELIER_BLOCS.md) en la
+simplifiant. Les 39 fiches réelles ont été chargées ici à l'essai (copiées puis retirées, jamais commitées) : toutes
+acceptées, `atelier_items_and_blocks` passe. **Le déploiement des blocs n'existe pas encore côté Atelier** : rien à
+voir en jeu avant lui.
 
 ## Tester
 

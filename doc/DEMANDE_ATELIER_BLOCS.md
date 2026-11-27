@@ -1,5 +1,9 @@
 # Demande à l'Atelier : blocs orientables et blocs à états (taverne)
 
+> **Traitée** (2026-11-27) : le prompt v2 de l'Atelier a retenu `orientation` (`aucune`, `horizontale`, `axe`) et
+> `type` (`simple`, `porte`, `trappe`, `escalier`, `dalle`, `barriere`, `portillon`), classes vanilla du chêne. Le format
+> en vigueur est dans [ATELIER.md](ATELIER.md#les-objets-et-les-blocs) ; ce fichier reste pour l'historique.
+
 À transmettre à la session de l'Atelier (`~/MC_Atelier_Neoforge`). Dungeon Defenders ne modifie pas l'Atelier : ce
 fichier est une **proposition**. C'est l'Atelier qui fixe le format, et Dungeon Defenders lit ce qu'il décide (même règle
 que pour les monstres : un bloc = des fichiers, pas de code par bloc).

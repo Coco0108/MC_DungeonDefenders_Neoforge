@@ -97,7 +97,7 @@ public final class AtelierLoader {
         Map<String, List<double[]>> formes = new TreeMap<>();
         Map<String, FicheBloc> blocs = loader.lireDossier(BLOCS, "Bloc", FicheBloc.CODEC, FicheBloc::id,
                 Set.of("id", "nom", "nom_en", "durete", "resistance", "outil", "niveau", "lumiere", "son", "modele", "transparent",
-                        "destinations", "origine"), Set.of("cache"),
+                        "orientation", "type", "destinations", "origine"), Set.of("cache"),
                 (bloc, erreurs) -> loader.verifierBloc(bloc, oeufs, objets, formes, erreurs));
         formes.keySet().retainAll(blocs.keySet());
         Atelier.initObjets(objets, blocs, formes);
@@ -160,7 +160,8 @@ public final class AtelierLoader {
 
     /**
      * Sa texture doit exister, son id être libre (objets et blocs partagent le registre des objets), son niveau aller avec
-     * un outil ; un bloc {@code modele} doit avoir son modèle converti et une forme valide.
+     * un outil ; un bloc {@code modele} doit avoir son modèle converti et une forme valide (une menuiserie : ses modèles
+     * d'état), une orientation aller avec sa sorte (horizontale : un modèle ; axe : un cube ; aucune pour une menuiserie).
      */
     private void verifierBloc(FicheBloc bloc, Set<String> oeufs, Map<String, FicheObjet> objets,
             Map<String, List<double[]>> formes, List<String> erreurs) {
@@ -175,8 +176,24 @@ public final class AtelierLoader {
         if (bloc.niveau() != FicheBloc.Niveau.AUCUN && bloc.outil() == FicheBloc.Outil.AUCUN) {
             erreurs.add("`niveau` « " + bloc.niveau().getSerializedName() + " » : il faut aussi l'`outil` qui le casse");
         }
-        if (bloc.modele()) {
+        if (bloc.type() != FicheBloc.Type.SIMPLE) {
+            if (bloc.orientation() != FicheBloc.Orientation.AUCUNE) {
+                erreurs.add("`type` « " + bloc.type().getSerializedName() + " » : pas d'`orientation`, il s'oriente et s'ouvre"
+                        + " comme son équivalent vanilla");
+            }
+            for (String modele : bloc.modelesEtats()) {
+                if (!jar.containsFile(modele)) {
+                    erreurs.add("modèle introuvable : " + modele + " (un modèle par état, déployé par l'Atelier)");
+                }
+            }
+        } else if (bloc.modele()) {
             verifierForme(bloc, formes, erreurs);
+        }
+        if (bloc.orientation() == FicheBloc.Orientation.HORIZONTALE && !bloc.modele()) {
+            erreurs.add("`orientation` « horizontale » : seulement pour un bloc `modele` (un cube n'a pas de devant)");
+        }
+        if (bloc.orientation() == FicheBloc.Orientation.AXE && bloc.modele()) {
+            erreurs.add("`orientation` « axe » : seulement pour un cube (comme une bûche), pas pour un bloc `modele`");
         }
     }
 
