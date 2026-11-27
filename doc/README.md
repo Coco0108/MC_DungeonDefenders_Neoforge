@@ -27,8 +27,9 @@ que les monstres tentent de détruire, et peut se défendre avec des pièges com
 7. [Idées & backlog](07-idees-et-backlog.md) — boîte à idées en vrac + backlog trié par catégorie/difficulté, pour lancer une fonctionnalité à la demande.
 
 **Atelier** : [ATELIER.md](ATELIER.md) — ce que le mod lit des monstres, objets et blocs
-**Demande à l'Atelier** : [DEMANDE_ATELIER_BLOCS.md](DEMANDE_ATELIER_BLOCS.md) — blocs orientés et blocs à états (porte, escalier, barrière…) pour la taverne
 déployés depuis l'Atelier (le mod bac à sable des modèles Blockbench), où, et ce qu'il ignore.
+
+**Demande à l'Atelier** : [DEMANDE_ATELIER_BLOCS.md](DEMANDE_ATELIER_BLOCS.md) — blocs orientés et blocs à états (porte, escalier, barrière…) pour la taverne
 
 **Data-driven** (équilibrer avec des JSON et `/reload`, sans recompiler) :
 [ennemis](data-driven/ennemis.md), [stats des tours](data-driven/tours.md),
