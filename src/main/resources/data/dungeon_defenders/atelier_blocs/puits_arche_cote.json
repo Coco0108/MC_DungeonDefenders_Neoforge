@@ -1,0 +1,11 @@
+{
+    "id": "puits_arche_cote",
+    "nom": "Côté d'arche du puits",
+    "nom_en": "Well Arch Side",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

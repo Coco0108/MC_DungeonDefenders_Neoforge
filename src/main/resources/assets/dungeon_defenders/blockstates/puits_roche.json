@@ -1,0 +1,18 @@
+{
+    "variants": {
+        "": [
+            {
+                "model": "dungeon_defenders:block/puits_roche",
+                "weight": 6
+            },
+            {
+                "model": "dungeon_defenders:block/puits_roche_2",
+                "weight": 2
+            },
+            {
+                "model": "dungeon_defenders:block/puits_roche_3",
+                "weight": 1
+            }
+        ]
+    }
+}

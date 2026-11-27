@@ -1,0 +1,10 @@
+{
+    "id": "puits_cocon",
+    "nom": "Cocon d'araignée",
+    "nom_en": "Spider Cocoon",
+    "modele": true,
+    "durete": 0.2,
+    "outil": "aucun",
+    "niveau": "aucun",
+    "son": "laine"
+}

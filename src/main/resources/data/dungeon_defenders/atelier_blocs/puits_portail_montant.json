@@ -1,0 +1,11 @@
+{
+    "id": "puits_portail_montant",
+    "nom": "Montant du grand portail",
+    "nom_en": "Great Gate Jamb",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

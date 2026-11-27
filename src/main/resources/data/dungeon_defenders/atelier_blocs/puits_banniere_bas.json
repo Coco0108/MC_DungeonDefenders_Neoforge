@@ -1,0 +1,11 @@
+{
+    "id": "puits_banniere_bas",
+    "nom": "Bas de bannière déchirée du puits",
+    "nom_en": "Well Torn Banner Bottom",
+    "modele": true,
+    "durete": 0.5,
+    "outil": "aucun",
+    "niveau": "aucun",
+    "son": "laine",
+    "orientation": "horizontale"
+}

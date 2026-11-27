@@ -1,0 +1,10 @@
+{
+    "id": "puits_estrade",
+    "nom": "Estrade du cristal",
+    "nom_en": "Crystal Dais",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

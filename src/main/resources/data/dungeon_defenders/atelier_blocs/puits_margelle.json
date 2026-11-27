@@ -1,0 +1,11 @@
+{
+    "id": "puits_margelle",
+    "nom": "Margelle du puits",
+    "nom_en": "Well Curb",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

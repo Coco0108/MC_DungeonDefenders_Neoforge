@@ -1,0 +1,10 @@
+{
+    "id": "puits_poulie",
+    "nom": "Poulie du puits",
+    "nom_en": "Well Pulley",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

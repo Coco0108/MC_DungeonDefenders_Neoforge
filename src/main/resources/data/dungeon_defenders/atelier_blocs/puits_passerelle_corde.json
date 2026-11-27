@@ -1,0 +1,11 @@
+{
+    "id": "puits_passerelle_corde",
+    "nom": "Passerelle à garde-fou du puits",
+    "nom_en": "Well Roped Walkway",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

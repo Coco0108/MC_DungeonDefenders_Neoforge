@@ -1,0 +1,11 @@
+{
+    "id": "puits_porte",
+    "nom": "Porte de cachot du puits",
+    "nom_en": "Well Dungeon Door",
+    "type": "porte",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

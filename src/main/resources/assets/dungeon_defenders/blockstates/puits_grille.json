@@ -1,0 +1,58 @@
+{
+    "variants": {
+        "facing=north,half=bottom,open=false": {
+            "model": "dungeon_defenders:block/puits_grille"
+        },
+        "facing=north,half=bottom,open=true": {
+            "model": "dungeon_defenders:block/puits_grille_ouverte"
+        },
+        "facing=north,half=top,open=false": {
+            "model": "dungeon_defenders:block/puits_grille_haut"
+        },
+        "facing=north,half=top,open=true": {
+            "model": "dungeon_defenders:block/puits_grille_ouverte"
+        },
+        "facing=east,half=bottom,open=false": {
+            "model": "dungeon_defenders:block/puits_grille"
+        },
+        "facing=east,half=bottom,open=true": {
+            "model": "dungeon_defenders:block/puits_grille_ouverte",
+            "y": 90
+        },
+        "facing=east,half=top,open=false": {
+            "model": "dungeon_defenders:block/puits_grille_haut"
+        },
+        "facing=east,half=top,open=true": {
+            "model": "dungeon_defenders:block/puits_grille_ouverte",
+            "y": 90
+        },
+        "facing=south,half=bottom,open=false": {
+            "model": "dungeon_defenders:block/puits_grille"
+        },
+        "facing=south,half=bottom,open=true": {
+            "model": "dungeon_defenders:block/puits_grille_ouverte",
+            "y": 180
+        },
+        "facing=south,half=top,open=false": {
+            "model": "dungeon_defenders:block/puits_grille_haut"
+        },
+        "facing=south,half=top,open=true": {
+            "model": "dungeon_defenders:block/puits_grille_ouverte",
+            "y": 180
+        },
+        "facing=west,half=bottom,open=false": {
+            "model": "dungeon_defenders:block/puits_grille"
+        },
+        "facing=west,half=bottom,open=true": {
+            "model": "dungeon_defenders:block/puits_grille_ouverte",
+            "y": 270
+        },
+        "facing=west,half=top,open=false": {
+            "model": "dungeon_defenders:block/puits_grille_haut"
+        },
+        "facing=west,half=top,open=true": {
+            "model": "dungeon_defenders:block/puits_grille_ouverte",
+            "y": 270
+        }
+    }
+}

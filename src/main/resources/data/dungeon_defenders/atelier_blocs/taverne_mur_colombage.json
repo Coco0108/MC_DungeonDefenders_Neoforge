@@ -1,0 +1,9 @@
+{
+    "id": "taverne_mur_colombage",
+    "nom": "Colombage de taverne",
+    "nom_en": "Tavern Half-Timbering",
+    "durete": 1.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

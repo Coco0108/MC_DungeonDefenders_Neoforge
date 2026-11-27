@@ -1,0 +1,15 @@
+{
+    "id": "taverne_mur_pierre",
+    "nom": "Mur de pierre de taverne",
+    "nom_en": "Tavern Stone Wall",
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "variantes": [
+        1,
+        1,
+        1,
+        1
+    ]
+}

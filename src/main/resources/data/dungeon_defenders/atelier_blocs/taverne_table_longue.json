@@ -1,0 +1,11 @@
+{
+    "id": "taverne_table_longue",
+    "nom": "Table longue de taverne",
+    "nom_en": "Tavern Long Table",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

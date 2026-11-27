@@ -1,0 +1,11 @@
+{
+    "id": "puits_ossements",
+    "nom": "Ossements du puits",
+    "nom_en": "Well Bones",
+    "modele": true,
+    "durete": 0.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

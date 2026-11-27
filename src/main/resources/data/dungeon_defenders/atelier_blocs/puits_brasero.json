@@ -1,0 +1,12 @@
+{
+    "id": "puits_brasero",
+    "nom": "Brasero du puits",
+    "nom_en": "Well Brazier",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "metal",
+    "transparent": true
+}

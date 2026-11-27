@@ -1,0 +1,11 @@
+{
+    "id": "taverne_rambarde",
+    "nom": "Rambarde de taverne",
+    "nom_en": "Tavern Railing",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

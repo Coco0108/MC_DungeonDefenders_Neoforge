@@ -1,0 +1,11 @@
+{
+    "id": "taverne_escalier",
+    "nom": "Escalier de taverne",
+    "nom_en": "Tavern Stairs",
+    "type": "escalier",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

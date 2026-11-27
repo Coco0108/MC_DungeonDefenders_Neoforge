@@ -1,0 +1,12 @@
+{
+    "id": "taverne_fenetre",
+    "nom": "Fenêtre de taverne",
+    "nom_en": "Tavern Window",
+    "modele": true,
+    "durete": 1.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "transparent": true,
+    "orientation": "horizontale"
+}

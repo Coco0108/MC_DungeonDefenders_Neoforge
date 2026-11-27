@@ -1,0 +1,11 @@
+{
+    "id": "puits_console",
+    "nom": "Console du puits",
+    "nom_en": "Well Corbel",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

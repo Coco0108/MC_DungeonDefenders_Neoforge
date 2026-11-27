@@ -1,0 +1,10 @@
+{
+    "id": "taverne_tapis",
+    "nom": "Tapis de taverne",
+    "nom_en": "Tavern Rug",
+    "modele": true,
+    "durete": 0.1,
+    "outil": "aucun",
+    "niveau": "aucun",
+    "son": "laine"
+}

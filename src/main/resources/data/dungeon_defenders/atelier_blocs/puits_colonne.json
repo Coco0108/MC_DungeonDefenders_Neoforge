@@ -1,0 +1,10 @@
+{
+    "id": "puits_colonne",
+    "nom": "Colonne du puits",
+    "nom_en": "Well Column",
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "axe"
+}

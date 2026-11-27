@@ -1,0 +1,11 @@
+{
+    "id": "puits_arche_cle",
+    "nom": "Clé d'arche du puits",
+    "nom_en": "Well Arch Keystone",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

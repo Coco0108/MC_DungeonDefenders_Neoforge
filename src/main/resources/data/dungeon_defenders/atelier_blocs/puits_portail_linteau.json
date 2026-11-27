@@ -1,0 +1,11 @@
+{
+    "id": "puits_portail_linteau",
+    "nom": "Linteau du grand portail",
+    "nom_en": "Great Gate Lintel",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

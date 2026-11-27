@@ -1,0 +1,12 @@
+{
+    "id": "taverne_foyer",
+    "nom": "Foyer de taverne",
+    "nom_en": "Tavern Hearth",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "pierre",
+    "orientation": "horizontale"
+}

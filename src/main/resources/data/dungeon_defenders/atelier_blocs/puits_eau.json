@@ -1,0 +1,11 @@
+{
+    "id": "puits_eau",
+    "nom": "Eau du puits",
+    "nom_en": "Well Water",
+    "modele": true,
+    "durete": 0.5,
+    "outil": "aucun",
+    "niveau": "aucun",
+    "son": "verre",
+    "transparent": true
+}

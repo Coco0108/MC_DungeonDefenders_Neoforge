@@ -1,0 +1,18 @@
+{
+    "variants": {
+        "": [
+            {
+                "model": "dungeon_defenders:block/puits_mur_fondation",
+                "weight": 6
+            },
+            {
+                "model": "dungeon_defenders:block/puits_mur_fondation_2",
+                "weight": 2
+            },
+            {
+                "model": "dungeon_defenders:block/puits_mur_fondation_3",
+                "weight": 1
+            }
+        ]
+    }
+}

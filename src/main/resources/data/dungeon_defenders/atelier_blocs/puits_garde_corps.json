@@ -1,0 +1,11 @@
+{
+    "id": "puits_garde_corps",
+    "nom": "Garde-corps du puits",
+    "nom_en": "Well Railing",
+    "type": "barriere",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal"
+}

@@ -1,0 +1,19 @@
+{
+    "variants": {
+        "facing=north": {
+            "model": "dungeon_defenders:block/taverne_console"
+        },
+        "facing=east": {
+            "model": "dungeon_defenders:block/taverne_console",
+            "y": 90
+        },
+        "facing=south": {
+            "model": "dungeon_defenders:block/taverne_console",
+            "y": 180
+        },
+        "facing=west": {
+            "model": "dungeon_defenders:block/taverne_console",
+            "y": 270
+        }
+    }
+}

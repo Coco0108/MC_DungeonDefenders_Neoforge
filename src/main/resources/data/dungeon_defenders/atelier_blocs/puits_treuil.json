@@ -1,0 +1,11 @@
+{
+    "id": "puits_treuil",
+    "nom": "Treuil du puits",
+    "nom_en": "Well Windlass",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

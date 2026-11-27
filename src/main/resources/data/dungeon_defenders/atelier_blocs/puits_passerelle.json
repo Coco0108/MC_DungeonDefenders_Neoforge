@@ -1,0 +1,11 @@
+{
+    "id": "puits_passerelle",
+    "nom": "Passerelle du puits",
+    "nom_en": "Well Walkway",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

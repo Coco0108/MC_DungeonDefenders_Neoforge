@@ -1,0 +1,19 @@
+{
+    "variants": {
+        "facing=north": {
+            "model": "dungeon_defenders:block/puits_treuil"
+        },
+        "facing=east": {
+            "model": "dungeon_defenders:block/puits_treuil",
+            "y": 90
+        },
+        "facing=south": {
+            "model": "dungeon_defenders:block/puits_treuil",
+            "y": 180
+        },
+        "facing=west": {
+            "model": "dungeon_defenders:block/puits_treuil",
+            "y": 270
+        }
+    }
+}

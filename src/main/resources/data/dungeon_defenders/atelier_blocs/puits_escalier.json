@@ -1,0 +1,11 @@
+{
+    "id": "puits_escalier",
+    "nom": "Escalier du puits",
+    "nom_en": "Well Stairs",
+    "type": "escalier",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

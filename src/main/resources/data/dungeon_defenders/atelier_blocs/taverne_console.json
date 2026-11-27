@@ -1,0 +1,11 @@
+{
+    "id": "taverne_console",
+    "nom": "Console de taverne",
+    "nom_en": "Tavern Brace",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

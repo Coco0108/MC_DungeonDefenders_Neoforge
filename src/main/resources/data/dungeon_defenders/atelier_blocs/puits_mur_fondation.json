@@ -1,0 +1,14 @@
+{
+    "id": "puits_mur_fondation",
+    "nom": "Mur de fondation du puits",
+    "nom_en": "Well Foundation Wall",
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "variantes": [
+        6,
+        2,
+        1
+    ]
+}

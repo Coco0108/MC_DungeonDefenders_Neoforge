@@ -1,0 +1,12 @@
+{
+    "id": "puits_toile_coin",
+    "nom": "Toile d'araignée d'angle",
+    "nom_en": "Corner Cobweb",
+    "modele": true,
+    "durete": 0.2,
+    "outil": "aucun",
+    "niveau": "aucun",
+    "son": "laine",
+    "transparent": true,
+    "orientation": "horizontale"
+}

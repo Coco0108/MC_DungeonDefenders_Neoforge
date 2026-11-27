@@ -1,0 +1,10 @@
+{
+    "id": "puits_pilier_chapiteau",
+    "nom": "Chapiteau de pilier du puits",
+    "nom_en": "Well Pillar Capital",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

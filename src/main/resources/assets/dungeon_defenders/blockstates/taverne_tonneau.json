@@ -1,0 +1,19 @@
+{
+    "variants": {
+        "facing=north": {
+            "model": "dungeon_defenders:block/taverne_tonneau"
+        },
+        "facing=east": {
+            "model": "dungeon_defenders:block/taverne_tonneau",
+            "y": 90
+        },
+        "facing=south": {
+            "model": "dungeon_defenders:block/taverne_tonneau",
+            "y": 180
+        },
+        "facing=west": {
+            "model": "dungeon_defenders:block/taverne_tonneau",
+            "y": 270
+        }
+    }
+}

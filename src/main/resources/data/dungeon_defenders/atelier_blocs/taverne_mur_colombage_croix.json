@@ -1,0 +1,9 @@
+{
+    "id": "taverne_mur_colombage_croix",
+    "nom": "Colombage en croix de taverne",
+    "nom_en": "Tavern Cross Half-Timbering",
+    "durete": 1.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

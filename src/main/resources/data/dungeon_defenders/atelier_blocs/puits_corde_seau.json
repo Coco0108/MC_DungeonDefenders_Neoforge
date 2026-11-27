@@ -1,0 +1,10 @@
+{
+    "id": "puits_corde_seau",
+    "nom": "Corde et seau du puits",
+    "nom_en": "Well Rope and Bucket",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

@@ -1,0 +1,11 @@
+{
+    "id": "puits_portail_battant_haut",
+    "nom": "Haut de battant du grand portail",
+    "nom_en": "Great Gate Leaf Top",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

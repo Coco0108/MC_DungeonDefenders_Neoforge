@@ -1,0 +1,10 @@
+{
+    "id": "taverne_poteau_base",
+    "nom": "Pied de poteau de taverne",
+    "nom_en": "Tavern Post Base",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

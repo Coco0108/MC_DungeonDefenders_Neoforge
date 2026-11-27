@@ -1,0 +1,7 @@
+{
+    "parent": "minecraft:block/cube_column",
+    "textures": {
+        "end": "dungeon_defenders:block/taverne_poutre_top",
+        "side": "dungeon_defenders:block/taverne_poutre"
+    }
+}

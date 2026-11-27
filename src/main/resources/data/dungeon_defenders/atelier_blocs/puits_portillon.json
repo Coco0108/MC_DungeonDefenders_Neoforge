@@ -1,0 +1,11 @@
+{
+    "id": "puits_portillon",
+    "nom": "Portillon du puits",
+    "nom_en": "Well Gate",
+    "type": "portillon",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal"
+}

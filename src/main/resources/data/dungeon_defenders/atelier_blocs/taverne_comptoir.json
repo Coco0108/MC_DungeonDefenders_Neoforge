@@ -1,0 +1,11 @@
+{
+    "id": "taverne_comptoir",
+    "nom": "Comptoir de taverne",
+    "nom_en": "Tavern Counter",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

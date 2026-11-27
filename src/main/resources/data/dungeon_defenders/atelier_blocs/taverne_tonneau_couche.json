@@ -1,0 +1,11 @@
+{
+    "id": "taverne_tonneau_couche",
+    "nom": "Tonneau couché de taverne",
+    "nom_en": "Tavern Lying Barrel",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

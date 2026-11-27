@@ -1,0 +1,10 @@
+{
+    "id": "taverne_tabouret",
+    "nom": "Tabouret de taverne",
+    "nom_en": "Tavern Stool",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

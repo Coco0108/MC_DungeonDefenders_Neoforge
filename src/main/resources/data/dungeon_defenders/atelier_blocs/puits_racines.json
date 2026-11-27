@@ -1,0 +1,10 @@
+{
+    "id": "puits_racines",
+    "nom": "Racines du puits",
+    "nom_en": "Well Roots",
+    "modele": true,
+    "durete": 0.6,
+    "outil": "pelle",
+    "niveau": "aucun",
+    "son": "terre"
+}

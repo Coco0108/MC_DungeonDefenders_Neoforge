@@ -1,0 +1,11 @@
+{
+    "id": "taverne_porte",
+    "nom": "Porte de taverne",
+    "nom_en": "Tavern Door",
+    "type": "porte",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

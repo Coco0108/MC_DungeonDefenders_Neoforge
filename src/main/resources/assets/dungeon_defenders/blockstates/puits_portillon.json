@@ -1,0 +1,80 @@
+{
+    "variants": {
+        "facing=south,in_wall=false,open=false": {
+            "model": "dungeon_defenders:block/puits_portillon",
+            "uvlock": true
+        },
+        "facing=south,in_wall=false,open=true": {
+            "model": "dungeon_defenders:block/puits_portillon_ouvert",
+            "uvlock": true
+        },
+        "facing=south,in_wall=true,open=false": {
+            "model": "dungeon_defenders:block/puits_portillon_mur",
+            "uvlock": true
+        },
+        "facing=south,in_wall=true,open=true": {
+            "model": "dungeon_defenders:block/puits_portillon_ouvert_mur",
+            "uvlock": true
+        },
+        "facing=west,in_wall=false,open=false": {
+            "model": "dungeon_defenders:block/puits_portillon",
+            "y": 90,
+            "uvlock": true
+        },
+        "facing=west,in_wall=false,open=true": {
+            "model": "dungeon_defenders:block/puits_portillon_ouvert",
+            "y": 90,
+            "uvlock": true
+        },
+        "facing=west,in_wall=true,open=false": {
+            "model": "dungeon_defenders:block/puits_portillon_mur",
+            "y": 90,
+            "uvlock": true
+        },
+        "facing=west,in_wall=true,open=true": {
+            "model": "dungeon_defenders:block/puits_portillon_ouvert_mur",
+            "y": 90,
+            "uvlock": true
+        },
+        "facing=north,in_wall=false,open=false": {
+            "model": "dungeon_defenders:block/puits_portillon",
+            "y": 180,
+            "uvlock": true
+        },
+        "facing=north,in_wall=false,open=true": {
+            "model": "dungeon_defenders:block/puits_portillon_ouvert",
+            "y": 180,
+            "uvlock": true
+        },
+        "facing=north,in_wall=true,open=false": {
+            "model": "dungeon_defenders:block/puits_portillon_mur",
+            "y": 180,
+            "uvlock": true
+        },
+        "facing=north,in_wall=true,open=true": {
+            "model": "dungeon_defenders:block/puits_portillon_ouvert_mur",
+            "y": 180,
+            "uvlock": true
+        },
+        "facing=east,in_wall=false,open=false": {
+            "model": "dungeon_defenders:block/puits_portillon",
+            "y": 270,
+            "uvlock": true
+        },
+        "facing=east,in_wall=false,open=true": {
+            "model": "dungeon_defenders:block/puits_portillon_ouvert",
+            "y": 270,
+            "uvlock": true
+        },
+        "facing=east,in_wall=true,open=false": {
+            "model": "dungeon_defenders:block/puits_portillon_mur",
+            "y": 270,
+            "uvlock": true
+        },
+        "facing=east,in_wall=true,open=true": {
+            "model": "dungeon_defenders:block/puits_portillon_ouvert_mur",
+            "y": 270,
+            "uvlock": true
+        }
+    }
+}
