@@ -211,8 +211,11 @@ Plus tard aussi : les **blocs de la taverne** (2026-11-27, 7 demandes `dungeon_d
 concepteur de modèles, livrées dans `modeles/blocs/taverne_*/` de l'Atelier). Ils sont dessinés pour les deux sortes de
 bloc qui existent (cube, `modele`), mais il leur faudra un champ de fiche générique, défini **dans l'Atelier** puis lu
 ici : `oriente` (rotation horizontale au placement : fenêtres, consoles, torche murale, banc, comptoir, étagère, foyer ;
-modèle dessiné devant au nord) et `axe` (comme une bûche : `taverne_poutre`). Pas prévus : portes, escaliers, dalles, et
-rambardes qui se raccordent d'elles-mêmes (ce sont des segments droits + un poteau d'angle).
+modèle dessiné devant au nord) et `axe` (comme une bûche : `taverne_poutre`). Une 8ᵉ demande,
+`taverne_menuiserie`, livre les modèles **par état** de la porte (bas/haut, charnière gauche/droite), de la trappe, de
+l'escalier (droit, intérieur, extérieur, comme vanilla), de la dalle (bas/haut), de la barrière qui se raccorde (poteau +
+bras nord, en multipart) et du portillon (fermé/ouvert) : il faudra ici des sortes de bloc génériques correspondantes
+(`porte`, `trappe`, `escalier`, `dalle`, `barriere`, `portillon`), à définir dans le format de fiche de l'Atelier.
 
 ## Tester
 
