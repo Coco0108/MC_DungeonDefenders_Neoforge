@@ -1892,6 +1892,23 @@ passerelles comme si elles n'existaient pas).
 - [ ] La lumière : on voit les monstres arriver.
 - [ ] Choisir : garder les deux, ou une seule (laquelle).
 
+## Les deux maps de la fonderie et le cristal sur l'estrade (2026-11-28)
+
+`fonderie_a` « Le Cœur de la Fonderie » et `fonderie_b` « La Halle de Coulée », après les maps du puits dans l'écran du
+cristal. Les gametests `map_paths_fonderie_*` : tous les monstres arrivent au cristal (9 à 35 s).
+
+- [ ] Les deux maps apparaissent, avec leur aperçu.
+- [ ] Dans les quatre maps (puits et fonderie), le cristal est maintenant **posé sur l'estrade**, un bloc plus haut.
+- [ ] Une partie complète sur chaque fonderie : chemins, place pour les tours, lumière, métal fondu qui ne brûle pas.
+- [ ] Choisir : garder les deux, ou une seule.
+
+## Les 9 monstres de l'Atelier (2026-11-28)
+
+Dans l'onglet « Monstres », après les cinq œufs d'ennemi. Ils ne viennent pas encore dans les vagues.
+
+- [ ] Chaque œuf fait apparaître son monstre, animé (marche, attaque, mort), à la bonne taille.
+- [ ] La wyverne vole.
+
 ## Onglets créatifs par map (2026-11-28)
 
 - [ ] Après l'onglet « Dungeon Defenders » (blocs de jeu, objets), un onglet « Blocs : Taverne » (blocs `taverne_*` et

@@ -313,6 +313,19 @@ de décor restent enregistrés aussi, sous leur propre id.
 brute en 5). Aucun bloc `atelier:` (vérifié en lisant les `.nbt`). Leurs chemins sont joués par les gametests
 `map_paths_puits_a` et `map_paths_puits_b` (voir plus bas).
 
+**Les deux maps de la fonderie, les 70 blocs `fonderie_*` et les 9 monstres** (2026-11-28, déploiement de l'Atelier
+@f6af63b, dernier commit `e0fc1a9`), d'après [DEMANDE_ATELIER_FONDERIE.md](DEMANDE_ATELIER_FONDERIE.md) et
+[DEMANDE_ATELIER_MONSTRES_TOURS.md](DEMANDE_ATELIER_MONSTRES_TOURS.md) :
+- `fonderie_a` « Le Cœur de la Fonderie » (47 × 21 × 47) et `fonderie_b` « La Halle de Coulée » (47 × 19 × 31), neuf
+  spawners chacune ; gametests `map_paths_fonderie_a` et `map_paths_fonderie_b` : tout arrive au cristal, en 9 à 35 s.
+- Les quatre maps ont été redéployées avec le cristal **posé sur l'estrade** (avant, il remplaçait la dalle du
+  milieu : un bloc trop bas, d'après Corentin). Les chemins passent toujours.
+- Les 9 monstres (`gobelin`, `orc`, `ogre`, `skeleton` « Squelette colosse », `kobold`, `dark_elf_warrior`,
+  `dark_elf_archer`, `dark_elf_mage`, `wyvern`) sont chargés et ont leur œuf dans l'onglet « Monstres ». Ils ne sont
+  **pas encore des ennemis des vagues** : les JSON d'ennemi pointent toujours vers les mobs vanilla, en attendant que
+  Corentin confirme la correspondance. Leurs `capacites` (tir de l'archer, sort du mage, explosion du kobold) ne sont
+  pas encore lues.
+
 ## Tester
 
 - `./gradlew runGameTestServer`, **maps** : `map_paths_<map>` pose la map comme structure de son test et fait partir de

@@ -1,6 +1,9 @@
 # Demande à l'Atelier : construire la deuxième map, la fonderie, en deux versions
 
-> **À transmettre** (2026-11-28) à la session de l'Atelier (`~/MC_Atelier_Neoforge`). Dungeon Defenders ne modifie pas
+> **Traitée** (2026-11-28) : blocs et maps `fonderie_a` « Le Cœur de la Fonderie », `fonderie_b` « La Halle de Coulée »
+> déployés (dernier commit `e0fc1a9`), chemins vérifiés par gametest, voir [ATELIER.md](ATELIER.md).
+>
+> **Avant** (2026-11-28) : à transmettre à la session de l'Atelier (`~/MC_Atelier_Neoforge`). Dungeon Defenders ne modifie pas
 > l'Atelier : ce fichier est une **demande**, l'Atelier décide de la façon de la ranger chez lui (comme `maps/puits_a/`
 > et `maps/puits_b/`). C'est la même démarche que [DEMANDE_ATELIER_PUITS.md](DEMANDE_ATELIER_PUITS.md) ; tout ce qui
 > n'est pas redit ici (format des blocs de jeu, livraison, contraintes) reste valable tel quel.

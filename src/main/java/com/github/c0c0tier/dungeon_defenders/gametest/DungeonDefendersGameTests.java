@@ -222,7 +222,7 @@ public final class DungeonDefendersGameTests {
         // Les maps de l'Atelier jouées pour de vrai : chacune est la structure de son test, et chacune dans son propre
         // environnement (donc son propre lot) : les monstres visent LE cristal du monde (CRYSTAL_POS), deux maps côte à
         // côte se le disputeraient.
-        for (String map : List.of("puits_a", "puits_b")) {
+        for (String map : List.of("puits_a", "puits_b", "fonderie_a", "fonderie_b")) {
             Holder<TestEnvironmentDefinition<?>> alone =
                     event.registerEnvironment(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "map_" + map));
             Identifier testId = Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "map_paths_" + map);
@@ -270,7 +270,13 @@ public final class DungeonDefendersGameTests {
         monstres.buildContents(parameters);
         var ids = monstres.getDisplayItems().stream()
                 .map(stack -> stack.get(com.github.c0c0tier.dungeon_defenders.init.ModDataComponents.ENEMY.get()))
+                .filter(java.util.Objects::nonNull)
                 .toList();
+        // Puis les œufs des monstres de l'Atelier.
+        for (String id : com.github.c0c0tier.dungeon_defenders.atelier.AtelierEntities.types().keySet()) {
+            var egg = BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, id + "_spawn_egg"));
+            helper.assertTrue(monstres.getDisplayItems().stream().anyMatch(stack -> stack.is(egg)), id + "_spawn_egg absent de l'onglet Monstres");
+        }
         helper.assertValueEqual(ids, com.github.c0c0tier.dungeon_defenders.init.EnemyRegistry.sortedIds(), "ennemis de l'onglet Monstres");
         var brute = monstres.getDisplayItems().stream()
                 .filter(stack -> Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "brute")
