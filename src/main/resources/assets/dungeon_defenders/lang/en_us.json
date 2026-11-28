@@ -497,5 +497,7 @@
   "block.dungeon_defenders.fonderie_tas_charbon": "Coal Heap",
   "block.dungeon_defenders.fonderie_terre_suie": "Sooty Dirt",
   "block.dungeon_defenders.fonderie_trappe": "Iron Grating Trapdoor",
-  "block.dungeon_defenders.fonderie_wagonnet": "Ore Cart"
+  "block.dungeon_defenders.fonderie_wagonnet": "Ore Cart",
+  "block.dungeon_defenders.fonderie_grille_sol": "Molten Metal Floor Grate",
+  "block.dungeon_defenders.fonderie_roche_lave": "Lava-Cracked Rock"
 }

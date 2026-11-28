@@ -5,5 +5,11 @@
     "durete": 2.0,
     "outil": "pioche",
     "niveau": "aucun",
-    "son": "pierre"
+    "son": "pierre",
+    "variantes": [
+        1,
+        1,
+        1,
+        1
+    ]
 }

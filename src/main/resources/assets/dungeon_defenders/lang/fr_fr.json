@@ -497,5 +497,7 @@
   "block.dungeon_defenders.fonderie_tas_charbon": "Tas de charbon",
   "block.dungeon_defenders.fonderie_terre_suie": "Terre noire de suie",
   "block.dungeon_defenders.fonderie_trappe": "Caillebotis de fer",
-  "block.dungeon_defenders.fonderie_wagonnet": "Wagonnet de minerai"
+  "block.dungeon_defenders.fonderie_wagonnet": "Wagonnet de minerai",
+  "block.dungeon_defenders.fonderie_grille_sol": "Grille de sol sur métal fondu",
+  "block.dungeon_defenders.fonderie_roche_lave": "Roche fissurée de lave"
 }

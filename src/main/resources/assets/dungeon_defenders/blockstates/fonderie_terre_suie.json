@@ -1,7 +1,22 @@
 {
     "variants": {
-        "": {
-            "model": "dungeon_defenders:block/fonderie_terre_suie"
-        }
+        "": [
+            {
+                "model": "dungeon_defenders:block/fonderie_terre_suie",
+                "weight": 1
+            },
+            {
+                "model": "dungeon_defenders:block/fonderie_terre_suie_2",
+                "weight": 1
+            },
+            {
+                "model": "dungeon_defenders:block/fonderie_terre_suie_3",
+                "weight": 1
+            },
+            {
+                "model": "dungeon_defenders:block/fonderie_terre_suie_4",
+                "weight": 1
+            }
+        ]
     }
 }

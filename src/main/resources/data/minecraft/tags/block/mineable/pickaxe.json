@@ -129,6 +129,8 @@
     "dungeon_defenders:fonderie_roche",
     "dungeon_defenders:fonderie_scories",
     "dungeon_defenders:fonderie_seaux_scories",
-    "dungeon_defenders:fonderie_trappe"
+    "dungeon_defenders:fonderie_trappe",
+    "dungeon_defenders:fonderie_grille_sol",
+    "dungeon_defenders:fonderie_roche_lave"
   ]
 }
