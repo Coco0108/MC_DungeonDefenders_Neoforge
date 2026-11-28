@@ -1,0 +1,25 @@
+{
+  "id": "thorn_hedge",
+  "nom": "Haie d'épines",
+  "nom_en": "Thorn Hedge",
+  "modele": "dungeon_defenders:geckolib/models/tower/thorn_hedge.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/thorn_hedge.animation.json",
+  "texture": "dungeon_defenders:textures/tower/thorn_hedge.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "sons": {
+    "build": "build",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "1efbb62bd4ceeca560bc9d41e30742f36e61d6e2c90dd51ff2abad8f65d0391b"
+  }
+}
