@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_suie_mur",
+    "nom": "Traînée de suie",
+    "nom_en": "Soot Streak",
+    "modele": true,
+    "durete": 0.2,
+    "outil": "aucun",
+    "niveau": "aucun",
+    "son": "laine",
+    "transparent": true,
+    "orientation": "horizontale"
+}

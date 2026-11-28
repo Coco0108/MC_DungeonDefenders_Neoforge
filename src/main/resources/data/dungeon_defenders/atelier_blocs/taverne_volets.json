@@ -1,0 +1,12 @@
+{
+    "id": "taverne_volets",
+    "nom": "Fenêtre à volets de taverne",
+    "nom_en": "Tavern Shuttered Window",
+    "modele": true,
+    "durete": 1.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "transparent": true,
+    "orientation": "horizontale"
+}

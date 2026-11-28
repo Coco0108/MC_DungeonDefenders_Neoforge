@@ -1,0 +1,10 @@
+{
+    "id": "puits_chaine",
+    "nom": "Chaîne du puits",
+    "nom_en": "Well Chain",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal"
+}

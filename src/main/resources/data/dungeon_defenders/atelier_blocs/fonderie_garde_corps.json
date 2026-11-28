@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_garde_corps",
+    "nom": "Garde-corps de fer",
+    "nom_en": "Iron Railing",
+    "type": "barriere",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal"
+}

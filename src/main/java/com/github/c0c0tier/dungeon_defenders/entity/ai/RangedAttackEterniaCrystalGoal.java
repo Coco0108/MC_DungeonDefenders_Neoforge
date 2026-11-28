@@ -72,8 +72,10 @@ public class RangedAttackEterniaCrystalGoal extends AbstractEterniaCrystalAttack
 
         if (this.drawTicks > 0) {
             this.drawTicks--;
-            if (this.drawTicks == 0) {
-                shoot(crystal);
+            // Tir immédiat, ou à l'impact de l'animation d'un monstre de l'Atelier
+            // (AnimatedAttacker) ; occupé, il garde la corde tendue et réessaie au tick suivant.
+            if (this.drawTicks == 0 && !AnimatedAttacker.strike(this.mob, () -> shoot(crystal))) {
+                this.drawTicks = 1;
             }
             return;
         }

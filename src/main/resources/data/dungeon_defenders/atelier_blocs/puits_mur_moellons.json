@@ -1,0 +1,15 @@
+{
+    "id": "puits_mur_moellons",
+    "nom": "Mur de moellons du puits",
+    "nom_en": "Well Rubble Wall",
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "variantes": [
+        1,
+        1,
+        1,
+        1
+    ]
+}

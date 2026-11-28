@@ -1,0 +1,14 @@
+{
+    "id": "fonderie_dalle_fonte",
+    "nom": "Dalle de fonte",
+    "nom_en": "Cast Iron Floor Plate",
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "variantes": [
+        2,
+        1,
+        1
+    ]
+}

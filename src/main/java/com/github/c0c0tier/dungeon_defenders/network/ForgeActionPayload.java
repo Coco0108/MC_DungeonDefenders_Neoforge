@@ -8,12 +8,14 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 // Envoyé par ForgeScreen : une action sur l'inventaire de la Forge. `index` est la case visée
-// (ignorée pour UNEQUIP). Action et index sont validés côté serveur.
+// (ignorée pour UNEQUIP et CLOSE). Action et index sont validés côté serveur.
 public record ForgeActionPayload(int action, int index) implements CustomPacketPayload {
 
     public static final int EQUIP = 0;
     public static final int DISCARD = 1;
     public static final int UNEQUIP = 2;
+    /** L'écran de la Forge s'est fermé (pour son animation {@code close}, voir ForgeViewers). */
+    public static final int CLOSE = 3;
 
     public static final CustomPacketPayload.Type<ForgeActionPayload> TYPE =
             new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "forge_action"));

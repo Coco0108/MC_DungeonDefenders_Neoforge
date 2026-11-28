@@ -1,0 +1,8 @@
+{
+    "parent": "minecraft:block/cube_bottom_top",
+    "textures": {
+        "top": "dungeon_defenders:block/puits_frise_top",
+        "bottom": "dungeon_defenders:block/puits_frise_bottom",
+        "side": "dungeon_defenders:block/puits_frise"
+    }
+}

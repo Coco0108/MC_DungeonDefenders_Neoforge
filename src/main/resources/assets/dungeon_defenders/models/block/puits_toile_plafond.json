@@ -1,0 +1,174 @@
+{
+    "parent": "minecraft:block/block",
+    "format_version": "1.21.6",
+    "credit": "Made with Blockbench",
+    "texture_size": [
+        32,
+        32
+    ],
+    "textures": {
+        "0": "dungeon_defenders:block/puits_toile_plafond",
+        "particle": "dungeon_defenders:block/puits_toile_plafond"
+    },
+    "elements": [
+        {
+            "name": "v1",
+            "from": [
+                1,
+                6,
+                5
+            ],
+            "to": [
+                15,
+                16,
+                5
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    8,
+                    11,
+                    5
+                ]
+            },
+            "faces": {
+                "north": {
+                    "uv": [
+                        0.0,
+                        6.0,
+                        7.0,
+                        11.0
+                    ],
+                    "texture": "#0"
+                },
+                "south": {
+                    "uv": [
+                        0.0,
+                        6.0,
+                        7.0,
+                        11.0
+                    ],
+                    "texture": "#0"
+                }
+            }
+        },
+        {
+            "name": "v2",
+            "from": [
+                2,
+                4,
+                11
+            ],
+            "to": [
+                14,
+                16,
+                11
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    8,
+                    10,
+                    11
+                ]
+            },
+            "faces": {
+                "north": {
+                    "uv": [
+                        7.0,
+                        0.0,
+                        13.0,
+                        6.0
+                    ],
+                    "texture": "#0"
+                },
+                "south": {
+                    "uv": [
+                        7.0,
+                        0.0,
+                        13.0,
+                        6.0
+                    ],
+                    "texture": "#0"
+                }
+            }
+        },
+        {
+            "name": "v3",
+            "from": [
+                8,
+                8,
+                2
+            ],
+            "to": [
+                8,
+                16,
+                14
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    8,
+                    12,
+                    8
+                ]
+            },
+            "faces": {
+                "east": {
+                    "uv": [
+                        7.0,
+                        6.0,
+                        13.0,
+                        10.0
+                    ],
+                    "texture": "#0"
+                },
+                "west": {
+                    "uv": [
+                        7.0,
+                        6.0,
+                        13.0,
+                        10.0
+                    ],
+                    "texture": "#0"
+                }
+            }
+        },
+        {
+            "name": "attache",
+            "from": [
+                1,
+                15.75,
+                2
+            ],
+            "to": [
+                15,
+                16,
+                14
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    8,
+                    15.875,
+                    8
+                ]
+            },
+            "faces": {
+                "down": {
+                    "uv": [
+                        0.0,
+                        0.0,
+                        7.0,
+                        6.0
+                    ],
+                    "texture": "#0"
+                }
+            }
+        }
+    ]
+}

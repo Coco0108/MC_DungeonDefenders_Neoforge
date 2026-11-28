@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "dungeon_defenders:block/training_dummy"
+    "model": "dungeon_defenders:block/dd_dummy"
   }
 }

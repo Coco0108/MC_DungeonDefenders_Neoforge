@@ -1,0 +1,22 @@
+{
+    "variants": {
+        "": [
+            {
+                "model": "dungeon_defenders:block/fonderie_roche",
+                "weight": 1
+            },
+            {
+                "model": "dungeon_defenders:block/fonderie_roche_2",
+                "weight": 1
+            },
+            {
+                "model": "dungeon_defenders:block/fonderie_roche_3",
+                "weight": 1
+            },
+            {
+                "model": "dungeon_defenders:block/fonderie_roche_4",
+                "weight": 1
+            }
+        ]
+    }
+}

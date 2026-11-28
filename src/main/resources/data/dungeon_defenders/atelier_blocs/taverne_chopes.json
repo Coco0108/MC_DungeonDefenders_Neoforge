@@ -1,0 +1,11 @@
+{
+    "id": "taverne_chopes",
+    "nom": "Chopes de taverne",
+    "nom_en": "Tavern Tankards",
+    "modele": true,
+    "durete": 0.5,
+    "outil": "aucun",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

@@ -1,0 +1,327 @@
+{
+    "parent": "minecraft:block/block",
+    "format_version": "1.21.6",
+    "credit": "Made with Blockbench",
+    "texture_size": [
+        32,
+        32
+    ],
+    "textures": {
+        "0": "dungeon_defenders:block/taverne_poteau_base",
+        "particle": "dungeon_defenders:block/taverne_poteau_base"
+    },
+    "elements": [
+        {
+            "name": "poteau",
+            "from": [
+                4,
+                4,
+                4
+            ],
+            "to": [
+                12,
+                16,
+                12
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    8,
+                    10,
+                    8
+                ]
+            },
+            "faces": {
+                "north": {
+                    "uv": [
+                        6.0,
+                        0.0,
+                        10.0,
+                        6.0
+                    ],
+                    "texture": "#0"
+                },
+                "east": {
+                    "uv": [
+                        6.0,
+                        0.0,
+                        10.0,
+                        6.0
+                    ],
+                    "texture": "#0"
+                },
+                "south": {
+                    "uv": [
+                        6.0,
+                        0.0,
+                        10.0,
+                        6.0
+                    ],
+                    "texture": "#0"
+                },
+                "west": {
+                    "uv": [
+                        6.0,
+                        0.0,
+                        10.0,
+                        6.0
+                    ],
+                    "texture": "#0"
+                },
+                "up": {
+                    "uv": [
+                        5.0,
+                        6.0,
+                        9.0,
+                        10.0
+                    ],
+                    "texture": "#0"
+                },
+                "down": {
+                    "uv": [
+                        5.0,
+                        6.0,
+                        9.0,
+                        10.0
+                    ],
+                    "texture": "#0"
+                }
+            }
+        },
+        {
+            "name": "cerclage",
+            "from": [
+                3,
+                7,
+                3
+            ],
+            "to": [
+                13,
+                9,
+                13
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    8,
+                    8,
+                    8
+                ]
+            },
+            "faces": {
+                "north": {
+                    "uv": [
+                        6.0,
+                        11.0,
+                        11.0,
+                        12.0
+                    ],
+                    "texture": "#0"
+                },
+                "east": {
+                    "uv": [
+                        11.0,
+                        11.0,
+                        16.0,
+                        12.0
+                    ],
+                    "texture": "#0"
+                },
+                "south": {
+                    "uv": [
+                        6.0,
+                        11.0,
+                        11.0,
+                        12.0
+                    ],
+                    "texture": "#0"
+                },
+                "west": {
+                    "uv": [
+                        11.0,
+                        11.0,
+                        16.0,
+                        12.0
+                    ],
+                    "texture": "#0"
+                },
+                "up": {
+                    "uv": [
+                        0.0,
+                        6.0,
+                        5.0,
+                        11.0
+                    ],
+                    "texture": "#0"
+                },
+                "down": {
+                    "uv": [
+                        0.0,
+                        6.0,
+                        5.0,
+                        11.0
+                    ],
+                    "texture": "#0"
+                }
+            }
+        },
+        {
+            "name": "socle",
+            "from": [
+                2,
+                0,
+                2
+            ],
+            "to": [
+                14,
+                3.5,
+                14
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    8,
+                    1.75,
+                    8
+                ]
+            },
+            "faces": {
+                "north": {
+                    "uv": [
+                        9.0,
+                        6.0,
+                        15.0,
+                        7.75
+                    ],
+                    "texture": "#0"
+                },
+                "east": {
+                    "uv": [
+                        0.0,
+                        11.0,
+                        6.0,
+                        12.75
+                    ],
+                    "texture": "#0"
+                },
+                "south": {
+                    "uv": [
+                        9.0,
+                        6.0,
+                        15.0,
+                        7.75
+                    ],
+                    "texture": "#0"
+                },
+                "west": {
+                    "uv": [
+                        0.0,
+                        11.0,
+                        6.0,
+                        12.75
+                    ],
+                    "texture": "#0"
+                },
+                "up": {
+                    "uv": [
+                        0.0,
+                        0.0,
+                        6.0,
+                        6.0
+                    ],
+                    "texture": "#0"
+                },
+                "down": {
+                    "uv": [
+                        0.0,
+                        0.0,
+                        6.0,
+                        6.0
+                    ],
+                    "texture": "#0"
+                }
+            }
+        },
+        {
+            "name": "socle_chanfrein",
+            "from": [
+                2.5,
+                3.5,
+                2.5
+            ],
+            "to": [
+                13.5,
+                4,
+                13.5
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    8,
+                    3.75,
+                    8
+                ]
+            },
+            "faces": {
+                "north": {
+                    "uv": [
+                        0.0,
+                        13.0,
+                        5.5,
+                        13.25
+                    ],
+                    "texture": "#0"
+                },
+                "east": {
+                    "uv": [
+                        5.5,
+                        13.0,
+                        11.0,
+                        13.25
+                    ],
+                    "texture": "#0"
+                },
+                "south": {
+                    "uv": [
+                        0.0,
+                        13.0,
+                        5.5,
+                        13.25
+                    ],
+                    "texture": "#0"
+                },
+                "west": {
+                    "uv": [
+                        5.5,
+                        13.0,
+                        11.0,
+                        13.25
+                    ],
+                    "texture": "#0"
+                },
+                "up": {
+                    "uv": [
+                        10.0,
+                        0.0,
+                        15.5,
+                        5.5
+                    ],
+                    "texture": "#0"
+                },
+                "down": {
+                    "uv": [
+                        10.0,
+                        0.0,
+                        15.5,
+                        5.5
+                    ],
+                    "texture": "#0"
+                }
+            }
+        }
+    ]
+}

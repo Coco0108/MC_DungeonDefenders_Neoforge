@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "dungeon_defenders:puits_escalier",
+    "dungeon_defenders:taverne_escalier",
+    "dungeon_defenders:fonderie_escalier"
+  ]
+}

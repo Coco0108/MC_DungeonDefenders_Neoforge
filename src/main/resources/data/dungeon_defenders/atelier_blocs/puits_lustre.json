@@ -1,0 +1,12 @@
+{
+    "id": "puits_lustre",
+    "nom": "Lustre du puits",
+    "nom_en": "Well Chandelier",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "metal",
+    "transparent": true
+}

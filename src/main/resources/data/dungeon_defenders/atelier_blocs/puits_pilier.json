@@ -1,0 +1,10 @@
+{
+    "id": "puits_pilier",
+    "nom": "Pilier du puits",
+    "nom_en": "Well Pillar",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

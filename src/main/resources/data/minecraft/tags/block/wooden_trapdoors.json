@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "dungeon_defenders:puits_grille",
+    "dungeon_defenders:taverne_trappe",
+    "dungeon_defenders:fonderie_trappe"
+  ]
+}

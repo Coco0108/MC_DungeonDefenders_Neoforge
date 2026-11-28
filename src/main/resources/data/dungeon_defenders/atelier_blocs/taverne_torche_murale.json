@@ -1,0 +1,12 @@
+{
+    "id": "taverne_torche_murale",
+    "nom": "Torche murale de taverne",
+    "nom_en": "Tavern Wall Torch",
+    "modele": true,
+    "durete": 0.5,
+    "outil": "aucun",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "bois",
+    "orientation": "horizontale"
+}

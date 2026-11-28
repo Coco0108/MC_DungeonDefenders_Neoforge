@@ -1,0 +1,11 @@
+{
+    "id": "puits_grille",
+    "nom": "Grille d'égout du puits",
+    "nom_en": "Well Sewer Grate",
+    "type": "trappe",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal"
+}

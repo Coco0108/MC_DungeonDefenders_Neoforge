@@ -1,0 +1,11 @@
+{
+    "id": "taverne_tonneau",
+    "nom": "Tonneau de taverne",
+    "nom_en": "Tavern Barrel",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

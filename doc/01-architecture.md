@@ -15,6 +15,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── DungeonDefendersModClient.java    # Point d'entrée @Mod côté CLIENT uniquement
     │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA, vie max du joueur)
     │   ├── TavernSpawn.java                  # Point de spawn fixe + chargement de la structure de la taverne (monde vide)
+    │   ├── ZoneReset.java                    # Retire les entités d'une pose précédente (taverne, map) quand elles se rechargent
     │   ├── CombatCountdown.java              # Compte à rebours entre le vote "prêt" unanime et le début du Combat
     │   ├── WorldTime.java                    # Heure du monde figée (taverne, puis heure propre à chaque map) ; météo arrêtée
     │   ├── MapInstance.java                  # "La map active" : emplacement partagé, placeholder, téléportation
@@ -30,6 +31,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── DifficultyScaling.java        # Multiplicateur difficulté x vague, pour les spawners
     │   │   ├── EnemyDefinition.java          # Un ennemi data-driven (entity_type, icône, XP, ordre, comportement) + codec strict
     │   │   ├── EnemyBehavior.java            # Types d'IA en Java (melee_priority, ranged_crystal), paramètres en JSON
+    │   │   ├── ModDataComponents.java        # Composants d'objet du mod (enemy : l'ennemi d'un œuf)
     │   │   ├── EnemyRegistry.java            # Ennemis côté serveur : reload listener (/reload) + synchro client (OnDatapackSyncEvent)
     │   │   ├── LegacyEnemyIds.java           # Table FIGÉE ancien ordinal -> identifiant (0 zombie, 1 squelette) + conversion NBT pour /dd_export
     │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild/enterTavern/startNewGame : transitions centralisées
@@ -118,6 +120,11 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── AbilityClientEvents.java      # Touches 1-4 : Start/Stop des compétences maintenues, salve pour le sort 1
     │   │   ├── ClientAbilityState.java       # État d'affichage des compétences : recharge en cours, emplacement canalisé
     │   │   └── ClientDisplayConfig.java      # Spec de config CLIENT (options d'affichage HUD facultatives), branchée dans DungeonDefendersModClient
+    │   ├── client/atelier/                    # Rendu GeckoLib des monstres de l'Atelier (client seulement)
+    │   │   ├── AtelierMonsterModel.java       # GeoModel : chemins de la fiche, texture de la variante (DataTicket)
+    │   │   ├── AtelierMonsterRenderer.java    # GeoEntityRenderer : échelle, ombre, glowmask, pas de bascule si animation death
+    │   │   ├── BlocAnimeRenderer.java         # GeoBlockRenderer commun aux blocs animés (décor dd_*, forge, mannequin, cristaux) : tourné selon facing, glowmask
+    │   │   └── EterniaCrystalGeoRenderer.java # Le cristal d'Eternia animé + sa barre de vie (un seul renderer par bloc)
     │   ├── client/gui/screen/
     │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
     │   │   ├── ManaChestConfigScreen.java    # Écran de config du coffre de mana, un seul champ (client uniquement)
@@ -150,11 +157,27 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── HeroWeaponItem.java            # Arme à distance d'un héros : lance un projectile au clic droit (fioles, rivets, bâton), effet à l'impact
     │   │   ├── HeroWeapons.java               # Donne à chaque joueur l'arme de son héros, retire les autres
     │   │   ├── ManaTestWandItem.java / ManaFillWandItem.java  # Baguettes de test du mana
+    │   │   ├── EnemyEggItem.java              # Œuf d'un ennemi data-driven (composant dungeon_defenders:enemy, apparence = icône de l'ennemi) ; onglet « Monstres »
     │   ├── loot/
     │   │   ├── LootRarity.java                # Raretés : chance, force, nombre de bonus secondaires, couleur
     │   │   ├── LootWeapon.java                # Une arme de butin (héros, rareté, bonus) ; forme objet au sol
     │   │   ├── LootGenerator.java             # Tire une arme au hasard et la pose au sol
     │   │   ├── Equipment.java                 # Inventaire de la Forge et arme équipée par héros : ranger, équiper, bonus
+    │   ├── atelier/                          # Monstres, objets et blocs reçus de l'Atelier (voir ATELIER.md) : aucun code par monstre
+    │   │   ├── AtelierLoader.java             # Lit et vérifie les fiches du jar à la construction du mod ; fiche invalide = ignorée + log
+    │   │   ├── Atelier.java                   # Ce qui a été chargé (fiches, animations, instants d'impact, sons, glowmasks)
+    │   │   ├── FicheMonstre.java              # Format d'une fiche de monstre (codec) ; sections non lues listées dans IGNOREES
+    │   │   ├── Fields.java / Impact.java      # Repris de l'Atelier : champs nommés dans les erreurs ; instant du marqueur « impact; »
+    │   │   ├── AtelierMonster.java            # extends Monster + GeoEntity : l'unique entité de tous les monstres de l'Atelier
+    │   │   ├── ReturningAnimationController.java # Repris de l'Atelier : revient à idle/walk après une animation déclenchée
+    │   │   ├── AtelierEntities.java           # Un EntityType + un œuf par fiche ; attributs ; onglets créatifs
+    │   │   ├── AtelierSounds.java             # Un SoundEvent par entrée de sounds.json
+    │   │   ├── FicheObjet.java / FicheBloc.java # Formats des fiches d'objet et de bloc (repris de l'Atelier, sans cache)
+    │   │   ├── AtelierObjets.java             # Un objet par fiche d'objet, un bloc + son objet par fiche de bloc ; un onglet créatif par série de blocs (map)
+    │   │   ├── BlocModele.java                # Bloc modèle converti : forme = union de ses boîtes ; obstacle pour le pathfinding (repris de l'Atelier)
+    │   │   ├── AnimationsBloc.java            # Les animations d'un bloc animé (fiche anime) : idle/opened en boucle, rôles joués par le serveur, état ouvert
+    │   │   ├── BlocAnimable.java              # Interface des block entities dessinés par un modèle animé de l'Atelier (jouer(role))
+    │   │   └── BlocAnime(Oriente).java / BlocAnimeEntity.java # Bloc de décor animé et son block entity (un type par bloc)
     │   ├── entity/
     │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
     │   │   ├── Corrosion.java                 # Marque en mémoire : un monstre corrodé subit plus de dégâts (Projecteur d'acide)
@@ -166,6 +189,7 @@ MC_DungeonDefenders_Neoforge/
     │   │       ├── AbstractEterniaCrystalAttackGoal.java # Base commune : ciblage/déplacement vers le cristal (un seul sous-classeur : la version à distance)
     │   │       ├── RangedAttackEterniaCrystalGoal.java   # Goal : s'arrêter à portée de tir et tirer des flèches sur le cristal (archers, ignorent Blockade/Turret)
     │   │       ├── AttackPriorityTargetGoal.java         # Goal unique des monstres de mêlée : choisit Block > Corps à corps > Cristal > Tourelle selon AiAttackTarget
+    │   │       ├── AnimatedAttacker.java                 # Coup animé : les goals passent par strike() ; dégâts à l'impact pour un monstre de l'Atelier
     │   │       └── SeekEterniaCrystalGoal.java           # Goal de secours (priorité plus basse) : navigue vers ModAttachments.CRYSTAL_POS sans limite de distance
     │   ├── gametest/
     │   │   ├── DungeonDefendersGameTests.java # Fonctions de test + enregistrement (RegisterGameTestsEvent)
@@ -182,14 +206,16 @@ MC_DungeonDefenders_Neoforge/
     │       ├── DirectionalTowerBlock.java    # SimpleTowerBlock + HORIZONTAL_FACING (Projecteur d'acide)
     │       ├── TowerBlockItem.java           # Item commun à toute tour (Blockade, Turret...) : useOn() ne pose plus rien (roue uniquement)
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
-    │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
+    │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit ; block entity pour son modèle animé
+    │       ├── FormeAtelier.java             # Forme d'un bloc du mod qui prend le modèle d'un bloc de décor de l'Atelier (cristal, forge, mannequin)
+    │       ├── ForgeViewers.java             # Qui a l'écran de quelle Forge ouvert (serveur) : open au premier, close au dernier
     │       ├── ManaChestBlock.java           # Meuble de map : donne du mana au clic droit (survie, 1x/vague) ou config (créatif)
-    │       ├── TrainingDummyBlock.java       # Support de mannequin : invisible, garantit qu'un TrainingDummyEntity existe juste au-dessus
+    │       ├── TrainingDummyBlock.java       # Support de mannequin : dessine le mannequin (modèle dd_dummy), garantit qu'un TrainingDummyEntity (invisible) existe à sa place
     │       ├── NoBuildZoneBlock.java         # Marqueur de zone interdite à la pose de tours : invisible, occupe la case
     │       ├── MapConfigBlock.java           # Réglages d'une map, posé DANS la map : voyagent dans le .nbt de la structure
     │       ├── PlayerSpawnBlock.java         # Marqueur de spawn des joueurs : invisible, traversable, ciblable en créatif seulement
     │       └── entity/
-    │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal) + enregistre CRYSTAL_POS
+    │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal) + enregistre CRYSTAL_POS ; destruction animée (death, explosion au marqueur impact)
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
     │           ├── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D, toujours affichée (client)
     │           ├── AiAttackTarget.java                     # Interface : contrat + paliers de priorité IA (Block/Corps à corps/Cristal/Tourelle)
@@ -230,7 +256,9 @@ MC_DungeonDefenders_Neoforge/
     │           ├── SpawnerRenderState.java                 # Instantané pour le rendu (client)
     │           ├── SpawnerBlockEntityRenderer.java         # Aperçu de composition en phase Construction, à travers les murs (client)
     │           ├── ManaChestBlockEntity.java               # PV: aucun ; manaAmount configurable, lastOpenedWave (1x/vague, recharge auto)
-    │           ├── TrainingDummyBlockEntity.java           # Aucun état : un tick serveur qui réinvoque le mannequin s'il a disparu
+    │           ├── TrainingDummyBlockEntity.java           # Tick serveur qui réinvoque le mannequin s'il a disparu ; joue hurt/hurt_heavy (modèle animé)
+    │           ├── AnimatedBlockEntity.java                # Base des blocs du jeu au modèle animé de l'Atelier (cache GeckoLib, synchro)
+    │           ├── ForgeBlockEntity.java / TavernCrystalBlockEntity.java # Modèle animé de la forge (open/close) et du cristal de la taverne (idle)
     │           └── MapConfigBlockEntity.java               # Nom/ordre/vagues/multiplicateur d'une map, relus sans poser la structure
     ├── resources/
     │   ├── assets/dungeon_defenders/
@@ -265,8 +293,11 @@ NeoForge autorise plusieurs classes `@Mod` pour le même `modId`, différenciée
 - Enregistre tous les `BlockEntityType` du mod (`eternia_crystal`, `spawner`, et chaque tour du
   roster — `spike_blockade`, `bouncer_blockade`, `slice_n_dice_blockade`, `harpoon_turret`,
   `bowling_ball_turret`, `mortar_turret`), chacun lié à son bloc dans `ModBlocks`.
-- Enregistre l'onglet créatif `dungeon_defenders_tab`, dont l'icône et le seul contenu
-  sont l'item du cristal.
+- Enregistre l'onglet créatif `dungeon_defenders_tab` (blocs de jeu et objets du mod), puis
+  l'onglet `monstres` (`MONSTERS_TAB`) : un œuf par ennemi data-driven (`item/EnemyEggItem`), dans
+  l'ordre `order`, suivi des œufs des monstres de l'Atelier. Les onglets de blocs de l'Atelier
+  viennent après (`AtelierObjets`). Le composant d'objet `dungeon_defenders:enemy` est dans
+  `init/ModDataComponents`.
 - Le constructeur `DungeonDefendersMod(IEventBus modEventBus)` branche les cinq registres
   (`ModBlocks.register(...)`, `ModAttachments.register(...)`, `ModMenus.register(...)`,
   `BLOCK_ENTITIES`, `CREATIVE_MODE_TABS`) sur le bus du mod.

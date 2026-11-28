@@ -1,0 +1,21 @@
+{
+    "id": "dd_dummy",
+    "nom": "Mannequin d'entraînement (décor)",
+    "nom_en": "Training Dummy (Decor)",
+    "modele": true,
+    "durete": 1.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "laine",
+    "orientation": "horizontale",
+    "anime": {
+        "modele": "dungeon_defenders:geckolib/models/block/dd_dummy.geo.json",
+        "animations": "dungeon_defenders:geckolib/animations/block/dd_dummy.animation.json",
+        "texture": "dungeon_defenders:textures/geckolib/block/dd_dummy.png",
+        "roles_animation": {
+            "idle": "animation.idle",
+            "hurt": "animation.hurt",
+            "hurt_heavy": "animation.hurt_heavy"
+        }
+    }
+}

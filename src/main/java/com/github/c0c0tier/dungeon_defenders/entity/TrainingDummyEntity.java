@@ -1,5 +1,7 @@
 package com.github.c0c0tier.dungeon_defenders.entity;
 
+import com.github.c0c0tier.dungeon_defenders.block.entity.TrainingDummyBlockEntity;
+
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -102,6 +104,10 @@ public class TrainingDummyEntity extends Zombie {
     public boolean hurtServer(ServerLevel level, DamageSource source, float damage) {
         boolean hurt = super.hurtServer(level, source, damage);
         this.setHealth(this.getMaxHealth());
+        // Le modèle animé du bloc qui l'a invoqué (à sa position, voir TrainingDummyBlockEntity) encaisse le coup.
+        if (hurt && level.getBlockEntity(this.blockPosition()) instanceof TrainingDummyBlockEntity block) {
+            block.onHit(damage);
+        }
         return hurt;
     }
 

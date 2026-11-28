@@ -1,0 +1,12 @@
+{
+    "id": "taverne_lanterne_suspendue",
+    "nom": "Lanterne suspendue de taverne",
+    "nom_en": "Tavern Hanging Lantern",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "metal",
+    "transparent": true
+}

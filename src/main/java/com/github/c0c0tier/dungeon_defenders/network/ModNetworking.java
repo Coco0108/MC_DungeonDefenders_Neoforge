@@ -566,6 +566,13 @@ public class ModNetworking {
             if (level.isClientSide()) {
                 return;
             }
+            // Fermer l'écran est permis à tout moment, même en Combat : seule l'animation de la Forge en dépend.
+            if (payload.action() == ForgeActionPayload.CLOSE) {
+                if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                    com.github.c0c0tier.dungeon_defenders.block.ForgeViewers.close(serverPlayer);
+                }
+                return;
+            }
             if (level.getData(ModAttachments.GAME_PHASE) == GamePhase.COMBAT.ordinal()) {
                 player.sendSystemMessage(Component.translatable("dungeon_defenders.forge.not_in_combat"));
                 return;

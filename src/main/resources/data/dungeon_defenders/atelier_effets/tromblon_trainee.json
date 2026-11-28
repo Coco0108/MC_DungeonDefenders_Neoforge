@@ -1,0 +1,14 @@
+{
+  "id": "tromblon_trainee",
+  "particules": [
+    {
+      "particule": "minecraft:smoke",
+      "nombre": 1,
+      "vitesse": 0.005
+    }
+  ],
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "42e44f17ae63d9872906b83f6541b9e075bb9180dd5dbb4ef794120e91124539"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "swipe_trail",
+  "particules": [
+    {
+      "particule": "minecraft:sweep_attack",
+      "nombre": 1
+    },
+    {
+      "particule": "minecraft:crit",
+      "nombre": 8,
+      "dispersion": 0.4,
+      "vitesse": 0.2
+    }
+  ],
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "811543166ea43b357e3a1bdfa1754af36813f8b2d79b4456547c5c425f248fda"
+  }
+}

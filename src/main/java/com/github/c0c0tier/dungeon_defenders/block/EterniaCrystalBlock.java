@@ -14,7 +14,11 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
+import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import com.github.c0c0tier.dungeon_defenders.atelier.AnimationsBloc;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -42,9 +46,18 @@ public class EterniaCrystalBlock extends BaseEntityBlock {
         return new EterniaCrystalBlockEntity(pos, state);
     }
 
+    // Dessiné par GeckoLib (modèle animé dd_cristal_v2 de l'Atelier, depuis le 2026-11-28) quand il est déployé, sinon
+    // par son modèle fixe.
     @Override
     public RenderShape getRenderShape(BlockState state) {
-        return RenderShape.MODEL;
+        return AnimationsBloc.dessineParGeckoLib("dd_cristal_v2") ? RenderShape.INVISIBLE : RenderShape.MODEL;
+    }
+
+    // L'animation de destruction se déroule côté serveur (explosion au marqueur, puis défaite).
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+        return level.isClientSide() ? null
+                : createTickerHelper(type, DungeonDefendersMod.ETERNIA_CRYSTAL_BE.get(), EterniaCrystalBlockEntity::serverTick);
     }
 
     @Override

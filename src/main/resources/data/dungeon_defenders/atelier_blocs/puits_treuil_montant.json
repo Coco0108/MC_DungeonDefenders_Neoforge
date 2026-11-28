@@ -1,0 +1,10 @@
+{
+    "id": "puits_treuil_montant",
+    "nom": "Montant de treuil du puits",
+    "nom_en": "Well Windlass Post",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

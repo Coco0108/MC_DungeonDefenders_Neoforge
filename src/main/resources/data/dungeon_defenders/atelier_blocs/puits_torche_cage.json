@@ -1,0 +1,13 @@
+{
+    "id": "puits_torche_cage",
+    "nom": "Torche en cage du puits",
+    "nom_en": "Well Caged Torch",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "metal",
+    "transparent": true,
+    "orientation": "horizontale"
+}

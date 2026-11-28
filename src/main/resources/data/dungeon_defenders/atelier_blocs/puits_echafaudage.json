@@ -1,0 +1,11 @@
+{
+    "id": "puits_echafaudage",
+    "nom": "Échafaudage du puits",
+    "nom_en": "Well Scaffold",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

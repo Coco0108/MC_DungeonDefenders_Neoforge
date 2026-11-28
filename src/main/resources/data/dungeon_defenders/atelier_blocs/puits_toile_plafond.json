@@ -1,0 +1,11 @@
+{
+    "id": "puits_toile_plafond",
+    "nom": "Voile de toile d'araignée",
+    "nom_en": "Hanging Cobweb",
+    "modele": true,
+    "durete": 0.2,
+    "outil": "aucun",
+    "niveau": "aucun",
+    "son": "laine",
+    "transparent": true
+}

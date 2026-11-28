@@ -425,4 +425,12 @@ public class ForgeScreen extends Screen {
     public boolean isPauseScreen() {
         return false;
     }
+
+    // Fermé (bouton, Échap, ou remplacé par un autre écran) : le serveur referme la Forge si personne d'autre ne s'en
+    // sert (animation close, voir ForgeViewers).
+    @Override
+    public void removed() {
+        super.removed();
+        send(ForgeActionPayload.CLOSE, 0);
+    }
 }

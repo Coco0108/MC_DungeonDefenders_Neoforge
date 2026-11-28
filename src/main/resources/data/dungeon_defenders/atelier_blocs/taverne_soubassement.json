@@ -1,0 +1,9 @@
+{
+    "id": "taverne_soubassement",
+    "nom": "Soubassement de taverne",
+    "nom_en": "Tavern Wainscot Wall",
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

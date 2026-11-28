@@ -1,0 +1,9 @@
+{
+    "id": "puits_terre",
+    "nom": "Terre battue du puits",
+    "nom_en": "Well Packed Dirt",
+    "durete": 0.6,
+    "outil": "pelle",
+    "niveau": "aucun",
+    "son": "terre"
+}

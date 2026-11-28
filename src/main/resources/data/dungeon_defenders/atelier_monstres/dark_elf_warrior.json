@@ -1,0 +1,30 @@
+{
+  "id": "dark_elf_warrior",
+  "nom": "Guerrier elfe noir",
+  "modele": "dungeon_defenders:geckolib/models/entity/dark_elf_warrior.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/entity/dark_elf_warrior.animation.json",
+  "texture": "dungeon_defenders:textures/entity/dark_elf_warrior/dark_elf_warrior.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "walk": "animation.walk",
+    "attack": "animation.attack"
+  },
+  "echelle": 1.0,
+  "hitbox": {
+    "largeur": 1.0,
+    "hauteur": 2.0
+  },
+  "stats": {
+    "pv": 40,
+    "degats": 8,
+    "vitesse": 0.3
+  },
+  "comportement": "hostile",
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "8d1c2b7a8e4f2a824c2e3eab198906f8d762372a68e0768a4e2d17aa80aa239a",
+    "effets": [
+      "swipe_trail"
+    ]
+  }
+}

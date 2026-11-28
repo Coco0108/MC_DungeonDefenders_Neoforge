@@ -1,0 +1,11 @@
+{
+    "id": "puits_etai_tete",
+    "nom": "Tête d'étai du puits",
+    "nom_en": "Well Prop Head",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

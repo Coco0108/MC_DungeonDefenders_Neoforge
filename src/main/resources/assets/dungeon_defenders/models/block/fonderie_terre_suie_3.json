@@ -1,0 +1,8 @@
+{
+    "parent": "minecraft:block/cube_bottom_top",
+    "textures": {
+        "top": "dungeon_defenders:block/fonderie_terre_suie_3",
+        "bottom": "dungeon_defenders:block/fonderie_terre_suie_3",
+        "side": "dungeon_defenders:block/fonderie_terre_suie_3"
+    }
+}

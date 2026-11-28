@@ -1,0 +1,9 @@
+{
+    "id": "puits_pave",
+    "nom": "Pavés du puits",
+    "nom_en": "Well Cobbles",
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

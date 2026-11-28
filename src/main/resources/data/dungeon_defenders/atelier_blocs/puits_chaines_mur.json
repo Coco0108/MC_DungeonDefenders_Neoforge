@@ -1,0 +1,11 @@
+{
+    "id": "puits_chaines_mur",
+    "nom": "Chaînes murales du puits",
+    "nom_en": "Well Wall Shackles",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "orientation": "horizontale"
+}

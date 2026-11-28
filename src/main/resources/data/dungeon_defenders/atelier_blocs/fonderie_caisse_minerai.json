@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_caisse_minerai",
+    "nom": "Caisse de minerai",
+    "nom_en": "Ore Crate",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

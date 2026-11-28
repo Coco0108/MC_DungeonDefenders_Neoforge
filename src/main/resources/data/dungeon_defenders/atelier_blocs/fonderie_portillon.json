@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_portillon",
+    "nom": "Portillon de fer",
+    "nom_en": "Iron Gate",
+    "type": "portillon",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal"
+}

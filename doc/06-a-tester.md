@@ -1743,6 +1743,32 @@ rendu n'ont jamais été vus.
 - [ ] Le projectile part bien du centre de l'écran (pas décalé à gauche/droite).
 - [ ] Avis attendu : vitesses et cloche de la fiole, à régler si besoin.
 
+## Monstres de l'Atelier (2026-11-25)
+
+Voir [ATELIER.md](ATELIER.md). Rien à tester tant qu'aucun monstre n'est déployé depuis l'Atelier : le code a été
+essayé en local avec une copie du « gluant » (chargement, IA de vague, impact, gametests), jamais affiché à l'écran.
+
+- [ ] **GeckoLib** : `build/mod-deps/geckolib-neoforge-26.1.2-5.5.2.jar` est dans `mods/` (client **et** serveur
+      dédié), sinon le mod refuse de se charger.
+- [ ] Le log de démarrage dit `Atelier : N monstre(s) chargé(s) [...]`, sans fiche rejetée (sinon, chaque problème est
+      listé juste au-dessus).
+- [ ] L'œuf est dans l'onglet « Dungeon Defenders » (et « Œufs d'apparition »), avec son apparence et son nom.
+- [ ] Le monstre s'affiche avec son modèle, à la bonne taille ; `idle` à l'arrêt, `walk` en marchant.
+- [ ] Variantes : plusieurs œufs donnent des textures différentes ; `/summon dungeon_defenders:<id> ~ ~ ~ {Variante:"<id>"}`
+      force une variante ; elle reste après avoir quitté et relancé le monde.
+- [ ] Glowmask : les parties lumineuses brillent dans le noir (seulement si la texture en a un).
+- [ ] En survie, un monstre `hostile` vient te frapper : l'animation `attack` se joue et les dégâts tombent **au moment
+      du coup** (pas au début du geste) ; reculer pendant le geste permet d'esquiver.
+- [ ] Dans une vague (spawner avec l'ennemi `dungeon_defenders:<id>`) : il attaque tours et cristal avec son animation,
+      les dégâts tombent à l'impact ; les tours le visent ; il donne XP, score, mana.
+- [ ] Blessé, il joue `hurt` (s'il l'a) ; mort, il joue `death` sans basculer sur le côté puis disparaît.
+- [ ] Sons `ambient`, `hurt`, `death` de sa fiche, et sons des keyframes de ses animations.
+- [ ] Un monstre volant (`"deplacement": "vol"`) vole, reste suspendu à l'arrêt, ne prend pas de dégâts de chute.
+- [ ] **Objets** de l'Atelier : dans l'onglet « Dungeon Defenders », avec leur texture, leur nom, la couleur de leur
+      rareté ; la nourriture se mange.
+- [ ] **Blocs** : texture (ou modèle converti), son, lumière ; un bloc `modele` se sélectionne et se heurte selon sa
+      forme ; il tombe une fois cassé (avec le bon outil s'il a un `niveau`).
+
 ## Général
 
 - [ ] Aucune erreur/exception dans les logs (`run/logs/latest.log`) au chargement du mod ni
@@ -1757,3 +1783,146 @@ Reporter les résultats dans [05-etat-et-problemes-connus.md](05-etat-et-problem
 (déplacer ce qui fonctionne vers « Ce qui est implémenté », et ce qui casse vers
 « Ce qui reste »), puis vider ou réduire ce fichier aux prochaines fonctionnalités non
 testées.
+
+## Blocs de la taverne (2026-11-27)
+
+Voir [ATELIER.md](ATELIER.md#les-objets-et-les-blocs). Déployés avec les blocs du puits (96 en tout) : les 96 fiches se
+chargent sans rejet et passent le gametest.
+
+- [ ] Le log de démarrage dit `Atelier : … 96 bloc(s) [puits_arche_cle, …]`, sans bloc rejeté.
+- [ ] Les 96 blocs (taverne et puits) sont dans l'onglet « Dungeon Defenders », avec leur modèle et leur nom (pas de damier violet et noir).
+- [ ] **Orientés** (banc, comptoir, étagère, console, torche murale, fenêtres, foyer…) : posés, ils regardent le joueur ;
+      un objet mural se retrouve dos au mur visé ; la boîte de sélection tourne avec le modèle.
+- [ ] **Poutre** (`taverne_poutre`) : posée contre un mur, elle se couche dans l'axe, bouts en section.
+- [ ] **Porte** : pose les deux moitiés, s'ouvre au clic, charnière du bon côté (deux portes côte à côte s'ouvrent en
+      miroir), son du chêne ; cassée, ne donne qu'une porte.
+- [ ] **Trappe** (en haut / en bas d'un bloc, ouverte), **escalier** (angles intérieur et extérieur qui se forment seuls),
+      **dalle** (haut, bas, deux dalles qui font un bloc plein), **barrière** (se raccorde aux voisines et au portillon),
+      **portillon** (s'ouvre, laisse passer).
+- [ ] Le verre des fenêtres et des lanternes est translucide.
+- [ ] Les lanternes, la torche, le lustre, les bougies et le foyer éclairent.
+- [ ] **Variantes** (`puits_roche`, `puits_mur_*`, `taverne_mur_pierre`) : un mur posé mélange plusieurs aspects au
+      hasard, sans couture.
+- [ ] **Puits** : la margelle droite et ses angles en arc forment un anneau fermé ; arche de 3 blocs (côtés tournés au
+      placement + clé) ; grand portail (montants, linteau, battants) ; estrade du cristal 3 × 3 avec ses bords et angles.
+- [ ] `puits_eau` et les toiles sont translucides ; on marche le long de la passerelle à corde.
+
+## Taverne construite par l'Atelier (2026-11-27)
+
+Voir [ATELIER.md](ATELIER.md#les-objets-et-les-blocs). Captures de référence : `maps/taverne/captures/` de l'Atelier.
+
+- [ ] **Rejoindre un monde** fonctionne (solo, et serveur lancé par `runServer`) : plus d'erreur « Failed to serialize
+      ResourceKey[minecraft:test_instance / …] ». Corrigé le 2026-11-27, vérifié par le gametest
+      `test_instances_serializable`.
+- [ ] Nouveau monde (ou monde existant rechargé) : la nouvelle taverne remplace l'ancienne, sans morceau de
+      l'ancienne qui dépasse autour.
+- [ ] On arrive sur le tapis, trois blocs après la porte d'entrée, regard vers l'intérieur.
+- [ ] Le **cristal** sur l'estrade au fond ouvre l'écran de choix de map ; partir en map puis revenir ramène sur le tapis.
+- [ ] La **forge** (coin nord-ouest) ouvre son écran ; le **mannequin** (aire d'entraînement, sud-ouest) est en place.
+- [ ] Portes, portillons et trappe s'ouvrent ; l'escalier mène à la mezzanine ; on ne peut tomber nulle part dans le vide.
+- [ ] Éclairage : lustres, lanternes, torches et cheminée suffisent, de jour comme la nuit (heure figée).
+- [ ] Le rendu ressemble aux captures de l'Atelier (pas de damier violet et noir, blocs orientés dans le bon sens).
+- [ ] Après un redémarrage, la taverne est reposée à l'identique.
+
+## Taverne mise à jour : flammes, chaîne, colombages, cristal, forge et mannequin (2026-11-27)
+
+Voir [ATELIER.md](ATELIER.md#les-objets-et-les-blocs).
+
+- [ ] Les flammes (lustre, lanternes, torches, bougies, foyer) bougent, et restent lumineuses dans l'ombre.
+- [ ] `taverne_chaine` empilée au-dessus d'un lustre s'y raccorde sans trou ; le grand lustre dépasse de son bloc sans
+      disparaître quand on tourne la caméra.
+- [ ] Murs à colombages : poteaux et traverses lisibles en mur, l'écharpe inverse fait des chevrons.
+- [ ] Escalier : toutes les faces sont visibles dans les 4 directions, en bas et en haut.
+- [ ] Le **cristal de la taverne**, la **forge** et le **mannequin** ont leurs modèles (plus de textures vanilla) ; leur
+      boîte de sélection suit le modèle ; la forge éclaire.
+- [ ] Posés à la main, la forge et le mannequin regardent le joueur. Dans la taverne, la forge regarde la salle (sud) ;
+      le mannequin regarde le sud tant que l'Atelier n'a pas redéployé avec l'orientation (il devrait regarder l'est).
+- [ ] Le mannequin n'est plus un zombie : seul le modèle se voit, et les tours lui tirent toujours dessus.
+
+## Taverne en halle (2026-11-28)
+
+Déployée par l'Atelier (commit `914a1a1`, « map: taverne_halle »), elle remplace la précédente : 35 × 31 × 46, un
+cristal, une arrivée, une forge, un mannequin, un support d'armure décoratif.
+
+- [ ] Nouveau monde : on arrive dans la halle, le cristal, la forge et le mannequin fonctionnent.
+- [ ] **Entités dupliquées (corrigé le 2026-11-28, `ZoneReset`)** : après plusieurs redémarrages, un seul support
+      d'armure (« Le client qui n'a jamais payé ») et un seul mannequin. Dans un monde qui a connu l'ancienne taverne,
+      les supports d'armure qui flottaient dans la nef ont disparu.
+- [ ] Aller en map puis revenir à la taverne : le support d'armure est toujours là (une seule fois).
+- [ ] Arrêter le serveur en pleine partie, le relancer, relancer une partie sur la même map : aucun monstre de la
+      partie interrompue ne réapparaît.
+
+
+## Blocs animés : forge, mannequin, cristaux (2026-11-28)
+
+Modèles animés de l'Atelier (`dd_forge_v2`, `dd_dummy`, `dd_cristal_v2`, commit `d769cc0`), branchés sur les blocs du jeu
+(voir [ATELIER.md](ATELIER.md#les-blocs-animés)). Rien de tout ça n'a été vu à l'écran : seuls les gametests sont passés.
+
+- [ ] **Sens** : la forge et le mannequin de la taverne regardent du même côté qu'avant (le modèle animé est tourné par
+      GeckoLib selon `facing`, comme le modèle fixe l'était par l'état de bloc). S'ils sont dos au joueur ou de profil,
+      le dire : c'est une ligne à changer.
+- [ ] La forge, le mannequin et le cristal de la taverne bougent au repos (`idle`) ; leurs parties lumineuses (feu de la
+      forge, cristal) brillent dans le noir (glowmask).
+- [ ] **Forge** : ouvrir son écran l'ouvre (`open` puis `opened` en boucle) ; le fermer (bouton, Échap) la referme
+      (`close`). À deux joueurs : elle ne se referme qu'une fois le dernier écran fermé.
+- [ ] **Mannequin** : un coup d'épée ou d'une tour le fait réagir (`hurt`) ; un coup d'au moins 8 dégâts, plus fort
+      (`hurt_heavy`).
+- [ ] **Cristal d'Eternia** (en map) : il a le modèle animé du cristal de la taverne, avec sa barre de vie au-dessus. À
+      0 PV, il joue sa destruction ; l'explosion tombe au bon moment de l'animation (0,4 s), puis il disparaît et la
+      partie est perdue. Aucune image où il revient entier juste avant de disparaître.
+- [ ] Sa hitbox reste de 3 blocs de haut (inchangée) pour un modèle d'environ 2 blocs : dire si ça gêne.
+- [ ] `/dd_bloc_anim <pos> <role>` (rôles proposés par la complétion) joue chaque rôle sur un bloc animé, décors
+      `dd_*` compris.
+- [ ] Le décor `dd_forge_v2` posé en créatif est animé lui aussi (`idle`).
+
+## Les deux maps du puits (2026-11-28)
+
+`puits_a` « La Salle du Puits » et `puits_b` « La Citerne engloutie », dans le pack « dungeon_defenders » de l'écran du
+cristal de la taverne. Les gametests `map_paths_*` ont lâché un monstre de chaque sorte à chaque spawner : tous arrivent
+au cristal, en 10 à 27 s. Ils bloquaient avant une correction de notre côté (les monstres traversaient la margelle et les
+passerelles comme si elles n'existaient pas).
+
+- [ ] Les deux maps apparaissent dans l'écran du cristal, avec leur aperçu.
+- [ ] Une partie complète (5 vagues) sur chacune : les monstres de chaque entrée arrivent au cristal, sans rester
+      coincés ni tomber dans l'eau.
+- [ ] **`puits_a`** : l'entrée nord passe autour du puits (ou par-dessus la margelle) ; l'entrée haute de l'ouest
+      descend ses escaliers.
+- [ ] **`puits_b`** : les monstres traversent les passerelles vers l'île du cristal sans tomber.
+- [ ] Place pour les tours le long des chemins ; les zones interdites (`no_build_zone`) sont au bon endroit.
+- [ ] La lumière : on voit les monstres arriver.
+- [ ] Choisir : garder les deux, ou une seule (laquelle).
+
+## Les deux maps de la fonderie et le cristal sur l'estrade (2026-11-28)
+
+`fonderie_a` « Le Cœur de la Fonderie » et `fonderie_b` « La Halle de Coulée », après les maps du puits dans l'écran du
+cristal. Les gametests `map_paths_fonderie_*` : tous les monstres arrivent au cristal (9 à 35 s).
+
+- [ ] Les deux maps apparaissent, avec leur aperçu.
+- [ ] Dans les quatre maps (puits et fonderie), le cristal est maintenant **posé sur l'estrade**, un bloc plus haut.
+- [ ] Une partie complète sur chaque fonderie : chemins, place pour les tours, lumière, métal fondu qui ne brûle pas.
+- [ ] Choisir : garder les deux, ou une seule.
+
+## Les 9 monstres de l'Atelier (2026-11-28)
+
+Dans l'onglet « Monstres », après les cinq œufs d'ennemi. Ils ne viennent pas encore dans les vagues.
+
+- [ ] Chaque œuf fait apparaître son monstre, animé (marche, attaque, mort), à la bonne taille.
+- [ ] La wyverne vole.
+
+## Onglets créatifs par map (2026-11-28)
+
+- [ ] Après l'onglet « Dungeon Defenders » (blocs de jeu, objets), un onglet « Blocs : Taverne » (blocs `taverne_*` et
+      les décors cristal, forge, mannequin), puis « Blocs : Puits ». Les icônes sont un tonneau et une margelle.
+- [ ] Plus aucun bloc de décor dans l'onglet « Dungeon Defenders ».
+
+## Onglet créatif « Monstres » (2026-11-28)
+
+Juste après l'onglet « Dungeon Defenders », avant les onglets de blocs.
+
+- [ ] Cinq œufs, dans l'ordre : Œuf : Zombie, Squelette, Brute, Coureur, Tireur d'élite. Chacun a l'icône de l'ennemi
+      (œuf de zombie, de squelette, hache en fer pour la brute, œuf de husk, de stray).
+- [ ] Clic droit au sol avec l'œuf de la brute : c'est une **brute** (plus grosse, plus de PV, barre de vie), pas un
+      zombie ordinaire ; elle part vers le cristal comme celles des spawners.
+- [ ] En multijoueur (serveur du homelab), l'onglet est rempli aussi (il vient de la liste reçue du serveur).
+- [ ] À savoir : un ennemi posé à l'œuf pendant une vague compte dans les monstres tués, il peut donc finir la vague
+      plus tôt (comme un œuf vanilla avant).

@@ -1,0 +1,21 @@
+{
+  "id": "crystal_charge",
+  "particules": [
+    {
+      "particule": "minecraft:end_rod",
+      "nombre": 10,
+      "dispersion": 0.3,
+      "vitesse": 0.02
+    },
+    {
+      "particule": "minecraft:electric_spark",
+      "nombre": 6,
+      "dispersion": 0.2,
+      "vitesse": 0.05
+    }
+  ],
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "ce04306e2319c889faa8eb1eb59fe587b871d70a7b3f6b869a6b69e71ad027b2"
+  }
+}

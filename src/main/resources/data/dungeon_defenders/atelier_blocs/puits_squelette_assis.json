@@ -1,0 +1,11 @@
+{
+    "id": "puits_squelette_assis",
+    "nom": "Squelette assis",
+    "nom_en": "Seated Skeleton",
+    "modele": true,
+    "durete": 0.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

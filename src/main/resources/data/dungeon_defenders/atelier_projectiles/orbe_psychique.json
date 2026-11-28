@@ -1,0 +1,24 @@
+{
+  "id": "orbe_psychique",
+  "nom": "Orbe psychique",
+  "modele": "dungeon_defenders:geckolib/models/projectile/orbe_psychique.geo.json",
+  "texture": "dungeon_defenders:textures/projectile/orbe_psychique.png",
+  "animations": "dungeon_defenders:geckolib/animations/projectile/orbe_psychique.animation.json",
+  "animation": "animation.spin",
+  "echelle": 1.0,
+  "taille": 0.35,
+  "vitesse": 0.7,
+  "gravite": 0,
+  "duree": 5,
+  "trainee": "psy_trainee",
+  "impact": {
+    "effet": "psy_impact",
+    "explosion": 0,
+    "feu": false,
+    "casse_blocs": false
+  },
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "8df2ea6f0cb430ef50bfb09bbca4385e4908a5f31105ad62c4c9035a02220894"
+  }
+}

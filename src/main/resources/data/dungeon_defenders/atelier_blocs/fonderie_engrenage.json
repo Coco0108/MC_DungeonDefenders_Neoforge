@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_engrenage",
+    "nom": "Engrenage de fonte",
+    "nom_en": "Cast Iron Gear",
+    "modele": true,
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "orientation": "horizontale"
+}

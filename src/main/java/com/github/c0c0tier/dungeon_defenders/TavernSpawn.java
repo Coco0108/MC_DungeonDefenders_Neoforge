@@ -150,6 +150,9 @@ public class TavernSpawn {
         BlockPos origin = originOf(template);
 
         Zone zone = zoneOf(level);
+        // Les entités déjà chargées partent avec clearZone ; celles de la sauvegarde, chargées plus tard, sont retirées
+        // à leur arrivée par ZoneReset (support d'armure dupliqué à chaque chargement, 2026-11-28).
+        ZoneReset.begin(level, "taverne", boxOf(zone.from(), zone.size()));
         clearZone(level, zone.from(), zone.size());
 
         // UPDATE_CLIENTS (et pas UPDATE_ALL) : on ne veut pas déclencher une cascade de mises à
@@ -265,6 +268,10 @@ public class TavernSpawn {
      * pendant {@code LevelEvent.Load}, avant que quoi que ce soit ne soit chargé — n'en
      * trouverait aucune, et la structure en poserait un exemplaire de plus à chaque démarrage.
      *
+     * <p><b>Ça ne suffit pas</b> (2026-11-28) : écrire un bloc charge les blocs du chunk, pas ses
+     * entités sauvegardées, qui arrivent plus tard. Celles-là sont retirées à leur arrivée par
+     * {@link ZoneReset} (voir {@code placeTavern}).
+     *
      * <p>Les joueurs sont évidemment épargnés. Tout le reste part : entités décoratives de la
      * structure (reposées juste après par {@code placeInWorld}), objets au sol qu'un joueur
      * aurait laissés, et le futur mannequin d'entraînement — c'est exactement ce qu'on veut,
@@ -282,12 +289,14 @@ public class TavernSpawn {
             }
         }
 
-        AABB zone = new AABB(
-                from.getX(), from.getY(), from.getZ(),
-                from.getX() + size.getX(), from.getY() + size.getY(), from.getZ() + size.getZ());
-        for (Entity entity : level.getEntitiesOfClass(Entity.class, zone, e -> !(e instanceof Player))) {
+        for (Entity entity : level.getEntitiesOfClass(Entity.class, boxOf(from, size), e -> !(e instanceof Player))) {
             entity.discard();
         }
+    }
+
+    private static AABB boxOf(BlockPos from, Vec3i size) {
+        return new AABB(from.getX(), from.getY(), from.getZ(),
+                from.getX() + size.getX(), from.getY() + size.getY(), from.getZ() + size.getZ());
     }
 
     /**

@@ -1,0 +1,9 @@
+{
+    "id": "puits_frise",
+    "nom": "Frise du puits",
+    "nom_en": "Well Frieze",
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

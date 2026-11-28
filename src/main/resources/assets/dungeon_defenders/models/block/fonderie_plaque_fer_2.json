@@ -1,0 +1,8 @@
+{
+    "parent": "minecraft:block/cube_bottom_top",
+    "textures": {
+        "top": "dungeon_defenders:block/fonderie_plaque_fer_2",
+        "bottom": "dungeon_defenders:block/fonderie_plaque_fer_2",
+        "side": "dungeon_defenders:block/fonderie_plaque_fer_2"
+    }
+}

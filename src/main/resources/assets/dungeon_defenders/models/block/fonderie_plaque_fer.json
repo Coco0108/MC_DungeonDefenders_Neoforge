@@ -1,0 +1,6 @@
+{
+    "parent": "minecraft:block/cube_all",
+    "textures": {
+        "all": "dungeon_defenders:block/fonderie_plaque_fer"
+    }
+}

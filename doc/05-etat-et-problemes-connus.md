@@ -5,6 +5,11 @@ vérifie la CI.
 
 ## Ce qui est implémenté
 
+- **Monstres, objets et blocs de l'Atelier** (2026-11-25, branche `feature/atelier`) : lus au démarrage depuis les
+  fiches déployées par l'Atelier, sans code par monstre, avec GeckoLib 5.5.2 en dépendance (à installer avec le mod sur
+  le client et le serveur dédié). Testé en local avec des copies non commitées ; aucun monstre réel déployé, rendu jamais
+  vu. Voir [ATELIER.md](ATELIER.md).
+
 - ✅ Bloc `eternia_crystal` + son item, hitbox 1×3×1, très résistant.
 - ✅ Block entity avec PV persistants (100 par défaut) **et synchronisés vers le client**.
 - ✅ Destruction du bloc et message « Game Over » à 0 PV.
@@ -499,7 +504,7 @@ vérifie la CI.
   fonctionnent exactement comme avant. À l'opposé du choix fait pour `SpawnerBlock`, où vider
   `getShape` sert justement à rendre le bloc introuvable en survie. Reconnaissance par block
   entity (`AbstractTowerBlockEntity`, donc générique à toute tour future, et
-  `EterniaCrystalBlockEntity`) plus la classe `TavernCrystalBlock`, qui n'a pas de block entity.
+  `EterniaCrystalBlockEntity`) plus la classe `TavernCrystalBlock`, reconnue par son bloc (son block entity, depuis le 2026-11-28, ne porte que son modèle animé).
   Option CLIENT `showTowerBlockOutline` pour remettre le contour, **décochée par défaut**.
   **Jamais vérifié visuellement.** Détail dans
   [02-gameplay.md](02-gameplay.md#le-contour-de-sélection-masqué-sur-les-tours-et-les-cristaux--clientblockoutlineclienteventsjava).
@@ -545,8 +550,8 @@ vérifie la CI.
   coup. Le bloc support (invisible/traversable, comme le spawner) réinvoque le mannequin s'il a
   disparu, une fois par seconde — choisi plutôt qu'une entité posée directement dans le `.nbt`
   de la taverne pour qu'aucun doublon ne puisse s'accumuler même si le nettoyage d'entités
-  ratait l'ancien. **Deux limites assumées** : le mannequin **ressemble à un zombie** (pas de
-  modèle de mannequin de paille), et l'absence de barre de vie tient au filtre par type de
+  ratait l'ancien. **Limites assumées** : le mannequin ressemblait à un zombie jusqu'au 2026-11-27
+  (c'est désormais son bloc qui le dessine, modèle `dd_dummy` de l'Atelier), et l'absence de barre de vie tient au filtre par type de
   `MobHealthBarRenderer`, pas à une exclusion explicite. **Corrigé (2026-09-06, retour en jeu)** :
   le mannequin apparaissait un bloc plus haut que le support, invoqué à `pos.above()` plutôt qu'à
   la position du bloc lui-même — même principe que `PlayerSpawnBlock` désormais, le marqueur EST
@@ -929,6 +934,10 @@ correction, il retrouve bien la chaîne exacte du crash
 graphe serveur est propre.
 
 ## Ce qui reste
+
+- ~~**Entités de la taverne dupliquées (signalé le 2026-11-28)**~~ : corrigé le jour même par `ZoneReset` (voir
+  [02-gameplay.md](02-gameplay.md#les-entités-aussi-sont-remises-à-zéro--clearzone)), pour la taverne et les maps. À
+  confirmer en jeu.
 
 ### Pas de texture dédiée
 

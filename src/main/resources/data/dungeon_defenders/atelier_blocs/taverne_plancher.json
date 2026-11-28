@@ -1,0 +1,9 @@
+{
+    "id": "taverne_plancher",
+    "nom": "Plancher de taverne",
+    "nom_en": "Tavern Floorboards",
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

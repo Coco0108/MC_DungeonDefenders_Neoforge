@@ -1,9 +1,0 @@
-{
-  "comment": "Placeholder : textures vanilla en attendant une texture dédiée.",
-  "parent": "minecraft:block/cube_bottom_top",
-  "textures": {
-    "top": "minecraft:block/smithing_table_top",
-    "side": "minecraft:block/blast_furnace_front_on",
-    "bottom": "minecraft:block/blast_furnace_top"
-  }
-}

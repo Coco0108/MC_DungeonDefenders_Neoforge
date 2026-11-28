@@ -1,0 +1,13 @@
+{
+    "variants": {
+        "type=bottom": {
+            "model": "dungeon_defenders:block/puits_dalle"
+        },
+        "type=top": {
+            "model": "dungeon_defenders:block/puits_dalle_haut"
+        },
+        "type=double": {
+            "model": "dungeon_defenders:block/puits_dalle_double"
+        }
+    }
+}

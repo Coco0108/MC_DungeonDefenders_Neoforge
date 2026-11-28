@@ -1,0 +1,11 @@
+{
+    "id": "taverne_trappe",
+    "nom": "Trappe de taverne",
+    "nom_en": "Tavern Trapdoor",
+    "type": "trappe",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

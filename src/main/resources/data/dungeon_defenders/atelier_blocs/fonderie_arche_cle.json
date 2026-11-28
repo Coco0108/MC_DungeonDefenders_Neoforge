@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_arche_cle",
+    "nom": "Clé d'arche de fonte",
+    "nom_en": "Cast Iron Arch Keystone",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

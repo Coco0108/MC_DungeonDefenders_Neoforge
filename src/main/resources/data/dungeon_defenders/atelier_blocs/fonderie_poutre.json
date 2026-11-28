@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_poutre",
+    "nom": "Poutre de fonte",
+    "nom_en": "Cast Iron Beam",
+    "modele": true,
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "orientation": "horizontale"
+}

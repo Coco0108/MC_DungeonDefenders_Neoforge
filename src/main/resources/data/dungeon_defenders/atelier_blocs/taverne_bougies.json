@@ -1,0 +1,11 @@
+{
+    "id": "taverne_bougies",
+    "nom": "Bougies de taverne",
+    "nom_en": "Tavern Candles",
+    "modele": true,
+    "durete": 0.3,
+    "outil": "aucun",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "metal"
+}

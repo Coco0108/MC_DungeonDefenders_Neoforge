@@ -1,0 +1,37 @@
+{
+  "id": "core_explosion",
+  "particules": [
+    {
+      "particule": "minecraft:explosion_emitter",
+      "nombre": 1
+    },
+    {
+      "particule": "minecraft:flame",
+      "nombre": 60,
+      "dispersion": 0.5,
+      "vitesse": 0.3
+    },
+    {
+      "particule": "minecraft:lava",
+      "nombre": 20,
+      "dispersion": 0.5
+    },
+    {
+      "particule": "minecraft:large_smoke",
+      "nombre": 30,
+      "dispersion": 0.8,
+      "vitesse": 0.08
+    },
+    {
+      "particule": {
+        "type": "minecraft:flash",
+        "color": "#ffffb060"
+      },
+      "nombre": 1
+    }
+  ],
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "3e5271de7a318b46e5adbb84c372d9016bf0ad441de38ef289e61864c96daa35"
+  }
+}

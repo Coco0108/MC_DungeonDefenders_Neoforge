@@ -3,12 +3,21 @@ package com.github.c0c0tier.dungeon_defenders.block;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.entity.TrainingDummyBlockEntity;
 import com.mojang.serialization.MapCodec;
+import com.github.c0c0tier.dungeon_defenders.atelier.AnimationsBloc;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -30,15 +39,43 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 // peuvent pas s'accumuler, même si le nettoyage ratait l'ancien. Il permet aussi de déplacer le
 // mannequin en créatif sans retoucher au fichier de structure.
 //
-// Invisible, traversable, ciblable en créatif seulement : c'est un marqueur d'édition, même
-// traitement que SpawnerBlock et PlayerSpawnBlock (voir ces classes pour le détail du
-// raisonnement, identique ici).
+// Traversable et ciblable en créatif seulement, comme SpawnerBlock et PlayerSpawnBlock (voir ces
+// classes pour le raisonnement). Depuis le 2026-11-27, il n'est plus invisible : c'est lui qui
+// dessine le mannequin (modèle dd_dummy de l'Atelier, orienté), à la place du zombie que
+// montrait l'entité.
 public class TrainingDummyBlock extends BaseEntityBlock {
 
     public static final MapCodec<TrainingDummyBlock> CODEC = simpleCodec(TrainingDummyBlock::new);
 
     public TrainingDummyBlock(Properties properties) {
         super(properties);
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.SOUTH));
+    }
+
+    // Orientée comme le bloc de décor dont elle prend le modèle (dd_dummy, dessiné devant au nord) : posée, elle
+    // regarde le joueur. Par défaut (structure sans la propriété, comme la taverne déployée avant qu'elle existe),
+    // elle regarde le sud.
+    public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
+    private static final FormeAtelier FORME = new FormeAtelier("dd_dummy");
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING);
+    }
+
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        return defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
+    }
+
+    @Override
+    protected BlockState rotate(BlockState state, Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
@@ -53,7 +90,11 @@ public class TrainingDummyBlock extends BaseEntityBlock {
 
     @Override
     protected RenderShape getRenderShape(BlockState state) {
-        return RenderShape.INVISIBLE;
+        // Depuis le 2026-11-27, c'est le bloc qui montre le mannequin (modèle dd_dummy de l'Atelier) ; l'entité, elle,
+        // n'est plus dessinée (NoopRenderer) : elle reste la cible des tours, invisible dans le modèle. Depuis le
+        // 2026-11-28, le modèle animé (block entity, GeckoLib) quand l'Atelier l'a déployé : il encaisse les coups que
+        // reçoit l'entité (hurt, hurt_heavy).
+        return AnimationsBloc.dessineParGeckoLib("dd_dummy") ? RenderShape.INVISIBLE : RenderShape.MODEL;
     }
 
     @Override
@@ -66,7 +107,7 @@ public class TrainingDummyBlock extends BaseEntityBlock {
         if (context instanceof EntityCollisionContext entityContext
                 && entityContext.getEntity() instanceof Player player
                 && player.isCreative()) {
-            return Shapes.block();
+            return FORME.get(state.getValue(FACING));
         }
         return Shapes.empty();
     }

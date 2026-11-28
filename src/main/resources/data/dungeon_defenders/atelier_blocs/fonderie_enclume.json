@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_enclume",
+    "nom": "Enclume de la fonderie",
+    "nom_en": "Foundry Anvil",
+    "modele": true,
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "orientation": "horizontale"
+}

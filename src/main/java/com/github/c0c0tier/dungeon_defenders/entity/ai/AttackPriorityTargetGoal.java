@@ -143,11 +143,22 @@ public class AttackPriorityTargetGoal extends MoveToBlockGoal {
             return;
         }
 
-        if (!(this.mob.level().getBlockEntity(this.blockPos) instanceof AiAttackTarget target)) {
+        if (!(this.mob.level().getBlockEntity(this.blockPos) instanceof AiAttackTarget)) {
             return;
         }
 
-        target.damage(this.damagePerHitOverride.orElseGet(Config.DAMAGE_PER_HIT::get));
+        // Les dégâts tombent tout de suite, ou à l'impact de l'animation d'un monstre de
+        // l'Atelier (AnimatedAttacker) : la cible est donc relue à ce moment-là.
+        int damage = this.damagePerHitOverride.orElseGet(Config.DAMAGE_PER_HIT::get);
+        BlockPos targetPos = this.blockPos;
+        boolean started = AnimatedAttacker.strike(this.mob, () -> {
+            if (this.mob.level().getBlockEntity(targetPos) instanceof AiAttackTarget target) {
+                target.damage(damage);
+            }
+        });
+        if (!started) {
+            return;
+        }
         this.mob.swing(InteractionHand.MAIN_HAND);
         this.hitCooldown = TICKS_BETWEEN_HITS;
     }

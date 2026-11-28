@@ -1,0 +1,11 @@
+{
+    "id": "puits_tonneau_brise",
+    "nom": "Tonneau brisé du puits",
+    "nom_en": "Well Broken Barrel",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

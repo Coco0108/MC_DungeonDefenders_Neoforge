@@ -1,0 +1,11 @@
+{
+    "id": "puits_portail_battant",
+    "nom": "Battant du grand portail",
+    "nom_en": "Great Gate Leaf",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

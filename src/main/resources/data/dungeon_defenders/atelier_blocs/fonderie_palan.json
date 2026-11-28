@@ -1,0 +1,10 @@
+{
+    "id": "fonderie_palan",
+    "nom": "Palan de la fonderie",
+    "nom_en": "Foundry Hoist",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal"
+}

@@ -1,0 +1,11 @@
+{
+    "id": "taverne_dalle",
+    "nom": "Dalle de plancher de taverne",
+    "nom_en": "Tavern Floorboard Slab",
+    "type": "dalle",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

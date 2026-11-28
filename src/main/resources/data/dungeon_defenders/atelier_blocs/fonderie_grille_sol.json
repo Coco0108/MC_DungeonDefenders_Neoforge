@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_grille_sol",
+    "nom": "Grille de sol sur métal fondu",
+    "nom_en": "Molten Metal Floor Grate",
+    "modele": true,
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 12,
+    "son": "metal",
+    "transparent": true
+}

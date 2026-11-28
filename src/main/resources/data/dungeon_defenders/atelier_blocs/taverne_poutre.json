@@ -1,0 +1,10 @@
+{
+    "id": "taverne_poutre",
+    "nom": "Poutre de taverne",
+    "nom_en": "Tavern Beam",
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "axe"
+}

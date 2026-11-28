@@ -1,0 +1,11 @@
+{
+    "id": "puits_banniere",
+    "nom": "Bannière déchirée du puits",
+    "nom_en": "Well Torn Banner",
+    "modele": true,
+    "durete": 0.5,
+    "outil": "aucun",
+    "niveau": "aucun",
+    "son": "laine",
+    "orientation": "horizontale"
+}

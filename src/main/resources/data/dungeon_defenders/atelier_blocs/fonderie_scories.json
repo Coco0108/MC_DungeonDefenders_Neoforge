@@ -1,0 +1,15 @@
+{
+    "id": "fonderie_scories",
+    "nom": "Scories",
+    "nom_en": "Slag",
+    "durete": 2.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "variantes": [
+        1,
+        1,
+        1,
+        1
+    ]
+}

@@ -1,0 +1,10 @@
+{
+    "id": "taverne_table_ronde",
+    "nom": "Table ronde de taverne",
+    "nom_en": "Tavern Round Table",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

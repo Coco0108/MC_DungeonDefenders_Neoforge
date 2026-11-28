@@ -1,0 +1,15 @@
+{
+    "id": "puits_mur_taille",
+    "nom": "Mur de pierre de taille du puits",
+    "nom_en": "Well Ashlar Wall",
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "variantes": [
+        1,
+        1,
+        1,
+        1
+    ]
+}

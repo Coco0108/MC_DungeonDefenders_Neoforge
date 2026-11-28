@@ -1,0 +1,12 @@
+{
+    "id": "taverne_fenetre_haut",
+    "nom": "Haut de fenêtre de taverne",
+    "nom_en": "Tavern Window Top",
+    "modele": true,
+    "durete": 1.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "transparent": true,
+    "orientation": "horizontale"
+}

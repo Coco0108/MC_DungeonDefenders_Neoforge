@@ -1,0 +1,10 @@
+{
+    "id": "fonderie_pilier_base",
+    "nom": "Base de pilier de la fonderie",
+    "nom_en": "Foundry Pillar Base",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

@@ -1,0 +1,19 @@
+{
+    "variants": {
+        "facing=north": {
+            "model": "dungeon_defenders:block/puits_caisses"
+        },
+        "facing=east": {
+            "model": "dungeon_defenders:block/puits_caisses",
+            "y": 90
+        },
+        "facing=south": {
+            "model": "dungeon_defenders:block/puits_caisses",
+            "y": 180
+        },
+        "facing=west": {
+            "model": "dungeon_defenders:block/puits_caisses",
+            "y": 270
+        }
+    }
+}

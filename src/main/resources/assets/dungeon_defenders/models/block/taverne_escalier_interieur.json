@@ -1,0 +1,9 @@
+{
+    "parent": "minecraft:block/inner_stairs",
+    "textures": {
+        "bottom": "dungeon_defenders:block/taverne_escalier",
+        "top": "dungeon_defenders:block/taverne_escalier",
+        "side": "dungeon_defenders:block/taverne_escalier",
+        "particle": "dungeon_defenders:block/taverne_escalier"
+    }
+}

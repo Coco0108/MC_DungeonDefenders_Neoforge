@@ -4,6 +4,7 @@ import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.GameTestInstance;
 import net.minecraft.gametest.framework.TestData;
@@ -11,6 +12,7 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,6 +34,17 @@ public class ModGameTestInstance extends GameTestInstance {
                     Identifier.CODEC.fieldOf("function").forGetter(ModGameTestInstance::functionId),
                     TestData.CODEC.forGetter(ModGameTestInstance::info))
             .apply(instance, ModGameTestInstance::new));
+
+    // Le type doit être enregistré dans test_instance_type : quand les gametests sont actifs (lancements de
+    // développement), le registre test_instance est envoyé aux clients qui rejoignent, et chaque instance est encodée
+    // par son type. Sans cet enregistrement, aucun client ne pouvait rejoindre un monde (« Failed to serialize
+    // ResourceKey[minecraft:test_instance / …]: Unregistered holder in … test_instance_type »).
+    public static final DeferredRegister<MapCodec<? extends GameTestInstance>> TYPES =
+            DeferredRegister.create(Registries.TEST_INSTANCE_TYPE, DungeonDefendersMod.MODID);
+
+    static {
+        TYPES.register("function", () -> CODEC);
+    }
 
     private final Identifier functionId;
 

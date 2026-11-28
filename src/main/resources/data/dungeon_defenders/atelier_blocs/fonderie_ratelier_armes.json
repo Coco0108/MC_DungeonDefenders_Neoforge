@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_ratelier_armes",
+    "nom": "Râtelier de lames brutes",
+    "nom_en": "Raw Blade Rack",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

@@ -1,0 +1,9 @@
+{
+    "id": "taverne_plancher_sombre",
+    "nom": "Plancher sombre de taverne",
+    "nom_en": "Tavern Dark Floorboards",
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

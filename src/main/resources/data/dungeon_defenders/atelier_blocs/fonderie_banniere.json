@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_banniere",
+    "nom": "Bannière de la fonderie",
+    "nom_en": "Foundry Banner",
+    "modele": true,
+    "durete": 0.5,
+    "outil": "aucun",
+    "niveau": "aucun",
+    "son": "laine",
+    "orientation": "horizontale"
+}

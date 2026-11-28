@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_ratelier_outils",
+    "nom": "Râtelier à outils de forge",
+    "nom_en": "Forge Tool Rack",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

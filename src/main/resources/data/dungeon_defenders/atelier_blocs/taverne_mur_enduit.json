@@ -1,0 +1,9 @@
+{
+    "id": "taverne_mur_enduit",
+    "nom": "Mur enduit de taverne",
+    "nom_en": "Tavern Plaster Wall",
+    "durete": 1.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

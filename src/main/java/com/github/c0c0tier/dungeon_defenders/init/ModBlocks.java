@@ -273,6 +273,10 @@ public class ModBlocks {
     public static final DeferredItem<ManaFillWandItem> MANA_FILL_WAND =
             ITEMS.registerItem("mana_fill_wand", ManaFillWandItem::new);
 
+    // 4ter. L'œuf d'un ennemi (onglet « Monstres ») : un exemplaire par ennemi data-driven, voir EnemyEggItem.
+    public static final DeferredItem<com.github.c0c0tier.dungeon_defenders.item.EnemyEggItem> ENEMY_EGG =
+            ITEMS.registerItem("enemy_egg", com.github.c0c0tier.dungeon_defenders.item.EnemyEggItem::new);
+
     // 5. Spawner : fait apparaître des zombies pendant la phase de combat (voir
     // SpawnerBlockEntity pour l'algorithme). Clic droit = harnais de test qui bascule la phase.
     public static final DeferredBlock<SpawnerBlock> SPAWNER = BLOCKS.registerBlock("spawner",
@@ -286,7 +290,10 @@ public class ModBlocks {
     // choix de map au clic droit (voir TavernCrystalBlock).
     public static final DeferredBlock<TavernCrystalBlock> TAVERN_CRYSTAL = BLOCKS.registerBlock("tavern_crystal",
             TavernCrystalBlock::new,
+            // Modèle dd_cristal_v2 de l'Atelier : pas un cube plein, et il luit comme le bloc de décor (10).
             properties -> properties
+                    .noOcclusion()
+                    .lightLevel(state -> 10)
                     .destroyTime(50.0F)
                     .explosionResistance(1200.0F)
                     .requiresCorrectToolForDrops());
@@ -322,7 +329,7 @@ public class ModBlocks {
     // et traversable comme le spawner — toute la logique vit dans TrainingDummyBlockEntity.
     public static final DeferredBlock<TrainingDummyBlock> TRAINING_DUMMY = BLOCKS.registerBlock("training_dummy",
             TrainingDummyBlock::new,
-            properties -> properties.strength(2.0F));
+            properties -> properties.strength(2.0F).noOcclusion());
 
     public static final DeferredItem<BlockItem> TRAINING_DUMMY_ITEM =
             ITEMS.registerSimpleBlockItem("training_dummy", TRAINING_DUMMY);
@@ -350,7 +357,8 @@ public class ModBlocks {
     // 12. Forge : meuble de la taverne, ouvre l'inventaire du joueur (voir ForgeBlock).
     public static final DeferredBlock<ForgeBlock> FORGE = BLOCKS.registerBlock("forge",
             ForgeBlock::new,
-            properties -> properties.strength(3.5F));
+            // Modèle dd_forge_v2 de l'Atelier : pas un cube plein, et son foyer éclaire comme le bloc de décor (15 depuis sa fiche v2.3).
+            properties -> properties.strength(3.5F).noOcclusion().lightLevel(state -> 15));
 
     public static final DeferredItem<BlockItem> FORGE_ITEM =
             ITEMS.registerSimpleBlockItem("forge", FORGE);

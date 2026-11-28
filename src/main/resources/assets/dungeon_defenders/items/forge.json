@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "dungeon_defenders:block/forge"
+    "model": "dungeon_defenders:block/dd_forge_v2"
   }
 }

@@ -1,0 +1,9 @@
+{
+    "id": "taverne_dalles",
+    "nom": "Dalles de taverne",
+    "nom_en": "Tavern Flagstones",
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

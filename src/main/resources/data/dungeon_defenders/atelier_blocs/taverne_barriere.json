@@ -1,0 +1,11 @@
+{
+    "id": "taverne_barriere",
+    "nom": "Barrière de taverne",
+    "nom_en": "Tavern Fence",
+    "type": "barriere",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

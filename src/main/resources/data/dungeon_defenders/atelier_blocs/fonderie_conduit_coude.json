@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_conduit_coude",
+    "nom": "Coude de conduit de soufflerie",
+    "nom_en": "Blast Duct Elbow",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "orientation": "horizontale"
+}

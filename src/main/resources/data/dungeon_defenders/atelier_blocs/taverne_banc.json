@@ -1,0 +1,11 @@
+{
+    "id": "taverne_banc",
+    "nom": "Banc de taverne",
+    "nom_en": "Tavern Bench",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

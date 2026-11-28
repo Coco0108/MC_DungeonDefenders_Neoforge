@@ -39,6 +39,10 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
+import com.github.c0c0tier.dungeon_defenders.atelier.AtelierEntities;
+import com.github.c0c0tier.dungeon_defenders.atelier.AtelierLoader;
+import com.github.c0c0tier.dungeon_defenders.atelier.AtelierObjets;
+import com.github.c0c0tier.dungeon_defenders.atelier.AtelierSounds;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
@@ -228,6 +232,19 @@ public class DungeonDefendersMod {
                     ModBlocks.LIFESTONE.get()
             ));
 
+    // La Forge et le cristal de la taverne ont un block entity depuis le 2026-11-28, pour leur modèle animé (Atelier).
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.github.c0c0tier.dungeon_defenders.block.entity.ForgeBlockEntity>> FORGE_BE =
+            BLOCK_ENTITIES.register("forge", () -> new BlockEntityType<>(
+                    com.github.c0c0tier.dungeon_defenders.block.entity.ForgeBlockEntity::new,
+                    ModBlocks.FORGE.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.github.c0c0tier.dungeon_defenders.block.entity.TavernCrystalBlockEntity>> TAVERN_CRYSTAL_BE =
+            BLOCK_ENTITIES.register("tavern_crystal", () -> new BlockEntityType<>(
+                    com.github.c0c0tier.dungeon_defenders.block.entity.TavernCrystalBlockEntity::new,
+                    ModBlocks.TAVERN_CRYSTAL.get()
+            ));
+
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TrainingDummyBlockEntity>> TRAINING_DUMMY_BE =
             BLOCK_ENTITIES.register("training_dummy", () -> new BlockEntityType<>(
                     TrainingDummyBlockEntity::new,
@@ -264,12 +281,41 @@ public class DungeonDefendersMod {
                     })
                     .build());
 
+    // 3bis. L'onglet « Monstres » : un œuf par ennemi (EnemyEggItem), puis les œufs des monstres de l'Atelier s'il y en a
+    // (AtelierEntities). Les onglets de blocs de l'Atelier viennent après (AtelierObjets).
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MONSTERS_TAB = CREATIVE_MODE_TABS.register("monstres",
+            () -> CreativeModeTab.builder()
+                    .title(Component.translatable("itemGroup.dungeon_defenders.monstres"))
+                    .icon(() -> com.github.c0c0tier.dungeon_defenders.item.EnemyEggItem.of(
+                            net.minecraft.resources.Identifier.fromNamespaceAndPath(MODID, "zombie"), net.minecraft.world.item.Items.ZOMBIE_SPAWN_EGG))
+                    .withTabsBefore(DUNGEON_DEFENDERS_TAB.getKey())
+                    .displayItems((parameters, output) -> com.github.c0c0tier.dungeon_defenders.item.EnemyEggItem.enemies()
+                            .forEach(enemy -> output.accept(com.github.c0c0tier.dungeon_defenders.item.EnemyEggItem.of(enemy.id(), enemy.icon()))))
+                    .build());
+
     public DungeonDefendersMod(IEventBus modEventBus, ModContainer container) {
         // On enregistre tes deux fichiers de registres sur le bus
         ModBlocks.register(modEventBus);
+        com.github.c0c0tier.dungeon_defenders.init.ModDataComponents.register(modEventBus);
         ModAttachments.register(modEventBus);
         ModMenus.register(modEventBus);
+        // Type des gametests du mod (voir ModGameTestInstance) : sans lui, un client ne peut pas rejoindre un monde
+        // quand les gametests sont actifs.
+        com.github.c0c0tier.dungeon_defenders.gametest.ModGameTestInstance.TYPES.register(modEventBus);
         ModEntities.register(modEventBus);
+        // Monstres de l'Atelier (doc/ATELIER.md) : les fiches sont lues AVANT leur enregistrement,
+        // chaque monstre ayant son propre type d'entité et chaque son son événement. Un id déjà pris
+        // par une entité du mod est refusé (avec un message), jamais enregistré deux fois.
+        AtelierLoader.load(container.getModInfo().getOwningFile().getFile().getContents(),
+                ModEntities.ENTITY_TYPES.getEntries().stream()
+                        .map(entry -> entry.getId().getPath())
+                        .collect(java.util.stream.Collectors.toSet()),
+                java.util.stream.Stream.concat(ModBlocks.ITEMS.getEntries().stream(), ModBlocks.BLOCKS.getEntries().stream())
+                        .map(entry -> entry.getId().getPath())
+                        .collect(java.util.stream.Collectors.toSet()));
+        AtelierEntities.register(modEventBus);
+        AtelierObjets.register(modEventBus);
+        AtelierSounds.register(modEventBus);
         ModChunkTickets.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);

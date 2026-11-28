@@ -1,0 +1,11 @@
+{
+    "id": "taverne_lustre",
+    "nom": "Lustre de taverne",
+    "nom_en": "Tavern Chandelier",
+    "modele": true,
+    "durete": 1.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "bois"
+}

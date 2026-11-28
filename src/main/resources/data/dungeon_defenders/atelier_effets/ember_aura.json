@@ -1,0 +1,25 @@
+{
+  "id": "ember_aura",
+  "particules": [
+    {
+      "particule": {
+        "type": "minecraft:dust",
+        "color": "#ff7a1f",
+        "scale": 1.0
+      },
+      "nombre": 3,
+      "dispersion": 0.6,
+      "vitesse": 0.01
+    },
+    {
+      "particule": "minecraft:small_flame",
+      "nombre": 2,
+      "dispersion": 0.5,
+      "vitesse": 0.01
+    }
+  ],
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "3cfe9c42d339c1ba2e6e434c3dd7b14a590c20620d304ba02a0de4a4ceed1bb4"
+  }
+}

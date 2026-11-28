@@ -1,0 +1,32 @@
+{
+  "id": "orc",
+  "nom": "Orc",
+  "modele": "dungeon_defenders:geckolib/models/entity/orc.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/entity/orc.animation.json",
+  "texture": "dungeon_defenders:textures/entity/orc/orc.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "walk": "animation.walk",
+    "attack": "animation.attack",
+    "roar": "animation.roar"
+  },
+  "echelle": 1.0,
+  "hitbox": {
+    "largeur": 1.6,
+    "hauteur": 2.9
+  },
+  "stats": {
+    "pv": 45,
+    "degats": 7,
+    "vitesse": 0.22
+  },
+  "comportement": "hostile",
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "e2e77a623ba707fdd8d5f0ca91298c37f9a1fe190c780ecb6e0a07e45d27f9db",
+    "effets": [
+      "roar_breath",
+      "rock_debris"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+    "id": "puits_estrade_angle",
+    "nom": "Angle d'estrade du cristal",
+    "nom_en": "Crystal Dais Corner",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

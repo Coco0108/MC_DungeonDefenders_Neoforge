@@ -1,0 +1,10 @@
+{
+    "id": "puits_etai",
+    "nom": "Étai du puits",
+    "nom_en": "Well Prop",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

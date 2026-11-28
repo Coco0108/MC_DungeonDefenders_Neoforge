@@ -1,0 +1,10 @@
+{
+    "id": "fonderie_pilier_chapiteau",
+    "nom": "Chapiteau de fonte",
+    "nom_en": "Cast Iron Capital",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

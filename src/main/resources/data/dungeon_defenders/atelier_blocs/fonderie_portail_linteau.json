@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_portail_linteau",
+    "nom": "Linteau de fonte du portail",
+    "nom_en": "Foundry Gate Lintel",
+    "modele": true,
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "orientation": "horizontale"
+}

@@ -1,0 +1,9 @@
+{
+    "id": "puits_pave_mousse",
+    "nom": "Pavés moussus du puits",
+    "nom_en": "Well Mossy Cobbles",
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

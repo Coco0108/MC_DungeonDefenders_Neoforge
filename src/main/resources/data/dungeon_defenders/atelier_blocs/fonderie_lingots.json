@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_lingots",
+    "nom": "Pile de lingots",
+    "nom_en": "Ingot Stack",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "orientation": "horizontale"
+}

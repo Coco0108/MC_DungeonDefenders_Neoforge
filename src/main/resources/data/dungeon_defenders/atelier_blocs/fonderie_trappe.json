@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_trappe",
+    "nom": "Caillebotis de fer",
+    "nom_en": "Iron Grating Trapdoor",
+    "type": "trappe",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "transparent": true
+}

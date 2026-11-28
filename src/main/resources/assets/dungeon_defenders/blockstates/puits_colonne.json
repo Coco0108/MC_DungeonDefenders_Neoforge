@@ -1,0 +1,16 @@
+{
+    "variants": {
+        "axis=y": {
+            "model": "dungeon_defenders:block/puits_colonne"
+        },
+        "axis=z": {
+            "model": "dungeon_defenders:block/puits_colonne_horizontal",
+            "x": 90
+        },
+        "axis=x": {
+            "model": "dungeon_defenders:block/puits_colonne_horizontal",
+            "x": 90,
+            "y": 90
+        }
+    }
+}

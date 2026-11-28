@@ -1,0 +1,11 @@
+{
+    "id": "puits_dalle",
+    "nom": "Dalle du puits",
+    "nom_en": "Well Slab",
+    "type": "dalle",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

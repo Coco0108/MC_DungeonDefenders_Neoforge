@@ -1,0 +1,31 @@
+{
+  "id": "wyvern",
+  "nom": "Wyverne",
+  "modele": "dungeon_defenders:geckolib/models/entity/wyvern.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/entity/wyvern.animation.json",
+  "texture": "dungeon_defenders:textures/entity/wyvern/wyvern.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "walk": "animation.walk",
+    "attack": "animation.attack"
+  },
+  "echelle": 1.0,
+  "hitbox": {
+    "largeur": 1.4,
+    "hauteur": 1.4
+  },
+  "stats": {
+    "pv": 30,
+    "degats": 5,
+    "vitesse": 0.3
+  },
+  "comportement": "hostile",
+  "deplacement": "vol",
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "e6316fd49ed4d058047155ecfe2894444342ed6c5d5dd52e81678152dbc44c76",
+    "effets": [
+      "swipe_trail"
+    ]
+  }
+}

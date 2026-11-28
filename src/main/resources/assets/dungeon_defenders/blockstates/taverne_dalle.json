@@ -1,0 +1,13 @@
+{
+    "variants": {
+        "type=bottom": {
+            "model": "dungeon_defenders:block/taverne_dalle"
+        },
+        "type=top": {
+            "model": "dungeon_defenders:block/taverne_dalle_haut"
+        },
+        "type=double": {
+            "model": "dungeon_defenders:block/taverne_dalle_double"
+        }
+    }
+}

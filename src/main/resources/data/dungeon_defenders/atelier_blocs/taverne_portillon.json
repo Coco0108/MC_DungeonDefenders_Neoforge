@@ -1,0 +1,11 @@
+{
+    "id": "taverne_portillon",
+    "nom": "Portillon de taverne",
+    "nom_en": "Tavern Fence Gate",
+    "type": "portillon",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois"
+}

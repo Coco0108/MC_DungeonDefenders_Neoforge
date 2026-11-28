@@ -1,0 +1,9 @@
+{
+    "id": "puits_dalle_gravee",
+    "nom": "Dalle gravée du puits",
+    "nom_en": "Well Engraved Flagstone",
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

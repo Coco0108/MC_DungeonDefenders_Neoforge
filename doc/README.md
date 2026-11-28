@@ -26,6 +26,18 @@ que les monstres tentent de détruire, et peut se défendre avec des pièges com
 6. [À tester en jeu](06-a-tester.md) — fonctionnalités écrites mais jamais lancées en jeu, checklist à cocher.
 7. [Idées & backlog](07-idees-et-backlog.md) — boîte à idées en vrac + backlog trié par catégorie/difficulté, pour lancer une fonctionnalité à la demande.
 
+**Atelier** : [ATELIER.md](ATELIER.md) — ce que le mod lit des monstres, objets et blocs
+déployés depuis l'Atelier (le mod bac à sable des modèles Blockbench), où, et ce qu'il ignore.
+
+**Demandes à l'Atelier** :
+
+- [DEMANDE_ATELIER_BLOCS.md](DEMANDE_ATELIER_BLOCS.md) — blocs orientés et blocs à états (porte, escalier, barrière…) pour la taverne (traitée)
+- [DEMANDE_ATELIER_BLOCS_ANIMES.md](DEMANDE_ATELIER_BLOCS_ANIMES.md) — format des blocs animés (forge, mannequin, cristal) (traitée)
+- [DEMANDE_ATELIER_PUITS.md](DEMANDE_ATELIER_PUITS.md) — construire la première map (le puits) en deux versions de plan différent, jouables (traitée)
+- [DEMANDE_ATELIER_FONDERIE.md](DEMANDE_ATELIER_FONDERIE.md) — construire la deuxième map (la fonderie) en deux versions, inspirée de « Foundries and Forges » pour la A (traitée)
+- [DEMANDE_ATELIER_MONSTRES_TOURS.md](DEMANDE_ATELIER_MONSTRES_TOURS.md) — réponse à l'Atelier : les 9 monstres et leurs ennemis, les 24 tours animées, les projectiles (envoyée)
+- [DEMANDE_ATELIER_TAVERNE.md](DEMANDE_ATELIER_TAVERNE.md) — construire la taverne en jeu avec les blocs `taverne_*`, captures, structure déployée (traitée)
+
 **Data-driven** (équilibrer avec des JSON et `/reload`, sans recompiler) :
 [ennemis](data-driven/ennemis.md), [stats des tours](data-driven/tours.md),
 [réglages globaux](data-driven/equilibrage.md).

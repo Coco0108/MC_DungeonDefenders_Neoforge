@@ -1,0 +1,12 @@
+{
+    "id": "taverne_lanterne_posee",
+    "nom": "Lanterne de taverne",
+    "nom_en": "Tavern Lantern",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "metal",
+    "transparent": true
+}

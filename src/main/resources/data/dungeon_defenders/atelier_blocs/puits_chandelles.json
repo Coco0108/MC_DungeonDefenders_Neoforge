@@ -1,0 +1,12 @@
+{
+    "id": "puits_chandelles",
+    "nom": "Chandelles du puits",
+    "nom_en": "Well Candles",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "pierre",
+    "orientation": "horizontale"
+}
