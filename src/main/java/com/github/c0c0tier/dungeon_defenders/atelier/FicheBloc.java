@@ -1,12 +1,14 @@
 package com.github.c0c0tier.dungeon_defenders.atelier;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.block.SoundType;
@@ -34,10 +36,11 @@ import net.minecraft.world.level.block.SoundType;
  * @param type a piece of joinery with block states, like its vanilla oak counterpart ({@link Type})
  * @param transparent see-through (glass, leaves): does not hide the faces next to it; the transparent pixels of its
  *        texture are then drawn as holes (or tinted, if half transparent)
+ * @param anime a {@code modele} block with an animated model ({@link Anime}), drawn by GeckoLib once placed
  */
 public record FicheBloc(String id, String nom, Optional<String> nomEn, float durete, Optional<Float> resistance, Outil outil,
         Niveau niveau, int lumiere, Son son, boolean modele, boolean transparent,
-        Orientation orientation, Type type) {
+        Orientation orientation, Type type, Optional<Anime> anime) {
     public static final Codec<FicheBloc> CODEC = RecordCodecBuilder.create(i -> i.group(
             Fields.required("id", Codec.STRING).forGetter(FicheBloc::id),
             Fields.required("nom", Codec.STRING).forGetter(FicheBloc::nom),
@@ -51,8 +54,33 @@ public record FicheBloc(String id, String nom, Optional<String> nomEn, float dur
             Fields.optional("modele", Codec.BOOL, false).forGetter(FicheBloc::modele),
             Fields.optional("transparent", Codec.BOOL, false).forGetter(FicheBloc::transparent),
             Fields.optional("orientation", Orientation.CODEC, Orientation.AUCUNE).forGetter(FicheBloc::orientation),
-            Fields.optional("type", Type.CODEC, Type.SIMPLE).forGetter(FicheBloc::type)
+            Fields.optional("type", Type.CODEC, Type.SIMPLE).forGetter(FicheBloc::type),
+            Fields.maybe("anime", Anime.CODEC).forGetter(FicheBloc::anime)
     ).apply(i, FicheBloc::new));
+
+    /**
+     * The animated model of a {@code modele} block (prompt de l'Atelier v2.3, format proposé par
+     * doc/DEMANDE_ATELIER_BLOCS_ANIMES.md et retenu tel quel). The converted model, its texture and its shape still serve
+     * the item, the breaking particles, the shape and the fallback; the placed block is drawn by GeckoLib.
+     *
+     * @param modele {@code dungeon_defenders:geckolib/models/block/<id>.geo.json}
+     * @param animations {@code dungeon_defenders:geckolib/animations/block/<id>.animation.json}
+     * @param texture {@code dungeon_defenders:textures/geckolib/block/<id>.png} (outside the block atlas), its glowmask
+     *        {@code <texture>_glowmask.png} next to it if it has one
+     * @param rolesAnimation role ({@link #ROLES}) → animation name; a missing role does not play
+     */
+    public record Anime(Identifier modele, Identifier animations, Identifier texture, Map<String, String> rolesAnimation) {
+        /** The roles a game can play: {@code idle} and {@code opened} loop, the others play once. */
+        public static final List<String> ROLES = List.of("idle", "open", "opened", "close", "hurt", "hurt_heavy", "death");
+
+        public static final Codec<Anime> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Fields.required("modele", Identifier.CODEC).forGetter(Anime::modele),
+                Fields.required("animations", Identifier.CODEC).forGetter(Anime::animations),
+                Fields.required("texture", Identifier.CODEC).forGetter(Anime::texture),
+                Fields.optional("roles_animation", Codec.unboundedMap(Codec.STRING, Codec.STRING), Map.of())
+                        .forGetter(Anime::rolesAnimation)
+        ).apply(i, Anime::new));
+    }
 
     /** Where its main texture must be, in the mod jar. */
     public String texturePath() {

@@ -232,6 +232,19 @@ public class DungeonDefendersMod {
                     ModBlocks.LIFESTONE.get()
             ));
 
+    // La Forge et le cristal de la taverne ont un block entity depuis le 2026-11-28, pour leur modèle animé (Atelier).
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.github.c0c0tier.dungeon_defenders.block.entity.ForgeBlockEntity>> FORGE_BE =
+            BLOCK_ENTITIES.register("forge", () -> new BlockEntityType<>(
+                    com.github.c0c0tier.dungeon_defenders.block.entity.ForgeBlockEntity::new,
+                    ModBlocks.FORGE.get()
+            ));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.github.c0c0tier.dungeon_defenders.block.entity.TavernCrystalBlockEntity>> TAVERN_CRYSTAL_BE =
+            BLOCK_ENTITIES.register("tavern_crystal", () -> new BlockEntityType<>(
+                    com.github.c0c0tier.dungeon_defenders.block.entity.TavernCrystalBlockEntity::new,
+                    ModBlocks.TAVERN_CRYSTAL.get()
+            ));
+
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TrainingDummyBlockEntity>> TRAINING_DUMMY_BE =
             BLOCK_ENTITIES.register("training_dummy", () -> new BlockEntityType<>(
                     TrainingDummyBlockEntity::new,

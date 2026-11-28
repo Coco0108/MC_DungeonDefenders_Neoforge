@@ -1,6 +1,11 @@
 package com.github.c0c0tier.dungeon_defenders.block;
 
 import com.github.c0c0tier.dungeon_defenders.network.OpenForgePayload;
+import com.github.c0c0tier.dungeon_defenders.block.entity.ForgeBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.atelier.AnimationsBloc;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -28,7 +33,11 @@ import net.minecraft.world.phys.BlockHitResult;
 //
 // Rien n'est stocké dans le bloc : l'inventaire appartient au joueur (attachment
 // FORGE_INVENTORY), toutes les Forges montrent donc le même, et chaque joueur voit le sien.
-public class ForgeBlock extends Block {
+//
+// Depuis le 2026-11-28, elle a un block entity (ForgeBlockEntity) pour son modèle animé dd_forge_v2 de l'Atelier : elle
+// s'ouvre quand un premier joueur ouvre son écran et se referme quand le dernier le ferme (ForgeViewers). Il ne
+// stocke toujours rien du joueur.
+public class ForgeBlock extends BaseEntityBlock {
 
     public static final MapCodec<ForgeBlock> CODEC = simpleCodec(ForgeBlock::new);
 
@@ -69,7 +78,7 @@ public class ForgeBlock extends Block {
     }
 
     @Override
-    protected MapCodec<? extends Block> codec() {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
 
@@ -77,7 +86,19 @@ public class ForgeBlock extends Block {
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         if (player instanceof ServerPlayer serverPlayer) {
             serverPlayer.connection.send(new OpenForgePayload().toVanillaClientbound());
+            ForgeViewers.open(serverPlayer, pos);
         }
         return InteractionResult.SUCCESS;
+    }
+
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new ForgeBlockEntity(pos, state);
+    }
+
+    // Dessinée par GeckoLib (ForgeBlockEntity) quand l'Atelier a déployé son modèle animé, sinon par son modèle fixe.
+    @Override
+    protected RenderShape getRenderShape(BlockState state) {
+        return AnimationsBloc.dessineParGeckoLib("dd_forge_v2") ? RenderShape.INVISIBLE : RenderShape.MODEL;
     }
 }

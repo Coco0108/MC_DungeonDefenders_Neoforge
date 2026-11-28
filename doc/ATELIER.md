@@ -140,6 +140,53 @@ réservé, `niveau` sans `outil`, bloc `modele` sans son modèle ou avec une for
 32 pixels), menuiserie `modele` sans l'un de ses modèles d'état, menuiserie avec une `orientation`, `horizontale` sur un
 cube, `axe` sur un bloc `modele` (les mêmes refus que l'Atelier). `cache` (bloc-cachette) : ignoré, avec un avertissement.
 
+## Les blocs animés
+
+Format du prompt de l'Atelier v2.3, qui a retenu tel quel celui de
+[DEMANDE_ATELIER_BLOCS_ANIMES.md](DEMANDE_ATELIER_BLOCS_ANIMES.md). Premier déploiement : `d769cc0` (2026-11-28),
+`dd_forge_v2`, `dd_dummy` et `dd_cristal_v2`.
+
+**La fiche** : un champ `anime` dans un bloc `modele` simple : `modele` (`geckolib/models/block/<id>.geo.json`),
+`animations` (`geckolib/animations/block/<id>.animation.json`), `texture` (`textures/geckolib/block/<id>.png`, hors de
+l'atlas des blocs, glowmask `<texture>_glowmask.png` à côté), `roles_animation` (rôle → nom d'animation). Le modèle fixe,
+sa texture et sa forme restent : objet en main, particules, forme, repli. Refusé (fiche ignorée) : `anime` sur une
+menuiserie ou un cube, un fichier absent, un rôle vers une animation qui n'existe pas. Un rôle inconnu : avertissement.
+Le chargeur lit l'instant d'effet de chaque rôle (`Atelier.impactBloc`, marqueur `impact` ou moitié de l'animation).
+
+**Le code** (aucun code par bloc) :
+
+| Classe | Rôle |
+|---|---|
+| `atelier/AnimationsBloc` | Les animations d'un bloc : un contrôleur, `idle` en boucle (`opened` quand il est ouvert), chaque rôle déclenché une fois par le serveur (`jouer`), envoyé par GeckoLib aux joueurs autour ; état ouvert synchronisé. `death` reste sur sa dernière image |
+| `atelier/BlocAnimable` | Interface des block entities qui le portent (`jouer(role)`) |
+| `atelier/BlocAnime`, `BlocAnimeOriente`, `BlocAnimeEntity` | Le bloc de décor animé (forme de rendu invisible) et son block entity, un type par bloc, enregistrés par `AtelierObjets` |
+| `block/entity/AnimatedBlockEntity` | Base des blocs du jeu qui empruntent le modèle animé d'un décor : `ForgeBlockEntity`, `TavernCrystalBlockEntity`, `TrainingDummyBlockEntity`, `EterniaCrystalBlockEntity` |
+| `client/atelier/BlocAnimeRenderer` | Le renderer commun (`GeoBlockRenderer`), tourné selon `facing`, glowmask ; `EterniaCrystalGeoRenderer` y ajoute la barre de vie |
+
+Sans modèle animé déployé, un bloc du jeu garde son modèle fixe (`AnimationsBloc.dessineParGeckoLib`) et n'a pas de
+renderer GeckoLib.
+
+**Les déclencheurs** :
+
+| Bloc du jeu | Modèle | Rôle | Quand |
+|---|---|---|---|
+| Forge | `dd_forge_v2` | `open` puis `opened` | Le premier joueur ouvre son écran (`ForgeBlock#useWithoutItem` → `ForgeViewers.open`) |
+| | | `close` | Le dernier le ferme : `ForgeScreen#removed` envoie `ForgeActionPayload.CLOSE` ; aussi à la déconnexion ou au changement de dimension |
+| Mannequin | `dd_dummy` | `hurt` | Son entité encaisse un coup (`TrainingDummyEntity#hurtServer` → `TrainingDummyBlockEntity#onHit`) |
+| | | `hurt_heavy` | Un coup d'au moins 8 dégâts (`HEAVY_HIT_DAMAGE`) |
+| Cristal de la taverne | `dd_cristal_v2` | `idle` | Toujours (il n'est jamais détruit) |
+| Cristal d'Eternia | `dd_cristal_v2` | `death` | À 0 PV : explosion au marqueur `impact`, défaite à la fin de l'animation (voir [02-gameplay.md](02-gameplay.md)) |
+
+**Pour tester** : `/dd_bloc_anim <pos> <role>` (niveau 2) joue un rôle sur n'importe quel bloc animé, décors compris
+(`death` ne fait que l'animation). Gametests `animated_blocks`, `forge_open_close`, `training_dummy_hurt`,
+`eternia_crystal_damage`.
+
+**Pathfinding** (écart avec le `BlocModele` de l'Atelier, 2026-11-28) : un bloc modèle qui a une forme est un obstacle
+pour les monstres (`isPathfindable` faux sur terre). Par défaut, le pathfinding vanilla traverse tout ce qui n'est pas un
+cube plein : il menait les monstres droit dans la margelle du puits, sans sauter, et à travers les passerelles, d'où ils
+tombaient dans l'eau. Vu par les gametests `map_paths_*` : 4 monstres sur 10 bloqués dans `puits_a`, 8 sur 11 dans
+`puits_b`, tous arrivés après la correction. À signaler à l'Atelier, dont les monstres ont le même souci dans ses mondes.
+
 ## Le lien avec les vagues
 
 Un monstre de l'Atelier devient un ennemi de vague par un fichier `enemy/<id>.json` du système d'ennemis du mod
@@ -210,8 +257,6 @@ projectiles (`atelier_effets/`, `atelier_projectiles/` restent des références 
 viennent des vagues), `butin` (les vagues ont leur propre économie : mana, butin de héros), `fuite`/`commerce` (la monnaie
 vivante), `oeuf`, `cibles`, `destinations`.
 
-Plus tard : les **blocs animés** (forge, mannequin, cristal ont des animations GeckoLib qu'un bloc fixe ne joue pas :
-il faudra un `GeoBlockEntity` générique, une fois le format défini dans l'Atelier).
 
 **Les blocs de la taverne** (2026-11-27) : 39 fiches `taverne_*` (murs, sols, charpente, fenêtres, mobilier, décor,
 éclairage, menuiseries), premier lot de blocs destiné à Dungeon Defenders. Leur format (`orientation`, `type`) est celui
@@ -255,7 +300,22 @@ leur forme dans `atelier_formes_bloc/` (`block/FormeAtelier`), et la forge et le
 remplacement a perdu l'orientation, puisque nos blocs n'en avaient pas : **à redéployer en gardant `facing`**. Les blocs
 de décor restent enregistrés aussi, sous leur propre id.
 
+**Les deux maps du puits et les blocs animés** (2026-11-28) : `puits_a` « La Salle du Puits » (commit `919e264`) et
+`puits_b` « La Citerne engloutie » (`3ae3e1e`), construites par l'Atelier d'après
+[DEMANDE_ATELIER_PUITS.md](DEMANDE_ATELIER_PUITS.md), puis les trois blocs animés (`d769cc0`), fusionnés dans
+`feature/atelier`. Chaque map fait 47 × 17 × 47 : un cristal, une arrivée, deux coffres de mana, un `map_config`
+(`MapOrder` 1 et 2, 5 vagues), et **trois entrées** de trois spawners chacune (un par composition : vagues 1 à 5, 2 à 5,
+brute en 5). Aucun bloc `atelier:` (vérifié en lisant les `.nbt`). Leurs chemins sont joués par les gametests
+`map_paths_puits_a` et `map_paths_puits_b` (voir plus bas).
+
 ## Tester
+
+- `./gradlew runGameTestServer`, **maps** : `map_paths_<map>` pose la map comme structure de son test et fait partir de
+  chaque spawner un monstre de chaque sorte qu'il fait venir, avec sa vraie IA ; chacun doit arriver au cristal (au
+  contact, ou à portée de tir pour un tireur) en une minute de jeu. En cas d'échec, le message donne pour chaque monstre
+  resté en route sa position et le chemin que son pathfinding trouve. Une map par environnement : les monstres visent le
+  cristal du monde, deux maps côte à côte se le disputeraient. Pour une nouvelle map de l'Atelier, ajouter son id à la
+  liste de `onRegisterGameTests`.
 
 - `./gradlew runGameTestServer` : le test `atelier_monsters` fait apparaître **chaque** monstre chargé et vérifie sa
   fiche (PV, dégâts), l'IA de vague, l'apparition par son `enemy/<id>.json`, et que son coup ne tombe qu'à l'impact ;

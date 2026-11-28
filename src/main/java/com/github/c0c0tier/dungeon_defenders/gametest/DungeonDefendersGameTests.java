@@ -19,6 +19,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import com.github.c0c0tier.dungeon_defenders.block.entity.TrainingDummyBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.entity.TrainingDummyEntity;
 import com.github.c0c0tier.dungeon_defenders.atelier.Atelier;
 import com.github.c0c0tier.dungeon_defenders.ZoneReset;
 import com.github.c0c0tier.dungeon_defenders.atelier.AtelierEntities;
@@ -156,7 +158,8 @@ public final class DungeonDefendersGameTests {
                 ModGameTestInstance.create(
                         Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "eternia_crystal_damage"),
                         DungeonDefendersGameTests::eterniaCrystalDamage,
-                        new TestData<>(environment, EMPTY_STRUCTURE, MAX_TICKS, 0, true)));
+                        // L'animation de destruction dure 1,6 s (32 ticks) : plus que MAX_TICKS.
+                        new TestData<>(environment, EMPTY_STRUCTURE, 60, 0, true)));
 
         event.registerTest(
                 Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "phase_transitions"),
@@ -178,6 +181,9 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "test_instances_serializable", DungeonDefendersGameTests::testInstancesSerializable);
         register(event, environment, "tavern_furniture_models", DungeonDefendersGameTests::tavernFurnitureModels);
         register(event, environment, "zone_reset_old_entities", DungeonDefendersGameTests::zoneResetOldEntities);
+        register(event, environment, "animated_blocks", DungeonDefendersGameTests::animatedBlocks);
+        register(event, environment, "forge_open_close", DungeonDefendersGameTests::forgeOpenClose);
+        register(event, environment, "training_dummy_hurt", DungeonDefendersGameTests::trainingDummyHurt, 60);
         register(event, environment, "monsters_do_not_burn", DungeonDefendersGameTests::monstersDoNotBurn);
         register(event, environment, "score_bonuses", DungeonDefendersGameTests::scoreBonuses);
         register(event, environment, "combat_countdown", DungeonDefendersGameTests::combatCountdown);
@@ -210,14 +216,131 @@ public final class DungeonDefendersGameTests {
         event.registerTest(atelierId, ModGameTestInstance.create(atelierId, DungeonDefendersGameTests::atelierMonsters,
                 new TestData<>(atelier, EMPTY_STRUCTURE, ATELIER_MAX_TICKS, 0, true)));
         register(event, atelier, "atelier_items_and_blocks", DungeonDefendersGameTests::atelierItemsAndBlocks);
+
+        // Les maps de l'Atelier jouées pour de vrai : chacune est la structure de son test, et chacune dans son propre
+        // environnement (donc son propre lot) : les monstres visent LE cristal du monde (CRYSTAL_POS), deux maps côte à
+        // côte se le disputeraient.
+        for (String map : List.of("puits_a", "puits_b")) {
+            Holder<TestEnvironmentDefinition<?>> alone =
+                    event.registerEnvironment(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "map_" + map));
+            Identifier testId = Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "map_paths_" + map);
+            event.registerTest(testId, ModGameTestInstance.create(testId, DungeonDefendersGameTests::mapPaths,
+                    new TestData<>(alone, Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "map/" + map),
+                            MAP_PATHS_MAX_TICKS, 0, true)));
+        }
+    }
+
+    /** Ce que le pathfinding du monstre trouve vers le cristal, pour comprendre où il bloque. */
+    private static String pathSummary(GameTestHelper helper, net.minecraft.world.entity.Mob mob, BlockPos crystal) {
+        var path = mob.getNavigation().createPath(crystal, 1);
+        if (path == null) {
+            return "aucun chemin";
+        }
+        StringBuilder nodes = new StringBuilder();
+        for (int i = 0; i < path.getNodeCount(); i++) {
+            var node = path.getNode(i);
+            nodes.append(i == 0 ? "" : " ").append(helper.relativePos(node.asBlockPos()).toShortString().replace(" ", ""))
+                    .append(node.type == net.minecraft.world.level.pathfinder.PathType.WALKABLE ? "" : ":" + node.type);
+        }
+        return (path.canReach() ? "chemin complet" : "chemin partiel") + " [" + nodes + "]";
+    }
+
+    /** Une minute de jeu : un chemin de 45 blocs se marche en une quinzaine de secondes. */
+    private static final int MAP_PATHS_MAX_TICKS = 1200;
+
+    /**
+     * Les chemins des monstres d'une map : à chaque spawner, un monstre de chaque sorte qu'il fait venir, avec sa vraie
+     * IA. Chacun doit arriver au cristal : au contact pour le corps à corps, à portée de tir pour le tir à distance. Le
+     * cristal a des PV sans fin pour le test. En cas d'échec, le message dit quels monstres sont restés en route, et où.
+     */
+    static void mapPaths(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        List<BlockPos> crystals = new java.util.ArrayList<>();
+        java.util.Map<BlockPos, List<SpawnerBlockEntity.SpawnEntry>> spawners = new java.util.LinkedHashMap<>();
+        List<BlockPos> chests = new java.util.ArrayList<>();
+        helper.forEveryBlockInStructure(relative -> {
+            BlockPos pos = helper.absolutePos(relative);
+            BlockState state = level.getBlockState(pos);
+            if (state.is(ModBlocks.ETERNIA_CRYSTAL.get())) {
+                crystals.add(pos);
+            } else if (state.is(ModBlocks.SPAWNER.get()) && level.getBlockEntity(pos) instanceof SpawnerBlockEntity spawner) {
+                spawners.put(pos, List.copyOf(spawner.getEntries()));
+            } else if (state.is(ModBlocks.MANA_CHEST.get())) {
+                chests.add(pos);
+            }
+        });
+        helper.assertValueEqual(crystals.size(), 1, "cristaux dans la map");
+        helper.assertTrue(!spawners.isEmpty(), "Aucun spawner dans la map");
+        BlockPos crystal = crystals.getFirst();
+        // Les blocs de jeu de la map sont retirés : la structure reste posée après le test, et ses spawners, ses coffres et
+        // son cristal s'inscrivent dans le monde (ACTIVE_SPAWNERS, CRYSTAL_POS…), que partagent les autres tests. Les
+        // monstres n'ont besoin que de la position du cristal, donnée à la main et effacée à la fin.
+        spawners.keySet().forEach(pos -> level.setBlockAndUpdate(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState()));
+        chests.forEach(pos -> level.setBlockAndUpdate(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState()));
+        level.setBlockAndUpdate(crystal, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState());
+        level.setData(ModAttachments.CRYSTAL_POS, crystal);
+        record Walker(net.minecraft.world.entity.Mob mob, String what, double reach) {
+        }
+        List<Walker> walkers = new java.util.ArrayList<>();
+        spawners.forEach((spawner, entries) -> {
+            for (var entry : entries) {
+                EnemyDefinition definition = EnemyRegistry.byId(entry.enemy());
+                helper.assertTrue(definition != null, "Ennemi inconnu " + entry.enemy() + " au spawner " + spawner);
+                var entity = definition.spawn(level, entry.enemy(), spawner);
+                helper.assertTrue(entity instanceof net.minecraft.world.entity.Mob, "Pas de monstre pour " + entry.enemy());
+                double reach = definition.behavior() instanceof EnemyBehavior.RangedCrystal ranged ? ranged.shootRange() + 1.0D : 3.0D;
+                walkers.add(new Walker((net.minecraft.world.entity.Mob) entity,
+                        entry.enemy().getPath() + " du spawner " + helper.relativePos(spawner).toShortString(), reach));
+            }
+        });
+        Runnable cleanUp = () -> {
+            walkers.forEach(walker -> walker.mob().discard());
+            if (crystal.equals(level.getData(ModAttachments.CRYSTAL_POS))) {
+                level.removeData(ModAttachments.CRYSTAL_POS);
+            }
+        };
+        // Juste avant la limite de temps, si tout le monde n'est pas arrivé : rien ne doit rester derrière le test.
+        helper.runAfterDelay(MAP_PATHS_MAX_TICKS - 2, cleanUp);
+        java.util.Map<Walker, Long> arrived = new java.util.HashMap<>();
+        net.minecraft.world.phys.Vec3 target = net.minecraft.world.phys.Vec3.atBottomCenterOf(crystal);
+        helper.onEachTick(() -> {
+            for (Walker walker : walkers) {
+                var mob = walker.mob();
+                double horizontal = Math.hypot(mob.getX() - target.x, mob.getZ() - target.z);
+                if (!arrived.containsKey(walker) && mob.isAlive() && horizontal <= walker.reach()
+                        && Math.abs(mob.getY() - target.y) <= 3.0D) {
+                    arrived.put(walker, helper.getTick());
+                }
+            }
+        });
+        helper.succeedWhen(() -> {
+            List<String> enRoute = walkers.stream().filter(walker -> !arrived.containsKey(walker))
+                    .map(walker -> walker.what() + " (à " + helper.relativePos(walker.mob().blockPosition()).toShortString()
+                            + (walker.mob().isAlive() ? "" : ", mort") + ", " + pathSummary(helper, walker.mob(), crystal) + ")")
+                    .toList();
+            if (!enRoute.isEmpty()) {
+                throw helper.assertionException(net.minecraft.network.chat.Component.literal("Pas arrivés au cristal ("
+                        + helper.relativePos(crystal).toShortString() + ") : " + String.join(", ", enRoute)));
+            }
+            com.mojang.logging.LogUtils.getLogger().info("Chemins de la map (cristal en {}) : {}",
+                    helper.relativePos(crystal).toShortString(), walkers.stream()
+                    .map(walker -> walker.what() + " en " + arrived.get(walker) / 20.0D + " s").toList());
+            cleanUp.run();
+        });
     }
 
     private static final int ATELIER_MAX_TICKS = 200;
 
     private static void register(RegisterGameTestsEvent event, Holder<TestEnvironmentDefinition<?>> environment,
                                  String name, Consumer<GameTestHelper> test) {
+        register(event, environment, name, test, MAX_TICKS);
+    }
+
+    /** Pour un test qui attend plus que {@code MAX_TICKS} (une animation, une invocation chaque seconde). */
+    private static void register(RegisterGameTestsEvent event, Holder<TestEnvironmentDefinition<?>> environment,
+                                 String name, Consumer<GameTestHelper> test, int maxTicks) {
         Identifier id = Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, name);
-        event.registerTest(id, ModGameTestInstance.create(id, test, new TestData<>(environment, EMPTY_STRUCTURE, MAX_TICKS, 0, true)));
+        event.registerTest(id, ModGameTestInstance.create(id, test, new TestData<>(environment, EMPTY_STRUCTURE, maxTicks, 0, true)));
     }
 
     /**
@@ -235,10 +358,95 @@ public final class DungeonDefendersGameTests {
         crystal.damage(10);
         helper.assertValueEqual(crystal.getCrystalHealth(), defaultHealth - 10, "PV du cristal après 10 dégâts");
 
+        // À 0 PV, le cristal joue sa destruction (modèle animé dd_cristal_v2, depuis le 2026-11-28) : il reste là pendant
+        // l'animation, ne prend plus de dégâts, puis disparaît.
         crystal.damage(defaultHealth);
-        helper.assertBlockNotPresent(ModBlocks.ETERNIA_CRYSTAL.get(), pos);
+        helper.assertTrue(crystal.isDying(), "Le cristal à 0 PV devrait jouer sa destruction");
+        helper.assertTrue(crystal.animations().dernierRole() != null && crystal.animations().dernierRole().equals("death"),
+                "Le cristal à 0 PV devrait jouer death");
+        helper.assertBlockPresent(ModBlocks.ETERNIA_CRYSTAL.get(), pos);
+        crystal.damage(10);
+        helper.assertValueEqual(crystal.getCrystalHealth(), 0, "PV du cristal pendant sa destruction");
+        // Marqueur impact de death à 0,4 s, animation de 1,6 s : l'explosion au tick 8, le bloc retiré au tick 31.
+        helper.assertValueEqual(EterniaCrystalBlockEntity.impactTick(), 8, "tick de l'explosion");
+        helper.assertValueEqual(EterniaCrystalBlockEntity.removalTick(), 31, "tick du retrait du cristal");
+        helper.runAfterDelay(EterniaCrystalBlockEntity.removalTick() - 5,
+                () -> helper.assertBlockPresent(ModBlocks.ETERNIA_CRYSTAL.get(), pos));
+        helper.runAfterDelay(EterniaCrystalBlockEntity.removalTick() + 5, () -> {
+            helper.assertBlockNotPresent(ModBlocks.ETERNIA_CRYSTAL.get(), pos);
+            helper.succeed();
+        });
+    }
 
+    // Les blocs animés de l'Atelier (prompt v2.3, format de doc/DEMANDE_ATELIER_BLOCS_ANIMES.md) : les trois fiches sont
+    // chargées avec leurs rôles, l'instant d'impact de death est lu côté serveur, et le décor dd_* comme les blocs du jeu
+    // qui prennent son modèle ont un block entity animé, dessiné par GeckoLib (forme de rendu invisible).
+    static void animatedBlocks(GameTestHelper helper) {
+        Map<String, List<String>> roles = Map.of(
+                "dd_forge_v2", List.of("idle", "open", "opened", "close"),
+                "dd_dummy", List.of("idle", "hurt", "hurt_heavy"),
+                "dd_cristal_v2", List.of("idle", "death"));
+        roles.forEach((id, attendus) -> {
+            var anime = com.github.c0c0tier.dungeon_defenders.atelier.Atelier.anime(id);
+            helper.assertTrue(anime.isPresent(), "Modèle animé non chargé : " + id);
+            helper.assertTrue(anime.get().rolesAnimation().keySet().containsAll(attendus), id + " : rôles " + anime.get().rolesAnimation());
+            helper.assertTrue(com.github.c0c0tier.dungeon_defenders.atelier.Atelier.aUnGlowmask(anime.get().texture()),
+                    id + " : glowmask non trouvé");
+        });
+        var death = com.github.c0c0tier.dungeon_defenders.atelier.Atelier.impactBloc("dd_cristal_v2", "death");
+        helper.assertTrue(death.marqueur() && Math.abs(death.secondes() - 0.4F) < 1e-3F && Math.abs(death.longueur() - 1.6F) < 1e-3F,
+                "Impact de death : " + death);
+        BlockPos pos = new BlockPos(1, 1, 1);
+        List<Block> blocks = List.of(
+                BuiltInRegistries.BLOCK.getValue(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "dd_forge_v2")),
+                BuiltInRegistries.BLOCK.getValue(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "dd_dummy")),
+                BuiltInRegistries.BLOCK.getValue(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "dd_cristal_v2")),
+                ModBlocks.FORGE.get(), ModBlocks.TRAINING_DUMMY.get(), ModBlocks.TAVERN_CRYSTAL.get(), ModBlocks.ETERNIA_CRYSTAL.get());
+        for (Block block : blocks) {
+            helper.setBlock(pos, block);
+            helper.assertTrue(helper.getLevel().getBlockEntity(helper.absolutePos(pos))
+                    instanceof com.github.c0c0tier.dungeon_defenders.atelier.BlocAnimable, block + " : pas de block entity animé");
+            helper.assertTrue(helper.getBlockState(pos).getRenderShape() == net.minecraft.world.level.block.RenderShape.INVISIBLE,
+                    block + " : devrait être dessiné par GeckoLib");
+        }
         helper.succeed();
+    }
+
+    // La Forge s'ouvre au premier joueur qui ouvre son écran et se referme quand le dernier le ferme (ForgeViewers).
+    static void forgeOpenClose(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 1, 1);
+        helper.setBlock(pos, ModBlocks.FORGE.get());
+        var forge = helper.getBlockEntity(pos, com.github.c0c0tier.dungeon_defenders.block.entity.ForgeBlockEntity.class);
+        BlockPos absolute = helper.absolutePos(pos);
+        java.util.UUID a = java.util.UUID.randomUUID();
+        java.util.UUID b = java.util.UUID.randomUUID();
+        var server = helper.getLevel().getServer();
+        com.github.c0c0tier.dungeon_defenders.block.ForgeViewers.open(a, helper.getLevel(), absolute);
+        helper.assertTrue(forge.animations().ouvert() && "open".equals(forge.animations().dernierRole()), "Forge ouverte par le premier joueur");
+        com.github.c0c0tier.dungeon_defenders.block.ForgeViewers.open(b, helper.getLevel(), absolute);
+        helper.assertValueEqual(com.github.c0c0tier.dungeon_defenders.block.ForgeViewers.viewers(helper.getLevel(), absolute), 2L, "joueurs devant la forge");
+        com.github.c0c0tier.dungeon_defenders.block.ForgeViewers.close(a, server);
+        helper.assertTrue(forge.animations().ouvert(), "La forge reste ouverte tant qu'un joueur s'en sert");
+        com.github.c0c0tier.dungeon_defenders.block.ForgeViewers.close(b, server);
+        helper.assertTrue(!forge.animations().ouvert() && "close".equals(forge.animations().dernierRole()), "Forge refermée par le dernier joueur");
+        helper.succeed();
+    }
+
+    // Le mannequin joue hurt quand son entité encaisse un coup, hurt_heavy à partir de 8 dégâts.
+    static void trainingDummyHurt(GameTestHelper helper) {
+        BlockPos pos = new BlockPos(1, 2, 1);
+        helper.setBlock(pos, ModBlocks.TRAINING_DUMMY.get());
+        var block = helper.getBlockEntity(pos, TrainingDummyBlockEntity.class);
+        block.onHit(3.0F);
+        helper.assertValueEqual(block.animations().dernierRole(), "hurt", "petit coup");
+        // Par l'entité elle-même, une fois invoquée par le bloc (un contrôle par seconde).
+        helper.runAfterDelay(25, () -> {
+            var dummies = helper.getLevel().getEntitiesOfClass(TrainingDummyEntity.class, new AABB(helper.absolutePos(pos)).inflate(1.5D));
+            helper.assertTrue(dummies.size() == 1, "Un mannequin devrait être invoqué : " + dummies.size());
+            dummies.getFirst().hurtServer(helper.getLevel(), helper.getLevel().damageSources().generic(), 10.0F);
+            helper.assertValueEqual(block.animations().dernierRole(), "hurt_heavy", "gros coup sur l'entité");
+            helper.succeed();
+        });
     }
 
     /**

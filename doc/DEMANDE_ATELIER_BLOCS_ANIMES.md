@@ -1,6 +1,10 @@
 # Demande à l'Atelier : les blocs animés (forge, mannequin, cristal)
 
-> **En attente** (2026-11-28). À transmettre à la session de l'Atelier (`~/MC_Atelier_Neoforge`). Ce fichier est une
+> **Traitée** (2026-11-28) : format retenu tel quel (prompt de l'Atelier v2.3), `dd_forge_v2`, `dd_dummy` et
+> `dd_cristal_v2` déployés (commit `d769cc0`), implémenté ici le même jour (voir [ATELIER.md](ATELIER.md#les-blocs-animés)).
+> Corentin a confirmé que `death` sert au cristal d'Eternia des maps.
+>
+> **Avant** (2026-11-28). À transmettre à la session de l'Atelier (`~/MC_Atelier_Neoforge`). Ce fichier est une
 > **proposition** : c'est l'Atelier qui fixe le format (même règle que pour les blocs orientés et les menuiseries,
 > [DEMANDE_ATELIER_BLOCS.md](DEMANDE_ATELIER_BLOCS.md)), puis met à jour l'« Historique » de
 > `docs/PROMPT_DUNGEON_DEFENDERS.md`. Dungeon Defenders lit ce qu'il décide.

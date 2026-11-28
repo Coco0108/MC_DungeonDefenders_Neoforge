@@ -504,7 +504,7 @@ vérifie la CI.
   fonctionnent exactement comme avant. À l'opposé du choix fait pour `SpawnerBlock`, où vider
   `getShape` sert justement à rendre le bloc introuvable en survie. Reconnaissance par block
   entity (`AbstractTowerBlockEntity`, donc générique à toute tour future, et
-  `EterniaCrystalBlockEntity`) plus la classe `TavernCrystalBlock`, qui n'a pas de block entity.
+  `EterniaCrystalBlockEntity`) plus la classe `TavernCrystalBlock`, reconnue par son bloc (son block entity, depuis le 2026-11-28, ne porte que son modèle animé).
   Option CLIENT `showTowerBlockOutline` pour remettre le contour, **décochée par défaut**.
   **Jamais vérifié visuellement.** Détail dans
   [02-gameplay.md](02-gameplay.md#le-contour-de-sélection-masqué-sur-les-tours-et-les-cristaux--clientblockoutlineclienteventsjava).

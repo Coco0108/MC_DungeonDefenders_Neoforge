@@ -6,7 +6,9 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -23,6 +25,7 @@ public final class Atelier {
     private static Map<String, FicheObjet> objets = Map.of();
     private static Map<String, FicheBloc> blocs = Map.of();
     private static Map<String, List<double[]>> formes = Map.of();
+    private static Map<String, Map<String, Impact>> impactsBlocs = Map.of();
 
     private Atelier() {
     }
@@ -39,10 +42,14 @@ public final class Atelier {
     }
 
     static void initObjets(Map<String, FicheObjet> validesObjets, Map<String, FicheBloc> validesBlocs,
-            Map<String, List<double[]>> boites) {
+            Map<String, List<double[]>> boites, Map<String, Map<String, Impact>> instantsBlocs, Set<Identifier> lumineusesBlocs) {
         objets = Collections.unmodifiableMap(validesObjets);
         blocs = Collections.unmodifiableMap(validesBlocs);
         formes = Collections.unmodifiableMap(boites);
+        impactsBlocs = Collections.unmodifiableMap(instantsBlocs);
+        Set<Identifier> toutes = new HashSet<>(glowmasks);
+        toutes.addAll(lumineusesBlocs);
+        glowmasks = Collections.unmodifiableSet(toutes);
     }
 
     /** Les monstres chargés, par id. */
@@ -74,7 +81,7 @@ public final class Atelier {
         return sons;
     }
 
-    /** Vrai si cette texture de monstre a son calque lumineux {@code <texture>_glowmask.png}. */
+    /** Vrai si cette texture de monstre ou de bloc animé a son calque lumineux {@code <texture>_glowmask.png}. */
     public static boolean aUnGlowmask(Identifier texture) {
         return glowmasks.contains(texture);
     }
@@ -97,5 +104,19 @@ public final class Atelier {
     /** Les boîtes d'un bloc {@code modele}, en pixels ({@code [x0, y0, z0, x1, y1, z1]}) ; vide pour un cube. */
     public static List<double[]> forme(String blocId) {
         return formes.getOrDefault(blocId, List.of());
+    }
+
+    /** Le modèle animé d'un bloc de l'Atelier ({@code anime} dans sa fiche), s'il en a un et qu'il a été chargé. */
+    public static Optional<FicheBloc.Anime> anime(String blocId) {
+        FicheBloc bloc = blocs.get(blocId);
+        return bloc == null ? Optional.empty() : bloc.anime();
+    }
+
+    /**
+     * Quand un rôle d'un bloc animé porte son effet (le marqueur {@code impact} de son animation, ou sa moitié), et la
+     * durée de cette animation ; {@code Impact(0, false, 0)} si le bloc ou le rôle n'existe pas.
+     */
+    public static Impact impactBloc(String blocId, String role) {
+        return impactsBlocs.getOrDefault(blocId, Map.of()).getOrDefault(role, new Impact(0, false, 0));
     }
 }

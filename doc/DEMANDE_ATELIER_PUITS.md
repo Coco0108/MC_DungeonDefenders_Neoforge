@@ -1,6 +1,11 @@
 # Demande à l'Atelier : construire la première map, le puits, en deux versions
 
-> **En attente** (2026-11-28). À transmettre à la session de l'Atelier (`~/MC_Atelier_Neoforge`). Dungeon Defenders ne
+> **Traitée** (2026-11-28) : `puits_a` « La Salle du Puits » et `puits_b` « La Citerne engloutie » déployées (commits
+> `919e264`, `3ae3e1e`), lues et jouées par les gametests `map_paths_*` : tous les monstres arrivent au cristal, après une
+> correction de notre côté (les blocs modèles sont maintenant des obstacles pour le pathfinding, voir
+> [ATELIER.md](ATELIER.md#les-blocs-animés)). À essayer en jeu par Corentin : [06-a-tester.md](06-a-tester.md).
+>
+> **Avant** (2026-11-28). À transmettre à la session de l'Atelier (`~/MC_Atelier_Neoforge`). Dungeon Defenders ne
 > modifie pas l'Atelier : ce fichier est une **demande**, l'Atelier décide de la façon de la ranger chez lui (comme
 > `maps/taverne/`).
 

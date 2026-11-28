@@ -38,7 +38,9 @@ public class EterniaCrystalBlockEntityRenderer
     // (une seule instance, réutilisée pour tous les cristaux), indexée par position — en
     // pratique une seule entrée à la fois (une seule map active), jamais nettoyée mais bornée
     // par le nombre de positions de cristal distinctes vues dans la session, négligeable.
-    private final Map<BlockPos, HealthLerp> lerpByPosition = new HashMap<>();
+    // Statique depuis le 2026-11-28 : partagée avec le renderer GeckoLib du cristal animé (EterniaCrystalGeoRenderer),
+    // qui dessine la même barre.
+    private static final Map<BlockPos, HealthLerp> lerpByPosition = new HashMap<>();
 
     public EterniaCrystalBlockEntityRenderer(BlockEntityRendererProvider.Context context) {
     }
@@ -58,13 +60,17 @@ public class EterniaCrystalBlockEntityRenderer
     ) {
         BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress);
 
+        state.healthPercent = healthPercent(blockEntity);
+    }
+
+    /** La part de PV à afficher pour ce cristal, animée d'un palier à l'autre. */
+    public static float healthPercent(EterniaCrystalBlockEntity blockEntity) {
         float target = Mth.clamp(
                 blockEntity.getCrystalHealth() / (float) Config.DEFAULT_HEALTH.get(), 0.0F, 1.0F);
-        HealthLerp lerp = this.lerpByPosition.computeIfAbsent(
+        HealthLerp lerp = lerpByPosition.computeIfAbsent(
                 blockEntity.getBlockPos(), pos -> new HealthLerp(target, LERP_MILLISECONDS));
         lerp.setTarget(target);
-
-        state.healthPercent = lerp.currentPercent();
+        return lerp.currentPercent();
     }
 
     @Override
@@ -74,6 +80,11 @@ public class EterniaCrystalBlockEntityRenderer
             SubmitNodeCollector collector,
             CameraRenderState camera
     ) {
+        submitBar(state.healthPercent, poseStack, collector, camera);
+    }
+
+    /** La barre de vie en billboard au-dessus du cristal, la pose étant à l'origine du bloc. */
+    public static void submitBar(float healthPercent, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
         poseStack.pushPose();
         poseStack.translate(0.5F, BAR_Y, 0.5F);
         // L'orientation de la caméra suffit à obtenir un billboard ; après cette
@@ -82,7 +93,7 @@ public class EterniaCrystalBlockEntityRenderer
         poseStack.mulPose(camera.orientation);
         poseStack.scale(1.0F, -1.0F, 1.0F);
 
-        HealthBarRendering.render(poseStack, collector, BAR_WIDTH, BAR_HEIGHT, state.healthPercent);
+        HealthBarRendering.render(poseStack, collector, BAR_WIDTH, BAR_HEIGHT, healthPercent);
 
         poseStack.popPose();
     }

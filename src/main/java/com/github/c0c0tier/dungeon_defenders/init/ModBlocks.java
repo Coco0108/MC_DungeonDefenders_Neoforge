@@ -353,8 +353,8 @@ public class ModBlocks {
     // 12. Forge : meuble de la taverne, ouvre l'inventaire du joueur (voir ForgeBlock).
     public static final DeferredBlock<ForgeBlock> FORGE = BLOCKS.registerBlock("forge",
             ForgeBlock::new,
-            // Modèle dd_forge_v2 de l'Atelier : pas un cube plein, et son foyer éclaire comme le bloc de décor (13).
-            properties -> properties.strength(3.5F).noOcclusion().lightLevel(state -> 13));
+            // Modèle dd_forge_v2 de l'Atelier : pas un cube plein, et son foyer éclaire comme le bloc de décor (15 depuis sa fiche v2.3).
+            properties -> properties.strength(3.5F).noOcclusion().lightLevel(state -> 15));
 
     public static final DeferredItem<BlockItem> FORGE_ITEM =
             ITEMS.registerSimpleBlockItem("forge", FORGE);

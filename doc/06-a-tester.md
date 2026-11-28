@@ -1852,3 +1852,42 @@ cristal, une arrivée, une forge, un mannequin, un support d'armure décoratif.
 - [ ] Arrêter le serveur en pleine partie, le relancer, relancer une partie sur la même map : aucun monstre de la
       partie interrompue ne réapparaît.
 
+
+## Blocs animés : forge, mannequin, cristaux (2026-11-28)
+
+Modèles animés de l'Atelier (`dd_forge_v2`, `dd_dummy`, `dd_cristal_v2`, commit `d769cc0`), branchés sur les blocs du jeu
+(voir [ATELIER.md](ATELIER.md#les-blocs-animés)). Rien de tout ça n'a été vu à l'écran : seuls les gametests sont passés.
+
+- [ ] **Sens** : la forge et le mannequin de la taverne regardent du même côté qu'avant (le modèle animé est tourné par
+      GeckoLib selon `facing`, comme le modèle fixe l'était par l'état de bloc). S'ils sont dos au joueur ou de profil,
+      le dire : c'est une ligne à changer.
+- [ ] La forge, le mannequin et le cristal de la taverne bougent au repos (`idle`) ; leurs parties lumineuses (feu de la
+      forge, cristal) brillent dans le noir (glowmask).
+- [ ] **Forge** : ouvrir son écran l'ouvre (`open` puis `opened` en boucle) ; le fermer (bouton, Échap) la referme
+      (`close`). À deux joueurs : elle ne se referme qu'une fois le dernier écran fermé.
+- [ ] **Mannequin** : un coup d'épée ou d'une tour le fait réagir (`hurt`) ; un coup d'au moins 8 dégâts, plus fort
+      (`hurt_heavy`).
+- [ ] **Cristal d'Eternia** (en map) : il a le modèle animé du cristal de la taverne, avec sa barre de vie au-dessus. À
+      0 PV, il joue sa destruction ; l'explosion tombe au bon moment de l'animation (0,4 s), puis il disparaît et la
+      partie est perdue. Aucune image où il revient entier juste avant de disparaître.
+- [ ] Sa hitbox reste de 3 blocs de haut (inchangée) pour un modèle d'environ 2 blocs : dire si ça gêne.
+- [ ] `/dd_bloc_anim <pos> <role>` (rôles proposés par la complétion) joue chaque rôle sur un bloc animé, décors
+      `dd_*` compris.
+- [ ] Le décor `dd_forge_v2` posé en créatif est animé lui aussi (`idle`).
+
+## Les deux maps du puits (2026-11-28)
+
+`puits_a` « La Salle du Puits » et `puits_b` « La Citerne engloutie », dans le pack « dungeon_defenders » de l'écran du
+cristal de la taverne. Les gametests `map_paths_*` ont lâché un monstre de chaque sorte à chaque spawner : tous arrivent
+au cristal, en 10 à 27 s. Ils bloquaient avant une correction de notre côté (les monstres traversaient la margelle et les
+passerelles comme si elles n'existaient pas).
+
+- [ ] Les deux maps apparaissent dans l'écran du cristal, avec leur aperçu.
+- [ ] Une partie complète (5 vagues) sur chacune : les monstres de chaque entrée arrivent au cristal, sans rester
+      coincés ni tomber dans l'eau.
+- [ ] **`puits_a`** : l'entrée nord passe autour du puits (ou par-dessus la margelle) ; l'entrée haute de l'ouest
+      descend ses escaliers.
+- [ ] **`puits_b`** : les monstres traversent les passerelles vers l'île du cristal sans tomber.
+- [ ] Place pour les tours le long des chemins ; les zones interdites (`no_build_zone`) sont au bon endroit.
+- [ ] La lumière : on voit les monstres arriver.
+- [ ] Choisir : garder les deux, ou une seule (laquelle).

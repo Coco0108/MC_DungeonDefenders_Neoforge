@@ -7,6 +7,7 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -16,7 +17,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * Its shape, for selection and collision, is the union of the boxes of its model; it never hides the faces of its
  * neighbours (registered with {@code noOcclusion}) and lets the sky light through, like any block that does not fill its cube.
  *
- * <p>Repris tel quel de l'Atelier (objet/BlocModele.java).
+ * <p>Repris de l'Atelier (objet/BlocModele.java), avec en plus {@link #isPathfindable} (2026-11-28).
  */
 public class BlocModele extends Block {
     private final VoxelShape shape;
@@ -30,6 +31,19 @@ public class BlocModele extends Block {
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return shape;
+    }
+
+    /**
+     * Pour les monstres, un bloc modèle qui a une forme est un obstacle, pas de l'air. Par défaut, le pathfinding vanilla
+     * traverse tout ce qui n'est pas un cube plein : il menait les monstres droit dans la margelle du puits (14 px de
+     * haut, vue au même niveau que le sol, donc sans saut) et à travers les passerelles (planches en haut du bloc, vues
+     * comme du vide), d'où ils tombaient dans l'eau (vu par le gametest {@code map_paths_*}, 2026-11-28). Bloqué, le bloc
+     * est contourné, ou franchi par-dessus : le pathfinding pose alors le monstre sur le haut de sa forme (il saute sur
+     * la margelle, il marche sur la passerelle). Un bloc sans forme (décor traversable) reste traversé.
+     */
+    @Override
+    protected boolean isPathfindable(BlockState state, PathComputationType type) {
+        return type == PathComputationType.LAND ? shape.isEmpty() : super.isPathfindable(state, type);
     }
 
     @Override

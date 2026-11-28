@@ -15,16 +15,22 @@ import net.minecraft.world.level.block.SlabBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.TransparentBlock;
 import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.properties.BlockSetType;
 import net.minecraft.world.level.block.state.properties.WoodType;
 import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraft.core.registries.Registries;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -44,6 +50,10 @@ public final class AtelierObjets {
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(DungeonDefendersMod.MODID);
     /** Objets puis blocs, dans l'ordre de l'onglet créatif. */
     private static final List<Supplier<? extends Item>> CONTENTS = new ArrayList<>();
+    private static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
+            DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, DungeonDefendersMod.MODID);
+    /** Un type de block entity par bloc animé ({@code anime}), comme un type d'entité par monstre. */
+    private static final Map<String, Supplier<BlockEntityType<BlocAnimeEntity>>> ANIMES = new HashMap<>();
 
     private AtelierObjets() {
     }
@@ -56,10 +66,25 @@ public final class AtelierObjets {
         for (FicheBloc bloc : Atelier.blocs().values()) {
             var block = BLOCKS.registerBlock(bloc.id(), constructeur(bloc), properties -> blockProperties(bloc, properties));
             CONTENTS.add(ITEMS.registerSimpleBlockItem(block));
+            if (anime(bloc)) {
+                ANIMES.put(bloc.id(), BLOCK_ENTITIES.register(bloc.id(), () -> new BlockEntityType<>(
+                        (pos, state) -> new BlocAnimeEntity(ANIMES.get(bloc.id()).get(), pos, state, bloc.id()), Set.of(block.get()))));
+            }
         }
         BLOCKS.register(modEventBus);
+        BLOCK_ENTITIES.register(modEventBus);
         ITEMS.register(modEventBus);
         modEventBus.addListener(AtelierObjets::addToCreativeTab);
+    }
+
+    /** Les types de block entity des blocs animés, par id de bloc (pour leurs renderers, côté client). */
+    public static Map<String, Supplier<BlockEntityType<BlocAnimeEntity>>> animes() {
+        return Collections.unmodifiableMap(ANIMES);
+    }
+
+    /** Un bloc {@code modele} simple avec {@code anime} (le chargeur refuse {@code anime} ailleurs). */
+    private static boolean anime(FicheBloc bloc) {
+        return bloc.anime().isPresent() && bloc.modele() && bloc.type() == FicheBloc.Type.SIMPLE;
     }
 
     private static void addToCreativeTab(BuildCreativeModeTabContentsEvent event) {
@@ -72,6 +97,13 @@ public final class AtelierObjets {
     private static Function<BlockBehaviour.Properties, ? extends Block> constructeur(FicheBloc bloc) {
         if (bloc.type() != FicheBloc.Type.SIMPLE) {
             return menuiserie(bloc.type());
+        }
+        if (anime(bloc)) {
+            List<double[]> forme = Atelier.forme(bloc.id());
+            Supplier<BlockEntityType<BlocAnimeEntity>> type = () -> ANIMES.get(bloc.id()).get();
+            return bloc.orientation() == FicheBloc.Orientation.HORIZONTALE
+                    ? properties -> new BlocAnimeOriente(properties, forme, type)
+                    : properties -> new BlocAnime(properties, forme, type);
         }
         if (bloc.modele()) {
             List<double[]> forme = Atelier.forme(bloc.id());

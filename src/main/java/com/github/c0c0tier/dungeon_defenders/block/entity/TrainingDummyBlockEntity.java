@@ -15,8 +15,13 @@ import java.util.List;
 
 // Entretient le mannequin d'entraînement du bloc : s'il n'y en a pas à sa position, en invoque
 // un. Aucun état à persister — contrairement à SpawnerBlockEntity, il n'y a rien à configurer,
-// ce block entity n'existe que pour avoir un tick serveur.
-public class TrainingDummyBlockEntity extends BlockEntity {
+// ce block entity n'existait que pour avoir un tick serveur. Depuis le 2026-11-28, il porte aussi le modèle animé
+// dd_dummy de l'Atelier (AnimatedBlockEntity) : l'entité lui fait jouer hurt ou hurt_heavy à chaque coup encaissé
+// (voir TrainingDummyEntity#hurtServer et onHit).
+public class TrainingDummyBlockEntity extends AnimatedBlockEntity {
+
+    /** À partir de ces dégâts en un coup, le mannequin joue {@code hurt_heavy} au lieu de {@code hurt}. */
+    public static final float HEAVY_HIT_DAMAGE = 8.0F;
 
     // Un contrôle par seconde suffit largement : le mannequin ne peut disparaître qu'à un
     // rechargement de monde ou si quelqu'un le supprime à la main. Inutile de balayer les
@@ -27,7 +32,14 @@ public class TrainingDummyBlockEntity extends BlockEntity {
     private static final double SEARCH_RADIUS = 1.5D;
 
     public TrainingDummyBlockEntity(BlockPos pos, BlockState state) {
-        super(DungeonDefendersMod.TRAINING_DUMMY_BE.get(), pos, state);
+        super(DungeonDefendersMod.TRAINING_DUMMY_BE.get(), pos, state, "dd_dummy");
+    }
+
+    /** Le mannequin a encaissé {@code damage} : {@code hurt_heavy} pour un gros coup (s'il existe), sinon {@code hurt}. */
+    public void onHit(float damage) {
+        if (!(damage >= HEAVY_HIT_DAMAGE && jouer("hurt_heavy"))) {
+            jouer("hurt");
+        }
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, TrainingDummyBlockEntity blockEntity) {

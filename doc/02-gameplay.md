@@ -209,8 +209,9 @@ chaque changement de version de Minecraft. Gametest `monsters_do_not_burn` (il �
 
 ### Le bloc — `block/TavernCrystalBlock.java`
 
-Un cristal, mais **différent** d'`EterniaCrystalBlock` : pas de block entity, pas de PV, pas
-de mécanique de combat — juste un point d'interaction dans la taverne. Clic droit demande au
+Un cristal, mais **différent** d'`EterniaCrystalBlock` : pas de PV, pas
+de mécanique de combat (depuis le 2026-11-28, un block entity, `TavernCrystalBlockEntity`, porte
+seulement son modèle animé `dd_cristal_v2`, qui boucle `idle` ; il ne joue jamais `death`) — juste un point d'interaction dans la taverne. Clic droit demande au
 client d'ouvrir `MapSelectionScreen`, via un paquet sans champ :
 
 ```java
@@ -401,7 +402,7 @@ simples (ex. `minecraft:item/dirt`, qui référence directement `minecraft:block
 |---|---|
 | Codec | `simpleCodec(EterniaCrystalBlock::new)` — obligatoire depuis 1.20.5 |
 | Block entity | `newBlockEntity` → `new EterniaCrystalBlockEntity(pos, state)` |
-| Render shape | `RenderShape.MODEL` (modèle JSON classique) |
+| Render shape | `RenderShape.INVISIBLE` quand le modèle animé `dd_cristal_v2` est déployé (dessiné par GeckoLib, `EterniaCrystalGeoRenderer`), sinon `RenderShape.MODEL` (modèle JSON classique) |
 | Collision | `Shapes.box(0, 0, 0, 1, 3, 1)` — 1×3×1, le cristal est infranchissable sur 3 blocs |
 | Sélection | même boîte 1×3×1 — le ciblage reste sur 3 blocs de haut, mais le contour noir n'est **plus dessiné** (voir "Le contour de sélection masqué sur les tours et les cristaux") |
 
@@ -467,10 +468,26 @@ private int crystalHealth = DEFAULT_HEALTH;
   - appelle `setChanged()` (marque le chunk à sauvegarder) ;
   - sort si `level` est nul ou côté client ;
   - appelle `level.sendBlockUpdated(...)` pour pousser les nouveaux PV vers les clients ;
-  - si les PV tombent à ≤ 0 : `level.destroyBlock(worldPosition, false)` — le `false` empêche
-    le drop de l'item — puis message `dungeon_defenders.eternia_crystal.destroyed` en rouge
-    gras à tous les joueurs, et `PhaseTransitions.onDefeat(level)` (voir plus bas, "Victoire et
-    défaite") pour remettre la partie à zéro.
+  - si les PV tombent à ≤ 0 : la **destruction animée** (depuis le 2026-11-28, voir plus bas),
+    puis `level.destroyBlock(worldPosition, false)` — le `false` empêche le drop de l'item —,
+    message `dungeon_defenders.eternia_crystal.destroyed` en rouge gras à tous les joueurs, et
+    `PhaseTransitions.onDefeat(level)` (voir plus bas, "Victoire et défaite") pour remettre la
+    partie à zéro.
+
+**Destruction animée** (modèle `dd_cristal_v2` de l'Atelier, voir [ATELIER.md](ATELIER.md#les-blocs-animés)).
+Le cristal d'Eternia prend le modèle animé du cristal de la taverne (`idle` en boucle). À 0 PV, il
+joue `death` (1,6 s) au lieu de disparaître d'un coup :
+
+| Tick | Ce qui se passe |
+|---|---|
+| 0 | `death` démarre ; le cristal ne prend plus de dégâts (`isDying`), les monstres continuent de le viser |
+| 8 (0,4 s, marqueur `impact` de l'animation, sinon sa moitié) | L'explosion : particules `EXPLOSION_EMITTER` et `END_ROD`, son d'explosion ; aucun dégât, aucun bloc cassé |
+| 31 (un tick avant la fin) | Le bloc est retiré, la partie est perdue (`destroy`). Un tick avant la fin : le modèle ne revient jamais à `idle` sous les yeux des joueurs |
+
+Le serveur lit ces instants dans le `.animation.json` au démarrage (`Atelier.impactBloc`),
+comme pour le coup d'un monstre. Sans modèle animé déployé, explosion et défaite tout de
+suite. Le ticker serveur d'`EterniaCrystalBlock` fait avancer la séquence. Gametest
+`eternia_crystal_damage`.
 
 **Persistance.** `saveAdditional` / `loadAdditional` utilisent l'API `ValueOutput` /
 `ValueInput` (le remplaçant des `CompoundTag` bruts) :
@@ -4167,7 +4184,7 @@ nommée par ce choix.
 
 Pendant que le plan est affiché, un scan périodique (toutes les 20 ticks) cherche le cristal de
 la zone actuelle : le Cristal d'Eternia (`EterniaCrystalBlockEntity`) en map, le cristal de la
-taverne (`TavernCrystalBlock`, pas de block entity, comparaison de `Block` directement) à la
+taverne (`TavernCrystalBlock`, comparaison de `Block` directement ; son block entity ne porte que son modèle animé) à la
 Taverne. **Borné exactement** à la zone connue (les trois attachments de taille), pas à un rayon
 arbitraire autour du joueur — contrairement au scan similaire de `MarkerOverlayClientEvents`
 (marqueurs d'édition en créatif), la zone entière est ici petite et exactement connue, inutile

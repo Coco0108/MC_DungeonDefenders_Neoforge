@@ -6,6 +6,11 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.core.BlockPos;
+import com.github.c0c0tier.dungeon_defenders.atelier.BlocAnimable;
+import com.github.c0c0tier.dungeon_defenders.atelier.FicheBloc;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -20,6 +25,8 @@ import java.io.IOException;
 //   bouton "Abandonner le niveau" du menu pause (voir PauseMenuClientEvents), qui est le chemin
 //   destiné aux joueurs ; celle-ci reste pratique pour déboguer.
 // - /dd_export : emballe les maps d'un pack dans un jar prêt à publier (voir MapExporter).
+// - /dd_bloc_anim <pos> <role> : fait jouer un rôle au bloc animé visé (forge, mannequin, cristaux, décors dd_*), pour
+//   vérifier les animations sans attendre leur déclencheur. Ne fait que l'animation : death ne détruit rien.
 @EventBusSubscriber(modid = DungeonDefendersMod.MODID)
 public class ModCommands {
 
@@ -35,6 +42,29 @@ public class ModCommands {
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(Commands.argument("namespace", StringArgumentType.word())
                         .executes(ModCommands::executeExport)));
+
+        event.getDispatcher().register(Commands.literal("dd_bloc_anim")
+                .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                .then(Commands.argument("pos", BlockPosArgument.blockPos())
+                        .then(Commands.argument("role", StringArgumentType.word())
+                                .suggests((context, builder) -> SharedSuggestionProvider.suggest(FicheBloc.Anime.ROLES, builder))
+                                .executes(ModCommands::executeBlocAnim))));
+    }
+
+    private static int executeBlocAnim(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        BlockPos pos = BlockPosArgument.getBlockPos(context, "pos");
+        String role = StringArgumentType.getString(context, "role");
+        if (!(source.getLevel().getBlockEntity(pos) instanceof BlocAnimable bloc)) {
+            source.sendFailure(Component.translatable("dungeon_defenders.bloc_anim.not_animated"));
+            return 0;
+        }
+        if (!bloc.jouer(role)) {
+            source.sendFailure(Component.translatable("dungeon_defenders.bloc_anim.no_role", role));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("dungeon_defenders.bloc_anim.played", role), false);
+        return 1;
     }
 
     private static int executeExport(CommandContext<CommandSourceStack> context) {

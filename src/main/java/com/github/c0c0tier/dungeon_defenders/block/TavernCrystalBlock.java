@@ -1,6 +1,11 @@
 package com.github.c0c0tier.dungeon_defenders.block;
 
 import com.github.c0c0tier.dungeon_defenders.init.MapDefinition;
+import com.github.c0c0tier.dungeon_defenders.block.entity.TavernCrystalBlockEntity;
+import com.github.c0c0tier.dungeon_defenders.atelier.AnimationsBloc;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import com.github.c0c0tier.dungeon_defenders.init.MapPreviews;
 import com.github.c0c0tier.dungeon_defenders.init.MapRegistry;
 import com.github.c0c0tier.dungeon_defenders.network.MapPreviewPayload;
@@ -33,7 +38,9 @@ import net.minecraft.world.phys.BlockHitResult;
 // chargée par ModBlocks au démarrage du mod, y compris sur un serveur dédié, où toute mention
 // d'une classe cliente fait planter le chargement — voir OpenMapSelectionPayload pour le
 // détail du crash constaté (2026-08-30).
-public class TavernCrystalBlock extends Block {
+//
+// Depuis le 2026-11-28, un block entity (TavernCrystalBlockEntity) porte seulement son modèle animé dd_cristal_v2.
+public class TavernCrystalBlock extends BaseEntityBlock {
 
     public static final MapCodec<TavernCrystalBlock> CODEC = simpleCodec(TavernCrystalBlock::new);
 
@@ -50,8 +57,19 @@ public class TavernCrystalBlock extends Block {
     }
 
     @Override
-    protected MapCodec<? extends Block> codec() {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
+    }
+
+    @Override
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return new TavernCrystalBlockEntity(pos, state);
+    }
+
+    // Dessiné par GeckoLib quand l'Atelier a déployé le modèle animé de dd_cristal_v2, sinon par son modèle fixe.
+    @Override
+    protected RenderShape getRenderShape(BlockState state) {
+        return AnimationsBloc.dessineParGeckoLib("dd_cristal_v2") ? RenderShape.INVISIBLE : RenderShape.MODEL;
     }
 
     @Override

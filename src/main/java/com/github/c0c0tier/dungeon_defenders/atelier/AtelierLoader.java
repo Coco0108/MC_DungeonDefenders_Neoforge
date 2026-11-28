@@ -53,6 +53,9 @@ public final class AtelierLoader {
     private final Set<String> objetsPris;
     private Set<String> sons = Set.of();
     private final Set<Identifier> glowmasks = new HashSet<>();
+    private final Set<Identifier> glowmasksBlocs = new HashSet<>();
+    /** Par bloc animé, l'instant d'effet de chaque rôle (voir {@link Atelier#impactBloc}). */
+    private final Map<String, Map<String, Impact>> impactsBlocs = new TreeMap<>();
 
     private AtelierLoader(JarContents jar, Set<String> idsPris, Set<String> objetsPris) {
         this.jar = jar;
@@ -97,10 +100,11 @@ public final class AtelierLoader {
         Map<String, List<double[]>> formes = new TreeMap<>();
         Map<String, FicheBloc> blocs = loader.lireDossier(BLOCS, "Bloc", FicheBloc.CODEC, FicheBloc::id,
                 Set.of("id", "nom", "nom_en", "durete", "resistance", "outil", "niveau", "lumiere", "son", "modele", "transparent",
-                        "orientation", "type", "variantes", "destinations", "origine"), Set.of("cache"),
+                        "orientation", "type", "variantes", "anime", "destinations", "origine"), Set.of("cache"),
                 (bloc, erreurs) -> loader.verifierBloc(bloc, oeufs, objets, formes, erreurs));
         formes.keySet().retainAll(blocs.keySet());
-        Atelier.initObjets(objets, blocs, formes);
+        loader.impactsBlocs.keySet().retainAll(blocs.keySet());
+        Atelier.initObjets(objets, blocs, formes, loader.impactsBlocs, loader.glowmasksBlocs);
         LOGGER.info("Atelier : {} objet(s) {}, {} bloc(s) {}", objets.size(), objets.keySet(), blocs.size(), blocs.keySet());
     }
 
@@ -189,12 +193,62 @@ public final class AtelierLoader {
         } else if (bloc.modele()) {
             verifierForme(bloc, formes, erreurs);
         }
+        bloc.anime().ifPresent(anime -> verifierAnime(bloc, anime, erreurs));
         if (bloc.orientation() == FicheBloc.Orientation.HORIZONTALE && !bloc.modele()) {
             erreurs.add("`orientation` « horizontale » : seulement pour un bloc `modele` (un cube n'a pas de devant)");
         }
         if (bloc.orientation() == FicheBloc.Orientation.AXE && bloc.modele()) {
             erreurs.add("`orientation` « axe » : seulement pour un cube (comme une bûche), pas pour un bloc `modele`");
         }
+    }
+
+    /**
+     * Un bloc animé ({@code anime}) : un bloc {@code modele} simple (le modèle converti sert à l'objet, aux particules et
+     * au repli), son modèle GeckoLib, ses animations et sa texture, chaque rôle vers une animation qui existe. Un rôle
+     * que Dungeon Defenders ne joue pas n'empêche rien (avertissement). Lit l'instant d'effet de chaque rôle : le serveur
+     * en a besoin (l'explosion du cristal au marqueur {@code impact} de {@code death}), GeckoLib ne lisant les
+     * instructions de timeline que côté client.
+     */
+    private void verifierAnime(FicheBloc bloc, FicheBloc.Anime anime, List<String> erreurs) {
+        if (!bloc.modele() || bloc.type() != FicheBloc.Type.SIMPLE) {
+            erreurs.add("`anime` : seulement pour un bloc `modele` simple (pas une menuiserie ni un cube)");
+        }
+        JsonObject geo = verifierAsset("anime.modele", anime.modele(), MODELES, ".geo.json", erreurs)
+                ? lireAssetJson("anime.modele", anime.modele(), erreurs) : null;
+        if (geo != null && !geo.has("minecraft:geometry")) {
+            erreurs.add("`anime.modele` : " + anime.modele() + " ne contient pas de « minecraft:geometry » (export GeckoLib attendu)");
+        }
+        if (verifierAsset("anime.texture", anime.texture(), "textures/", ".png", erreurs)) {
+            String chemin = anime.texture().getPath();
+            Identifier glowmask = anime.texture().withPath(chemin.substring(0, chemin.length() - ".png".length()) + GLOWMASK + ".png");
+            if (jar.containsFile(cheminAsset(glowmask))) {
+                glowmasksBlocs.add(anime.texture());
+            }
+        }
+        JsonObject animations = verifierAsset("anime.animations", anime.animations(), ANIMATIONS, ".animation.json", erreurs)
+                ? lireAssetJson("anime.animations", anime.animations(), erreurs) : null;
+        if (animations == null) {
+            return;
+        }
+        JsonObject toutes = animations.get("animations") instanceof JsonObject objet ? objet : new JsonObject();
+        Map<String, Impact> instants = new TreeMap<>();
+        anime.rolesAnimation().forEach((role, nom) -> {
+            if (!FicheBloc.Anime.ROLES.contains(role)) {
+                LOGGER.warn("Bloc {} : rôle d'animation « {} » inconnu de Dungeon Defenders (connus : {}), jamais joué",
+                        bloc.id(), role, String.join(", ", FicheBloc.Anime.ROLES));
+            }
+            if (!(toutes.get(nom) instanceof JsonObject animation)) {
+                erreurs.add("`anime.roles_animation` : le rôle « " + role + " » vise l'animation « " + nom
+                        + " », absente de " + anime.animations() + " (animations trouvées : " + String.join(", ", toutes.keySet()) + ")");
+                return;
+            }
+            List<String> erreursImpact = new ArrayList<>();
+            List<String> avertissementsImpact = new ArrayList<>();
+            instants.put(role, Impact.read(nom, animation, erreursImpact, avertissementsImpact));
+            erreursImpact.forEach(erreur -> erreurs.add("`anime.animations` : " + erreur));
+            avertissementsImpact.forEach(avertissement -> LOGGER.warn("Bloc {} : {}", bloc.id(), avertissement));
+        });
+        impactsBlocs.put(bloc.id(), Map.copyOf(instants));
     }
 
     private void verifierIdObjet(String id, Set<String> oeufs, List<String> erreurs) {

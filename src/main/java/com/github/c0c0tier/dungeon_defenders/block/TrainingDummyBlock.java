@@ -3,6 +3,7 @@ package com.github.c0c0tier.dungeon_defenders.block;
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import com.github.c0c0tier.dungeon_defenders.block.entity.TrainingDummyBlockEntity;
 import com.mojang.serialization.MapCodec;
+import com.github.c0c0tier.dungeon_defenders.atelier.AnimationsBloc;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -90,8 +91,10 @@ public class TrainingDummyBlock extends BaseEntityBlock {
     @Override
     protected RenderShape getRenderShape(BlockState state) {
         // Depuis le 2026-11-27, c'est le bloc qui montre le mannequin (modèle dd_dummy de l'Atelier) ; l'entité, elle,
-        // n'est plus dessinée (NoopRenderer) : elle reste la cible des tours, invisible dans le modèle.
-        return RenderShape.MODEL;
+        // n'est plus dessinée (NoopRenderer) : elle reste la cible des tours, invisible dans le modèle. Depuis le
+        // 2026-11-28, le modèle animé (block entity, GeckoLib) quand l'Atelier l'a déployé : il encaisse les coups que
+        // reçoit l'entité (hurt, hurt_heavy).
+        return AnimationsBloc.dessineParGeckoLib("dd_dummy") ? RenderShape.INVISIBLE : RenderShape.MODEL;
     }
 
     @Override

@@ -121,7 +121,9 @@ MC_DungeonDefenders_Neoforge/
     │   │   └── ClientDisplayConfig.java      # Spec de config CLIENT (options d'affichage HUD facultatives), branchée dans DungeonDefendersModClient
     │   ├── client/atelier/                    # Rendu GeckoLib des monstres de l'Atelier (client seulement)
     │   │   ├── AtelierMonsterModel.java       # GeoModel : chemins de la fiche, texture de la variante (DataTicket)
-    │   │   └── AtelierMonsterRenderer.java    # GeoEntityRenderer : échelle, ombre, glowmask, pas de bascule si animation death
+    │   │   ├── AtelierMonsterRenderer.java    # GeoEntityRenderer : échelle, ombre, glowmask, pas de bascule si animation death
+    │   │   ├── BlocAnimeRenderer.java         # GeoBlockRenderer commun aux blocs animés (décor dd_*, forge, mannequin, cristaux) : tourné selon facing, glowmask
+    │   │   └── EterniaCrystalGeoRenderer.java # Le cristal d'Eternia animé + sa barre de vie (un seul renderer par bloc)
     │   ├── client/gui/screen/
     │   │   ├── SpawnerConfigScreen.java      # Écran de config du spawner (client uniquement)
     │   │   ├── ManaChestConfigScreen.java    # Écran de config du coffre de mana, un seul champ (client uniquement)
@@ -170,7 +172,10 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── AtelierSounds.java             # Un SoundEvent par entrée de sounds.json
     │   │   ├── FicheObjet.java / FicheBloc.java # Formats des fiches d'objet et de bloc (repris de l'Atelier, sans cache)
     │   │   ├── AtelierObjets.java             # Un objet par fiche d'objet, un bloc + son objet par fiche de bloc
-    │   │   └── BlocModele.java                # Bloc modèle converti : forme = union de ses boîtes (repris de l'Atelier)
+    │   │   ├── BlocModele.java                # Bloc modèle converti : forme = union de ses boîtes ; obstacle pour le pathfinding (repris de l'Atelier)
+    │   │   ├── AnimationsBloc.java            # Les animations d'un bloc animé (fiche anime) : idle/opened en boucle, rôles joués par le serveur, état ouvert
+    │   │   ├── BlocAnimable.java              # Interface des block entities dessinés par un modèle animé de l'Atelier (jouer(role))
+    │   │   └── BlocAnime(Oriente).java / BlocAnimeEntity.java # Bloc de décor animé et son block entity (un type par bloc)
     │   ├── entity/
     │   │   ├── ManaCrystalEntity.java         # extends ExperienceOrb : drop de mana ramassable au sol, pas un item d'inventaire
     │   │   ├── Corrosion.java                 # Marque en mémoire : un monstre corrodé subit plus de dégâts (Projecteur d'acide)
@@ -199,15 +204,16 @@ MC_DungeonDefenders_Neoforge/
     │       ├── DirectionalTowerBlock.java    # SimpleTowerBlock + HORIZONTAL_FACING (Projecteur d'acide)
     │       ├── TowerBlockItem.java           # Item commun à toute tour (Blockade, Turret...) : useOn() ne pose plus rien (roue uniquement)
     │       ├── SpawnerBlock.java             # Fait spawn des ennemis en combat ; clic droit = bascule phase (test)
-    │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit
+    │       ├── TavernCrystalBlock.java       # Pas de PV : ouvre MapSelectionScreen au clic droit ; block entity pour son modèle animé
     │       ├── FormeAtelier.java             # Forme d'un bloc du mod qui prend le modèle d'un bloc de décor de l'Atelier (cristal, forge, mannequin)
+    │       ├── ForgeViewers.java             # Qui a l'écran de quelle Forge ouvert (serveur) : open au premier, close au dernier
     │       ├── ManaChestBlock.java           # Meuble de map : donne du mana au clic droit (survie, 1x/vague) ou config (créatif)
     │       ├── TrainingDummyBlock.java       # Support de mannequin : dessine le mannequin (modèle dd_dummy), garantit qu'un TrainingDummyEntity (invisible) existe à sa place
     │       ├── NoBuildZoneBlock.java         # Marqueur de zone interdite à la pose de tours : invisible, occupe la case
     │       ├── MapConfigBlock.java           # Réglages d'une map, posé DANS la map : voyagent dans le .nbt de la structure
     │       ├── PlayerSpawnBlock.java         # Marqueur de spawn des joueurs : invisible, traversable, ciblable en créatif seulement
     │       └── entity/
-    │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal) + enregistre CRYSTAL_POS
+    │           ├── EterniaCrystalBlockEntity.java          # État persistant (PV) + synchro client + AiAttackTarget (priorité cristal) + enregistre CRYSTAL_POS ; destruction animée (death, explosion au marqueur impact)
     │           ├── EterniaCrystalRenderState.java          # Instantané pour le rendu (client)
     │           ├── EterniaCrystalBlockEntityRenderer.java  # Barre de vie 3D, toujours affichée (client)
     │           ├── AiAttackTarget.java                     # Interface : contrat + paliers de priorité IA (Block/Corps à corps/Cristal/Tourelle)
@@ -248,7 +254,9 @@ MC_DungeonDefenders_Neoforge/
     │           ├── SpawnerRenderState.java                 # Instantané pour le rendu (client)
     │           ├── SpawnerBlockEntityRenderer.java         # Aperçu de composition en phase Construction, à travers les murs (client)
     │           ├── ManaChestBlockEntity.java               # PV: aucun ; manaAmount configurable, lastOpenedWave (1x/vague, recharge auto)
-    │           ├── TrainingDummyBlockEntity.java           # Aucun état : un tick serveur qui réinvoque le mannequin s'il a disparu
+    │           ├── TrainingDummyBlockEntity.java           # Tick serveur qui réinvoque le mannequin s'il a disparu ; joue hurt/hurt_heavy (modèle animé)
+    │           ├── AnimatedBlockEntity.java                # Base des blocs du jeu au modèle animé de l'Atelier (cache GeckoLib, synchro)
+    │           ├── ForgeBlockEntity.java / TavernCrystalBlockEntity.java # Modèle animé de la forge (open/close) et du cristal de la taverne (idle)
     │           └── MapConfigBlockEntity.java               # Nom/ordre/vagues/multiplicateur d'une map, relus sans poser la structure
     ├── resources/
     │   ├── assets/dungeon_defenders/

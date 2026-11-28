@@ -16,8 +16,8 @@ import com.geckolib.renderer.base.GeoRenderState;
  *
  * <p>Repris tel quel de l'Atelier (entity/ReturningAnimationController.java).
  */
-final class ReturningAnimationController<T extends GeoAnimatable> extends AnimationController<T> {
-    ReturningAnimationController(String name, int transitionTicks, AnimationStateHandler<T> stateHandler) {
+public final class ReturningAnimationController<T extends GeoAnimatable> extends AnimationController<T> {
+    public ReturningAnimationController(String name, int transitionTicks, AnimationStateHandler<T> stateHandler) {
         super(name, transitionTicks, stateHandler);
     }
 

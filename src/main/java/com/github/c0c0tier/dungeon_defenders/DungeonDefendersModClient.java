@@ -4,6 +4,9 @@ import com.github.c0c0tier.dungeon_defenders.atelier.Atelier;
 import com.github.c0c0tier.dungeon_defenders.atelier.AtelierEntities;
 import com.github.c0c0tier.dungeon_defenders.atelier.FicheMonstre;
 import com.github.c0c0tier.dungeon_defenders.client.atelier.AtelierMonsterRenderer;
+import com.github.c0c0tier.dungeon_defenders.client.atelier.BlocAnimeRenderer;
+import com.github.c0c0tier.dungeon_defenders.client.atelier.EterniaCrystalGeoRenderer;
+import com.github.c0c0tier.dungeon_defenders.atelier.AtelierObjets;
 import com.github.c0c0tier.dungeon_defenders.block.entity.EterniaCrystalBlockEntityRenderer;
 import com.github.c0c0tier.dungeon_defenders.block.entity.SpawnerBlockEntityRenderer;
 import com.github.c0c0tier.dungeon_defenders.block.entity.TowerHealthBarRenderer;
@@ -107,10 +110,28 @@ public class DungeonDefendersModClient {
     static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         // C'est l'événement qui fournit le BlockEntityRendererProvider.Context attendu
         // par le constructeur du renderer.
-        event.registerBlockEntityRenderer(
-                DungeonDefendersMod.ETERNIA_CRYSTAL_BE.get(),
-                EterniaCrystalBlockEntityRenderer::new
-        );
+        // Le cristal d'Eternia : le modèle animé dd_cristal_v2 de l'Atelier et sa barre de vie s'il est déployé, sinon
+        // la barre seule (sur le modèle fixe).
+        var cristal = Atelier.anime("dd_cristal_v2");
+        if (cristal.isPresent()) {
+            event.registerBlockEntityRenderer(DungeonDefendersMod.ETERNIA_CRYSTAL_BE.get(),
+                    context -> new EterniaCrystalGeoRenderer<>(context, cristal.get()));
+        } else {
+            event.registerBlockEntityRenderer(
+                    DungeonDefendersMod.ETERNIA_CRYSTAL_BE.get(),
+                    EterniaCrystalBlockEntityRenderer::new
+            );
+        }
+        // Les blocs animés de l'Atelier (anime dans leur fiche) : les décors dd_*, puis les blocs du jeu qui prennent
+        // leur modèle (sans modèle animé déployé, ils gardent leur modèle fixe et n'ont pas de renderer).
+        AtelierObjets.animes().forEach((id, type) -> Atelier.anime(id).ifPresent(anime ->
+                event.registerBlockEntityRenderer(type.get(), context -> new BlocAnimeRenderer<>(context, anime))));
+        Atelier.anime("dd_forge_v2").ifPresent(anime -> event.registerBlockEntityRenderer(
+                DungeonDefendersMod.FORGE_BE.get(), context -> new BlocAnimeRenderer<>(context, anime)));
+        Atelier.anime("dd_dummy").ifPresent(anime -> event.registerBlockEntityRenderer(
+                DungeonDefendersMod.TRAINING_DUMMY_BE.get(), context -> new BlocAnimeRenderer<>(context, anime)));
+        cristal.ifPresent(anime -> event.registerBlockEntityRenderer(
+                DungeonDefendersMod.TAVERN_CRYSTAL_BE.get(), context -> new BlocAnimeRenderer<>(context, anime)));
         event.registerBlockEntityRenderer(
                 DungeonDefendersMod.SPAWNER_BE.get(),
                 SpawnerBlockEntityRenderer::new
