@@ -1,0 +1,21 @@
+{
+  "id": "carreau_repetiteur",
+  "nom": "Carreau de répétiteur",
+  "modele": "dungeon_defenders:geckolib/models/projectile/carreau_repetiteur.geo.json",
+  "texture": "dungeon_defenders:textures/projectile/carreau_repetiteur.png",
+  "echelle": 1.0,
+  "taille": 0.12,
+  "vitesse": 3.5,
+  "gravite": 0.01,
+  "duree": 2,
+  "impact": {
+    "effet": "carreau_impact",
+    "explosion": 0,
+    "feu": false,
+    "casse_blocs": false
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "6beb9c042c5622b5d1b9ed9a7b632782a6c12a5682dabca40a78d6266a11fc2f"
+  }
+}
