@@ -19,7 +19,7 @@
     "dungeon_defenders:fonderie_braises": 4,
     "dungeon_defenders:fonderie_brasero": 8,
     "dungeon_defenders:fonderie_caisse_minerai": 2,
-    "dungeon_defenders:fonderie_chaine": 46,
+    "dungeon_defenders:fonderie_chaine": 45,
     "dungeon_defenders:fonderie_chenal": 6,
     "dungeon_defenders:fonderie_chenal_fin": 4,
     "dungeon_defenders:fonderie_colonne_fonte": 210,
@@ -31,7 +31,7 @@
     "dungeon_defenders:fonderie_enclume": 2,
     "dungeon_defenders:fonderie_engrenage": 2,
     "dungeon_defenders:fonderie_escalier": 72,
-    "dungeon_defenders:fonderie_estrade": 8,
+    "dungeon_defenders:fonderie_estrade": 9,
     "dungeon_defenders:fonderie_estrade_angle": 4,
     "dungeon_defenders:fonderie_estrade_bord": 12,
     "dungeon_defenders:fonderie_fourneau_bas": 4,
@@ -77,8 +77,8 @@
     "minecraft:light": 172
   },
   "origine": {
-    "atelier_commit": "c64f2b1",
-    "empreinte": "0a15e0a669b11f18996af2de1c291c7eccc4fadd0a50cf2c71f3fe49ee2a0b62",
+    "atelier_commit": "f6af63b",
+    "empreinte": "24171c61ac7c680d6d9252ea0309bcde57683cd769b3872c64867250cad8d7cf",
     "generes": [
       "src/main/resources/assets/dungeon_defenders/textures/gui/maps/fonderie_a.png",
       "src/main/resources/data/dungeon_defenders/structure/map/fonderie_a.nbt"
