@@ -1,0 +1,30 @@
+{
+  "id": "eclair_impact",
+  "particules": [
+    {
+      "particule": "minecraft:electric_spark",
+      "nombre": 24,
+      "dispersion": 0.3,
+      "vitesse": 0.4
+    },
+    {
+      "particule": {
+        "type": "minecraft:flash",
+        "color": "#ffffd27a"
+      },
+      "nombre": 1
+    },
+    {
+      "particule": "minecraft:end_rod",
+      "nombre": 8,
+      "dispersion": 0.2,
+      "vitesse": 0.15
+    }
+  ],
+  "son": "minecraft:entity.lightning_bolt.impact",
+  "volume": 0.3,
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "8a6e77fe67741d6ceea8acea20a5fa380f5d293057141f43dd1d87f368f68a3d"
+  }
+}

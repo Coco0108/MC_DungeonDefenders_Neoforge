@@ -1,0 +1,32 @@
+{
+  "id": "crystal_spire",
+  "nom": "Flèche de cristal",
+  "nom_en": "Crystal Spire",
+  "modele": "dungeon_defenders:geckolib/models/tower/crystal_spire.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/crystal_spire.animation.json",
+  "texture": "dungeon_defenders:textures/tower/crystal_spire.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "bouche": "bouche",
+  "effet": "eclair_impact",
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "39ae25117bdeb56a0c2e83a421ca8dbeb88a47063eeba9e079229aca6c1ec074",
+    "effets": [
+      "eclair_impact"
+    ]
+  }
+}
