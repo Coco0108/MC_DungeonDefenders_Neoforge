@@ -1,0 +1,30 @@
+{
+  "id": "gobelin",
+  "nom": "Gobelin",
+  "modele": "dungeon_defenders:geckolib/models/entity/gobelin.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/entity/gobelin.animation.json",
+  "texture": "dungeon_defenders:textures/entity/gobelin/gobelin.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "walk": "animation.walk",
+    "attack": "animation.attack"
+  },
+  "echelle": 1.0,
+  "hitbox": {
+    "largeur": 1.2,
+    "hauteur": 1.7
+  },
+  "stats": {
+    "pv": 20,
+    "degats": 3,
+    "vitesse": 0.25
+  },
+  "comportement": "hostile",
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "24c330d869e914f243e888016dcbf8aeddb89d35fe908b7c7f142df068e8bee4",
+    "effets": [
+      "step_dust"
+    ]
+  }
+}
