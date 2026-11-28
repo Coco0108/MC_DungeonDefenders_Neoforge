@@ -546,6 +546,7 @@
 		"animation.walk": {
 			"loop": true,
 			"animation_length": 1,
+			"sound_effects": {"0.25": {"effect": "dungeon_defenders:entity.dark_elf_warrior.step"}, "0.75": {"effect": "dungeon_defenders:entity.dark_elf_warrior.step"}},
 			"bones": {
 				"root": {
 					"rotation": {
@@ -2351,6 +2352,7 @@
 		},
 		"animation.attack": {
 			"animation_length": 1.4,
+			"sound_effects": {"0.6": {"effect": "dungeon_defenders:entity.dark_elf_warrior.slash"}},
 			"bones": {
 				"root": {
 					"position": {
