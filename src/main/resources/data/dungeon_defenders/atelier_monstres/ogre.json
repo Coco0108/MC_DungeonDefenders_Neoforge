@@ -23,8 +23,8 @@
   },
   "comportement": "hostile",
   "origine": {
-    "atelier_commit": "f6af63b",
-    "empreinte": "9f61a4ded261de290e071dc18269a01fce1f71f86a908cf6b6865e092278ffa1",
+    "atelier_commit": "365c61b",
+    "empreinte": "95bd3d5f107d518b208ddba1f32e0a33f4013de7a0a07ae51c4592a41117124d",
     "effets": [
       "roar_breath",
       "rock_debris"
