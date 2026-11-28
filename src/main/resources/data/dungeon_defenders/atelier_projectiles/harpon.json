@@ -1,0 +1,21 @@
+{
+  "id": "harpon",
+  "nom": "Harpon",
+  "modele": "dungeon_defenders:geckolib/models/projectile/harpon.geo.json",
+  "texture": "dungeon_defenders:textures/projectile/harpon.png",
+  "echelle": 1.0,
+  "taille": 0.2,
+  "vitesse": 3.0,
+  "gravite": 0.01,
+  "duree": 3,
+  "impact": {
+    "effet": "harpon_impact",
+    "explosion": 0,
+    "feu": false,
+    "casse_blocs": false
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "dfcfa1d81693143f6c55d32e5ad98e05db4a10c234f7734a147ba5f1d6c2577b"
+  }
+}

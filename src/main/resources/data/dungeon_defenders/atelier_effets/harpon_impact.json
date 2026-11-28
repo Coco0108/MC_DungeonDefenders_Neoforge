@@ -1,0 +1,26 @@
+{
+  "id": "harpon_impact",
+  "particules": [
+    {
+      "particule": "minecraft:crit",
+      "nombre": 10,
+      "dispersion": 0.15,
+      "vitesse": 0.25
+    },
+    {
+      "particule": {
+        "type": "minecraft:block",
+        "block_state": "minecraft:oak_planks"
+      },
+      "nombre": 6,
+      "dispersion": 0.1,
+      "vitesse": 0.1
+    }
+  ],
+  "son": "minecraft:item.trident.hit",
+  "volume": 0.8,
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "b70f58c220fe25aa97b831d06dd8fcd65478b0b1c429a8b1ccd78169f6d094c5"
+  }
+}

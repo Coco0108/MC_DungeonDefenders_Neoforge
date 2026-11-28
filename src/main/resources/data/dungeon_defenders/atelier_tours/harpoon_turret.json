@@ -1,0 +1,43 @@
+{
+  "id": "harpoon_turret",
+  "nom": "Tourelle à harpon",
+  "nom_en": "Harpoon Turret",
+  "modele": "dungeon_defenders:geckolib/models/tower/harpoon_turret.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/harpoon_turret.animation.json",
+  "texture": "dungeon_defenders:textures/tower/harpoon_turret.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "visee": {
+    "os": "tete",
+    "lacet": true,
+    "tangage": [
+      -10,
+      30
+    ]
+  },
+  "bouche": "bouche",
+  "projectile": "harpon",
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "10b3772fd4a76679ea2348b70d1b14d06bc3041e81094573d22e3f0f4205a722",
+    "effets": [
+      "harpon_impact"
+    ],
+    "projectiles": [
+      "harpon"
+    ]
+  }
+}
