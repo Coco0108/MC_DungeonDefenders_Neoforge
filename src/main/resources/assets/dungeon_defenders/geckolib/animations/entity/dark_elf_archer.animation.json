@@ -552,6 +552,7 @@
 		"animation.walk": {
 			"loop": true,
 			"animation_length": 1,
+			"sound_effects": {"0.25": {"effect": "dungeon_defenders:entity.dark_elf_archer.step"}, "0.75": {"effect": "dungeon_defenders:entity.dark_elf_archer.step"}},
 			"bones": {
 				"root": {
 					"rotation": {
@@ -2081,6 +2082,7 @@
 		},
 		"animation.shoot": {
 			"animation_length": 2.6,
+			"sound_effects": {"1.5": {"effect": "dungeon_defenders:entity.dark_elf_archer.shoot"}},
 			"bones": {
 				"torso": {
 					"rotation": {
@@ -2850,6 +2852,7 @@
 		},
 		"animation.attack": {
 			"animation_length": 1.1,
+			"sound_effects": {"0.45": {"effect": "dungeon_defenders:entity.dark_elf_archer.stab"}},
 			"bones": {
 				"torso": {
 					"rotation": {
