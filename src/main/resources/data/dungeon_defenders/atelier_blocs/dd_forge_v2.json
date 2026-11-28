@@ -6,7 +6,18 @@
     "durete": 3.0,
     "outil": "pioche",
     "niveau": "aucun",
-    "lumiere": 13,
+    "lumiere": 15,
     "son": "pierre",
-    "orientation": "horizontale"
+    "orientation": "horizontale",
+    "anime": {
+        "modele": "dungeon_defenders:geckolib/models/block/dd_forge_v2.geo.json",
+        "animations": "dungeon_defenders:geckolib/animations/block/dd_forge_v2.animation.json",
+        "texture": "dungeon_defenders:textures/geckolib/block/dd_forge_v2.png",
+        "roles_animation": {
+            "idle": "animation.idle",
+            "open": "animation.open",
+            "opened": "animation.opened",
+            "close": "animation.close"
+        }
+    }
 }

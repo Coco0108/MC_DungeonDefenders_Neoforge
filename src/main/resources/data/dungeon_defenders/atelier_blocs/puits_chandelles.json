@@ -6,7 +6,7 @@
     "durete": 1.5,
     "outil": "pioche",
     "niveau": "aucun",
-    "lumiere": 10,
+    "lumiere": 15,
     "son": "pierre",
     "orientation": "horizontale"
 }

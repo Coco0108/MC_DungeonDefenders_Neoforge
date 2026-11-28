@@ -58,11 +58,12 @@
     "dungeon_defenders:taverne_torche_murale": 21,
     "dungeon_defenders:taverne_trappe": 1,
     "dungeon_defenders:taverne_volets": 4,
-    "dungeon_defenders:training_dummy": 1
+    "dungeon_defenders:training_dummy": 1,
+    "minecraft:light": 170
   },
   "origine": {
-    "atelier_commit": "353e0bb",
-    "empreinte": "22681c0d3e5b8f63158e16d9d9ba2c40663f49bff3da38cc780370eecc0de7b1",
+    "atelier_commit": "110b0eb",
+    "empreinte": "8e5d400713545f12c39691c37fcdecec100e3217f15dfe64272b7bb1272f316c",
     "generes": [
       "src/main/resources/data/dungeon_defenders/structure/tavern.nbt"
     ],
