@@ -1,0 +1,27 @@
+{
+  "id": "magnet_coil",
+  "nom": "Bobine magnétique",
+  "nom_en": "Magnet Coil",
+  "modele": "dungeon_defenders:geckolib/models/tower/magnet_coil.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/magnet_coil.animation.json",
+  "texture": "dungeon_defenders:textures/tower/magnet_coil.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "67b0da9c5f937db8f7916dd3efdf28527319dc548b2c69d805feb095433b0ad5"
+  }
+}

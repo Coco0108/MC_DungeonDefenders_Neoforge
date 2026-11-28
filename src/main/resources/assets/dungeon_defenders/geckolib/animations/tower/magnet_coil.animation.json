@@ -1,0 +1,378 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.idle": {
+			"loop": true,
+			"animation_length": 3,
+			"bones": {
+				"base": {
+					"scale": {
+						"0.0": {
+							"post": [
+								"1",
+								"1",
+								"1"
+							],
+							"lerp_mode": "catmullrom"
+						},
+						"1.5": {
+							"post": [
+								"1",
+								"1.012",
+								"1"
+							],
+							"lerp_mode": "catmullrom"
+						},
+						"3.0": {
+							"post": [
+								"1",
+								"1",
+								"1"
+							],
+							"lerp_mode": "catmullrom"
+						}
+					}
+				}
+			}
+		},
+		"animation.build": {
+			"animation_length": 1,
+			"bones": {
+				"base": {
+					"scale": {
+						"0.0": [
+							"0.2",
+							"0",
+							"0.2"
+						],
+						"0.55": {
+							"pre": [
+								"1.08",
+								"1.15",
+								"1.08"
+							],
+							"post": [
+								"1.08",
+								"1.15",
+								"1.08"
+							],
+							"lerp_mode": "catmullrom"
+						},
+						"0.75": {
+							"post": [
+								"0.97",
+								"0.92",
+								"0.97"
+							],
+							"lerp_mode": "catmullrom"
+						},
+						"0.9": {
+							"post": [
+								"1.02",
+								"1.03",
+								"1.02"
+							],
+							"lerp_mode": "catmullrom"
+						},
+						"1.0": [
+							"1",
+							"1",
+							"1"
+						]
+					}
+				}
+			},
+			"sound_effects": {
+				"0.0": {
+					"effect": "dungeon_defenders:entity.magnet_coil.build"
+				}
+			}
+		},
+		"animation.attack": {
+			"animation_length": 0.8,
+			"bones": {
+				"aimant": {
+					"position": {
+						"0.0": [
+							"0",
+							"0",
+							"0"
+						],
+						"0.15": [
+							"0",
+							"1",
+							"0"
+						],
+						"0.8": {
+							"pre": [
+								"0",
+								"0",
+								"0"
+							],
+							"post": [
+								"0",
+								"0",
+								"0"
+							],
+							"lerp_mode": "catmullrom"
+						}
+					}
+				},
+				"bobine": {
+					"scale": {
+						"0.0": [
+							"1",
+							"1",
+							"1"
+						],
+						"0.15": [
+							"1.08",
+							"0.96",
+							"1.08"
+						],
+						"0.8": {
+							"pre": [
+								"1",
+								"1",
+								"1"
+							],
+							"post": [
+								"1",
+								"1",
+								"1"
+							],
+							"lerp_mode": "catmullrom"
+						}
+					}
+				}
+			},
+			"timeline": {
+				"0.15": "impact;"
+			},
+			"sound_effects": {
+				"0.15": {
+					"effect": "dungeon_defenders:entity.magnet_coil.attack"
+				}
+			}
+		},
+		"animation.hurt": {
+			"animation_length": 0.4,
+			"bones": {
+				"base": {
+					"rotation": {
+						"0.0": [
+							"0",
+							"0",
+							"0"
+						],
+						"0.06": [
+							"5",
+							"0",
+							"0"
+						],
+						"0.16": [
+							"-3",
+							"0",
+							"0"
+						],
+						"0.28": [
+							"1",
+							"0",
+							"0"
+						],
+						"0.4": [
+							"0",
+							"0",
+							"0"
+						]
+					},
+					"scale": {
+						"0.0": [
+							"1",
+							"1",
+							"1"
+						],
+						"0.06": [
+							"1.04",
+							"0.94",
+							"1.04"
+						],
+						"0.2": [
+							"0.99",
+							"1.02",
+							"0.99"
+						],
+						"0.4": [
+							"1",
+							"1",
+							"1"
+						]
+					}
+				}
+			},
+			"sound_effects": {
+				"0.0": {
+					"effect": "dungeon_defenders:entity.magnet_coil.hurt"
+				}
+			}
+		},
+		"animation.upgrade": {
+			"animation_length": 1.2,
+			"bones": {
+				"base": {
+					"position": {
+						"0.0": [
+							"0",
+							"0",
+							"0"
+						],
+						"0.25": {
+							"pre": [
+								"0",
+								"2.5",
+								"0"
+							],
+							"post": [
+								"0",
+								"2.5",
+								"0"
+							],
+							"lerp_mode": "catmullrom"
+						},
+						"0.45": [
+							"0",
+							"0",
+							"0"
+						],
+						"0.55": [
+							"0",
+							"0.6",
+							"0"
+						],
+						"0.65": [
+							"0",
+							"0",
+							"0"
+						]
+					},
+					"scale": {
+						"0.0": [
+							"1",
+							"1",
+							"1"
+						],
+						"0.45": [
+							"1",
+							"1",
+							"1"
+						],
+						"0.5": [
+							"1.1",
+							"0.9",
+							"1.1"
+						],
+						"0.7": [
+							"0.97",
+							"1.06",
+							"0.97"
+						],
+						"0.9": [
+							"1",
+							"1",
+							"1"
+						]
+					}
+				}
+			},
+			"sound_effects": {
+				"0.4": {
+					"effect": "dungeon_defenders:entity.magnet_coil.upgrade"
+				}
+			}
+		},
+		"animation.destroy": {
+			"loop": "hold_on_last_frame",
+			"animation_length": 1.2,
+			"bones": {
+				"base": {
+					"rotation": {
+						"0.0": [
+							"0",
+							"0",
+							"0"
+						],
+						"0.08": [
+							"0",
+							"0",
+							"4"
+						],
+						"0.16": [
+							"0",
+							"0",
+							"-4"
+						],
+						"0.24": [
+							"0",
+							"0",
+							"3"
+						],
+						"0.32": [
+							"0",
+							"0",
+							"0"
+						],
+						"1.0": [
+							"12",
+							"0",
+							"2"
+						]
+					},
+					"position": {
+						"0.32": [
+							"0",
+							"0",
+							"0"
+						],
+						"1.1": [
+							"0",
+							"-1",
+							"0"
+						]
+					},
+					"scale": {
+						"0.0": [
+							"1",
+							"1",
+							"1"
+						],
+						"0.32": [
+							"1",
+							"1",
+							"1"
+						],
+						"0.6": [
+							"1.05",
+							"0.8",
+							"1.05"
+						],
+						"1.1": [
+							"1.1",
+							"0.02",
+							"1.1"
+						],
+						"1.2": [
+							"0",
+							"0",
+							"0"
+						]
+					}
+				}
+			},
+			"sound_effects": {
+				"0.0": {
+					"effect": "dungeon_defenders:entity.magnet_coil.destroy"
+				}
+			}
+		}
+	}
+}
