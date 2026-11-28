@@ -1,0 +1,25 @@
+{
+  "id": "volatile_vat",
+  "nom": "Cuve instable",
+  "nom_en": "Volatile Vat",
+  "modele": "dungeon_defenders:geckolib/models/tower/volatile_vat.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/volatile_vat.animation.json",
+  "texture": "dungeon_defenders:textures/tower/volatile_vat.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "sons": {
+    "build": "build",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "fd6a54cfc8f8dab897b384a1d3b5f5dece1e8970b4e2e1528b63829ca23eeb16"
+  }
+}
