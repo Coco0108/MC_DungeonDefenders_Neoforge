@@ -1,0 +1,27 @@
+{
+  "id": "mud_totem",
+  "nom": "Totem de boue",
+  "nom_en": "Mud Totem",
+  "modele": "dungeon_defenders:geckolib/models/tower/mud_totem.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/mud_totem.animation.json",
+  "texture": "dungeon_defenders:textures/tower/mud_totem.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "883a75775812fce2f1cfe7ee9bb5998043aea2f19fc1e1d440eea057acf96899"
+  }
+}
