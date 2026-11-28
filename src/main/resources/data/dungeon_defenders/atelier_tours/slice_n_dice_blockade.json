@@ -1,0 +1,27 @@
+{
+  "id": "slice_n_dice_blockade",
+  "nom": "Barricade à lames",
+  "nom_en": "Slice N Dice Blockade",
+  "modele": "dungeon_defenders:geckolib/models/tower/slice_n_dice_blockade.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/slice_n_dice_blockade.animation.json",
+  "texture": "dungeon_defenders:textures/tower/slice_n_dice_blockade.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "acd55acf26c7d73c50f3c99c523bf6a2d3633ddb6ee61ea581025ef965ea017c"
+  }
+}
