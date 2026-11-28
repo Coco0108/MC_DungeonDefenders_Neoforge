@@ -1,0 +1,27 @@
+{
+  "id": "piston_slammer",
+  "nom": "Marteau-piston",
+  "nom_en": "Piston Slammer",
+  "modele": "dungeon_defenders:geckolib/models/tower/piston_slammer.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/piston_slammer.animation.json",
+  "texture": "dungeon_defenders:textures/tower/piston_slammer.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "4ef0865cb70a8ae24f738b1522bce87088ffcba148444cd9e40a1680cefa669e"
+  }
+}
