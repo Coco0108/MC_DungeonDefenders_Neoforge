@@ -227,8 +227,8 @@
     ]
   },
   "origine": {
-    "atelier_commit": "3c94885",
-    "empreinte": "dd741c8651827557a7df29f763ba5993a68facecc0f9588bb6d354602da0374f",
+    "atelier_commit": "110b0eb",
+    "empreinte": "32171e6f470bee4b8b31a40b1667218cdb138eef6a199925e4f419a8ec9951b8",
     "generes": [
       "src/main/resources/assets/dungeon_defenders/blockstates/dd_cristal_v2.json",
       "src/main/resources/assets/dungeon_defenders/blockstates/dd_dummy.json",

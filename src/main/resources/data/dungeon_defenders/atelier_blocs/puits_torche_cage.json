@@ -6,7 +6,7 @@
     "durete": 3.0,
     "outil": "pioche",
     "niveau": "aucun",
-    "lumiere": 14,
+    "lumiere": 15,
     "son": "metal",
     "transparent": true,
     "orientation": "horizontale"
