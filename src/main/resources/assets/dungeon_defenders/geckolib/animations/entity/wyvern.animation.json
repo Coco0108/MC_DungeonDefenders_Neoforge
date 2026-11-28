@@ -4,6 +4,7 @@
 		"animation.idle": {
 			"loop": true,
 			"animation_length": 1.2,
+			"sound_effects": {"0.4": {"effect": "dungeon_defenders:entity.wyvern.flap"}},
 			"bones": {
 				"root": {
 					"position": {
@@ -1148,6 +1149,7 @@
 		"animation.walk": {
 			"loop": true,
 			"animation_length": 0.6,
+			"sound_effects": {"0.2": {"effect": "dungeon_defenders:entity.wyvern.flap"}},
 			"bones": {
 				"root": {
 					"position": {
@@ -1901,6 +1903,7 @@
 		},
 		"animation.attack": {
 			"animation_length": 1.9,
+			"sound_effects": {"0.85": {"effect": "dungeon_defenders:entity.wyvern.claw"}},
 			"bones": {
 				"root": {
 					"position": {

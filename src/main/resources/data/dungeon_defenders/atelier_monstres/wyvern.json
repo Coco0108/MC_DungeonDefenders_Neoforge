@@ -22,8 +22,8 @@
   "comportement": "hostile",
   "deplacement": "vol",
   "origine": {
-    "atelier_commit": "f6af63b",
-    "empreinte": "e6316fd49ed4d058047155ecfe2894444342ed6c5d5dd52e81678152dbc44c76",
+    "atelier_commit": "365c61b",
+    "empreinte": "fd3ff9fa57432d3cb4ddb08953963576b1c527781f3858ed75ecd682c3711bdf",
     "effets": [
       "swipe_trail"
     ]
