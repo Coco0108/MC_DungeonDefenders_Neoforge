@@ -1,0 +1,53 @@
+{
+  "id": "dark_elf_archer",
+  "nom": "Archer elfe noir",
+  "modele": "dungeon_defenders:geckolib/models/entity/dark_elf_archer.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/entity/dark_elf_archer.animation.json",
+  "texture": "dungeon_defenders:textures/entity/dark_elf_archer/dark_elf_archer.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "walk": "animation.walk",
+    "attack": "animation.attack",
+    "shoot": "animation.shoot"
+  },
+  "echelle": 1.0,
+  "hitbox": {
+    "largeur": 0.9,
+    "hauteur": 1.9
+  },
+  "stats": {
+    "pv": 18,
+    "degats": 4,
+    "vitesse": 0.25
+  },
+  "comportement": "hostile",
+  "capacites": [
+    {
+      "type": "tir",
+      "role": "shoot",
+      "projectile": "fleche_elfe_noir",
+      "depart": "arrow_tip",
+      "recharge": 3,
+      "quand": {
+        "distance": [
+          3,
+          14
+        ]
+      }
+    },
+    {
+      "type": "coup"
+    }
+  ],
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "ebcf6dceac89d94932b5c803d7e9a120495aa259cf07684eb700b4b4e76f7cc9",
+    "effets": [
+      "pierre_impact",
+      "tromblon_trainee"
+    ],
+    "projectiles": [
+      "fleche_elfe_noir"
+    ]
+  }
+}
