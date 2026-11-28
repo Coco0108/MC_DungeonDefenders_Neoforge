@@ -1,0 +1,24 @@
+{
+  "id": "carreau_long_trainee",
+  "particules": [
+    {
+      "particule": {
+        "type": "minecraft:dust",
+        "color": "#d8ecff",
+        "scale": 0.9
+      },
+      "nombre": 2,
+      "dispersion": 0.02
+    },
+    {
+      "particule": "minecraft:crit",
+      "nombre": 1,
+      "dispersion": 0.02,
+      "vitesse": 0.01
+    }
+  ],
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "0c86ddad95424a47172230fcd9abb99aa85b79853e8ee5c3b2af0189c339b11b"
+  }
+}

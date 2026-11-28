@@ -1,0 +1,44 @@
+{
+  "id": "longshot_turret",
+  "nom": "Tourelle longue portée",
+  "nom_en": "Longshot Turret",
+  "modele": "dungeon_defenders:geckolib/models/tower/longshot_turret.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/longshot_turret.animation.json",
+  "texture": "dungeon_defenders:textures/tower/longshot_turret.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "visee": {
+    "os": "tete",
+    "lacet": true,
+    "tangage": [
+      -15,
+      25
+    ]
+  },
+  "bouche": "bouche",
+  "projectile": "carreau_long",
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "72d71c47a31ff283c908701ba5bc6c315969c7ac20135337ebecca2e832a79f7",
+    "effets": [
+      "carreau_impact",
+      "carreau_long_trainee"
+    ],
+    "projectiles": [
+      "carreau_long"
+    ]
+  }
+}

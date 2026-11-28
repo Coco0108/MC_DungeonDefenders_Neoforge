@@ -1,0 +1,17 @@
+{
+  "id": "carreau_impact",
+  "particules": [
+    {
+      "particule": "minecraft:crit",
+      "nombre": 6,
+      "dispersion": 0.1,
+      "vitesse": 0.2
+    }
+  ],
+  "son": "minecraft:entity.arrow.hit",
+  "volume": 0.7,
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "b56ccc27518a38c103e4ed14c296e16699431ee1e0a4e709ecafcaac2e10a739"
+  }
+}

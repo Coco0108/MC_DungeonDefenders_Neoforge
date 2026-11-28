@@ -1,0 +1,22 @@
+{
+  "id": "carreau_long",
+  "nom": "Carreau long",
+  "modele": "dungeon_defenders:geckolib/models/projectile/carreau_long.geo.json",
+  "texture": "dungeon_defenders:textures/projectile/carreau_long.png",
+  "echelle": 1.0,
+  "taille": 0.15,
+  "vitesse": 4.5,
+  "gravite": 0.005,
+  "duree": 3,
+  "trainee": "carreau_long_trainee",
+  "impact": {
+    "effet": "carreau_impact",
+    "explosion": 0,
+    "feu": false,
+    "casse_blocs": false
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "102f8e89247fa57c13fd4cde1ea933b93ea50bca041f61f29ba6f2eab55994c7"
+  }
+}
