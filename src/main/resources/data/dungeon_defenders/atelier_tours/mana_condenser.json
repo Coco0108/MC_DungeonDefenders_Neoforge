@@ -1,0 +1,27 @@
+{
+  "id": "mana_condenser",
+  "nom": "Condenseur de mana",
+  "nom_en": "Mana Condenser",
+  "modele": "dungeon_defenders:geckolib/models/tower/mana_condenser.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/mana_condenser.animation.json",
+  "texture": "dungeon_defenders:textures/tower/mana_condenser.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "af38200bed45420fda91b4321e658241edd6c1c1a69953bcd8d8c626331f174a"
+  }
+}
