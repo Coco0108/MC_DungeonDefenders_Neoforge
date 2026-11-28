@@ -1,0 +1,124 @@
+{
+    "variants": {
+        "facing=east,half=lower,hinge=left,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_gauche"
+        },
+        "facing=east,half=lower,hinge=left,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_droite",
+            "y": 90
+        },
+        "facing=east,half=lower,hinge=right,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_droite"
+        },
+        "facing=east,half=lower,hinge=right,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_gauche",
+            "y": 270
+        },
+        "facing=east,half=upper,hinge=left,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_gauche"
+        },
+        "facing=east,half=upper,hinge=left,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_droite",
+            "y": 90
+        },
+        "facing=east,half=upper,hinge=right,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_droite"
+        },
+        "facing=east,half=upper,hinge=right,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_gauche",
+            "y": 270
+        },
+        "facing=south,half=lower,hinge=left,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_gauche",
+            "y": 90
+        },
+        "facing=south,half=lower,hinge=left,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_droite",
+            "y": 180
+        },
+        "facing=south,half=lower,hinge=right,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_droite",
+            "y": 90
+        },
+        "facing=south,half=lower,hinge=right,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_gauche"
+        },
+        "facing=south,half=upper,hinge=left,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_gauche",
+            "y": 90
+        },
+        "facing=south,half=upper,hinge=left,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_droite",
+            "y": 180
+        },
+        "facing=south,half=upper,hinge=right,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_droite",
+            "y": 90
+        },
+        "facing=south,half=upper,hinge=right,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_gauche"
+        },
+        "facing=west,half=lower,hinge=left,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_gauche",
+            "y": 180
+        },
+        "facing=west,half=lower,hinge=left,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_droite",
+            "y": 270
+        },
+        "facing=west,half=lower,hinge=right,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_droite",
+            "y": 180
+        },
+        "facing=west,half=lower,hinge=right,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_gauche",
+            "y": 90
+        },
+        "facing=west,half=upper,hinge=left,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_gauche",
+            "y": 180
+        },
+        "facing=west,half=upper,hinge=left,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_droite",
+            "y": 270
+        },
+        "facing=west,half=upper,hinge=right,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_droite",
+            "y": 180
+        },
+        "facing=west,half=upper,hinge=right,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_gauche",
+            "y": 90
+        },
+        "facing=north,half=lower,hinge=left,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_gauche",
+            "y": 270
+        },
+        "facing=north,half=lower,hinge=left,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_droite"
+        },
+        "facing=north,half=lower,hinge=right,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_droite",
+            "y": 270
+        },
+        "facing=north,half=lower,hinge=right,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_bas_gauche",
+            "y": 180
+        },
+        "facing=north,half=upper,hinge=left,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_gauche",
+            "y": 270
+        },
+        "facing=north,half=upper,hinge=left,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_droite"
+        },
+        "facing=north,half=upper,hinge=right,open=false": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_droite",
+            "y": 270
+        },
+        "facing=north,half=upper,hinge=right,open=true": {
+            "model": "dungeon_defenders:block/fonderie_porte_haut_gauche",
+            "y": 180
+        }
+    }
+}

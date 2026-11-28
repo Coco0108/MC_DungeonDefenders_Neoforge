@@ -1,0 +1,58 @@
+{
+    "parent": "minecraft:block/block",
+    "format_version": "1.21.6",
+    "credit": "Made with Blockbench",
+    "texture_size": [
+        32,
+        32
+    ],
+    "textures": {
+        "0": "dungeon_defenders:block/fonderie_suie_mur",
+        "particle": "dungeon_defenders:block/fonderie_suie_mur"
+    },
+    "elements": [
+        {
+            "name": "suie",
+            "from": [
+                0,
+                4,
+                15.75
+            ],
+            "to": [
+                16,
+                16,
+                15.75
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    8,
+                    10,
+                    15.75
+                ]
+            },
+            "faces": {
+                "north": {
+                    "uv": [
+                        0.0,
+                        0.0,
+                        8.0,
+                        6.0
+                    ],
+                    "texture": "#0"
+                },
+                "south": {
+                    "uv": [
+                        0.0,
+                        0.0,
+                        8.0,
+                        6.0
+                    ],
+                    "texture": "#0"
+                }
+            }
+        }
+    ],
+    "ambientocclusion": false
+}

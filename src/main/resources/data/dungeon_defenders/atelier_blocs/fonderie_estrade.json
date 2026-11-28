@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_estrade",
+    "nom": "Estrade de fonte du cristal",
+    "nom_en": "Foundry Crystal Dais",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 3,
+    "son": "pierre"
+}

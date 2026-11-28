@@ -1,0 +1,48 @@
+{
+    "multipart": [
+        {
+            "apply": {
+                "model": "dungeon_defenders:block/fonderie_garde_corps_poteau"
+            }
+        },
+        {
+            "when": {
+                "north": "true"
+            },
+            "apply": {
+                "model": "dungeon_defenders:block/fonderie_garde_corps_cote",
+                "uvlock": true
+            }
+        },
+        {
+            "when": {
+                "east": "true"
+            },
+            "apply": {
+                "model": "dungeon_defenders:block/fonderie_garde_corps_cote",
+                "y": 90,
+                "uvlock": true
+            }
+        },
+        {
+            "when": {
+                "south": "true"
+            },
+            "apply": {
+                "model": "dungeon_defenders:block/fonderie_garde_corps_cote",
+                "y": 180,
+                "uvlock": true
+            }
+        },
+        {
+            "when": {
+                "west": "true"
+            },
+            "apply": {
+                "model": "dungeon_defenders:block/fonderie_garde_corps_cote",
+                "y": 270,
+                "uvlock": true
+            }
+        }
+    ]
+}

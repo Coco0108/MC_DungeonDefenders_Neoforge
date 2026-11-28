@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_tas_charbon",
+    "nom": "Tas de charbon",
+    "nom_en": "Coal Heap",
+    "modele": true,
+    "durete": 0.8,
+    "outil": "pelle",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

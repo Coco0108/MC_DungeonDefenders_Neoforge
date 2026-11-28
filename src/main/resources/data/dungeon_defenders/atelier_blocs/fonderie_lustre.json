@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_lustre",
+    "nom": "Lustre de fonte",
+    "nom_en": "Cast Iron Chandelier",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "metal",
+    "transparent": true
+}

@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_passerelle_rambarde",
+    "nom": "Passerelle à rambarde",
+    "nom_en": "Railed Grating Walkway",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "transparent": true,
+    "orientation": "horizontale"
+}

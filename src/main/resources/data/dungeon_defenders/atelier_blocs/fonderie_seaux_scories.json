@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_seaux_scories",
+    "nom": "Seaux de scories",
+    "nom_en": "Slag Buckets",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 5,
+    "son": "metal",
+    "orientation": "horizontale"
+}

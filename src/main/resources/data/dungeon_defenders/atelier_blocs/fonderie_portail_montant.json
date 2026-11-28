@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_portail_montant",
+    "nom": "Montant du portail de la fonderie",
+    "nom_en": "Foundry Gate Jamb",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

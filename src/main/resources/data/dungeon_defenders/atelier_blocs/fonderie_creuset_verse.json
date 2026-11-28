@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_creuset_verse",
+    "nom": "Creuset qui verse",
+    "nom_en": "Pouring Crucible",
+    "modele": true,
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 12,
+    "son": "metal",
+    "orientation": "horizontale"
+}

@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_herse",
+    "nom": "Herse de la fonderie",
+    "nom_en": "Foundry Portcullis",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "transparent": true,
+    "orientation": "horizontale"
+}

@@ -1,0 +1,14 @@
+{
+    "id": "fonderie_mur_brique_suie",
+    "nom": "Mur de brique noircie",
+    "nom_en": "Sooty Firebrick Wall",
+    "durete": 2.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "variantes": [
+        2,
+        1,
+        1
+    ]
+}

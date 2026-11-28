@@ -1,0 +1,14 @@
+{
+    "id": "fonderie_mur_brique",
+    "nom": "Mur de brique réfractaire",
+    "nom_en": "Firebrick Wall",
+    "durete": 2.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "variantes": [
+        2,
+        1,
+        1
+    ]
+}

@@ -1,0 +1,19 @@
+{
+    "variants": {
+        "facing=north": {
+            "model": "dungeon_defenders:block/fonderie_estrade_bord"
+        },
+        "facing=east": {
+            "model": "dungeon_defenders:block/fonderie_estrade_bord",
+            "y": 90
+        },
+        "facing=south": {
+            "model": "dungeon_defenders:block/fonderie_estrade_bord",
+            "y": 180
+        },
+        "facing=west": {
+            "model": "dungeon_defenders:block/fonderie_estrade_bord",
+            "y": 270
+        }
+    }
+}

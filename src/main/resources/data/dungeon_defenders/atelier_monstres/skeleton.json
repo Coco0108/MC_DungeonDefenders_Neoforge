@@ -1,0 +1,31 @@
+{
+  "id": "skeleton",
+  "nom": "Squelette colosse",
+  "modele": "dungeon_defenders:geckolib/models/entity/skeleton.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/entity/skeleton.animation.json",
+  "texture": "dungeon_defenders:textures/entity/skeleton/skeleton.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "walk": "animation.walk",
+    "attack": "animation.attack",
+    "roar": "animation.roar"
+  },
+  "echelle": 1.0,
+  "hitbox": {
+    "largeur": 1.1,
+    "hauteur": 2.7
+  },
+  "stats": {
+    "pv": 35,
+    "degats": 6,
+    "vitesse": 0.24
+  },
+  "comportement": "hostile",
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "7cf950e360a78297ed657cf6e04d4f9f1ac7ebc0ec9c17cbef9e4020826d231f",
+    "effets": [
+      "roar_breath"
+    ]
+  }
+}

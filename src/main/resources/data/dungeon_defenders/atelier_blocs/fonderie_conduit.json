@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_conduit",
+    "nom": "Conduit de soufflerie",
+    "nom_en": "Blast Duct",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "orientation": "horizontale"
+}

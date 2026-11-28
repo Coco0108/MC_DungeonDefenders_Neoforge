@@ -1,0 +1,26 @@
+{
+  "id": "pierre_impact",
+  "particules": [
+    {
+      "particule": {
+        "type": "minecraft:block",
+        "block_state": "minecraft:stone"
+      },
+      "nombre": 14,
+      "dispersion": 0.15,
+      "vitesse": 0.1
+    },
+    {
+      "particule": "minecraft:poof",
+      "nombre": 2,
+      "dispersion": 0.05,
+      "vitesse": 0.02
+    }
+  ],
+  "son": "minecraft:block.stone.hit",
+  "volume": 0.8,
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "45ac3c049f68b4b36b1833a11ef8235dce81fbd56210347e2c13895dc881d72f"
+  }
+}

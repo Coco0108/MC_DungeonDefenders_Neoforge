@@ -1,0 +1,54 @@
+{
+  "id": "dark_elf_mage",
+  "nom": "Mage elfe noir",
+  "modele": "dungeon_defenders:geckolib/models/entity/dark_elf_mage.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/entity/dark_elf_mage.animation.json",
+  "texture": "dungeon_defenders:textures/entity/dark_elf_mage/dark_elf_mage.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "walk": "animation.walk",
+    "attack": "animation.attack",
+    "cast": "animation.cast"
+  },
+  "echelle": 1.0,
+  "hitbox": {
+    "largeur": 0.9,
+    "hauteur": 2.6
+  },
+  "stats": {
+    "pv": 22,
+    "degats": 5,
+    "vitesse": 0.23
+  },
+  "comportement": "hostile",
+  "capacites": [
+    {
+      "type": "tir",
+      "role": "cast",
+      "projectile": "orbe_psychique",
+      "depart": "staff_tip",
+      "recharge": 4,
+      "quand": {
+        "distance": [
+          3,
+          14
+        ]
+      }
+    },
+    {
+      "type": "coup"
+    }
+  ],
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "f88aaa49bd6618c3012879762338d978749d6099da7bce6e1550f5c85e4551e2",
+    "effets": [
+      "crystal_charge",
+      "psy_impact",
+      "psy_trainee"
+    ],
+    "projectiles": [
+      "orbe_psychique"
+    ]
+  }
+}

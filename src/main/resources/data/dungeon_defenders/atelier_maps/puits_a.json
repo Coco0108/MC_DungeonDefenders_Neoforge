@@ -29,7 +29,7 @@
     "dungeon_defenders:puits_eau": 14,
     "dungeon_defenders:puits_echafaudage": 12,
     "dungeon_defenders:puits_escalier": 12,
-    "dungeon_defenders:puits_estrade": 8,
+    "dungeon_defenders:puits_estrade": 9,
     "dungeon_defenders:puits_estrade_angle": 4,
     "dungeon_defenders:puits_estrade_bord": 12,
     "dungeon_defenders:puits_etai": 6,
@@ -69,8 +69,8 @@
     "minecraft:light": 269
   },
   "origine": {
-    "atelier_commit": "7ec6840",
-    "empreinte": "4929e1c6f995660489b86fac496edb72c0d4bc90d6f16ee286d0e3045bfe5989",
+    "atelier_commit": "f6af63b",
+    "empreinte": "4146f480414a32d9617bbf745c566638c884bea0c8f5e9d86ff5de83b3195c51",
     "generes": [
       "src/main/resources/assets/dungeon_defenders/textures/gui/maps/puits_a.png",
       "src/main/resources/data/dungeon_defenders/structure/map/puits_a.nbt"

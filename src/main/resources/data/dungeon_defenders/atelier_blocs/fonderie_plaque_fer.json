@@ -1,0 +1,14 @@
+{
+    "id": "fonderie_plaque_fer",
+    "nom": "Plaque de fonte rivetée",
+    "nom_en": "Riveted Iron Plate",
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "variantes": [
+        2,
+        1,
+        1
+    ]
+}

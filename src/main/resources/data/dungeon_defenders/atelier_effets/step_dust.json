@@ -1,0 +1,32 @@
+{
+  "id": "step_dust",
+  "particules": [
+    {
+      "particule": {
+        "type": "minecraft:block",
+        "block_state": "minecraft:blackstone"
+      },
+      "nombre": 10,
+      "dispersion": [
+        0.4,
+        0.05,
+        0.4
+      ],
+      "vitesse": 0.1
+    },
+    {
+      "particule": "minecraft:poof",
+      "nombre": 2,
+      "dispersion": [
+        0.3,
+        0,
+        0.3
+      ],
+      "vitesse": 0.02
+    }
+  ],
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "8fce32882640166f9d4c78f408a5df18a7c5a2e11fa966c32b4e66ae7d1171cb"
+  }
+}

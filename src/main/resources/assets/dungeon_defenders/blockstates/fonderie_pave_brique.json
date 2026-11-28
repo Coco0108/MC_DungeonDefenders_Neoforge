@@ -1,0 +1,18 @@
+{
+    "variants": {
+        "": [
+            {
+                "model": "dungeon_defenders:block/fonderie_pave_brique",
+                "weight": 4
+            },
+            {
+                "model": "dungeon_defenders:block/fonderie_pave_brique_2",
+                "weight": 2
+            },
+            {
+                "model": "dungeon_defenders:block/fonderie_pave_brique_3",
+                "weight": 1
+            }
+        ]
+    }
+}

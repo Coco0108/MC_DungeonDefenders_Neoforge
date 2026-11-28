@@ -1,0 +1,15 @@
+{
+    "id": "fonderie_roche_lave",
+    "nom": "Roche fissurée de lave",
+    "nom_en": "Lava-Cracked Rock",
+    "durete": 2.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 9,
+    "son": "pierre",
+    "variantes": [
+        1,
+        1,
+        1
+    ]
+}

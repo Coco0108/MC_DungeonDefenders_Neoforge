@@ -1,0 +1,22 @@
+{
+  "id": "fleche_elfe_noir",
+  "nom": "Flèche d'elfe noir",
+  "modele": "dungeon_defenders:geckolib/models/projectile/fleche_elfe_noir.geo.json",
+  "texture": "dungeon_defenders:textures/projectile/fleche_elfe_noir.png",
+  "echelle": 1.0,
+  "taille": 0.15,
+  "vitesse": 2.6,
+  "gravite": 0.03,
+  "duree": 3,
+  "trainee": "tromblon_trainee",
+  "impact": {
+    "effet": "pierre_impact",
+    "explosion": 0,
+    "feu": false,
+    "casse_blocs": false
+  },
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "00221beee88056c9a77d1e4e00d97ba21d1bf3ead1b1e13e0ce64c342e2b6052"
+  }
+}

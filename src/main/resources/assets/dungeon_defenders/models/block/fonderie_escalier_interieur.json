@@ -1,0 +1,9 @@
+{
+    "parent": "minecraft:block/inner_stairs",
+    "textures": {
+        "bottom": "dungeon_defenders:block/fonderie_escalier",
+        "top": "dungeon_defenders:block/fonderie_escalier",
+        "side": "dungeon_defenders:block/fonderie_escalier",
+        "particle": "dungeon_defenders:block/fonderie_escalier"
+    }
+}

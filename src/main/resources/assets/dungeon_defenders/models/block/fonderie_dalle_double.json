@@ -1,0 +1,9 @@
+{
+    "parent": "minecraft:block/cube_bottom_top",
+    "textures": {
+        "bottom": "dungeon_defenders:block/fonderie_dalle",
+        "top": "dungeon_defenders:block/fonderie_dalle",
+        "side": "dungeon_defenders:block/fonderie_dalle",
+        "particle": "dungeon_defenders:block/fonderie_dalle"
+    }
+}

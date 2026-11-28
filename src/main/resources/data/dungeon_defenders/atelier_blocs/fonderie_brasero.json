@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_brasero",
+    "nom": "Brasero de la fonderie",
+    "nom_en": "Foundry Brazier",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "metal",
+    "transparent": true
+}

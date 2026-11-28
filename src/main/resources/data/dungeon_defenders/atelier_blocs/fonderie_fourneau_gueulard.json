@@ -1,0 +1,13 @@
+{
+    "id": "fonderie_fourneau_gueulard",
+    "nom": "Gueulard du haut fourneau",
+    "nom_en": "Blast Furnace Throat",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 12,
+    "son": "pierre",
+    "transparent": true,
+    "orientation": "horizontale"
+}

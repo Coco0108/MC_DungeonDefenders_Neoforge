@@ -1,0 +1,33 @@
+{
+  "id": "ogre",
+  "nom": "Ogre",
+  "modele": "dungeon_defenders:geckolib/models/entity/ogre.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/entity/ogre.animation.json",
+  "texture": "dungeon_defenders:textures/entity/ogre/ogre.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "walk": "animation.walk",
+    "attack": "animation.attack",
+    "roar": "animation.roar"
+  },
+  "echelle": 1.0,
+  "hitbox": {
+    "largeur": 1.9,
+    "hauteur": 3.3
+  },
+  "stats": {
+    "pv": 120,
+    "degats": 14,
+    "vitesse": 0.17,
+    "recharge_attaque": 2.2
+  },
+  "comportement": "hostile",
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "9f61a4ded261de290e071dc18269a01fce1f71f86a908cf6b6865e092278ffa1",
+    "effets": [
+      "roar_breath",
+      "rock_debris"
+    ]
+  }
+}

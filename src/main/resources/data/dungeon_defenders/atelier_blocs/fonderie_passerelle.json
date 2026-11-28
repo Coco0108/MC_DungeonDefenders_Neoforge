@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_passerelle",
+    "nom": "Passerelle en caillebotis",
+    "nom_en": "Grating Walkway",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "transparent": true,
+    "orientation": "horizontale"
+}
