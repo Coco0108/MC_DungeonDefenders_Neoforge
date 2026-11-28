@@ -1,0 +1,27 @@
+{
+  "id": "iron_barricade",
+  "nom": "Barricade de fer",
+  "nom_en": "Iron Barricade",
+  "modele": "dungeon_defenders:geckolib/models/tower/iron_barricade.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/iron_barricade.animation.json",
+  "texture": "dungeon_defenders:textures/tower/iron_barricade.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "repair": "animation.repair",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "sons": {
+    "build": "build",
+    "repair": "repair",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "c752cbc0130e1e063dc8e0bc658ee8fec392c0ba03b8ba4a7e6828068d52b231"
+  }
+}
