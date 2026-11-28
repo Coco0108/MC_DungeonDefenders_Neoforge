@@ -113,7 +113,12 @@ Catégorie `MONSTER`, sans aucune apparition naturelle : il n'apparaît que par 
 ## Les objets et les blocs
 
 Même principe : un objet par fiche d'objet, un bloc et son objet par fiche de bloc, enregistrés au démarrage
-(`atelier/AtelierObjets`, repris d'`objet/AtelierObjets.java` de l'Atelier), tous dans l'onglet « Dungeon Defenders ».
+(`atelier/AtelierObjets`, repris d'`objet/AtelierObjets.java` de l'Atelier). Les objets vont dans l'onglet créatif
+« Dungeon Defenders ». Les blocs ont **un onglet par série** (2026-11-28) : la série est le début de l'id jusqu'au
+premier `_` (`taverne_*`, `puits_*`, `fonderie_*`…), et les décors `dd_*` vont avec la taverne. Les onglets suivent
+l'onglet du mod, dans l'ordre taverne, puis les maps de la campagne (`AtelierObjets.SERIES`, qui donne aussi le bloc
+d'icône). Titre : `itemGroup.dungeon_defenders.blocs_<serie>`, sinon le nom de la série. Une nouvelle série a son onglet
+sans code ; l'ajouter à `SERIES` et aux fichiers de langue pour choisir sa place, son icône et son titre.
 Ce code ne fait qu'**enregistrer** : les fichiers natifs (états de bloc, modèles, définitions d'objet, butin du bloc,
 tags d'outil, noms) arrivent avec le déploiement, comme l'Atelier les génère pour lui-même.
 

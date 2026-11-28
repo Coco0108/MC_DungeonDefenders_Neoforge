@@ -1,5 +1,8 @@
 {
   "itemGroup.dungeon_defenders": "Dungeon Defenders",
+  "itemGroup.dungeon_defenders.blocs_taverne": "Blocks: Tavern",
+  "itemGroup.dungeon_defenders.blocs_puits": "Blocks: Well",
+  "itemGroup.dungeon_defenders.blocs_fonderie": "Blocks: Foundry",
   "block.dungeon_defenders.eternia_crystal": "Eternia Crystal",
   "block.dungeon_defenders.spike_blockade": "Spike Blockade",
   "block.dungeon_defenders.harpoon_turret": "Harpoon Turret",

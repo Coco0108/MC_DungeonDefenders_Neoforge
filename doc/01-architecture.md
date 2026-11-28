@@ -171,7 +171,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── AtelierEntities.java           # Un EntityType + un œuf par fiche ; attributs ; onglets créatifs
     │   │   ├── AtelierSounds.java             # Un SoundEvent par entrée de sounds.json
     │   │   ├── FicheObjet.java / FicheBloc.java # Formats des fiches d'objet et de bloc (repris de l'Atelier, sans cache)
-    │   │   ├── AtelierObjets.java             # Un objet par fiche d'objet, un bloc + son objet par fiche de bloc
+    │   │   ├── AtelierObjets.java             # Un objet par fiche d'objet, un bloc + son objet par fiche de bloc ; un onglet créatif par série de blocs (map)
     │   │   ├── BlocModele.java                # Bloc modèle converti : forme = union de ses boîtes ; obstacle pour le pathfinding (repris de l'Atelier)
     │   │   ├── AnimationsBloc.java            # Les animations d'un bloc animé (fiche anime) : idle/opened en boucle, rôles joués par le serveur, état ouvert
     │   │   ├── BlocAnimable.java              # Interface des block entities dessinés par un modèle animé de l'Atelier (jouer(role))

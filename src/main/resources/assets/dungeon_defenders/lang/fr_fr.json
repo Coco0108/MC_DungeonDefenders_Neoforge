@@ -1,5 +1,8 @@
 {
   "itemGroup.dungeon_defenders": "Dungeon Defenders",
+  "itemGroup.dungeon_defenders.blocs_taverne": "Blocs : Taverne",
+  "itemGroup.dungeon_defenders.blocs_puits": "Blocs : Puits",
+  "itemGroup.dungeon_defenders.blocs_fonderie": "Blocs : Fonderie",
   "block.dungeon_defenders.eternia_crystal": "Cristal d'Eternia",
   "block.dungeon_defenders.spike_blockade": "Barricade à Pics",
   "block.dungeon_defenders.harpoon_turret": "Tourelle Harpon",

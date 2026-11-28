@@ -2,6 +2,9 @@ package com.github.c0c0tier.dungeon_defenders.atelier;
 
 import com.github.c0c0tier.dungeon_defenders.DungeonDefendersMod;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -28,6 +31,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,8 +42,9 @@ import java.util.function.Supplier;
  * Un objet par fiche d'objet ({@code data/dungeon_defenders/atelier_objets/<id>.json}) et un bloc, avec son objet, par
  * fiche de bloc ({@code atelier_blocs/<id>.json} ; un {@link BlocModele} pour un modèle converti, un
  * {@link BlocModeleOriente} s'il se tourne vers le joueur, un {@link RotatedPillarBlock} pour un cube dans un axe, la
- * classe vanilla du chêne pour une porte, une trappe, un escalier, une dalle, une barrière ou un portillon), tous dans l'onglet
- * « Dungeon Defenders ». Aucun code par objet ni par bloc : tout vient de la fiche. Repris de
+ * classe vanilla du chêne pour une porte, une trappe, un escalier, une dalle, une barrière ou un portillon). Les objets vont
+ * dans l'onglet « Dungeon Defenders », les blocs dans un onglet par série (une par map : {@code taverne_*},
+ * {@code puits_*}…, voir {@link #registerTabs}). Aucun code par objet ni par bloc : tout vient de la fiche. Repris de
  * {@code objet/AtelierObjets.java} de l'Atelier, sans les blocs-cachettes ni l'onglet « Atelier ».
  *
  * <p>Les fichiers natifs (états de bloc, modèles et définitions d'objet, butin du bloc, tags d'outil, noms) ne sont pas
@@ -48,8 +53,24 @@ import java.util.function.Supplier;
 public final class AtelierObjets {
     private static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(DungeonDefendersMod.MODID);
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(DungeonDefendersMod.MODID);
-    /** Objets puis blocs, dans l'ordre de l'onglet créatif. */
+    /** Les objets, dans l'ordre de l'onglet créatif « Dungeon Defenders ». */
     private static final List<Supplier<? extends Item>> CONTENTS = new ArrayList<>();
+    private static final DeferredRegister<CreativeModeTab> TABS =
+            DeferredRegister.create(net.minecraft.core.registries.Registries.CREATIVE_MODE_TAB, DungeonDefendersMod.MODID);
+    /**
+     * Les séries de blocs connues, dans l'ordre des onglets (la taverne, puis les maps de la campagne), avec le bloc qui
+     * sert d'icône. Une série inconnue a quand même son onglet, après celles-ci (icône : son premier bloc).
+     */
+    private static final Map<String, String> SERIES = new LinkedHashMap<>();
+
+    static {
+        SERIES.put("taverne", "taverne_tonneau");
+        SERIES.put("puits", "puits_margelle");
+        SERIES.put("fonderie", "fonderie_enclume");
+    }
+
+    /** Les décors {@code dd_*} (cristal, forge, mannequin) sont des meubles de la taverne. */
+    private static final Map<String, String> SERIE_DE_PREFIXE = Map.of("dd", "taverne");
     private static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES =
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, DungeonDefendersMod.MODID);
     /** Un type de block entity par bloc animé ({@code anime}), comme un type d'entité par monstre. */
@@ -63,18 +84,67 @@ public final class AtelierObjets {
         for (FicheObjet objet : Atelier.objets().values()) {
             CONTENTS.add(ITEMS.registerSimpleItem(objet.id(), properties -> itemProperties(objet, properties)));
         }
+        Map<String, List<Supplier<? extends Item>>> parSerie = new LinkedHashMap<>();
+        SERIES.keySet().forEach(serie -> parSerie.put(serie, new ArrayList<>()));
+        Map<String, Supplier<? extends Item>> icones = new HashMap<>();
         for (FicheBloc bloc : Atelier.blocs().values()) {
             var block = BLOCKS.registerBlock(bloc.id(), constructeur(bloc), properties -> blockProperties(bloc, properties));
-            CONTENTS.add(ITEMS.registerSimpleBlockItem(block));
+            var item = ITEMS.registerSimpleBlockItem(block);
+            String serie = serie(bloc.id());
+            parSerie.computeIfAbsent(serie, s -> new ArrayList<>()).add(item);
+            if (bloc.id().equals(SERIES.get(serie))) {
+                icones.put(serie, item);
+            }
             if (anime(bloc)) {
                 ANIMES.put(bloc.id(), BLOCK_ENTITIES.register(bloc.id(), () -> new BlockEntityType<>(
                         (pos, state) -> new BlocAnimeEntity(ANIMES.get(bloc.id()).get(), pos, state, bloc.id()), Set.of(block.get()))));
             }
         }
+        registerTabs(parSerie, icones);
         BLOCKS.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
+        TABS.register(modEventBus);
         ITEMS.register(modEventBus);
         modEventBus.addListener(AtelierObjets::addToCreativeTab);
+    }
+
+    /** La série d'un bloc : le début de son id jusqu'au premier {@code _} ({@code puits_margelle} → {@code puits}). */
+    static String serie(String id) {
+        int fin = id.indexOf('_');
+        String prefixe = fin < 0 ? id : id.substring(0, fin);
+        return SERIE_DE_PREFIXE.getOrDefault(prefixe, prefixe);
+    }
+
+    /** L'onglet créatif d'une série de blocs, s'il existe ({@code taverne}, {@code puits}…). */
+    public static java.util.Optional<CreativeModeTab> onglet(String serie) {
+        return java.util.Optional.ofNullable(net.minecraft.core.registries.BuiltInRegistries.CREATIVE_MODE_TAB.getValue(
+                net.minecraft.resources.Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "blocs_" + serie)));
+    }
+
+    /**
+     * Un onglet créatif par série de blocs (une par map, plus la taverne), après l'onglet « Dungeon Defenders », dans
+     * l'ordre de {@link #SERIES}. Titre : {@code itemGroup.dungeon_defenders.blocs_<serie>} des fichiers de langue du mod,
+     * sinon le nom de la série.
+     */
+    private static void registerTabs(Map<String, List<Supplier<? extends Item>>> parSerie, Map<String, Supplier<? extends Item>> icones) {
+        ResourceKey<CreativeModeTab> precedent = DungeonDefendersMod.DUNGEON_DEFENDERS_TAB.getKey();
+        for (var entry : parSerie.entrySet()) {
+            String serie = entry.getKey();
+            List<Supplier<? extends Item>> items = entry.getValue();
+            if (items.isEmpty()) {
+                continue;
+            }
+            Supplier<? extends Item> icone = icones.getOrDefault(serie, items.getFirst());
+            ResourceKey<CreativeModeTab> avant = precedent;
+            var tab = TABS.register("blocs_" + serie, () -> CreativeModeTab.builder()
+                    .title(Component.translatableWithFallback("itemGroup." + DungeonDefendersMod.MODID + ".blocs_" + serie,
+                            Character.toUpperCase(serie.charAt(0)) + serie.substring(1)))
+                    .icon(() -> new ItemStack(icone.get()))
+                    .withTabsBefore(avant)
+                    .displayItems((parameters, output) -> items.forEach(item -> output.accept(item.get())))
+                    .build());
+            precedent = tab.getKey();
+        }
     }
 
     /** Les types de block entity des blocs animés, par id de bloc (pour leurs renderers, côté client). */

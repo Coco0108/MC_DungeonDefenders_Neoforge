@@ -1891,3 +1891,9 @@ passerelles comme si elles n'existaient pas).
 - [ ] Place pour les tours le long des chemins ; les zones interdites (`no_build_zone`) sont au bon endroit.
 - [ ] La lumière : on voit les monstres arriver.
 - [ ] Choisir : garder les deux, ou une seule (laquelle).
+
+## Onglets créatifs par map (2026-11-28)
+
+- [ ] Après l'onglet « Dungeon Defenders » (blocs de jeu, objets), un onglet « Blocs : Taverne » (blocs `taverne_*` et
+      les décors cristal, forge, mannequin), puis « Blocs : Puits ». Les icônes sont un tonneau et une margelle.
+- [ ] Plus aucun bloc de décor dans l'onglet « Dungeon Defenders ».

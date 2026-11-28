@@ -216,6 +216,7 @@ public final class DungeonDefendersGameTests {
         event.registerTest(atelierId, ModGameTestInstance.create(atelierId, DungeonDefendersGameTests::atelierMonsters,
                 new TestData<>(atelier, EMPTY_STRUCTURE, ATELIER_MAX_TICKS, 0, true)));
         register(event, atelier, "atelier_items_and_blocks", DungeonDefendersGameTests::atelierItemsAndBlocks);
+        register(event, atelier, "atelier_creative_tabs", DungeonDefendersGameTests::atelierCreativeTabs);
 
         // Les maps de l'Atelier jouées pour de vrai : chacune est la structure de son test, et chacune dans son propre
         // environnement (donc son propre lot) : les monstres visent LE cristal du monde (CRYSTAL_POS), deux maps côte à
@@ -243,6 +244,27 @@ public final class DungeonDefendersGameTests {
                     .append(node.type == net.minecraft.world.level.pathfinder.PathType.WALKABLE ? "" : ":" + node.type);
         }
         return (path.canReach() ? "chemin complet" : "chemin partiel") + " [" + nodes + "]";
+    }
+
+    /**
+     * Un onglet créatif par série de blocs de l'Atelier (taverne, puits…) : chaque bloc dans le sien, les décors dd_* avec
+     * la taverne, et plus aucun bloc de l'Atelier dans l'onglet « Dungeon Defenders ».
+     */
+    static void atelierCreativeTabs(GameTestHelper helper) {
+        var parameters = new net.minecraft.world.item.CreativeModeTab.ItemDisplayParameters(
+                helper.getLevel().enabledFeatures(), true, helper.getLevel().registryAccess());
+        var principal = DungeonDefendersMod.DUNGEON_DEFENDERS_TAB.get();
+        principal.buildContents(parameters);
+        for (String id : com.github.c0c0tier.dungeon_defenders.atelier.Atelier.blocs().keySet()) {
+            String serie = id.startsWith("dd_") ? "taverne" : id.substring(0, id.indexOf('_'));
+            var onglet = com.github.c0c0tier.dungeon_defenders.atelier.AtelierObjets.onglet(serie);
+            helper.assertTrue(onglet.isPresent(), "Pas d'onglet pour la série " + serie);
+            onglet.get().buildContents(parameters);
+            var item = BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, id));
+            helper.assertTrue(onglet.get().getDisplayItems().stream().anyMatch(stack -> stack.is(item)), id + " absent de l'onglet " + serie);
+            helper.assertTrue(principal.getDisplayItems().stream().noneMatch(stack -> stack.is(item)), id + " encore dans l'onglet Dungeon Defenders");
+        }
+        helper.succeed();
     }
 
     /** Une minute de jeu : un chemin de 45 blocs se marche en une quinzaine de secondes. */
