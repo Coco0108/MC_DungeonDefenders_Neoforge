@@ -1,0 +1,45 @@
+{
+  "id": "obus_explosion",
+  "particules": [
+    {
+      "particule": "minecraft:explosion",
+      "nombre": 3,
+      "dispersion": 0.6
+    },
+    {
+      "particule": "minecraft:flame",
+      "nombre": 30,
+      "dispersion": 0.6,
+      "vitesse": 0.15
+    },
+    {
+      "particule": "minecraft:large_smoke",
+      "nombre": 20,
+      "dispersion": [
+        1.2,
+        0.3,
+        1.2
+      ],
+      "vitesse": 0.05
+    },
+    {
+      "particule": {
+        "type": "minecraft:block",
+        "block_state": "minecraft:dirt"
+      },
+      "nombre": 24,
+      "dispersion": [
+        1.0,
+        0.1,
+        1.0
+      ],
+      "vitesse": 0.25
+    }
+  ],
+  "son": "minecraft:entity.generic.explode",
+  "volume": 0.7,
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "eb7dfa34bb89b2e7f278484117b6ff501a7af0041aa6b3094fba44ac8257c5e6"
+  }
+}

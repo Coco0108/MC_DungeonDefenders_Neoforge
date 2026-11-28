@@ -1,0 +1,44 @@
+{
+  "id": "mortar_turret",
+  "nom": "Mortier",
+  "nom_en": "Mortar Turret",
+  "modele": "dungeon_defenders:geckolib/models/tower/mortar_turret.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/mortar_turret.animation.json",
+  "texture": "dungeon_defenders:textures/tower/mortar_turret.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "visee": {
+    "os": "tete",
+    "lacet": true,
+    "tangage": [
+      -45,
+      0
+    ]
+  },
+  "bouche": "bouche",
+  "projectile": "obus_mortier",
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "a3ccebbff2d2f341a5c5717767409b693c775c4f5b8897eb1264b4498b73325f",
+    "effets": [
+      "obus_explosion",
+      "obus_trainee"
+    ],
+    "projectiles": [
+      "obus_mortier"
+    ]
+  }
+}

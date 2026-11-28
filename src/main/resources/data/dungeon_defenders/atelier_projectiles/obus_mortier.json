@@ -1,0 +1,24 @@
+{
+  "id": "obus_mortier",
+  "nom": "Obus de mortier",
+  "modele": "dungeon_defenders:geckolib/models/projectile/obus_mortier.geo.json",
+  "texture": "dungeon_defenders:textures/projectile/obus_mortier.png",
+  "animations": "dungeon_defenders:geckolib/animations/projectile/obus_mortier.animation.json",
+  "animation": "animation.spin",
+  "echelle": 1.0,
+  "taille": 0.4,
+  "vitesse": 1.0,
+  "gravite": 0.09,
+  "duree": 5,
+  "trainee": "obus_trainee",
+  "impact": {
+    "effet": "obus_explosion",
+    "explosion": 0,
+    "feu": false,
+    "casse_blocs": false
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "b1029af3e8955d4a00d8a6bbbf8b8b2610c8806a95ca5edd6c4da02946668664"
+  }
+}

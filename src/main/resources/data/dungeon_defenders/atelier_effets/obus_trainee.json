@@ -1,0 +1,21 @@
+{
+  "id": "obus_trainee",
+  "particules": [
+    {
+      "particule": "minecraft:smoke",
+      "nombre": 2,
+      "dispersion": 0.04,
+      "vitesse": 0.01
+    },
+    {
+      "particule": "minecraft:small_flame",
+      "nombre": 1,
+      "dispersion": 0.02,
+      "vitesse": 0.005
+    }
+  ],
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "ca806dd02e0ff0c291acdb1d77520dd770ad621da29c7a6875ac7e4e7a68e89a"
+  }
+}
