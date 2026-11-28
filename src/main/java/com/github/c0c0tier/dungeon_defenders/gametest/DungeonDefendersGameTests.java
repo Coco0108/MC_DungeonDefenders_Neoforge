@@ -20,6 +20,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import com.github.c0c0tier.dungeon_defenders.atelier.Atelier;
+import com.github.c0c0tier.dungeon_defenders.ZoneReset;
 import com.github.c0c0tier.dungeon_defenders.atelier.AtelierEntities;
 import com.github.c0c0tier.dungeon_defenders.atelier.AtelierMonster;
 import com.github.c0c0tier.dungeon_defenders.atelier.FicheMonstre;
@@ -176,6 +177,7 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "world_time_frozen", DungeonDefendersGameTests::worldTimeFrozen);
         register(event, environment, "test_instances_serializable", DungeonDefendersGameTests::testInstancesSerializable);
         register(event, environment, "tavern_furniture_models", DungeonDefendersGameTests::tavernFurnitureModels);
+        register(event, environment, "zone_reset_old_entities", DungeonDefendersGameTests::zoneResetOldEntities);
         register(event, environment, "monsters_do_not_burn", DungeonDefendersGameTests::monstersDoNotBurn);
         register(event, environment, "score_bonuses", DungeonDefendersGameTests::scoreBonuses);
         register(event, environment, "combat_countdown", DungeonDefendersGameTests::combatCountdown);
@@ -517,13 +519,28 @@ public final class DungeonDefendersGameTests {
         helper.succeed();
     }
 
-    /**
-     * L'heure du monde se fige à la valeur demandée (heure propre d'une map), retombe sur
-     * l'heure par défaut de la config pour une valeur absente ou hors plage, et un bloc de
-     * configuration de map transporte bien son heure.
-     */
-    // Le registre test_instance est envoyé aux clients quand les gametests sont actifs : chaque instance doit pouvoir être
-    // encodée, sinon aucun client ne rejoint le monde (type de ModGameTestInstance non enregistré, 2026-11-27).
+    // Une entité rechargée depuis la sauvegarde dans une zone reposée (taverne, map) est retirée si elle vient d'une pose
+    // précédente ; celles de la pose en cours restent (support d'armure dupliqué à chaque chargement, 2026-11-28).
+    static void zoneResetOldEntities(GameTestHelper helper) {
+        var level = helper.getLevel();
+        BlockPos inside = helper.absolutePos(new BlockPos(1, 1, 1));
+        ZoneReset.begin(level, "gametest", new AABB(inside).inflate(2.0D));
+        try {
+            var ancienne = new net.minecraft.world.entity.decoration.ArmorStand(level, inside.getX() + 0.5D, inside.getY(), inside.getZ() + 0.5D);
+            helper.assertTrue(!ZoneReset.keep(ancienne, level.dimension(), true),
+                    "Une entité rechargée sans la génération en cours doit être retirée");
+            var posee = new net.minecraft.world.entity.decoration.ArmorStand(level, inside.getX() + 0.5D, inside.getY(), inside.getZ() + 0.5D);
+            helper.assertTrue(ZoneReset.keep(posee, level.dimension(), false), "Une entité nouvelle doit être gardée");
+            helper.assertTrue(ZoneReset.keep(posee, level.dimension(), true),
+                    "Une entité de la pose en cours, rechargée dans la même session, doit être gardée");
+            var dehors = new net.minecraft.world.entity.decoration.ArmorStand(level, inside.getX() + 20.5D, inside.getY(), inside.getZ());
+            helper.assertTrue(ZoneReset.keep(dehors, level.dimension(), true), "Une entité hors de la zone ne doit pas être touchée");
+        } finally {
+            ZoneReset.end("gametest");
+        }
+        helper.succeed();
+    }
+
     // Cristal de la taverne, forge et mannequin prennent la forme des blocs de décor de l'Atelier (dd_cristal_v2,
     // dd_forge_v2, dd_dummy) ; forge et mannequin sont orientés, sud par défaut (2026-11-27).
     static void tavernFurnitureModels(GameTestHelper helper) {
@@ -551,6 +568,8 @@ public final class DungeonDefendersGameTests {
         helper.succeed();
     }
 
+    // Le registre test_instance est envoyé aux clients quand les gametests sont actifs : chaque instance doit pouvoir être
+    // encodée, sinon aucun client ne rejoint le monde (type de ModGameTestInstance non enregistré, 2026-11-27).
     static void testInstancesSerializable(GameTestHelper helper) {
         var access = helper.getLevel().registryAccess();
         var ops = net.minecraft.resources.RegistryOps.create(NbtOps.INSTANCE, access);
@@ -571,6 +590,11 @@ public final class DungeonDefendersGameTests {
         helper.succeed();
     }
 
+    /**
+     * L'heure du monde se fige à la valeur demandée (heure propre d'une map), retombe sur
+     * l'heure par défaut de la config pour une valeur absente ou hors plage, et un bloc de
+     * configuration de map transporte bien son heure.
+     */
     static void worldTimeFrozen(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Holder<WorldClock> clock = level.registryAccess().lookupOrThrow(Registries.WORLD_CLOCK).getOrThrow(WorldClocks.OVERWORLD);

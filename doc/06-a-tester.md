@@ -1845,8 +1845,10 @@ Déployée par l'Atelier (commit `914a1a1`, « map: taverne_halle »), elle remp
 cristal, une arrivée, une forge, un mannequin, un support d'armure décoratif.
 
 - [ ] Nouveau monde : on arrive dans la halle, le cristal, la forge et le mannequin fonctionnent.
-- [ ] **Bug connu, pas encore corrigé** : à chaque chargement du monde, le support d'armure de la structure est
-      ajouté une fois de plus (`TavernSpawn#clearZone` ne trouve pas les entités déjà sauvegardées, sans doute pas
-      encore chargées au moment du nettoyage). Dans un monde qui a connu l'ancienne taverne, ses supports d'armure
-      flottent dans la nef. Tester dans un **nouveau monde** en attendant.
+- [ ] **Entités dupliquées (corrigé le 2026-11-28, `ZoneReset`)** : après plusieurs redémarrages, un seul support
+      d'armure (« Le client qui n'a jamais payé ») et un seul mannequin. Dans un monde qui a connu l'ancienne taverne,
+      les supports d'armure qui flottaient dans la nef ont disparu.
+- [ ] Aller en map puis revenir à la taverne : le support d'armure est toujours là (une seule fois).
+- [ ] Arrêter le serveur en pleine partie, le relancer, relancer une partie sur la même map : aucun monstre de la
+      partie interrompue ne réapparaît.
 

@@ -15,6 +15,7 @@ MC_DungeonDefenders_Neoforge/
     │   ├── DungeonDefendersModClient.java    # Point d'entrée @Mod côté CLIENT uniquement
     │   ├── ModEvents.java                    # Événements de jeu (attribution de l'IA, vie max du joueur)
     │   ├── TavernSpawn.java                  # Point de spawn fixe + chargement de la structure de la taverne (monde vide)
+    │   ├── ZoneReset.java                    # Retire les entités d'une pose précédente (taverne, map) quand elles se rechargent
     │   ├── CombatCountdown.java              # Compte à rebours entre le vote "prêt" unanime et le début du Combat
     │   ├── WorldTime.java                    # Heure du monde figée (taverne, puis heure propre à chaque map) ; météo arrêtée
     │   ├── MapInstance.java                  # "La map active" : emplacement partagé, placeholder, téléportation

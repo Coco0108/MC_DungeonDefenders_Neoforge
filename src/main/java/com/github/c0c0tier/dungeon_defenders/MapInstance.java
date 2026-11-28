@@ -161,6 +161,9 @@ public final class MapInstance {
         Vec3i size = template.get().getSize();
         BlockPos origin = originOf(size);
 
+        // Même chose que la taverne : les entités d'une partie précédente encore sauvegardées (monstres d'une partie
+        // interrompue par un arrêt du serveur) arrivent après le nettoyage ; ZoneReset les retire à leur chargement.
+        ZoneReset.begin(level, "map", boxOf(zoneFrom(size), zoneSize(size)));
         clearZone(level, zoneFrom(size), zoneSize(size));
 
         // UPDATE_CLIENTS et pas UPDATE_ALL : pas de cascade de mises à jour de voisinage sur
@@ -229,12 +232,14 @@ public final class MapInstance {
             }
         }
 
-        AABB zone = new AABB(
-                from.getX(), from.getY(), from.getZ(),
-                from.getX() + size.getX(), from.getY() + size.getY(), from.getZ() + size.getZ());
-        for (Entity entity : level.getEntitiesOfClass(Entity.class, zone, e -> !(e instanceof Player))) {
+        for (Entity entity : level.getEntitiesOfClass(Entity.class, boxOf(from, size), e -> !(e instanceof Player))) {
             entity.discard();
         }
+    }
+
+    private static AABB boxOf(BlockPos from, Vec3i size) {
+        return new AABB(from.getX(), from.getY(), from.getZ(),
+                from.getX() + size.getX(), from.getY() + size.getY(), from.getZ() + size.getZ());
     }
 
     private static void buildPlaceholderArena(ServerLevel level) {

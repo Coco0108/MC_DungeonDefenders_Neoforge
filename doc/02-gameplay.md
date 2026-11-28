@@ -147,6 +147,16 @@ qu'on interroge leurs entités. Chercher les entités d'abord — pendant `Level
 que quoi que ce soit ne soit chargé — n'en trouverait aucune, et la structure en poserait un
 exemplaire de plus à chaque démarrage du serveur.
 
+**Mais ça ne suffit pas** (bug signalé le 2026-11-28 : le support d'armure de la taverne en un exemplaire de plus à
+chaque chargement, ceux de l'ancienne taverne flottant dans la nouvelle). Écrire un bloc charge les **blocs** du chunk,
+pas ses **entités** sauvegardées : elles arrivent plus tard, de façon asynchrone, et `clearZone` ne les voit pas.
+D'où **`ZoneReset`** : chaque pose (taverne, ou map dans `MapInstance#placeMap`) ouvre une *génération* (un nombre
+tiré au hasard) pour sa zone ; toute entité qui y apparaît ensuite la reçoit dans ses données persistantes
+(`dungeon_defenders:generation_de_zone`). Une entité **rechargée depuis la sauvegarde** dans la zone sans la génération
+en cours vient d'une pose précédente : `EntityJoinLevelEvent` est annulé, elle n'est pas ajoutée. Celles de la pose en
+cours survivent à un déchargement de chunk pendant la session (aller en map puis revenir). Les joueurs ne sont jamais
+touchés. Gametest `zone_reset_old_entities`.
+
 Ce que ça emporte, volontairement : les entités décoratives (reposées juste après), les objets
 au sol qu'un joueur aurait laissés dans la taverne, et le futur **mannequin d'entraînement** des
 tours. Chaque chargement du monde remet la taverne dans l'état livré avec le mod.

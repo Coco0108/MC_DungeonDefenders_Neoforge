@@ -935,10 +935,9 @@ graphe serveur est propre.
 
 ## Ce qui reste
 
-- **Entités de la taverne dupliquées (signalé le 2026-11-28)** : `TavernSpawn#clearZone` ne retire pas les entités
-  déjà sauvegardées dans la zone (support d'armure de la structure) : un exemplaire de plus à chaque chargement du
-  monde. Les entités du chunk ne sont probablement pas encore chargées au moment du nettoyage (`LevelEvent.Load`),
-  malgré l'écriture des blocs qui charge le chunk. `MapInstance#clearZone` suit le même principe. À corriger.
+- ~~**Entités de la taverne dupliquées (signalé le 2026-11-28)**~~ : corrigé le jour même par `ZoneReset` (voir
+  [02-gameplay.md](02-gameplay.md#les-entités-aussi-sont-remises-à-zéro--clearzone)), pour la taverne et les maps. À
+  confirmer en jeu.
 
 ### Pas de texture dédiée
 
