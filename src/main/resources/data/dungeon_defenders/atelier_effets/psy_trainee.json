@@ -1,0 +1,23 @@
+{
+  "id": "psy_trainee",
+  "particules": [
+    {
+      "particule": {
+        "type": "minecraft:dust",
+        "color": "#b060ff",
+        "scale": 1.0
+      },
+      "nombre": 3,
+      "dispersion": 0.06
+    },
+    {
+      "particule": "minecraft:end_rod",
+      "nombre": 1,
+      "vitesse": 0.01
+    }
+  ],
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "afb88726784ccb76facd44d2a8ad31f5d95ca57df436d1212549d792736ea307"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "id": "psy_impact",
+  "particules": [
+    {
+      "particule": {
+        "type": "minecraft:dust",
+        "color": "#b060ff",
+        "scale": 1.6
+      },
+      "nombre": 24,
+      "dispersion": 0.3
+    },
+    {
+      "particule": "minecraft:end_rod",
+      "nombre": 14,
+      "dispersion": 0.3,
+      "vitesse": 0.2
+    },
+    {
+      "particule": "minecraft:witch",
+      "nombre": 10,
+      "dispersion": 0.3
+    }
+  ],
+  "son": "minecraft:entity.evoker.cast_spell",
+  "volume": 0.8,
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "49812ca20db445fed8ff73a117fdc20f346c90820e0ba1f0ca745cc5b5bfe6fa"
+  }
+}
