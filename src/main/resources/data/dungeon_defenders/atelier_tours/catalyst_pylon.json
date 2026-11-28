@@ -1,0 +1,25 @@
+{
+  "id": "catalyst_pylon",
+  "nom": "Pylône catalyseur",
+  "nom_en": "Catalyst Pylon",
+  "modele": "dungeon_defenders:geckolib/models/tower/catalyst_pylon.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/catalyst_pylon.animation.json",
+  "texture": "dungeon_defenders:textures/tower/catalyst_pylon.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "sons": {
+    "build": "build",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "36dbe1f93d636ab31d7b190956e7223709bac2009e16264de2f434ab38ba35bb"
+  }
+}
