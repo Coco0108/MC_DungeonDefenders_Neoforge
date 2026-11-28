@@ -1,0 +1,27 @@
+{
+  "id": "bouncer_blockade",
+  "nom": "Barricade rebondissante",
+  "nom_en": "Bouncer Blockade",
+  "modele": "dungeon_defenders:geckolib/models/tower/bouncer_blockade.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/bouncer_blockade.animation.json",
+  "texture": "dungeon_defenders:textures/tower/bouncer_blockade.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "ff742a1850764e33ae93221f473638775702120e6a7b4c4c8a1bfcd6a1e1d59a"
+  }
+}
