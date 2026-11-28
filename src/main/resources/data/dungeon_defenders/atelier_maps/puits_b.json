@@ -26,7 +26,7 @@
     "dungeon_defenders:puits_dalle_gravee": 49,
     "dungeon_defenders:puits_eau": 780,
     "dungeon_defenders:puits_echafaudage": 18,
-    "dungeon_defenders:puits_estrade": 8,
+    "dungeon_defenders:puits_estrade": 9,
     "dungeon_defenders:puits_estrade_angle": 4,
     "dungeon_defenders:puits_estrade_bord": 12,
     "dungeon_defenders:puits_etai": 18,
@@ -62,8 +62,8 @@
     "minecraft:light": 297
   },
   "origine": {
-    "atelier_commit": "7ec6840",
-    "empreinte": "f86c26b9cc62bd1673cc7477f2de1b9d159274372b1050d9dc913bec54da6bab",
+    "atelier_commit": "f6af63b",
+    "empreinte": "c179978f27a6e7a423c0881c2bed0e37dccd5062a985597f18c9e104d5e9663c",
     "generes": [
       "src/main/resources/assets/dungeon_defenders/textures/gui/maps/puits_b.png",
       "src/main/resources/data/dungeon_defenders/structure/map/puits_b.nbt"
