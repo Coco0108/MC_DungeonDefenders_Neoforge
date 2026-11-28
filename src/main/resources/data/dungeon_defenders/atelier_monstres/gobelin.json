@@ -21,8 +21,8 @@
   },
   "comportement": "hostile",
   "origine": {
-    "atelier_commit": "f6af63b",
-    "empreinte": "24c330d869e914f243e888016dcbf8aeddb89d35fe908b7c7f142df068e8bee4",
+    "atelier_commit": "365c61b",
+    "empreinte": "fdb00041d454ff6051a8a6aa118ca40e31b0c2e49609818055f7d105fbf8d177",
     "effets": [
       "step_dust"
     ]

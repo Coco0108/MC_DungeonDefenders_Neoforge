@@ -664,6 +664,7 @@
 		"animation.walk": {
 			"loop": true,
 			"animation_length": 1,
+			"sound_effects": {"0.25": {"effect": "dungeon_defenders:entity.gobelin.step"}, "0.75": {"effect": "dungeon_defenders:entity.gobelin.step"}},
 			"bones": {
 				"root": {
 					"rotation": {
@@ -2729,6 +2730,7 @@
 		},
 		"animation.attack": {
 			"animation_length": 1.5,
+			"sound_effects": {"0.7": {"effect": "dungeon_defenders:entity.gobelin.club"}},
 			"bones": {
 				"root": {
 					"position": {
