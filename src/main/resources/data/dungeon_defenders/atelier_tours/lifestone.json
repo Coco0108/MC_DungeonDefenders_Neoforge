@@ -1,0 +1,27 @@
+{
+  "id": "lifestone",
+  "nom": "Pierre de vie",
+  "nom_en": "Lifestone",
+  "modele": "dungeon_defenders:geckolib/models/tower/lifestone.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/lifestone.animation.json",
+  "texture": "dungeon_defenders:textures/tower/lifestone.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "b125f0ddfd6586d637c44ac2d0c9a97ec352359e90a79b3fddb7e3c6fb676925"
+  }
+}
