@@ -1,0 +1,41 @@
+{
+  "id": "jet_acide",
+  "particules": [
+    {
+      "particule": {
+        "type": "minecraft:dust",
+        "color": "#a8e070",
+        "scale": 1.2
+      },
+      "nombre": 18,
+      "dispersion": [
+        0.35,
+        0.2,
+        0.35
+      ],
+      "vitesse": 0.3
+    },
+    {
+      "particule": "minecraft:sneeze",
+      "nombre": 10,
+      "dispersion": [
+        0.3,
+        0.15,
+        0.3
+      ],
+      "vitesse": 0.25
+    },
+    {
+      "particule": "minecraft:item_slime",
+      "nombre": 6,
+      "dispersion": 0.2,
+      "vitesse": 0.2
+    }
+  ],
+  "son": "minecraft:entity.generic.splash",
+  "volume": 0.5,
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "66199fb281e88f1e060c4a467373a5712527465e759dd0b686f030f01286943b"
+  }
+}
