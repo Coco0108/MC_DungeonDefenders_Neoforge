@@ -522,6 +522,7 @@
 		"animation.walk": {
 			"loop": true,
 			"animation_length": 1.4,
+			"sound_effects": {"0.35": {"effect": "dungeon_defenders:entity.skeleton.step"}, "1.05": {"effect": "dungeon_defenders:entity.skeleton.step"}},
 			"bones": {
 				"root": {
 					"rotation": {
@@ -2327,6 +2328,7 @@
 		},
 		"animation.attack": {
 			"animation_length": 1.6,
+			"sound_effects": {"0.675": {"effect": "dungeon_defenders:entity.skeleton.strike"}},
 			"bones": {
 				"root": {
 					"position": {
@@ -3730,6 +3732,7 @@
 		},
 		"animation.roar": {
 			"animation_length": 2.6,
+			"sound_effects": {"0.9": {"effect": "dungeon_defenders:entity.skeleton.roar"}},
 			"bones": {
 				"root": {
 					"rotation": {
