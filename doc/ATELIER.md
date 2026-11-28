@@ -228,6 +228,15 @@ donjon, échafaudages et passerelles, éclairage, araignées, ossements et déco
 `type: echelle`, `LadderBlock`) et une toile qui ralentit (`type: toile`, `WebBlock`) : les toiles demandées sont du
 décor.
 
+**Les blocs de la deuxième map** (« fonderie », les forges du château, 2026-11-28) : 8 demandes
+`dungeon_defenders-fonderie_*` déposées chez le concepteur (`~/homelab/modeles/a-faire/`), 68 blocs prévus dans
+`modeles/blocs/fonderie_*/` de l'Atelier. Elles reprennent les leçons des séries précédentes : variantes d'aspect
+(`_2`, `_3`) dès la première livraison pour les murs et les sols, UV en tuiles pleines pour l'escalier et la dalle
+(`uvlock`), aucune boîte de forme plate. Le métal fondu, les flammes et les braises sont sur trois textures animées
+partagées (`fonderie_fusion`, `fonderie_flamme`, `fonderie_braises`, `.mcmeta`) avec `light_emission`, comme
+`taverne_flamme`. Le bain et les chenaux de métal fondu sont du **décor** : ils ne brûlent pas (il faudrait une sorte de
+bloc qui inflige des dégâts, qui n'existe pas dans le format).
+
 **La taverne** (2026-11-27) : construite en jeu par l'Atelier à partir de
 [DEMANDE_ATELIER_TAVERNE.md](DEMANDE_ATELIER_TAVERNE.md), avec les seuls blocs `taverne_*`, puis déployée (commit
 `1d8f795`, « map: taverne depuis l'atelier @9f1731a ») et fusionnée dans `feature/atelier`. 35 × 28 × 30, plan original :
