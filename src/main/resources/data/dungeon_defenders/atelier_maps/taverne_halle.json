@@ -1,0 +1,71 @@
+{
+  "id": "taverne_halle",
+  "nom": "Taverne en halle",
+  "structure": "dungeon_defenders:tavern",
+  "taille": [
+    35,
+    31,
+    46
+  ],
+  "remplacements": {
+    "atelier:dd_cristal_v2": "dungeon_defenders:tavern_crystal",
+    "minecraft:lodestone": "dungeon_defenders:player_spawn",
+    "atelier:dd_forge_v2": "dungeon_defenders:forge",
+    "atelier:dd_dummy": "dungeon_defenders:training_dummy"
+  },
+  "blocs": {
+    "dungeon_defenders:forge": 1,
+    "dungeon_defenders:player_spawn": 1,
+    "dungeon_defenders:tavern_crystal": 1,
+    "dungeon_defenders:taverne_banc": 104,
+    "dungeon_defenders:taverne_barriere": 50,
+    "dungeon_defenders:taverne_bougies": 17,
+    "dungeon_defenders:taverne_chaine": 41,
+    "dungeon_defenders:taverne_chopes": 16,
+    "dungeon_defenders:taverne_comptoir": 11,
+    "dungeon_defenders:taverne_console": 8,
+    "dungeon_defenders:taverne_dalle": 42,
+    "dungeon_defenders:taverne_dalles": 287,
+    "dungeon_defenders:taverne_escalier": 2768,
+    "dungeon_defenders:taverne_etagere": 47,
+    "dungeon_defenders:taverne_fenetre": 30,
+    "dungeon_defenders:taverne_fenetre_haut": 24,
+    "dungeon_defenders:taverne_foyer": 4,
+    "dungeon_defenders:taverne_lanterne_posee": 7,
+    "dungeon_defenders:taverne_lanterne_suspendue": 10,
+    "dungeon_defenders:taverne_lustre": 7,
+    "dungeon_defenders:taverne_mur_colombage": 128,
+    "dungeon_defenders:taverne_mur_colombage_croix": 66,
+    "dungeon_defenders:taverne_mur_colombage_inverse": 128,
+    "dungeon_defenders:taverne_mur_enduit": 467,
+    "dungeon_defenders:taverne_mur_pierre": 801,
+    "dungeon_defenders:taverne_plancher": 1068,
+    "dungeon_defenders:taverne_plancher_sombre": 540,
+    "dungeon_defenders:taverne_porte": 4,
+    "dungeon_defenders:taverne_portillon": 2,
+    "dungeon_defenders:taverne_poteau": 48,
+    "dungeon_defenders:taverne_poteau_base": 24,
+    "dungeon_defenders:taverne_poutre": 775,
+    "dungeon_defenders:taverne_rambarde": 71,
+    "dungeon_defenders:taverne_rambarde_poteau": 20,
+    "dungeon_defenders:taverne_soubassement": 132,
+    "dungeon_defenders:taverne_table_longue": 44,
+    "dungeon_defenders:taverne_table_ronde": 4,
+    "dungeon_defenders:taverne_tabouret": 22,
+    "dungeon_defenders:taverne_tapis": 46,
+    "dungeon_defenders:taverne_tonneau": 22,
+    "dungeon_defenders:taverne_tonneau_couche": 15,
+    "dungeon_defenders:taverne_torche_murale": 21,
+    "dungeon_defenders:taverne_trappe": 1,
+    "dungeon_defenders:taverne_volets": 4,
+    "dungeon_defenders:training_dummy": 1
+  },
+  "origine": {
+    "atelier_commit": "353e0bb",
+    "empreinte": "22681c0d3e5b8f63158e16d9d9ba2c40663f49bff3da38cc780370eecc0de7b1",
+    "generes": [
+      "src/main/resources/data/dungeon_defenders/structure/tavern.nbt"
+    ],
+    "entrees": {}
+  }
+}
