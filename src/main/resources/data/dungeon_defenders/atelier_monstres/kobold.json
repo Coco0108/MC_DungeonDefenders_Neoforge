@@ -35,8 +35,8 @@
     }
   ],
   "origine": {
-    "atelier_commit": "f6af63b",
-    "empreinte": "9c339355c372701ef968a36f92b00cfd4c266be5417566d161263570bb0a475e",
+    "atelier_commit": "365c61b",
+    "empreinte": "0459071f753cc399c73dc08b66fd7fd6d97a7b4f06ec916f96b42fdf74428038",
     "effets": [
       "core_explosion",
       "ember_aura"
