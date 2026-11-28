@@ -1,0 +1,24 @@
+{
+  "id": "fiole",
+  "nom": "Fiole d'acide",
+  "modele": "dungeon_defenders:geckolib/models/projectile/fiole.geo.json",
+  "texture": "dungeon_defenders:textures/projectile/fiole.png",
+  "animations": "dungeon_defenders:geckolib/animations/projectile/fiole.animation.json",
+  "animation": "animation.spin",
+  "echelle": 1.0,
+  "taille": 0.25,
+  "vitesse": 1.1,
+  "gravite": 0.07,
+  "duree": 4,
+  "trainee": "fiole_trainee",
+  "impact": {
+    "effet": "fiole_impact",
+    "explosion": 0,
+    "feu": false,
+    "casse_blocs": false
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "e2bbf394e1de64b26add59747e3f604942a79113c2e19d92e2e2ab983debdb77"
+  }
+}

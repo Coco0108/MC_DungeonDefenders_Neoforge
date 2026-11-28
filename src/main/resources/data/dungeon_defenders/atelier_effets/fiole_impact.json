@@ -1,0 +1,49 @@
+{
+  "id": "fiole_impact",
+  "particules": [
+    {
+      "particule": {
+        "type": "minecraft:block",
+        "block_state": "minecraft:lime_stained_glass"
+      },
+      "nombre": 12,
+      "dispersion": 0.2,
+      "vitesse": 0.15
+    },
+    {
+      "particule": "minecraft:item_slime",
+      "nombre": 16,
+      "dispersion": 0.4,
+      "vitesse": 0.15
+    },
+    {
+      "particule": {
+        "type": "minecraft:dust",
+        "color": "#7bc043",
+        "scale": 1.6
+      },
+      "nombre": 30,
+      "dispersion": [
+        1.2,
+        0.05,
+        1.2
+      ]
+    },
+    {
+      "particule": "minecraft:sneeze",
+      "nombre": 14,
+      "dispersion": [
+        1.0,
+        0.05,
+        1.0
+      ],
+      "vitesse": 0.005
+    }
+  ],
+  "son": "minecraft:block.glass.break",
+  "volume": 0.8,
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "da505d5e58950bee0fee602c37074c4cf17d243105eb86771814e89c7f5d9c1f"
+  }
+}

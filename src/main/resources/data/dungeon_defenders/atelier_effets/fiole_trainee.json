@@ -1,0 +1,18 @@
+{
+  "id": "fiole_trainee",
+  "particules": [
+    {
+      "particule": {
+        "type": "minecraft:dust",
+        "color": "#7bc043",
+        "scale": 0.8
+      },
+      "nombre": 1,
+      "dispersion": 0.03
+    }
+  ],
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "796a4e0b81e550cd8415576cdfb510580f1843d884a977ff1dea68f13bbf9930"
+  }
+}

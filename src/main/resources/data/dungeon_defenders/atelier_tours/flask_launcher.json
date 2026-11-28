@@ -1,0 +1,41 @@
+{
+  "id": "flask_launcher",
+  "nom": "Lance-fioles",
+  "nom_en": "Flask Launcher",
+  "modele": "dungeon_defenders:geckolib/models/tower/flask_launcher.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/flask_launcher.animation.json",
+  "texture": "dungeon_defenders:textures/tower/flask_launcher.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "visee": {
+    "os": "tete",
+    "lacet": true,
+    "tangage": false
+  },
+  "bouche": "bouche",
+  "projectile": "fiole",
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "147f74a844a73465e59f9f94a54e8d9a1a1c89dd048c2bae3570ed4af36e0998",
+    "effets": [
+      "fiole_impact",
+      "fiole_trainee"
+    ],
+    "projectiles": [
+      "fiole"
+    ]
+  }
+}
