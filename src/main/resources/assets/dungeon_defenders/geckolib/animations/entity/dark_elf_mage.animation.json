@@ -580,6 +580,7 @@
 		"animation.walk": {
 			"loop": true,
 			"animation_length": 1.2,
+			"sound_effects": {"0.3": {"effect": "dungeon_defenders:entity.dark_elf_mage.step"}, "0.9": {"effect": "dungeon_defenders:entity.dark_elf_mage.step"}},
 			"bones": {
 				"root": {
 					"rotation": {
@@ -2545,6 +2546,7 @@
 		},
 		"animation.cast": {
 			"animation_length": 2.2,
+			"sound_effects": {"0.4": {"effect": "dungeon_defenders:entity.dark_elf_mage.charge"}, "1.0": {"effect": "dungeon_defenders:entity.dark_elf_mage.release"}},
 			"bones": {
 				"root": {
 					"position": {
@@ -3193,6 +3195,7 @@
 		},
 		"animation.attack": {
 			"animation_length": 1.2,
+			"sound_effects": {"0.525": {"effect": "dungeon_defenders:entity.dark_elf_mage.staff"}},
 			"bones": {
 				"root": {
 					"position": {
