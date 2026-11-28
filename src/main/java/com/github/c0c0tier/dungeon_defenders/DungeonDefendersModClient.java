@@ -425,6 +425,11 @@ public class DungeonDefendersModClient {
     @SubscribeEvent
     static void onClientSetup(FMLClientSetupEvent event) {
         event.enqueueWork(() -> Minecraft.getInstance().options.keyPlayerList.setKey(InputConstants.UNKNOWN));
+        // L'onglet « Monstres » montre les ennemis que le client a reçus du serveur (pas ceux du serveur intégré, absent
+        // en multijoueur).
+        com.github.c0c0tier.dungeon_defenders.item.EnemyEggItem.setEnemies(() -> ClientEnemyDefinitions.sorted().stream()
+                .map(e -> new com.github.c0c0tier.dungeon_defenders.item.EnemyEggItem.Entry(e.id(), e.icon()))
+                .toList());
     }
 
     // Plus de hotbar (HUD masqué, HOTBAR ci-dessus, et à terme un seul item par main plutôt

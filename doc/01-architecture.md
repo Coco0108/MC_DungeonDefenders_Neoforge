@@ -31,6 +31,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── DifficultyScaling.java        # Multiplicateur difficulté x vague, pour les spawners
     │   │   ├── EnemyDefinition.java          # Un ennemi data-driven (entity_type, icône, XP, ordre, comportement) + codec strict
     │   │   ├── EnemyBehavior.java            # Types d'IA en Java (melee_priority, ranged_crystal), paramètres en JSON
+    │   │   ├── ModDataComponents.java        # Composants d'objet du mod (enemy : l'ennemi d'un œuf)
     │   │   ├── EnemyRegistry.java            # Ennemis côté serveur : reload listener (/reload) + synchro client (OnDatapackSyncEvent)
     │   │   ├── LegacyEnemyIds.java           # Table FIGÉE ancien ordinal -> identifiant (0 zombie, 1 squelette) + conversion NBT pour /dd_export
     │   │   ├── PhaseTransitions.java         # enterCombat/enterBuild/enterTavern/startNewGame : transitions centralisées
@@ -156,6 +157,7 @@ MC_DungeonDefenders_Neoforge/
     │   │   ├── HeroWeaponItem.java            # Arme à distance d'un héros : lance un projectile au clic droit (fioles, rivets, bâton), effet à l'impact
     │   │   ├── HeroWeapons.java               # Donne à chaque joueur l'arme de son héros, retire les autres
     │   │   ├── ManaTestWandItem.java / ManaFillWandItem.java  # Baguettes de test du mana
+    │   │   ├── EnemyEggItem.java              # Œuf d'un ennemi data-driven (composant dungeon_defenders:enemy, apparence = icône de l'ennemi) ; onglet « Monstres »
     │   ├── loot/
     │   │   ├── LootRarity.java                # Raretés : chance, force, nombre de bonus secondaires, couleur
     │   │   ├── LootWeapon.java                # Une arme de butin (héros, rareté, bonus) ; forme objet au sol
@@ -291,8 +293,11 @@ NeoForge autorise plusieurs classes `@Mod` pour le même `modId`, différenciée
 - Enregistre tous les `BlockEntityType` du mod (`eternia_crystal`, `spawner`, et chaque tour du
   roster — `spike_blockade`, `bouncer_blockade`, `slice_n_dice_blockade`, `harpoon_turret`,
   `bowling_ball_turret`, `mortar_turret`), chacun lié à son bloc dans `ModBlocks`.
-- Enregistre l'onglet créatif `dungeon_defenders_tab`, dont l'icône et le seul contenu
-  sont l'item du cristal.
+- Enregistre l'onglet créatif `dungeon_defenders_tab` (blocs de jeu et objets du mod), puis
+  l'onglet `monstres` (`MONSTERS_TAB`) : un œuf par ennemi data-driven (`item/EnemyEggItem`), dans
+  l'ordre `order`, suivi des œufs des monstres de l'Atelier. Les onglets de blocs de l'Atelier
+  viennent après (`AtelierObjets`). Le composant d'objet `dungeon_defenders:enemy` est dans
+  `init/ModDataComponents`.
 - Le constructeur `DungeonDefendersMod(IEventBus modEventBus)` branche les cinq registres
   (`ModBlocks.register(...)`, `ModAttachments.register(...)`, `ModMenus.register(...)`,
   `BLOCK_ENTITIES`, `CREATIVE_MODE_TABS`) sur le bus du mod.

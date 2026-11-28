@@ -360,6 +360,15 @@ compatibilité réseau à assurer) :
 synchronisées ». Avec les deux JSON livrés, c'est exactement {zombie, squelette}, donc rien ne
 change visuellement. Un futur ennemi aura automatiquement sa barre de vie.
 
+**Onglet créatif « Monstres » (2026-11-28) :** un œuf par ennemi (`item/EnemyEggItem`, un seul
+objet `dungeon_defenders:enemy_egg` dont le composant `dungeon_defenders:enemy` porte l'id). Le
+client le remplit avec sa copie (`ClientEnemyDefinitions`, branchée au setup client par
+`EnemyEggItem.setEnemies`, pour que le code commun ne nomme aucune classe cliente). L'œuf prend
+l'apparence de l'`icon` de l'ennemi (composant `item_model`) et fait apparaître l'ennemi exact
+par `EnemyDefinition#spawn`, stats comprises : c'est ce qui distingue une brute d'un zombie,
+que l'œuf vanilla confond. Un nouveau JSON d'ennemi a donc son œuf sans code. Limite : après un
+`/reload` qui ajoute un ennemi, l'onglet ne se met à jour qu'à la reconnexion.
+
 ## 5. Migration ordinal → identifiant
 
 ### Principe commun : lecture compatible, écriture au nouveau format, conversion loggée

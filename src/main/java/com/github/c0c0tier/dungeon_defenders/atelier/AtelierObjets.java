@@ -122,12 +122,12 @@ public final class AtelierObjets {
     }
 
     /**
-     * Un onglet créatif par série de blocs (une par map, plus la taverne), après l'onglet « Dungeon Defenders », dans
+     * Un onglet créatif par série de blocs (une par map, plus la taverne), après l'onglet « Monstres », dans
      * l'ordre de {@link #SERIES}. Titre : {@code itemGroup.dungeon_defenders.blocs_<serie>} des fichiers de langue du mod,
      * sinon le nom de la série.
      */
     private static void registerTabs(Map<String, List<Supplier<? extends Item>>> parSerie, Map<String, Supplier<? extends Item>> icones) {
-        ResourceKey<CreativeModeTab> precedent = DungeonDefendersMod.DUNGEON_DEFENDERS_TAB.getKey();
+        ResourceKey<CreativeModeTab> precedent = DungeonDefendersMod.MONSTERS_TAB.getKey();
         for (var entry : parSerie.entrySet()) {
             String serie = entry.getKey();
             List<Supplier<? extends Item>> items = entry.getValue();

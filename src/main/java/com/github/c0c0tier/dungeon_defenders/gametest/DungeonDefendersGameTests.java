@@ -182,6 +182,7 @@ public final class DungeonDefendersGameTests {
         register(event, environment, "tavern_furniture_models", DungeonDefendersGameTests::tavernFurnitureModels);
         register(event, environment, "zone_reset_old_entities", DungeonDefendersGameTests::zoneResetOldEntities);
         register(event, environment, "animated_blocks", DungeonDefendersGameTests::animatedBlocks);
+        register(event, environment, "enemy_egg_spawns_exact_enemy", DungeonDefendersGameTests::enemyEggSpawnsExactEnemy);
         register(event, environment, "forge_open_close", DungeonDefendersGameTests::forgeOpenClose);
         register(event, environment, "training_dummy_hurt", DungeonDefendersGameTests::trainingDummyHurt, 60);
         register(event, environment, "monsters_do_not_burn", DungeonDefendersGameTests::monstersDoNotBurn);
@@ -264,6 +265,44 @@ public final class DungeonDefendersGameTests {
             helper.assertTrue(onglet.get().getDisplayItems().stream().anyMatch(stack -> stack.is(item)), id + " absent de l'onglet " + serie);
             helper.assertTrue(principal.getDisplayItems().stream().noneMatch(stack -> stack.is(item)), id + " encore dans l'onglet Dungeon Defenders");
         }
+        // L'onglet « Monstres » : un œuf par ennemi data-driven, dans l'ordre, chacun avec l'apparence de son icône.
+        var monstres = DungeonDefendersMod.MONSTERS_TAB.get();
+        monstres.buildContents(parameters);
+        var ids = monstres.getDisplayItems().stream()
+                .map(stack -> stack.get(com.github.c0c0tier.dungeon_defenders.init.ModDataComponents.ENEMY.get()))
+                .toList();
+        helper.assertValueEqual(ids, com.github.c0c0tier.dungeon_defenders.init.EnemyRegistry.sortedIds(), "ennemis de l'onglet Monstres");
+        var brute = monstres.getDisplayItems().stream()
+                .filter(stack -> Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "brute")
+                        .equals(stack.get(com.github.c0c0tier.dungeon_defenders.init.ModDataComponents.ENEMY.get())))
+                .findFirst().orElseThrow();
+        helper.assertValueEqual(brute.get(net.minecraft.core.component.DataComponents.ITEM_MODEL),
+                Identifier.withDefaultNamespace("iron_axe"), "apparence de l'œuf de brute");
+        helper.succeed();
+    }
+
+    /**
+     * L'œuf de la brute fait apparaître une brute (marquée, avec ses stats), pas un zombie : les deux sont des
+     * {@code minecraft:zombie}, c'est ce que l'œuf vanilla ne sait pas distinguer.
+     */
+    static void enemyEggSpawnsExactEnemy(GameTestHelper helper) {
+        Identifier bruteId = Identifier.fromNamespaceAndPath(DungeonDefendersMod.MODID, "brute");
+        var definition = com.github.c0c0tier.dungeon_defenders.init.EnemyRegistry.byId(bruteId);
+        helper.assertTrue(definition != null, "Pas d'ennemi brute");
+        var stack = com.github.c0c0tier.dungeon_defenders.item.EnemyEggItem.of(bruteId, definition.icon());
+        BlockPos floor = helper.absolutePos(new BlockPos(1, 0, 1));
+        var hit = new net.minecraft.world.phys.BlockHitResult(net.minecraft.world.phys.Vec3.atCenterOf(floor),
+                net.minecraft.core.Direction.UP, floor, false);
+        var result = stack.getItem().useOn(new net.minecraft.world.item.context.UseOnContext(helper.getLevel(), null,
+                net.minecraft.world.InteractionHand.MAIN_HAND, stack, hit));
+        helper.assertTrue(result.consumesAction(), "L'œuf n'a rien fait apparaître : " + result);
+        var spawned = helper.getLevel().getEntities((net.minecraft.world.entity.Entity) null,
+                new net.minecraft.world.phys.AABB(floor.above()).inflate(1), entity -> entity instanceof net.minecraft.world.entity.monster.Monster);
+        helper.assertValueEqual(spawned.size(), 1, "monstres apparus");
+        var mob = (net.minecraft.world.entity.LivingEntity) spawned.getFirst();
+        helper.assertValueEqual(mob.getData(com.github.c0c0tier.dungeon_defenders.init.ModAttachments.ENEMY_ID), bruteId.toString(), "ennemi apparu");
+        definition.maxHealth().ifPresent(hp -> helper.assertValueEqual(mob.getMaxHealth(), hp.floatValue(), "PV max de la brute"));
+        mob.discard();
         helper.succeed();
     }
 

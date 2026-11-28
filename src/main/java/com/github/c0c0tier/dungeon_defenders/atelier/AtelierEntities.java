@@ -17,7 +17,7 @@ import java.util.Map;
 
 /**
  * Un type d'entité par fiche de monstre chargée, {@code dungeon_defenders:<id>}, et son œuf d'apparition
- * {@code dungeon_defenders:<id>_spawn_egg} (onglets « Œufs d'apparition » et « Dungeon Defenders »). Repris de
+ * {@code dungeon_defenders:<id>_spawn_egg} (onglets « Œufs d'apparition » et « Monstres »). Repris de
  * {@code entity/AtelierEntities.java} et {@code entity/AtelierItems.java} de l'Atelier, sans apparition naturelle ni
  * projectiles.
  *
@@ -62,7 +62,7 @@ public final class AtelierEntities {
     }
 
     private static void addToCreativeTabs(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS || event.getTab() == DungeonDefendersMod.DUNGEON_DEFENDERS_TAB.get()) {
+        if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS || event.getTab() == DungeonDefendersMod.MONSTERS_TAB.get()) {
             EGGS.values().forEach(event::accept);
         }
     }

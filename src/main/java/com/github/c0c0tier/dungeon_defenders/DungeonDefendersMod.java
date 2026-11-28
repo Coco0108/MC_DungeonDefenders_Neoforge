@@ -281,9 +281,22 @@ public class DungeonDefendersMod {
                     })
                     .build());
 
+    // 3bis. L'onglet « Monstres » : un œuf par ennemi (EnemyEggItem), puis les œufs des monstres de l'Atelier s'il y en a
+    // (AtelierEntities). Les onglets de blocs de l'Atelier viennent après (AtelierObjets).
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MONSTERS_TAB = CREATIVE_MODE_TABS.register("monstres",
+            () -> CreativeModeTab.builder()
+                    .title(Component.translatable("itemGroup.dungeon_defenders.monstres"))
+                    .icon(() -> com.github.c0c0tier.dungeon_defenders.item.EnemyEggItem.of(
+                            net.minecraft.resources.Identifier.fromNamespaceAndPath(MODID, "zombie"), net.minecraft.world.item.Items.ZOMBIE_SPAWN_EGG))
+                    .withTabsBefore(DUNGEON_DEFENDERS_TAB.getKey())
+                    .displayItems((parameters, output) -> com.github.c0c0tier.dungeon_defenders.item.EnemyEggItem.enemies()
+                            .forEach(enemy -> output.accept(com.github.c0c0tier.dungeon_defenders.item.EnemyEggItem.of(enemy.id(), enemy.icon()))))
+                    .build());
+
     public DungeonDefendersMod(IEventBus modEventBus, ModContainer container) {
         // On enregistre tes deux fichiers de registres sur le bus
         ModBlocks.register(modEventBus);
+        com.github.c0c0tier.dungeon_defenders.init.ModDataComponents.register(modEventBus);
         ModAttachments.register(modEventBus);
         ModMenus.register(modEventBus);
         // Type des gametests du mod (voir ModGameTestInstance) : sans lui, un client ne peut pas rejoindre un monde

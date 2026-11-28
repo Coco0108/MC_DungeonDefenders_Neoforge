@@ -1897,3 +1897,15 @@ passerelles comme si elles n'existaient pas).
 - [ ] Après l'onglet « Dungeon Defenders » (blocs de jeu, objets), un onglet « Blocs : Taverne » (blocs `taverne_*` et
       les décors cristal, forge, mannequin), puis « Blocs : Puits ». Les icônes sont un tonneau et une margelle.
 - [ ] Plus aucun bloc de décor dans l'onglet « Dungeon Defenders ».
+
+## Onglet créatif « Monstres » (2026-11-28)
+
+Juste après l'onglet « Dungeon Defenders », avant les onglets de blocs.
+
+- [ ] Cinq œufs, dans l'ordre : Œuf : Zombie, Squelette, Brute, Coureur, Tireur d'élite. Chacun a l'icône de l'ennemi
+      (œuf de zombie, de squelette, hache en fer pour la brute, œuf de husk, de stray).
+- [ ] Clic droit au sol avec l'œuf de la brute : c'est une **brute** (plus grosse, plus de PV, barre de vie), pas un
+      zombie ordinaire ; elle part vers le cristal comme celles des spawners.
+- [ ] En multijoueur (serveur du homelab), l'onglet est rempli aussi (il vient de la liste reçue du serveur).
+- [ ] À savoir : un ennemi posé à l'œuf pendant une vague compte dans les monstres tués, il peut donc finir la vague
+      plus tôt (comme un œuf vanilla avant).

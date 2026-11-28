@@ -273,6 +273,10 @@ public class ModBlocks {
     public static final DeferredItem<ManaFillWandItem> MANA_FILL_WAND =
             ITEMS.registerItem("mana_fill_wand", ManaFillWandItem::new);
 
+    // 4ter. L'œuf d'un ennemi (onglet « Monstres ») : un exemplaire par ennemi data-driven, voir EnemyEggItem.
+    public static final DeferredItem<com.github.c0c0tier.dungeon_defenders.item.EnemyEggItem> ENEMY_EGG =
+            ITEMS.registerItem("enemy_egg", com.github.c0c0tier.dungeon_defenders.item.EnemyEggItem::new);
+
     // 5. Spawner : fait apparaître des zombies pendant la phase de combat (voir
     // SpawnerBlockEntity pour l'algorithme). Clic droit = harnais de test qui bascule la phase.
     public static final DeferredBlock<SpawnerBlock> SPAWNER = BLOCKS.registerBlock("spawner",

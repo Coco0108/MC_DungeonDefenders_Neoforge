@@ -72,7 +72,7 @@ plusieurs marqueurs `impact`, une keyframe de son vers un événement non décla
 ## Les monstres
 
 Un **type d'entité par fiche**, `dungeon_defenders:<id>`, et son œuf `dungeon_defenders:<id>_spawn_egg` (onglets
-« Œufs d'apparition » et « Dungeon Defenders »). **Une seule classe d'entité** (`atelier/AtelierMonster`), **un seul
+« Œufs d'apparition » et « Monstres »). **Une seule classe d'entité** (`atelier/AtelierMonster`), **un seul
 modèle et un seul renderer** (`client/atelier/`), qui prennent tout dans la fiche.
 
 | Champ de la fiche | Effet dans Dungeon Defenders |
@@ -116,7 +116,7 @@ Même principe : un objet par fiche d'objet, un bloc et son objet par fiche de b
 (`atelier/AtelierObjets`, repris d'`objet/AtelierObjets.java` de l'Atelier). Les objets vont dans l'onglet créatif
 « Dungeon Defenders ». Les blocs ont **un onglet par série** (2026-11-28) : la série est le début de l'id jusqu'au
 premier `_` (`taverne_*`, `puits_*`, `fonderie_*`…), et les décors `dd_*` vont avec la taverne. Les onglets suivent
-l'onglet du mod, dans l'ordre taverne, puis les maps de la campagne (`AtelierObjets.SERIES`, qui donne aussi le bloc
+l'onglet du mod et l'onglet « Monstres », dans l'ordre taverne, puis les maps de la campagne (`AtelierObjets.SERIES`, qui donne aussi le bloc
 d'icône). Titre : `itemGroup.dungeon_defenders.blocs_<serie>`, sinon le nom de la série. Une nouvelle série a son onglet
 sans code ; l'ajouter à `SERIES` et aux fichiers de langue pour choisir sa place, son icône et son titre.
 Ce code ne fait qu'**enregistrer** : les fichiers natifs (états de bloc, modèles, définitions d'objet, butin du bloc,
@@ -328,5 +328,5 @@ brute en 5). Aucun bloc `atelier:` (vérifié en lisant les `.nbt`). Leurs chemi
   forme d'un bloc `modele`). Sans rien de déployé, ils n'ont rien à vérifier. Ils tournent dans leur propre
   environnement (`dungeon_defenders:atelier`), donc dans un lot à part : les tests des tours et des armes visent le
   monstre le plus proche, et un monstre d'un test voisin du même lot pourrait les fausser.
-- En jeu : l'œuf, les objets et les blocs dans l'onglet « Dungeon Defenders », ou `/summon dungeon_defenders:<id>` ; voir
+- En jeu : l'œuf dans l'onglet « Monstres », les objets dans « Dungeon Defenders », les blocs dans leur onglet de série, ou `/summon dungeon_defenders:<id>` ; voir
   [06-a-tester.md](06-a-tester.md#monstres-de-latelier).
