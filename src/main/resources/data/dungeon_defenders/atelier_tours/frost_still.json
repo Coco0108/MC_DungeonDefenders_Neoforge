@@ -1,0 +1,27 @@
+{
+  "id": "frost_still",
+  "nom": "Alambic de givre",
+  "nom_en": "Frost Still",
+  "modele": "dungeon_defenders:geckolib/models/tower/frost_still.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/frost_still.animation.json",
+  "texture": "dungeon_defenders:textures/tower/frost_still.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "7adb0a87ee81b3aa18c96aa59e6a60f42454b4d82bacbe80de02b83db4e14e65"
+  }
+}
