@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_bain",
+    "nom": "Bain de métal fondu",
+    "nom_en": "Molten Metal Pool",
+    "modele": true,
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "metal"
+}

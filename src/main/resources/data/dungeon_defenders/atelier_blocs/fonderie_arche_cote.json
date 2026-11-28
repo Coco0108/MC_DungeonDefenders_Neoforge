@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_arche_cote",
+    "nom": "Côté d'arche de la fonderie",
+    "nom_en": "Foundry Arch Side",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

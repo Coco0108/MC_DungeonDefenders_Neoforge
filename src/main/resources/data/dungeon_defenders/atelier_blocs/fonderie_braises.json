@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_braises",
+    "nom": "Tas de braises",
+    "nom_en": "Ember Pile",
+    "modele": true,
+    "durete": 0.8,
+    "outil": "pelle",
+    "niveau": "aucun",
+    "lumiere": 11,
+    "son": "pierre"
+}

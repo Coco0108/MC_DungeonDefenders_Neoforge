@@ -2,6 +2,7 @@
   "replace": false,
   "values": [
     "dungeon_defenders:puits_porte",
-    "dungeon_defenders:taverne_porte"
+    "dungeon_defenders:taverne_porte",
+    "dungeon_defenders:fonderie_porte"
   ]
 }

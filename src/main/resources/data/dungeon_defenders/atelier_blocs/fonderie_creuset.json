@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_creuset",
+    "nom": "Creuset de la fonderie",
+    "nom_en": "Foundry Crucible",
+    "modele": true,
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 12,
+    "son": "metal"
+}

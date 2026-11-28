@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_herse_chaine",
+    "nom": "Chaîne de la herse",
+    "nom_en": "Portcullis Chain",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "orientation": "horizontale"
+}

@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_escalier",
+    "nom": "Escalier de la fonderie",
+    "nom_en": "Foundry Stairs",
+    "type": "escalier",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre"
+}

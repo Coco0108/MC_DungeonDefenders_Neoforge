@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_estrade_angle",
+    "nom": "Angle d'estrade de fonte",
+    "nom_en": "Foundry Crystal Dais Corner",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "orientation": "horizontale"
+}

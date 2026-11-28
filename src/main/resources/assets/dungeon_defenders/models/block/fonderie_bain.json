@@ -1,0 +1,407 @@
+{
+    "parent": "minecraft:block/block",
+    "format_version": "1.21.6",
+    "credit": "Made with Blockbench",
+    "texture_size": [
+        32,
+        32
+    ],
+    "textures": {
+        "0": "dungeon_defenders:block/fonderie_bain",
+        "1": "dungeon_defenders:block/fonderie_fusion",
+        "particle": "dungeon_defenders:block/fonderie_bain"
+    },
+    "elements": [
+        {
+            "name": "croute1",
+            "from": [
+                2,
+                3,
+                3
+            ],
+            "to": [
+                6,
+                3.25,
+                6
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    4,
+                    3.125,
+                    4.5
+                ]
+            },
+            "faces": {
+                "north": {
+                    "uv": [
+                        5.0,
+                        0.0,
+                        7.0,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "east": {
+                    "uv": [
+                        7.0,
+                        0.0,
+                        8.5,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "south": {
+                    "uv": [
+                        5.0,
+                        0.0,
+                        7.0,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "west": {
+                    "uv": [
+                        7.0,
+                        0.0,
+                        8.5,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "up": {
+                    "uv": [
+                        0.0,
+                        0.0,
+                        2.0,
+                        1.5
+                    ],
+                    "texture": "#0"
+                },
+                "down": {
+                    "uv": [
+                        0.0,
+                        0.0,
+                        2.0,
+                        1.5
+                    ],
+                    "texture": "#0"
+                }
+            }
+        },
+        {
+            "name": "croute2",
+            "from": [
+                9,
+                3,
+                9
+            ],
+            "to": [
+                13,
+                3.25,
+                11.5
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    11,
+                    3.125,
+                    10.25
+                ]
+            },
+            "faces": {
+                "north": {
+                    "uv": [
+                        5.0,
+                        0.0,
+                        7.0,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "east": {
+                    "uv": [
+                        7.0,
+                        0.0,
+                        8.25,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "south": {
+                    "uv": [
+                        5.0,
+                        0.0,
+                        7.0,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "west": {
+                    "uv": [
+                        7.0,
+                        0.0,
+                        8.25,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "up": {
+                    "uv": [
+                        0.0,
+                        0.0,
+                        2.0,
+                        1.25
+                    ],
+                    "texture": "#0"
+                },
+                "down": {
+                    "uv": [
+                        0.0,
+                        0.0,
+                        2.0,
+                        1.25
+                    ],
+                    "texture": "#0"
+                }
+            }
+        },
+        {
+            "name": "croute3",
+            "from": [
+                11,
+                3,
+                1
+            ],
+            "to": [
+                14,
+                3.25,
+                3
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    12.5,
+                    3.125,
+                    2
+                ]
+            },
+            "faces": {
+                "north": {
+                    "uv": [
+                        8.5,
+                        0.0,
+                        10.0,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "east": {
+                    "uv": [
+                        10.0,
+                        0.0,
+                        11.0,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "south": {
+                    "uv": [
+                        8.5,
+                        0.0,
+                        10.0,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "west": {
+                    "uv": [
+                        10.0,
+                        0.0,
+                        11.0,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "up": {
+                    "uv": [
+                        3.5,
+                        0.0,
+                        5.0,
+                        1.0
+                    ],
+                    "texture": "#0"
+                },
+                "down": {
+                    "uv": [
+                        3.5,
+                        0.0,
+                        5.0,
+                        1.0
+                    ],
+                    "texture": "#0"
+                }
+            }
+        },
+        {
+            "name": "croute4",
+            "from": [
+                3,
+                3,
+                11
+            ],
+            "to": [
+                5.5,
+                3.25,
+                14
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    4.25,
+                    3.125,
+                    12.5
+                ]
+            },
+            "faces": {
+                "north": {
+                    "uv": [
+                        7.0,
+                        0.0,
+                        8.25,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "east": {
+                    "uv": [
+                        8.5,
+                        0.0,
+                        10.0,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "south": {
+                    "uv": [
+                        7.0,
+                        0.0,
+                        8.25,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "west": {
+                    "uv": [
+                        8.5,
+                        0.0,
+                        10.0,
+                        0.125
+                    ],
+                    "texture": "#0"
+                },
+                "up": {
+                    "uv": [
+                        2.0,
+                        0.0,
+                        3.25,
+                        1.5
+                    ],
+                    "texture": "#0"
+                },
+                "down": {
+                    "uv": [
+                        2.0,
+                        0.0,
+                        3.25,
+                        1.5
+                    ],
+                    "texture": "#0"
+                }
+            }
+        },
+        {
+            "name": "metal",
+            "from": [
+                0,
+                0,
+                0
+            ],
+            "to": [
+                16,
+                3,
+                16
+            ],
+            "rotation": {
+                "angle": 0,
+                "axis": "y",
+                "origin": [
+                    8,
+                    1.5,
+                    8
+                ]
+            },
+            "faces": {
+                "north": {
+                    "uv": [
+                        0,
+                        0,
+                        16,
+                        3
+                    ],
+                    "texture": "#1"
+                },
+                "south": {
+                    "uv": [
+                        0,
+                        0,
+                        16,
+                        3
+                    ],
+                    "texture": "#1"
+                },
+                "east": {
+                    "uv": [
+                        0,
+                        0,
+                        16,
+                        3
+                    ],
+                    "texture": "#1"
+                },
+                "west": {
+                    "uv": [
+                        0,
+                        0,
+                        16,
+                        3
+                    ],
+                    "texture": "#1"
+                },
+                "up": {
+                    "uv": [
+                        0,
+                        0,
+                        16,
+                        16
+                    ],
+                    "texture": "#1"
+                },
+                "down": {
+                    "uv": [
+                        0,
+                        0,
+                        16,
+                        16
+                    ],
+                    "texture": "#1"
+                }
+            },
+            "light_emission": 15
+        }
+    ]
+}

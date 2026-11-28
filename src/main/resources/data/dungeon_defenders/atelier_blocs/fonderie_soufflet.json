@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_soufflet",
+    "nom": "Soufflet de forge",
+    "nom_en": "Forge Bellows",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

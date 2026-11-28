@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_wagonnet",
+    "nom": "Wagonnet de minerai",
+    "nom_en": "Ore Cart",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "orientation": "horizontale"
+}

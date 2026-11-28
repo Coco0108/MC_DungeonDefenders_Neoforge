@@ -1,0 +1,14 @@
+{
+    "id": "fonderie_roche",
+    "nom": "Roche volcanique",
+    "nom_en": "Volcanic Rock",
+    "durete": 2.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "variantes": [
+        2,
+        1,
+        1
+    ]
+}

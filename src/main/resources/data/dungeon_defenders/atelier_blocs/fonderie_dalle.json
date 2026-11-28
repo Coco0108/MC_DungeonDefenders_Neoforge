@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_dalle",
+    "nom": "Dalle de fonte quadrillée",
+    "nom_en": "Cast Iron Slab",
+    "type": "dalle",
+    "modele": true,
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal"
+}

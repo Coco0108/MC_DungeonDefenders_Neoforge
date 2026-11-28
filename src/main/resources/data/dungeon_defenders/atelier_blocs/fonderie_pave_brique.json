@@ -1,0 +1,14 @@
+{
+    "id": "fonderie_pave_brique",
+    "nom": "Pavés de brique en chevrons",
+    "nom_en": "Herringbone Brick Paving",
+    "durete": 2.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "pierre",
+    "variantes": [
+        4,
+        2,
+        1
+    ]
+}

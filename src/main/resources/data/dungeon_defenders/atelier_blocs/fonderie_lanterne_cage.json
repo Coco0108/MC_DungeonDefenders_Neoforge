@@ -1,0 +1,13 @@
+{
+    "id": "fonderie_lanterne_cage",
+    "nom": "Lanterne de forge",
+    "nom_en": "Forge Lantern",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "metal",
+    "transparent": true,
+    "orientation": "horizontale"
+}

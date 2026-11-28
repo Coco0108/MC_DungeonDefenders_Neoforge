@@ -1,0 +1,9 @@
+{
+    "id": "fonderie_terre_suie",
+    "nom": "Terre noire de suie",
+    "nom_en": "Sooty Dirt",
+    "durete": 0.6,
+    "outil": "pelle",
+    "niveau": "aucun",
+    "son": "terre"
+}

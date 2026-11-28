@@ -1,0 +1,18 @@
+{
+    "variants": {
+        "": [
+            {
+                "model": "dungeon_defenders:block/fonderie_mur_brique",
+                "weight": 2
+            },
+            {
+                "model": "dungeon_defenders:block/fonderie_mur_brique_2",
+                "weight": 1
+            },
+            {
+                "model": "dungeon_defenders:block/fonderie_mur_brique_3",
+                "weight": 1
+            }
+        ]
+    }
+}

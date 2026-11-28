@@ -1,0 +1,11 @@
+{
+    "id": "fonderie_console",
+    "nom": "Console de fonte",
+    "nom_en": "Cast Iron Bracket",
+    "modele": true,
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal",
+    "orientation": "horizontale"
+}

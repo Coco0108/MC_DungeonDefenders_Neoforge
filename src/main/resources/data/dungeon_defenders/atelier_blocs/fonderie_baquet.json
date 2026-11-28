@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_baquet",
+    "nom": "Baquet de trempe",
+    "nom_en": "Quenching Tub",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "son": "bois",
+    "transparent": true,
+    "orientation": "horizontale"
+}

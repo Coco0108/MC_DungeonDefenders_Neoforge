@@ -1,0 +1,7 @@
+{
+    "parent": "minecraft:block/cube_column_horizontal",
+    "textures": {
+        "end": "dungeon_defenders:block/fonderie_colonne_fonte_top",
+        "side": "dungeon_defenders:block/fonderie_colonne_fonte"
+    }
+}

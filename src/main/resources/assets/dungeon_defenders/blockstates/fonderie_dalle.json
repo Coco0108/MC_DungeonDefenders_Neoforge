@@ -1,0 +1,13 @@
+{
+    "variants": {
+        "type=bottom": {
+            "model": "dungeon_defenders:block/fonderie_dalle"
+        },
+        "type=top": {
+            "model": "dungeon_defenders:block/fonderie_dalle_haut"
+        },
+        "type=double": {
+            "model": "dungeon_defenders:block/fonderie_dalle_double"
+        }
+    }
+}

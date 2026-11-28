@@ -1,0 +1,10 @@
+{
+    "id": "fonderie_poteau",
+    "nom": "Poteau de fonte",
+    "nom_en": "Cast Iron Post",
+    "modele": true,
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "son": "metal"
+}

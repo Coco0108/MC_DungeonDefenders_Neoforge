@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_lanterne_suspendue",
+    "nom": "Lanterne de forge suspendue",
+    "nom_en": "Hanging Forge Lantern",
+    "modele": true,
+    "durete": 3.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "metal",
+    "transparent": true
+}

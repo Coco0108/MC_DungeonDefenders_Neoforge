@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_chenal_fin",
+    "nom": "Bout de chenal de métal fondu",
+    "nom_en": "Molten Metal Channel End",
+    "modele": true,
+    "durete": 1.5,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "pierre",
+    "orientation": "horizontale"
+}

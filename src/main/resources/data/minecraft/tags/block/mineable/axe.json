@@ -44,6 +44,13 @@
     "dungeon_defenders:taverne_trappe",
     "dungeon_defenders:taverne_volets",
     "dungeon_defenders:dd_dummy",
-    "dungeon_defenders:taverne_mur_colombage_inverse"
+    "dungeon_defenders:taverne_mur_colombage_inverse",
+    "dungeon_defenders:fonderie_baquet",
+    "dungeon_defenders:fonderie_caisse_minerai",
+    "dungeon_defenders:fonderie_moules",
+    "dungeon_defenders:fonderie_ratelier_armes",
+    "dungeon_defenders:fonderie_ratelier_outils",
+    "dungeon_defenders:fonderie_soufflet",
+    "dungeon_defenders:fonderie_wagonnet"
   ]
 }

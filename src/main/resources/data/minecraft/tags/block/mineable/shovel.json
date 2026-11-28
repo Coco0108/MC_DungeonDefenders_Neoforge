@@ -2,6 +2,9 @@
   "replace": false,
   "values": [
     "dungeon_defenders:puits_racines",
-    "dungeon_defenders:puits_terre"
+    "dungeon_defenders:puits_terre",
+    "dungeon_defenders:fonderie_braises",
+    "dungeon_defenders:fonderie_tas_charbon",
+    "dungeon_defenders:fonderie_terre_suie"
   ]
 }

@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_moules",
+    "nom": "Moules à lingots",
+    "nom_en": "Ingot Molds",
+    "modele": true,
+    "durete": 2.0,
+    "outil": "hache",
+    "niveau": "aucun",
+    "lumiere": 6,
+    "son": "bois",
+    "orientation": "horizontale"
+}

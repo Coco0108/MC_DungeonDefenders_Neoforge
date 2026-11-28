@@ -1,0 +1,19 @@
+{
+    "variants": {
+        "facing=north": {
+            "model": "dungeon_defenders:block/fonderie_chenal"
+        },
+        "facing=east": {
+            "model": "dungeon_defenders:block/fonderie_chenal",
+            "y": 90
+        },
+        "facing=south": {
+            "model": "dungeon_defenders:block/fonderie_chenal",
+            "y": 180
+        },
+        "facing=west": {
+            "model": "dungeon_defenders:block/fonderie_chenal",
+            "y": 270
+        }
+    }
+}

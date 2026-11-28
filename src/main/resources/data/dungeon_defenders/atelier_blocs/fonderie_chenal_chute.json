@@ -1,0 +1,12 @@
+{
+    "id": "fonderie_chenal_chute",
+    "nom": "Chute de métal fondu",
+    "nom_en": "Molten Metal Spout",
+    "modele": true,
+    "durete": 5.0,
+    "outil": "pioche",
+    "niveau": "aucun",
+    "lumiere": 15,
+    "son": "metal",
+    "orientation": "horizontale"
+}

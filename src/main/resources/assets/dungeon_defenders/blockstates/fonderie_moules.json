@@ -1,0 +1,19 @@
+{
+    "variants": {
+        "facing=north": {
+            "model": "dungeon_defenders:block/fonderie_moules"
+        },
+        "facing=east": {
+            "model": "dungeon_defenders:block/fonderie_moules",
+            "y": 90
+        },
+        "facing=south": {
+            "model": "dungeon_defenders:block/fonderie_moules",
+            "y": 180
+        },
+        "facing=west": {
+            "model": "dungeon_defenders:block/fonderie_moules",
+            "y": 270
+        }
+    }
+}
