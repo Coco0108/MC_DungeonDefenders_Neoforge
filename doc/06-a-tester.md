@@ -1839,3 +1839,14 @@ Voir [ATELIER.md](ATELIER.md#les-objets-et-les-blocs).
       le mannequin regarde le sud tant que l'Atelier n'a pas redéployé avec l'orientation (il devrait regarder l'est).
 - [ ] Le mannequin n'est plus un zombie : seul le modèle se voit, et les tours lui tirent toujours dessus.
 
+## Taverne en halle (2026-11-28)
+
+Déployée par l'Atelier (commit `914a1a1`, « map: taverne_halle »), elle remplace la précédente : 35 × 31 × 46, un
+cristal, une arrivée, une forge, un mannequin, un support d'armure décoratif.
+
+- [ ] Nouveau monde : on arrive dans la halle, le cristal, la forge et le mannequin fonctionnent.
+- [ ] **Bug connu, pas encore corrigé** : à chaque chargement du monde, le support d'armure de la structure est
+      ajouté une fois de plus (`TavernSpawn#clearZone` ne trouve pas les entités déjà sauvegardées, sans doute pas
+      encore chargées au moment du nettoyage). Dans un monde qui a connu l'ancienne taverne, ses supports d'armure
+      flottent dans la nef. Tester dans un **nouveau monde** en attendant.
+
