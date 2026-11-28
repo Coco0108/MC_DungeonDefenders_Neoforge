@@ -1,0 +1,32 @@
+{
+  "id": "rock_debris",
+  "particules": [
+    {
+      "particule": {
+        "type": "minecraft:block",
+        "block_state": "minecraft:blackstone"
+      },
+      "nombre": 40,
+      "dispersion": [
+        1.2,
+        0.2,
+        1.2
+      ],
+      "vitesse": 0.25
+    },
+    {
+      "particule": "minecraft:large_smoke",
+      "nombre": 8,
+      "dispersion": [
+        1,
+        0.2,
+        1
+      ],
+      "vitesse": 0.03
+    }
+  ],
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "e11fb2261fdcdb8b9bd70ca5a98b328affdd75806985b2db7562c8afd551d3b9"
+  }
+}
