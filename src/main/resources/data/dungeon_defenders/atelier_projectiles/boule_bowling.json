@@ -1,0 +1,23 @@
+{
+  "id": "boule_bowling",
+  "nom": "Boule de bowling",
+  "modele": "dungeon_defenders:geckolib/models/projectile/boule_bowling.geo.json",
+  "texture": "dungeon_defenders:textures/projectile/boule_bowling.png",
+  "animations": "dungeon_defenders:geckolib/animations/projectile/boule_bowling.animation.json",
+  "animation": "animation.spin",
+  "echelle": 1.0,
+  "taille": 0.5,
+  "vitesse": 1.1,
+  "gravite": 0.08,
+  "duree": 4,
+  "impact": {
+    "effet": "pierre_impact",
+    "explosion": 0,
+    "feu": false,
+    "casse_blocs": false
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "cb36a375d68be8d9f9cc82bebfac7e36f10e274f5a119606dcc56de66b3f6f18"
+  }
+}

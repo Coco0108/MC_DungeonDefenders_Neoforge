@@ -1,0 +1,40 @@
+{
+  "id": "bowling_ball_turret",
+  "nom": "Tourelle à boulets",
+  "nom_en": "Bowling Ball Turret",
+  "modele": "dungeon_defenders:geckolib/models/tower/bowling_ball_turret.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/bowling_ball_turret.animation.json",
+  "texture": "dungeon_defenders:textures/tower/bowling_ball_turret.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "visee": {
+    "os": "tete",
+    "lacet": true,
+    "tangage": false
+  },
+  "bouche": "bouche",
+  "projectile": "boule_bowling",
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "19571c2371407da017a8decdbf5ab9f3fb528361ddb95da8ff9304d589f4ec55",
+    "effets": [
+      "pierre_impact"
+    ],
+    "projectiles": [
+      "boule_bowling"
+    ]
+  }
+}
