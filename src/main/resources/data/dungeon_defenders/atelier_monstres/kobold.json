@@ -1,0 +1,45 @@
+{
+  "id": "kobold",
+  "nom": "Kobold",
+  "modele": "dungeon_defenders:geckolib/models/entity/kobold.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/entity/kobold.animation.json",
+  "texture": "dungeon_defenders:textures/entity/kobold/kobold.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "walk": "animation.walk",
+    "attack": "animation.attack",
+    "explode": "animation.explode"
+  },
+  "echelle": 1.0,
+  "hitbox": {
+    "largeur": 0.9,
+    "hauteur": 2.0
+  },
+  "stats": {
+    "pv": 12,
+    "degats": 3,
+    "vitesse": 0.33
+  },
+  "comportement": "hostile",
+  "capacites": [
+    {
+      "type": "explosion",
+      "role": "explode",
+      "puissance": 2,
+      "quand": {
+        "distance": [
+          0,
+          2
+        ]
+      }
+    }
+  ],
+  "origine": {
+    "atelier_commit": "f6af63b",
+    "empreinte": "9c339355c372701ef968a36f92b00cfd4c266be5417566d161263570bb0a475e",
+    "effets": [
+      "core_explosion",
+      "ember_aura"
+    ]
+  }
+}
