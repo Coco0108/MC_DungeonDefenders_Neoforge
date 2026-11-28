@@ -1,0 +1,40 @@
+{
+  "id": "boulder_thrower",
+  "nom": "Lanceur de rochers",
+  "nom_en": "Boulder Thrower",
+  "modele": "dungeon_defenders:geckolib/models/tower/boulder_thrower.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/boulder_thrower.animation.json",
+  "texture": "dungeon_defenders:textures/tower/boulder_thrower.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "attack": "animation.attack",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "visee": {
+    "os": "tete",
+    "lacet": true,
+    "tangage": false
+  },
+  "bouche": "bouche",
+  "projectile": "rocher",
+  "sons": {
+    "build": "build",
+    "attack": "attack",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "53d62cbb38620c9f8a62da7b9c8fa40d599ac8ee7cf0c2ceff9c82823fdb9132",
+    "effets": [
+      "rock_debris"
+    ],
+    "projectiles": [
+      "rocher"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "rocher",
+  "nom": "Rocher",
+  "modele": "dungeon_defenders:geckolib/models/projectile/rocher.geo.json",
+  "texture": "dungeon_defenders:textures/projectile/rocher.png",
+  "animations": "dungeon_defenders:geckolib/animations/projectile/rocher.animation.json",
+  "animation": "animation.spin",
+  "echelle": 1.0,
+  "taille": 0.6,
+  "vitesse": 1.2,
+  "gravite": 0.06,
+  "duree": 4,
+  "impact": {
+    "effet": "rock_debris",
+    "explosion": 0,
+    "feu": false,
+    "casse_blocs": false
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "cb76a7b605330655da130e07774e7b87fa024e9ca00644273a651999633b67f7"
+  }
+}
