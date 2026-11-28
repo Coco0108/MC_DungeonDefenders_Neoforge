@@ -34,6 +34,7 @@ déployés depuis l'Atelier (le mod bac à sable des modèles Blockbench), où, 
 - [DEMANDE_ATELIER_BLOCS.md](DEMANDE_ATELIER_BLOCS.md) — blocs orientés et blocs à états (porte, escalier, barrière…) pour la taverne (traitée)
 - [DEMANDE_ATELIER_BLOCS_ANIMES.md](DEMANDE_ATELIER_BLOCS_ANIMES.md) — format des blocs animés (forge, mannequin, cristal) (traitée)
 - [DEMANDE_ATELIER_PUITS.md](DEMANDE_ATELIER_PUITS.md) — construire la première map (le puits) en deux versions de plan différent, jouables (traitée)
+- [DEMANDE_ATELIER_FONDERIE.md](DEMANDE_ATELIER_FONDERIE.md) — construire la deuxième map (la fonderie) en deux versions, inspirée de « Foundries and Forges » pour la A (à transmettre)
 - [DEMANDE_ATELIER_TAVERNE.md](DEMANDE_ATELIER_TAVERNE.md) — construire la taverne en jeu avec les blocs `taverne_*`, captures, structure déployée (traitée)
 
 **Data-driven** (équilibrer avec des JSON et `/reload`, sans recompiler) :
