@@ -29,7 +29,7 @@
     "dungeon_defenders:fonderie_dalle_fonte": 503,
     "dungeon_defenders:fonderie_enclume": 4,
     "dungeon_defenders:fonderie_engrenage": 2,
-    "dungeon_defenders:fonderie_estrade": 8,
+    "dungeon_defenders:fonderie_estrade": 9,
     "dungeon_defenders:fonderie_estrade_angle": 4,
     "dungeon_defenders:fonderie_estrade_bord": 12,
     "dungeon_defenders:fonderie_fourneau_bas": 5,
@@ -76,8 +76,8 @@
     "minecraft:light": 112
   },
   "origine": {
-    "atelier_commit": "c64f2b1",
-    "empreinte": "15aab217dfd5a00967cd76676031ed58381f7c2a58db66b5b1760d0316987ec1",
+    "atelier_commit": "f6af63b",
+    "empreinte": "7b56957a380677b8270655eb50946ad803267c407b9efa6b38726b5a01708eab",
     "generes": [
       "src/main/resources/assets/dungeon_defenders/textures/gui/maps/fonderie_b.png",
       "src/main/resources/data/dungeon_defenders/structure/map/fonderie_b.nbt"
