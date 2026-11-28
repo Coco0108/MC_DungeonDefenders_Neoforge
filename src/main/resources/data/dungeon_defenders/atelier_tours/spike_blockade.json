@@ -1,0 +1,25 @@
+{
+  "id": "spike_blockade",
+  "nom": "Barricade à pointes",
+  "nom_en": "Spike Blockade",
+  "modele": "dungeon_defenders:geckolib/models/tower/spike_blockade.geo.json",
+  "animations": "dungeon_defenders:geckolib/animations/tower/spike_blockade.animation.json",
+  "texture": "dungeon_defenders:textures/tower/spike_blockade.png",
+  "roles_animation": {
+    "idle": "animation.idle",
+    "build": "animation.build",
+    "hurt": "animation.hurt",
+    "upgrade": "animation.upgrade",
+    "destroy": "animation.destroy"
+  },
+  "sons": {
+    "build": "build",
+    "hurt": "hurt",
+    "upgrade": "upgrade",
+    "destroy": "destroy"
+  },
+  "origine": {
+    "atelier_commit": "365c61b",
+    "empreinte": "ac6c4ebaf1fc929da6b423d63ac623aea0456fe09c576f27b9749574dc4723a5"
+  }
+}
