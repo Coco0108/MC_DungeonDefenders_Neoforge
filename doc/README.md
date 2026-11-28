@@ -32,6 +32,7 @@ déployés depuis l'Atelier (le mod bac à sable des modèles Blockbench), où, 
 **Demandes à l'Atelier** :
 
 - [DEMANDE_ATELIER_BLOCS.md](DEMANDE_ATELIER_BLOCS.md) — blocs orientés et blocs à états (porte, escalier, barrière…) pour la taverne (traitée)
+- [DEMANDE_ATELIER_PUITS.md](DEMANDE_ATELIER_PUITS.md) — construire la première map (le puits) en deux versions de plan différent, jouables
 - [DEMANDE_ATELIER_TAVERNE.md](DEMANDE_ATELIER_TAVERNE.md) — construire la taverne en jeu avec les blocs `taverne_*`, captures, structure déployée (traitée)
 
 **Data-driven** (équilibrer avec des JSON et `/reload`, sans recompiler) :
